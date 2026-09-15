@@ -23,7 +23,11 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 
 def _now() -> float:
-    return time.perf_counter()
+    # AppWorld uses freezegun, which patches time.time / time.perf_counter.
+    try:
+        return time.clock_gettime(time.CLOCK_MONOTONIC_RAW)
+    except (AttributeError, OSError):
+        return os.times().elapsed
 
 
 def jsonable(obj: Any, depth: int = 0) -> Any:

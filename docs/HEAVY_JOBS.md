@@ -41,7 +41,7 @@ margin on our own scaffold, there is nothing to displace.
 
 | field | value |
 |---|---|
-| Runs | 60 dev tasks × 6 arms × 2 seeds = **720 runs** |
+| Runs | 57 dev tasks × 6 arms × 2 seeds = **684 runs** |
 | Arms | `planner_alone`, `executor_alone` (granite-4.2-8b), `executor_alone` (granite-4.2-3b), `prompt_only`, `fixed_k` (k=5), plus a 20-task `oracle_escalation` probe |
 | PBS | `select=1:ncpus=32:ngpus=1:mem=128gb`, `-q gpu_batch_exec`, walltime **08:00:00** |
 | Layout | vLLM serves granite-8b and granite-3b (adapters off) on the one H100; 16 AppWorld worker processes; 6 concurrent `codex exec` subprocesses |
@@ -49,7 +49,7 @@ margin on our own scaffold, there is nothing to displace.
 | Planner turns | ≈ 3,500 |
 | Planner cost | **US$8–14** |
 | GPU-hours | ≈ 6 |
-| Outputs | `results/pilot_<date>/runs.jsonl`, 720 event logs, a variance table, the delegable-step histogram |
+| Outputs | `results/pilot_<date>/runs.jsonl`, 684 event logs, a variance table, the delegable-step histogram |
 | Gate | proceed only if `planner_alone − executor_alone ≥ 20 pp` TGC and ≥ 30% of steps are delegable. If the 8B gap is too small, the 3B arm becomes the executor |
 | Risk | a systematically broken prompt wastes the whole run → the job runs a **10-task smoke slice first** and stops if any arm returns 0 successes |
 
@@ -57,12 +57,15 @@ margin on our own scaffold, there is nothing to displace.
 
 ## HJ-2 — M4 trajectory collection
 
-**Purpose.** Build the supervised training set from the 105 train tasks: planner-alone demonstrations,
+**Purpose.** Build the supervised training set from the train split: planner-alone demonstrations,
 plus prompt-only rollouts that contain real interventions and real escalations.
+
+⚠ The train split holds **90 tasks, not the documented 105** [measured, gate G2] — a 14% smaller
+supervised pool than planned. Consider raising rollouts per task from 8 to 10 to compensate.
 
 | field | value |
 |---|---|
-| Runs | 105 tasks × (2 `planner_alone` + 8 `prompt_only`) = **1,050 runs** |
+| Runs | 90 tasks × (2 `planner_alone` + 8 `prompt_only`) = **900 runs** |
 | PBS | same shape, walltime **10:00:00**, resumable |
 | Duration | ≈ 8–10 h, likely split across two jobs |
 | Planner turns | ≈ 7,500 |
@@ -88,7 +91,7 @@ measured against.
 | Planner cost | **US$0** — no planner calls during training |
 | Outputs | `artifacts/adapters/sft_b_granite8b`, `artifacts/adapters/sft_c_granite8b`, plus manifests listing every training task id |
 | Guard | CI test fails if any dev or test task id appears in an adapter manifest |
-| Then | dev evaluation of each adapter: 60 tasks × 2 arms × 2 seeds ≈ 240 runs, ≈ 1 h, ≈ US$2 |
+| Then | dev evaluation of each adapter: 57 tasks × 2 arms × 2 seeds ≈ 228 runs, ≈ 1 h, ≈ US$2 |
 
 ---
 

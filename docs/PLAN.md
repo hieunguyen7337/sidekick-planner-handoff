@@ -176,15 +176,28 @@ to return HTTP 200 at their declared sizes (`apps.bundle` 193,950 B, `tests.bund
 `scripts/setup/fix_appworld_lfs.sh` automates this and refuses to install a bundle whose checksum does
 not match.
 
-**750 tasks over 250 scenarios: train 105 / dev 60 / test_normal 168 / test_challenge 417**, where
-test_challenge requires apps unseen in train [verified].
+⚠ **Measured split sizes differ from the published ones** [measured, gate G2, job 25384181]. Running
+`load_task_ids` against the installed data returns:
+
+| split | paper / README | **measured** |
+|---|---|---|
+| train | 105 | **90** |
+| dev | 60 | **57** |
+| test_normal | 168 | 168 |
+| test_challenge | 417 | 417 |
+
+The two test splits match exactly, so the loader is behaving; train and dev simply contain fewer task
+instances in the installed data version than the paper reports. **All planning numbers below use the
+measured values**, which shrinks the supervised training pool by 14% and is worth stating in the paper's
+limitations. The cause is not yet established — check whether the shipped data version differs from the
+one the paper describes before publishing the number.
 
 Split policy, frozen now:
 
 | split | use |
 |---|---|
-| train (105) | trajectory collection and all supervised training |
-| dev (60) | thresholds, ε, hyper-parameters, prompt iteration, early stopping |
+| train (90) | trajectory collection and all supervised training |
+| dev (57) | thresholds, ε, hyper-parameters, prompt iteration, early stopping |
 | test_normal (168) | the single final paired evaluation |
 | test_challenge (417) | optional out-of-distribution slice, one seed, three systems |
 
@@ -238,7 +251,7 @@ Hypotheses, all internal and paired:
 
 **What is deliberately not claimed**: any leaderboard position, any statement about frontier models, and
 any claim about online RL. Published work reaches 87 TGC with on-policy RL on a 14B model; we do offline
-LoRA on 105 tasks and say so.
+LoRA on 90 tasks and say so.
 
 **Realistic expectation, stated in advance.** Published numbers put a frozen ~8B model between 1 and 17
 TGC on test_normal, and SFT on a few thousand teacher trajectories around 26–33, while luna is at 85.
@@ -279,8 +292,8 @@ Approximately **10–12 weeks, ≈ 120 H100-hours, ≈ 33k planner turns, US$80�
 | **M0** gates (tonight → 1 wk) | G1 codex from a batch node **(PASSED tonight)**; G2 AppWorld install, verify, one task, 8-way pool timing; G3 Granite serving + LoRA train + LoRA serve; G4 luna worker sandbox retest | ≈ 5 | ≤ 100 |
 | **M1** foundation (1 wk) | uv project, schemas, event log, cost ledger, mock env, tests, AGENTS.md, registry, trimmed literature matrix | 0 | 0 |
 | **M2** harness (2 wk) | `AppWorldEnv`, planner client, 8 systems, replay, PBS templates, 3-task live dry run | ≈ 2 | ≤ 100 |
-| **M3** pilot (1–2 wk) | dev 60 × {planner_alone, executor_alone 8B/3B, prompt_only, fixed_k} × 2 seeds; capability-gap gate; annotate 50 interventions; **prereg v1 frozen** | ≈ 6 | ≈ 3.5k |
-| **M4** data + SFT (2 wk) | train 105 × (2 planner-alone demos + 8 prompt-only rollouts); SFT(b) plan-conditioned and SFT(c) + correction/ASK; dev eval | ≈ 20 | ≈ 7.5k |
+| **M3** pilot (1–2 wk) | dev 57 × {planner_alone, executor_alone 8B/3B, prompt_only, fixed_k} × 2 seeds; capability-gap gate; annotate 50 interventions; **prereg v1 frozen** | ≈ 6 | ≈ 3.5k |
+| **M4** data + SFT (2 wk) | train 90 × (2 planner-alone demos + 8 prompt-only rollouts); SFT(b) plan-conditioned and SFT(c) + correction/ASK; dev eval | ≈ 20 | ≈ 7.5k |
 | **M5** verifier + DPO (2 wk) | counterfactual branches → labels; verifier; DPO 3 pair types × 3 λ; `router_seq`; oracle; dev eval | ≈ 40 | ≈ 3k |
 | **M6** final (1–2 wk) | test_normal 168 × 6 systems × 3 seeds; statistics; optional test_challenge × 1 seed × 3 systems | ≈ 30 (+8) | ≈ 18.6k (+11.7k) |
 | **M7** write-up (1 wk) | tables, figures, prereg reconciliation, optional perturbation flags | 0 | ≤ 2k |

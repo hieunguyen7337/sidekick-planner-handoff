@@ -86,9 +86,9 @@ export PATH="/scratch/n12194778/sidekick/env/bin:${PATH}"
 echo "=== appworld install ==="
 appworld install
 echo "=== appworld download data ==="
-appworld download data
+appworld download data --root "$APPWORLD_ROOT"
 echo "=== appworld verify tasks ==="
-appworld verify tasks
+appworld verify tasks --root "$APPWORLD_ROOT"
 
 echo "=== running G2 gate ==="
 cd "$REPO"
