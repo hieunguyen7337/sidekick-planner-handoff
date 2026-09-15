@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import subprocess
 from collections import Counter
 from pathlib import Path
@@ -152,11 +153,20 @@ def gate(summary: dict, *, expect_planner: bool, expect_model: str | None) -> li
 
 
 def purge_broken(out_root: Path, campaign_id: str) -> int:
-    """Delete result.json for runs that failed in a way worth retrying.
+    """Delete the whole run directory for runs that failed in a way worth retrying.
 
     run_campaign skips any run whose result.json already exists. Without this, a run
     that crashed is never retried on resume -- so a maintenance kill mid-campaign
     would make those failures permanent instead of recoverable.
+
+    ⚠ The whole directory, not just result.json. `EventLog` APPENDS, so deleting only the
+    result left events.jsonl in place and the retry wrote its events after the failed
+    attempt's. Observed 2026-09-15 in run 0d8a4ee_1: two `run_start` events and two
+    step-0 observations in one file, the dead attempt and the live one concatenated with
+    nothing marking the boundary. The headline metrics survived -- RunResult is rewritten
+    each time -- but anything reading the event log double-counts, which includes the
+    smoke gate's own `parseable_actions` tally and every future consumer of these
+    trajectories as SFT data. A retried run must start from an empty directory.
     """
     root = out_root / campaign_id
     removed = 0
@@ -164,11 +174,11 @@ def purge_broken(out_root: Path, campaign_id: str) -> int:
         try:
             data = json.loads(path.read_text(encoding="utf-8") or "{}")
         except (OSError, json.JSONDecodeError):
-            path.unlink(missing_ok=True)
+            shutil.rmtree(path.parent, ignore_errors=True)
             removed += 1
             continue
         if (data.get("error_type") or "") in BROKEN:
-            path.unlink(missing_ok=True)
+            shutil.rmtree(path.parent, ignore_errors=True)
             removed += 1
     return removed
 

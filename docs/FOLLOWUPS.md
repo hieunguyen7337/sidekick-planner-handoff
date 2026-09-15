@@ -134,6 +134,17 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
   by prompting — **the trained Sidekick executor should have this suppressed in SFT**, since every
   hallucinated observation is a training-time distribution mismatch with the real transcript.
 
+- **A retried run appended its events to the dead attempt's log.** `purge_broken` deleted
+  `result.json` so the run would re-execute, but left `events.jsonl`, and `EventLog` appends.
+  Observed 2026-09-15 in `0d8a4ee_1`: two `run_start` events and two step-0 observations in
+  one file, the failed attempt and the live one concatenated with nothing marking the
+  boundary. Headline metrics were unaffected (`RunResult` is rewritten each run), but
+  everything that reads the event log double-counts — including the smoke gate's own
+  `parseable_actions` tally, and every future consumer of these trajectories as SFT data,
+  which would train on interleaved attempts. Fixed by purging the whole run directory.
+  **Any event log written before 2026-09-16 for a re-run task should be treated as
+  suspect**; `result.json` files are fine.
+
 - **`max_planner_calls` silently overrides `max_steps` for any planner-driven arm.** In
   `planner_alone` the planner takes every step, so calls and steps are the same quantity and the
   smaller cap wins. Measured 2026-09-15: of 12 `limit` episodes, 11 hit `max_planner_calls=25`
