@@ -1,6 +1,6 @@
 # Sidekick — heavy jobs, specified in full and **not submitted**
 
-Status **2026-09-15 21:0x AEST: nothing in this file has been submitted.** Each job below needs
+Status **2026-09-16: nothing in this file has been submitted.** All M0 feasibility gates passed on 2026-09-15 (see `feasibility/M0_RESULTS.md`), so these jobs are technically unblocked and wait only on approval. Each job below needs
 explicit approval before it runs. Tonight only the M0 feasibility gates run, because the cluster enters
 maintenance at ~08:00 on 2026-09-16 and PBS refuses to start any job whose walltime crosses that.
 
@@ -45,7 +45,7 @@ margin on our own scaffold, there is nothing to displace.
 | Arms | `planner_alone`, `executor_alone` (granite-4.2-8b), `executor_alone` (granite-4.2-3b), `prompt_only`, `fixed_k` (k=5), plus a 20-task `oracle_escalation` probe |
 | PBS | `select=1:ncpus=32:ngpus=1:mem=128gb`, `-q gpu_batch_exec`, walltime **08:00:00** |
 | Layout | vLLM serves granite-8b and granite-3b (adapters off) on the one H100; 16 AppWorld worker processes; 6 concurrent `codex exec` subprocesses |
-| Duration | ≈ 5–7 h [INFERRED — G2's measured per-step latency replaces this] |
+| Duration | ≈ 5–7 h [INFERRED — G3 measured 1,808 tok/s at 16-way concurrency, so this holds] |
 | Planner turns | ≈ 3,500 |
 | Planner cost | **US$8–14** |
 | GPU-hours | ≈ 6 |
@@ -86,7 +86,7 @@ measured against.
 |---|---|
 | PBS | `select=1:ncpus=16:ngpus=1:mem=128gb`, walltime **06:00:00** per variant |
 | Recipe | TRL SFT + PEFT LoRA r=64 α=128 on `q,k,v,o,gate,up,down`, lr 1e-4 cosine, 2 epochs, 32k context, gradient checkpointing, loss on executor tokens only |
-| Duration | ≈ 2–4 h per variant on one H100 [INFERRED — G3's smoke run calibrates this] |
+| Duration | ≈ 2–4 h per variant on one H100 [INFERRED — G3 smoke: 6.2 s load, 17 s for a tiny run, 20 GB peak] |
 | GPU-hours | ≈ 8 for both, ≈ 16 with the 3B arm and a seed repeat |
 | Planner cost | **US$0** — no planner calls during training |
 | Outputs | `artifacts/adapters/sft_b_granite8b`, `artifacts/adapters/sft_c_granite8b`, plus manifests listing every training task id |

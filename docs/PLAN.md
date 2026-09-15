@@ -289,7 +289,7 @@ Approximately **10–12 weeks, ≈ 120 H100-hours, ≈ 33k planner turns, US$80�
 
 | milestone | content | GPU-h | planner turns |
 |---|---|---|---|
-| **M0** gates (tonight → 1 wk) | G1 codex from a batch node **(PASSED tonight)**; G2 AppWorld install, verify, one task, 8-way pool timing; G3 Granite serving + LoRA train + LoRA serve; G4 luna worker sandbox retest | ≈ 5 | ≤ 100 |
+| **M0** gates — **ALL RESOLVED 2026-09-15**, see `feasibility/M0_RESULTS.md` | G1 planner from a batch node **PASS**; G2 AppWorld install/verify/8-way pool **PASS** (needed a Git LFS fix); G3 Granite LoRA train + vLLM adapter serving **PASS** (1,808 tok/s at 16-way); G4 luna worker sandbox **FAIL**, does not affect the study | ≈ 1 used | ≈ 20 used |
 | **M1** foundation (1 wk) | uv project, schemas, event log, cost ledger, mock env, tests, AGENTS.md, registry, trimmed literature matrix | 0 | 0 |
 | **M2** harness (2 wk) | `AppWorldEnv`, planner client, 8 systems, replay, PBS templates, 3-task live dry run | ≈ 2 | ≤ 100 |
 | **M3** pilot (1–2 wk) | dev 57 × {planner_alone, executor_alone 8B/3B, prompt_only, fixed_k} × 2 seeds; capability-gap gate; annotate 50 interventions; **prereg v1 frozen** | ≈ 6 | ≈ 3.5k |
