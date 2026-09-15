@@ -104,6 +104,18 @@ scaffold scores **85.1 TGC / 73.2 SGC** on test_normal in 9.3 mean interactions,
 test_challenge. Our own planner-alone arm will differ because our scaffold is different; the
 leaderboard number is context, and our measured planner-alone arm is the baseline that matters.
 
+### 3.1a Pinned versions (verified 2026-09-15, to be re-confirmed by the M0 gates)
+
+| thing | pin |
+|---|---|
+| AppWorld | commit `42b5bcf3cd334fee33f0c37c02070a9f5807add5` on `main`, dated 2026-09-03 [verified via the GitHub API] — PyPI `0.1.3.post1` lags `main` |
+| `ibm-granite/granite-4.2-8b` | revision `f8de16cdcdbc6c779ca517604e050d82cc119e44`, 4 safetensors shards [verified via the HF API] |
+| vLLM | 0.29.0 is current on PyPI; Granite 4.2 needs ≥ 0.20 for `granite_thinking_parser` [verified] |
+| Codex CLI | 0.153.4 [measured] |
+
+Every run manifest records these, and a changed pin starts a new run prefix rather than continuing an
+old one.
+
 ### 3.2 Executor (trainable)
 
 **`ibm-granite/granite-4.2-8b`** [verified from the model card and config.json today]: dense
