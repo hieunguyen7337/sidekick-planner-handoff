@@ -128,18 +128,28 @@ run_model () {
     fi
   fi
 
-  # --- smoke gate (do not skip) ---
-  echo "[u7] --- ${model} smoke gate ---"
+  # --- smoke gate (in its own campaign, wiped every time) ---
+  # A gate that can pass -- or fail -- on cached results is not a gate. Sharing a
+  # campaign_id with the main run meant run_campaign found the previous attempt's
+  # result.json files and skipped all three tasks (n_jobs=0, n_skipped=3), so the gate
+  # re-graded stale output from a build that had already been fixed and failed the arm
+  # on it. Observed 2026-09-15, job 25387603, which burned two vLLM startups to grade
+  # results it never produced. A separate campaign directory, removed before every run,
+  # cannot do that; the 3 extra episodes are a cheap price for a gate that means what it
+  # says.
+  local scid="${cid}_smoke"
+  rm -rf "${OUT:?}/${scid:?}"
+  echo "[u7] --- ${model} smoke gate (${scid}) ---"
   "${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
     --system executor_alone --split dev --tasks 3 --seeds 1 \
     --env appworld --workers 3 \
-    --config "${cfg}" --out "${OUT}"
+    --config "${cfg}" --campaign-id "${scid}" --out "${OUT}"
   local smoke_rc=$?
   if [[ "${smoke_rc}" -ne 0 ]]; then
     echo "[u7] FATAL: smoke runner exited ${smoke_rc} for ${model}"
     kill_vllm; return 1
   fi
-  "${SIDEKICK_VENV}/bin/python" - "${OUT}/${cid}" <<'PY'
+  "${SIDEKICK_VENV}/bin/python" - "${OUT}/${scid}" <<'PY'
 import json, sys, pathlib
 root = pathlib.Path(sys.argv[1])
 results = sorted(root.glob("executor_alone/*/*/result.json"))
@@ -171,6 +181,15 @@ PY
     echo "[u7] FATAL: smoke gate failed for ${model} (rc=${gate_rc})"
     kill_vllm; return 1
   fi
+
+  # --- clear failures from earlier attempts so resume actually retries them ---
+  # run_campaign skips any task whose result.json exists, including one that failed.
+  # This script had no purge step at all (the planner one did), so three parse_error
+  # results from a fixed-since build sat in the campaign and were silently kept as the
+  # answer for those tasks. Purging is what makes "resume after a fix" mean anything.
+  echo "[u7] --- ${model} purge broken runs from earlier attempts ---"
+  "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+    --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -2
 
   # --- full campaign ---
   echo "[u7] --- ${model} campaign ---"

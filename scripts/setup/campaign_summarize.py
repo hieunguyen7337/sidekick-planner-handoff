@@ -22,7 +22,14 @@ from collections import Counter
 from pathlib import Path
 from statistics import mean
 
-BROKEN = {"api_error", "timeout", "crash"}
+# `parse_error` belongs here, and leaving it out cost a whole GPU job. A parse error is
+# almost always the harness failing to read output the model produced correctly -- four of
+# tonight's defects had that shape -- so it is exactly the kind of failure a resume after a
+# fix must retry. Without it the stale results survived the purge, run_campaign skipped
+# every smoke task (n_jobs=0, n_skipped=3), and the gate graded the *previous* build's
+# output and failed an arm that was already fixed. `limit` is deliberately NOT here: an
+# episode that spent its step budget is a real outcome, not a broken run.
+BROKEN = {"api_error", "timeout", "crash", "parse_error"}
 
 
 def _results(root: Path) -> list[dict]:
@@ -219,7 +226,9 @@ def main() -> int:
     out_root = Path(a.out)
     if a.purge_broken:
         n = purge_broken(out_root, a.campaign_id)
-        print(f"[purge] removed {n} broken result.json (crash/timeout/api_error) so they retry")
+        # Name the set from BROKEN rather than restating it, so the log cannot drift out
+        # of step with what was actually deleted.
+        print(f"[purge] removed {n} broken result.json ({'/'.join(sorted(BROKEN))}) so they retry")
     s = summarise(out_root, a.campaign_id)
     print(json.dumps(s, indent=2))
 
