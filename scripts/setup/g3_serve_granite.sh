@@ -9,6 +9,22 @@ export HF_HOME="${HF_HOME:-/scratch/n12194778/hf}"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export VLLM_ALLOW_RUNTIME_LORA_UPDATING=1
 export PATH="${VENV}/bin:${HOME}/.local/bin:${PATH}"
+# FlashInfer JIT during vLLM warmup needs nvcc. Prefer the pip-bundled CUDA 13 toolkit.
+CU13="${VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"
+  export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+if command -v module >/dev/null 2>&1; then
+  module load CUDA/12.8.0 >/dev/null 2>&1 || module load CUDA/12.6.0 >/dev/null 2>&1 || true
+  if [[ -z "${CUDA_HOME:-}" && -n "${EBROOTCUDA:-}" ]]; then
+    export CUDA_HOME="${EBROOTCUDA}"
+    export PATH="${CUDA_HOME}/bin:${PATH}"
+  fi
+fi
+echo "[g3_serve] CUDA_HOME=${CUDA_HOME:-unset} nvcc=$(command -v nvcc || echo none)"
 LOGDIR="${SCRATCH}/logs"
 ADAPTER="${SIDEKICK_LORA_OUT:-${SCRATCH}/artifacts/adapters/smoke_lora}"
 MODEL="${SIDEKICK_MODEL:-ibm-granite/granite-4.2-8b}"

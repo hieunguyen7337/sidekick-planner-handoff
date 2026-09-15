@@ -3,10 +3,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from typing import Any
 
 from sidekick.environments.base import BaseEnv
 from sidekick.protocols.schemas import ExecutorAction, Observation
+
+DEFAULT_APPWORLD_ROOT = "/scratch/n12194778/sidekick/appworld"
+
+
+class AppWorldRootError(Exception):
+    """Raised when the resolved AppWorld data root has no data/tasks directory."""
 
 
 class AppWorldEnv(BaseEnv):
@@ -26,7 +33,25 @@ class AppWorldEnv(BaseEnv):
     with multiprocessing.Pool (one world per worker).
     """
 
-    def __init__(self, experiment_name: str = "sidekick", extra_kwargs: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        experiment_name: str = "sidekick",
+        extra_kwargs: dict[str, Any] | None = None,
+        root: str | None = None,
+    ) -> None:
+        # Resolve the data root: explicit argument > APPWORLD_ROOT env var >
+        # installed default. Never fall through to os.getcwd() (AppWorld's own
+        # dangerous default in appworld/common/path_store.py).
+        self.root = root or os.environ.get("APPWORLD_ROOT") or DEFAULT_APPWORLD_ROOT
+        self.root = os.path.abspath(self.root)
+        if not os.path.isdir(os.path.join(self.root, "data", "tasks")):
+            raise AppWorldRootError(
+                f"AppWorld data root {self.root!r} has no data/tasks directory. "
+                f"Pass root=..., set APPWORLD_ROOT, or check {DEFAULT_APPWORLD_ROOT!r}."
+            )
+        # Set before the lazy AppWorld import in reset(): appworld resolves its
+        # root from this variable and would otherwise use os.getcwd().
+        os.environ["APPWORLD_ROOT"] = self.root
         self.experiment_name = experiment_name
         self.extra_kwargs = extra_kwargs or {}
         self.task_id = ""
@@ -120,6 +145,9 @@ class AppWorldEnv(BaseEnv):
     @property
     def api_docs_digest(self) -> str:
         return self._api_docs_digest
+
+    def manifest_fields(self) -> dict:
+        return {"appworld_root": self.root, "experiment_name": self.experiment_name}
 
 
 def _digest_api_docs(api_docs: Any) -> str:

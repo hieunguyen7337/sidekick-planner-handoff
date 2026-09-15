@@ -15,6 +15,13 @@ export SIDEKICK_LORA_OUT=/scratch/n12194778/sidekick/artifacts/adapters/smoke_lo
 export SIDEKICK_MODEL=ibm-granite/granite-4.2-8b
 export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
 export VLLM_ALLOW_RUNTIME_LORA_UPDATING=1
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"
+  export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
 REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
 cd "${REPO}"
 echo "[pbs] host=$(hostname) job=${PBS_JOBID} start=$(date -Iseconds)"
