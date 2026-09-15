@@ -188,6 +188,26 @@ def test_parse_report():
 def test_parse_complete():
     a = parse_executor_action("COMPLETE")
     assert a.kind == "COMPLETE"
+    assert a.message is None
+
+
+def test_parse_complete_carries_the_answer():
+    """AppWorld scores question tasks on the answer, so it must survive parsing.
+
+    Regression: the parser tested `stripped == "COMPLETE"`, so a real answer like
+    "COMPLETE: Placeholder Song A, Placeholder Song B" raised ActionParseError and a
+    solved task was recorded as a parse_error with tgc 0.0.
+    """
+    a = parse_executor_action("COMPLETE: Placeholder Song A, Placeholder Song B")
+    assert a.kind == "COMPLETE"
+    assert a.message == "Placeholder Song A, Placeholder Song B"
+    assert a.raw_output == "COMPLETE: Placeholder Song A, Placeholder Song B"
+
+
+def test_parse_complete_with_empty_answer_is_a_bare_complete():
+    a = parse_executor_action("COMPLETE:")
+    assert a.kind == "COMPLETE"
+    assert a.message is None
 
 
 def test_parse_priority_code_over_ask():
