@@ -134,6 +134,27 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
   by prompting — **the trained Sidekick executor should have this suppressed in SFT**, since every
   hallucinated observation is a training-time distribution mismatch with the real transcript.
 
+- **`max_planner_calls` silently overrides `max_steps` for any planner-driven arm.** In
+  `planner_alone` the planner takes every step, so calls and steps are the same quantity and the
+  smaller cap wins. Measured 2026-09-15: of 12 `limit` episodes, 11 hit `max_planner_calls=25`
+  and **none** hit `max_steps=40` — the arm was effectively capped at 25 steps while
+  `executor_alone` ran to 40. Two arms of one experiment on different budgets, which is exactly
+  what the token-budget defect did earlier. Reconcile the caps (either raise
+  `max_planner_calls` for planner-driven arms or derive it from `max_steps`) before any
+  arm-to-arm quality or cost number is published.
+
+- **ε = 5 pp is smaller than the baseline's own seed noise.** `planner_alone` scored 0.649 and
+  0.719 on the *same* 57 tasks across two seeds — a 7.0 pp spread from the frozen planner's
+  sampling alone, since nothing else differed. Pairing by task removes task difficulty but not
+  this. A 5 pp non-inferiority margin with 2 seeds is therefore likely unresolvable; widen ε or
+  budget more seeds, and settle it before M6 rather than discovering it in the analysis.
+
+- **A gate that asks "did anything parse" is not a gate.** The 8B smoke gate passed a build in
+  which every episode died at step 1 or 2, because one action somewhere had parsed; the arm then
+  ran to completion and produced 108 runs, 108 `parse_error`, 0 solved. Now fails when more than
+  half of episodes end in `parse_error`. The general lesson: a gate must assert the property it
+  exists to protect (episodes can keep going), not a proxy that a single lucky sample satisfies.
+
 - **Fenced-code extraction is implemented twice, and the copies have now diverged.**
   `_PYTHON_FENCE_RE` in `src/sidekick/agents/planner.py:468` serves the planner path;
   `_FENCE_LAZY_RE` / `_PY_TAG_RE` in `src/sidekick/protocols/schemas.py` serve the executor

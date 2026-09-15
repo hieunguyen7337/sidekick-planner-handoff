@@ -12,9 +12,37 @@ must be reconciled against this file before its numbers are quoted anywhere.
 
 | job | arm | campaign_id | submitted | code actually run | status |
 |---|---|---|---|---|---|
-| 25386878 | `planner_alone` (gpt-5.6-luna) | `hj1b_planner_20260915` | 2026-09-15 23:09 | **`6435bc0`** | see below |
+| 25386878 | `planner_alone` (gpt-5.6-luna) | `hj1b_planner_20260915` | 2026-09-15 23:09 | **`6435bc0`** | **COMPLETE 114/114**, see results below |
 | 25386895 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-15 23:15 | `6435bc0` | exited 1 at 23:20 — smoke gate failed, `parse_error` 3/3 on both models. Results purged. |
 | 25387603 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-15 23:25 | **`419c0f6`** | see below |
+
+## `planner_alone` result, 2026-09-15 (114/114, code `6435bc0`)
+
+| | |
+|---|---|
+| TGC | **0.684** (78 of 114 solved) |
+| per seed, same 57 tasks | seed 1 **0.649**, seed 2 **0.719** |
+| steps / episode | 13.52 mean |
+| planner calls | 1,645 total, 14.4 per episode |
+| outcomes | 101 clean, **12 `limit`**, 1 `parse_error` |
+| provenance | `manifest.json` self-labels its commit "MAY NOT be the code that ran" — trust this file, not that field |
+
+Two things in this table matter more than the headline.
+
+**The binding cap was `max_planner_calls`, not `max_steps`.** Of the 12 `limit` episodes,
+**11 hit `max_planner_calls=25` and none hit `max_steps=40`**. In `planner_alone` the planner
+drives every step, so calls and steps are the same quantity, and the smaller cap silently
+wins: this arm was effectively limited to 25 steps while `executor_alone` gets 40. It is the
+conservative direction for the ≥20 pp gate (it holds the planner down), so it cannot
+manufacture a pass — but the caps must be reconciled before any arm-to-arm cost or quality
+number is published, and 10.5% of episodes being truncated means 0.684 is a floor on what
+this planner does, not its ceiling.
+
+**Seed spread is 7.0 pp on identical task sets.** 0.649 vs 0.719 over the same 57 tasks is a
+clean read on the frozen planner's sampling noise, since nothing else differs. `PLAN.md` sets
+ε = 5 pp for the later non-inferiority test — smaller than the noise of the baseline it is
+measured against. Pairing by task removes task difficulty but not this, so ε = 5 pp with 2
+seeds is likely unresolvable. Either widen ε or budget more seeds; decide before M6, not after.
 
 ## Why 25386895 does not count as a result
 
