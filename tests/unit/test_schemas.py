@@ -294,6 +294,53 @@ def test_parse_refuses_a_truncated_fence_that_is_not_valid_python():
         parse_executor_action("```python\nsongs = apis.spotify.show_song_library(")
 
 
+def test_parse_handles_granites_third_output_format():
+    # Observed 2026-09-15: Hermes-style <tool_call> with a bare language line and closing
+    # tags from a different schema entirely. No <py>, no fence.
+    raw = (
+        "\n<tool_call>\npython\nprint(apis.spotify.show_account())\n"
+        "</parameter>\n</function>\n"
+    )
+    a = parse_executor_action(raw)
+    assert a.kind == "CODE"
+    assert a.code == "print(apis.spotify.show_account())"
+
+
+def test_unwrapped_salvage_takes_the_action_not_the_hallucinated_reply():
+    # Observed 2026-09-15: the model wrote its action, then invented the environment's
+    # response beneath it. The invention is itself valid Python (a list of calls), so
+    # joining every non-wrapper line would have executed the dream along with the action.
+    raw = (
+        "\n<tool_call>\npython>\nprint(apis.venmo.show_transactions())\n"
+        "</parameter>\n</output>\n\n```\n"
+        "[Transaction(id='txn_001', amount=25.0), Transaction(id='txn_002', amount=9.5)]\n"
+        "```\n"
+    )
+    a = parse_executor_action(raw)
+    assert a.kind == "CODE"
+    assert a.code == "print(apis.venmo.show_transactions())"
+    assert "Transaction(" not in a.code
+
+
+def test_unwrapped_salvage_will_not_execute_a_bare_complete():
+    # "COMPLETE" is a valid Python expression (a Name), so compile() alone would accept
+    # it and the environment would raise NameError instead of completing the task.
+    a = parse_executor_action("<tool_call>\nCOMPLETE\n</tool_call>")
+    assert a.kind == "COMPLETE"
+
+
+def test_unwrapped_salvage_does_not_fire_without_a_wrapper():
+    # Plain prose that happens to contain a call must not become an action.
+    with pytest.raises(ActionParseError):
+        parse_executor_action("I think I should call show_song_library() next.")
+
+
+def test_unwrapped_salvage_rejects_narration_inside_a_wrapper():
+    raw = "<tool_call>\nI need to get the songs from the library first.\n</tool_call>"
+    with pytest.raises(ActionParseError):
+        parse_executor_action(raw)
+
+
 def test_parse_takes_whichever_code_block_comes_first():
     fence_first = "```python\na = 1\n```\n<py>\nb = 2\n</py>"
     assert parse_executor_action(fence_first).code == "a = 1"

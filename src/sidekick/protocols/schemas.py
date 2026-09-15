@@ -209,6 +209,77 @@ def _tagged_block(raw: str) -> tuple[int, str] | None:
     return (m.start(), m.group(1)) if m else None
 
 
+# Lines that are pure wrapper: an XML-ish tag on its own, a fence, or a bare language
+# marker. Everything Granite has produced so far is real Python inside one of these.
+_WRAPPER_LINE_RE = re.compile(
+    r"^\s*(?:"
+    # a tag on its own line, opening or closing, with or without attributes
+    r"</?(?:tool_call|tool_response|function|parameter|arguments|py|python|code|output|section)\b[^>]*>"
+    # a markdown fence, opening or closing
+    r"|```[a-zA-Z0-9_+-]*"
+    # a bare language marker, including the mangled forms seen in the wild: `python>`
+    r"|<?/?\s*(?:python|py)\s*>?"
+    r")\s*$",
+    re.IGNORECASE,
+)
+# Salvage only fires when the model was visibly *trying* to delimit code. Without this
+# gate, prose that happens to be a valid Python expression could be executed.
+_WRAPPER_HINT_RE = re.compile(
+    r"<\s*/?\s*(?:tool_call|tool_response|function|parameter|arguments|py|python|code)\b|```",
+    re.IGNORECASE,
+)
+
+
+def _unwrapped_block(raw: str) -> tuple[int, str] | None:
+    """Last resort: strip wrapper lines and keep the remainder if it is valid Python.
+
+    Granite 4.2 does not have one output format, it has several, and it picks between
+    them per generation. Measured on three consecutive smoke gates, all with thinking off
+    and all containing correct code:
+
+        <tool_call>\\n<py>\\nCODE\\n</py>\\n</section>
+        <tool_call>\\npython\\nCODE\\n</parameter>\\n</function>
+        ```python\\nCODE\\n```
+
+    Adding a regex per variant loses: the next model, or the next vLLM version, invents
+    another. Stripping the delimiters and asking Python whether what remains compiles is
+    stable under variants nobody has seen yet.
+
+    Two guards keep this from promoting prose to an action: the text must show a wrapper
+    token at all, and the remainder must both compile *and* contain a call. A bare
+    ``COMPLETE`` compiles perfectly well as a Name expression, and running it would raise
+    NameError inside the environment instead of completing the task.
+    """
+    if not _WRAPPER_HINT_RE.search(raw):
+        return None
+    # The FIRST contiguous run of non-wrapper lines, not every non-wrapper line joined.
+    # Granite often writes its action and then hallucinates the environment's reply after
+    # it, and a hallucinated reply can itself be valid Python -- a list of constructor
+    # calls, say -- so joining everything would hand the environment the model's
+    # invention along with its action. Taking the first block keeps the action and
+    # discards whatever it dreamed afterwards.
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for line in raw.splitlines():
+        if _WRAPPER_LINE_RE.match(line):
+            if current:
+                blocks.append(current)
+                current = []
+            continue
+        if not line.strip() and not current:
+            continue
+        current.append(line)
+    if current:
+        blocks.append(current)
+    for block in blocks:
+        candidate = "\n".join(block).strip()
+        # A call is the mark of an action; it also rejects a bare COMPLETE, which would
+        # otherwise compile as a Name and raise NameError in the environment.
+        if "(" in candidate and _parses(candidate):
+            return 0, candidate
+    return None
+
+
 def _first_code_block(raw: str) -> str | None:
     """Return the earliest python block, in whichever of the two spellings comes first.
 
@@ -221,7 +292,11 @@ def _first_code_block(raw: str) -> str | None:
         found = finder(raw)
         if found and (best is None or found[0] < best[0]):
             best = found
-    return best[1] if best else None
+    if best is not None:
+        return best[1]
+    # Neither delimiter matched. Fall back to stripping wrappers and asking Python.
+    unwrapped = _unwrapped_block(raw)
+    return unwrapped[1] if unwrapped else None
 
 
 def parse_executor_action(raw: str) -> ExecutorAction:

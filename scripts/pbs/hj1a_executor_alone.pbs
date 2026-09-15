@@ -169,11 +169,23 @@ for r in results:
                 continue
             if e.get("event_type") == "action":
                 parseable += 1
-print(f"[gate] runs={len(results)} crashed_or_timed_out={crashed} parseable_actions={parseable}")
+parse_errored = sum(1 for r in results
+                    if json.loads(r.read_text()).get("error_type") == "parse_error")
+print(f"[gate] runs={len(results)} crashed_or_timed_out={crashed} "
+      f"parseable_actions={parseable} ended_in_parse_error={parse_errored}")
 if crashed == len(results):
     print("[gate] FAIL: all runs crashed or timed out"); sys.exit(1)
 if parseable == 0:
     print("[gate] FAIL: zero parseable actions"); sys.exit(1)
+# "At least one action parsed anywhere" is not a gate. It passed a build where every
+# episode died at step 1 or 2, and the arm then ran to completion: 108 runs, 108
+# parse_error, 0 solved, in under two minutes. One lucky first action was enough to
+# satisfy it. What matters is whether episodes can KEEP going, so require most of them
+# not to end on a parse error.
+if parse_errored * 2 > len(results):
+    print(f"[gate] FAIL: {parse_errored}/{len(results)} episodes ended in parse_error -- "
+          "the model's output format is not one this harness can read")
+    sys.exit(1)
 print("[gate] PASS")
 PY
   local gate_rc=$?
