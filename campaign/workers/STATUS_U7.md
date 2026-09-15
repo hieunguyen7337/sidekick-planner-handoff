@@ -11,6 +11,19 @@ Deadline: submit with walltime=05:00:00 before 23:30 (cluster maintenance ~08:00
 - [x] PBS script `scripts/pbs/hj1a_executor_alone.pbs` written (bash -n OK; vLLM flags reuse the
       proven g3_serve_granite.sh working set [OBSERVED /scratch/n12194778/sidekick/logs/g3_serve.json]).
 - [x] Submitted 2026-09-15 22:14 AEST — job id **25385589.aqua** (walltime 05:00:00, gpu_inter).
+      **FAILED 22:19**: FlashInfer JIT build of the `sampling` op died in both vLLM attempts for
+      both models — `#error "CUDA compiler and CUDA toolkit headers are incompatible"` from
+      flashinfer's bundled libcudacxx vs nvcc 13.4 (CU13) on PATH
+      [OBSERVED /scratch/n12194778/sidekick/logs/hj1a_vllm_8b.log].
+- [x] Fix applied to PBS script: `VLLM_USE_FLASHINFER_SAMPLER=0` (PyTorch sampling fallback,
+      avoids the JIT entirely), `FLASHINFER_CACHE_DIR` moved to /scratch, kill_vllm also kills
+      EngineCore children. Note for analysis: sampling backend is PyTorch, not FlashInfer.
+- [x] Resubmitted 22:21 — job **25385758.aqua** (also resubmitted independently by another session
+- [x] Job 25385758 was deleted without running (substate 91, 22:25). Resubmitted as 25385779, but a
+      parallel session had already submitted 25385774 (same fixed script). To avoid two identical
+      campaigns racing on the same /scratch experiment dirs I deleted my 25385779 and left
+      **25385774.aqua** as the single active job. **Coordination note: 25385774 is the canonical
+      hj1a-exec job — do not submit another hj1a_executor_alone.pbs and do not delete 25385774.**
 - [ ] 8B smoke gate (3 tasks × seed 1, workers 3).
 - [ ] 8B campaign (57 tasks × seeds 1,2, workers 10).
 - [ ] 3B smoke gate.

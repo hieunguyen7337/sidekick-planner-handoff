@@ -15,12 +15,27 @@ export HF_HOME=/scratch/n12194778/hf
 export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
 export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
 export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+# Scratch venv carries appworld/vllm/torch but NOT the sidekick package itself.
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
 CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
 if [[ -x "${CU13}/bin/nvcc" ]]; then
   export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
   export PATH="${CU13}/bin:${PATH}"
   export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
 fi
+# FlashInfer JIT of the `sampling` op fails: bundled libcudacxx headers are incompatible
+# with nvcc 13.4 (CU13) [OBSERVED hj1a_vllm_8b.log 2026-09-15]. Disable the flashinfer
+# sampler (PyTorch fallback) and use a scratch-local JIT cache.
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u7
+# Belt-and-braces: the same log also showed `[Errno 24] Too many open files` from
+# ninja during that JIT [OBSERVED hj1a_vllm_8b.log]. Raise the soft fd limit as far
+# as the node allows, in case any compile path is still reached.
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u7] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
 REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
 OUT=/scratch/n12194778/sidekick/results
 LOGDIR=/scratch/n12194778/sidekick/logs
@@ -41,6 +56,7 @@ kill_vllm () {
     wait "${VLLM_PID}" 2>/dev/null || true
   fi
   pkill -f "vllm serve" 2>/dev/null || true
+  pkill -f "EngineCore" 2>/dev/null || true
   sleep 5
   echo "[u7] GPU after shutdown:"
   nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true

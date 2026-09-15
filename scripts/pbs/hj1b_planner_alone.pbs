@@ -1,0 +1,102 @@
+#!/bin/bash
+#PBS -N hj1b-planner
+#PBS -q cpu_inter
+#PBS -l select=1:ncpus=8:mem=32gb
+#PBS -l walltime=05:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj1b_planner.out
+
+# HJ-1 Class B: planner_alone on AppWorld dev, 57 tasks x 2 seeds = 114 runs.
+# CPU only -- planner_drives=True means the executor is never constructed, so no GPU
+# and no vLLM server. Planner is gpt-5.6-luna via `codex exec` on the ChatGPT plan
+# subscription (no per-token billing); the real limit is plan quota, which is not
+# observable from a batch job, so the job is written to be resumable and to fail loudly.
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+# The scratch venv carries appworld/vllm/torch but NOT the sidekick package itself
+# (that is installed only in the repo's own .venv). Put the source tree on the path.
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+OUT=/scratch/n12194778/sidekick/results
+CID=hj1b_planner_20260915
+CFG="${REPO}/configs/pilot_planner_alone.yaml"
+PY="${SIDEKICK_VENV}/bin/python"
+SUM="${REPO}/scripts/setup/campaign_summarize.py"
+cd "${REPO}" || exit 1
+
+echo "[hj1b] host=$(hostname) job=${PBS_JOBID:-none} start=$(date -Iseconds)"
+echo "[hj1b] nproc=$(nproc) mem=$(free -g | awk '/^Mem:/{print $2"gb"}')"
+
+# ---- preflight -------------------------------------------------------------
+if ! command -v codex >/dev/null 2>&1; then
+  echo "[hj1b] FATAL: codex not on PATH inside the job" >&2
+  exit 2
+fi
+echo "[hj1b] codex=$(command -v codex) version=$(timeout 60 codex --version 2>&1 | head -1)"
+if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+  echo "[hj1b] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate" >&2
+  exit 2
+fi
+echo "[hj1b] auth.json present (contents never printed)"
+if [[ ! -d "${APPWORLD_ROOT}" ]]; then
+  echo "[hj1b] FATAL: APPWORLD_ROOT ${APPWORLD_ROOT} does not exist" >&2
+  exit 2
+fi
+mkdir -p "${OUT}" /scratch/n12194778/sidekick/codex_scratch
+
+# ---- smoke gate: 3 tasks, seed 1 -------------------------------------------
+# Same campaign id as the full run, so these 3 runs are reused rather than repeated
+# (the runner skips any run whose result.json already exists).
+# Retry anything that previously crashed. run_campaign skips any run whose
+# result.json exists, so without this a crashed run is skipped forever on resume.
+echo "[hj1b] ---- purge broken runs from any earlier attempt ----"
+"${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-broken 2>/dev/null | head -2
+
+echo "[hj1b] ---- smoke slice (3 tasks, seed 1) ----"
+timeout 1800 "${PY}" -m sidekick.runner \
+  --system planner_alone --split dev --tasks 3 --seeds 1 \
+  --env appworld --workers 3 \
+  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
+SMOKE_RC=$?
+echo "[hj1b] smoke runner exit=${SMOKE_RC} at $(date -Iseconds)"
+
+echo "[hj1b] ---- smoke gate ----"
+"${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" \
+  --gate --expect-planner --expect-model gpt-5.6-luna --repo "${REPO}"
+GATE_RC=$?
+if [[ "${GATE_RC}" -ne 0 ]]; then
+  echo "[hj1b] ABORT: smoke gate failed, not spending the full campaign" >&2
+  exit 3
+fi
+
+# ---- full campaign: 57 tasks x 2 seeds -------------------------------------
+echo "[hj1b] ---- full campaign (57 tasks, seeds 1,2) ----"
+timeout 14400 "${PY}" -m sidekick.runner \
+  --system planner_alone --split dev --tasks 57 --seeds 1,2 \
+  --env appworld --workers 6 \
+  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
+FULL_RC=$?
+echo "[hj1b] full runner exit=${FULL_RC} at $(date -Iseconds)"
+
+# ---- summary + manifest ----------------------------------------------------
+echo "[hj1b] ---- summary + manifest ----"
+"${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" \
+  --config "${CFG}" --repo "${REPO}" \
+  --manifest "${OUT}/results/${CID}/manifest.json"
+
+echo "[hj1b] codex session transcripts under ~/.codex/sessions modified in this window:"
+find "${HOME}/.codex/sessions" -type f -newermt '-6 hours' 2>/dev/null | wc -l
+
+echo "[hj1b] done rc_smoke=${SMOKE_RC} rc_full=${FULL_RC} end=$(date -Iseconds)"
+if [[ "${FULL_RC}" -ne 0 ]]; then
+  exit 1
+fi
+exit 0

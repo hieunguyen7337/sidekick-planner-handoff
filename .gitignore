@@ -2,4 +2,4 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
-*.egg-info/
+*.egg-info/campaign/workers/logs/
