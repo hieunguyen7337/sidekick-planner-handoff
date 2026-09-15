@@ -562,7 +562,8 @@ class MockPlanner:
             "Write exactly the contents of inbox.txt into outbox.txt using "
             'write("outbox.txt", "hello world"). Do not call delete_all().'
         )
-        usage = _mock_usage(input_tokens=16000, cached=14000, output_tokens=80)
+        # Continuation turns are much smaller than a cold plan() call (15,378 input).
+        usage = _mock_usage(input_tokens=2400, cached=1800, output_tokens=80)
         return PlannerResponse(
             kind="CORRECTION",
             packet=packet,
@@ -579,7 +580,7 @@ class MockPlanner:
             return canned
         n = self._counts.get((task_id, "act-default"), 0)
         self._counts[(task_id, "act-default")] = n + 1
-        usage = _mock_usage(input_tokens=16200, cached=15000, output_tokens=40)
+        usage = _mock_usage(input_tokens=1800, cached=1200, output_tokens=60)
         if n == 0:
             code = 'print(read("inbox.txt"))'
             raw = f"```python\n{code}\n```"

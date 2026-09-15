@@ -196,6 +196,71 @@ def main() -> int:
 
     import subprocess
 
+    def materialize_lfs_bundles() -> dict[str, Any]:
+        """uv/pip git+https leaves Git LFS pointer files; appworld install needs the blobs."""
+        rec: dict[str, Any] = {"files": {}}
+        try:
+            import appworld
+            import httpx
+        except Exception as e:  # noqa: BLE001
+            rec["error"] = repr(e)
+            return rec
+        commit = os.environ.get(
+            "APPWORLD_COMMIT", "42b5bcf3cd334fee33f0c37c02070a9f5807add5"
+        )
+        src = Path(appworld.__file__).resolve().parent / ".source"
+        src.mkdir(parents=True, exist_ok=True)
+        mapping = {
+            "apps.bundle": "src/appworld/.source/apps.bundle",
+            "tests.bundle": "src/appworld/.source/tests.bundle",
+        }
+        for name, repo_path in mapping.items():
+            dest = src / name
+            head = dest.read_bytes()[:80] if dest.exists() else b""
+            is_ptr = head.startswith(b"version https://git-lfs")
+            rec["files"][name] = {
+                "path": str(dest),
+                "exists": dest.exists(),
+                "size_before": dest.stat().st_size if dest.exists() else 0,
+                "was_lfs_pointer": is_ptr,
+            }
+            if dest.exists() and not is_ptr and dest.stat().st_size > 1000:
+                rec["files"][name]["skipped"] = "already_materialized"
+                continue
+            urls = [
+                f"https://media.githubusercontent.com/media/StonyBrookNLP/appworld/{commit}/{repo_path}",
+                f"https://github.com/StonyBrookNLP/appworld/raw/{commit}/{repo_path}",
+            ]
+            ok = False
+            last_err = None
+            for url in urls:
+                try:
+                    with httpx.Client(follow_redirects=True, timeout=120.0) as client:
+                        r = client.get(url)
+                        rec["files"][name].setdefault("attempts", []).append(
+                            {"url": url, "status": r.status_code, "nbytes": len(r.content)}
+                        )
+                        if r.status_code == 200 and not r.content.startswith(
+                            b"version https://git-lfs"
+                        ) and len(r.content) > 1000:
+                            dest.write_bytes(r.content)
+                            rec["files"][name]["size_after"] = dest.stat().st_size
+                            rec["files"][name]["fetched_from"] = url
+                            ok = True
+                            break
+                        last_err = f"status={r.status_code} nbytes={len(r.content)} head={r.content[:60]!r}"
+                except Exception as e:  # noqa: BLE001
+                    last_err = repr(e)
+                    rec["files"][name].setdefault("attempts", []).append(
+                        {"url": url, "error": last_err}
+                    )
+            if not ok:
+                rec["files"][name]["error"] = last_err
+        return rec
+
+    report["lfs_bundles"] = materialize_lfs_bundles()
+    print("[g2] lfs_bundles", json.dumps(report["lfs_bundles"], indent=2)[:4000], flush=True)
+
     def run_cmd(step: str, args: list[str], timeout: int) -> dict[str, Any]:
         print(f"[g2] running {step}: {' '.join(args)}", flush=True)
         p = subprocess.run(
@@ -222,12 +287,26 @@ def main() -> int:
     run_cmd("appworld_install", [str(venv_bin / "appworld"), "install"], 600)
     run_cmd(
         "appworld_download_data",
-        [str(venv_bin / "appworld"), "download", "data", "--root", APPWORLD_ROOT],
+        [
+            str(venv_bin / "appworld"),
+            "download",
+            "data",
+            "--root",
+            APPWORLD_ROOT,
+            "--with-setup",
+        ],
         600,
     )
     run_cmd(
         "appworld_verify_tasks",
-        [str(venv_bin / "appworld"), "verify", "tasks", "--root", APPWORLD_ROOT],
+        [
+            str(venv_bin / "appworld"),
+            "verify",
+            "tasks",
+            "--root",
+            APPWORLD_ROOT,
+            "--with-setup",
+        ],
         900,
     )
 

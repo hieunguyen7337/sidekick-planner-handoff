@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N u1-g3
 #PBS -q gpu_inter
-#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
+#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb:qlist=gpu_inter_exec
 #PBS -l walltime=02:00:00
 #PBS -j oe
 #PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/U1_g3_granite.out

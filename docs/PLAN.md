@@ -165,6 +165,17 @@ Apache-2.0; the protected bundle may only be redistributed encrypted, and traini
 explicitly allowed [verified]. Install from a **pinned commit of `main`**, not PyPI: the released
 `0.1.3.post1` lags `main` significantly. Data bundle is ~35 MB.
 
+⚠ **Installing AppWorld from git needs a Git LFS workaround on this cluster** [measured, gate G2].
+AppWorld ships its app implementations and evaluation tests as encrypted `.bundle` files tracked in Git
+LFS. A `pip install git+https://…` does **not** fetch LFS objects, and `git-lfs` is not installed here,
+so both bundles arrive as 131-byte pointer stubs and `appworld install` fails with "is a Git LFS pointer
+and not a bundle file". Fix: fetch each object over plain HTTPS from
+`https://media.githubusercontent.com/media/StonyBrookNLP/appworld/<commit>/src/appworld/.source/<name>.bundle`
+and verify it against the `oid sha256` recorded in the pointer it replaces. Both objects were confirmed
+to return HTTP 200 at their declared sizes (`apps.bundle` 193,950 B, `tests.bundle` 204,701 B).
+`scripts/setup/fix_appworld_lfs.sh` automates this and refuses to install a bundle whose checksum does
+not match.
+
 **750 tasks over 250 scenarios: train 105 / dev 60 / test_normal 168 / test_challenge 417**, where
 test_challenge requires apps unseen in train [verified].
 
