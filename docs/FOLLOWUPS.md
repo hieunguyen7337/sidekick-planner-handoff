@@ -134,6 +134,15 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
   by prompting — **the trained Sidekick executor should have this suppressed in SFT**, since every
   hallucinated observation is a training-time distribution mismatch with the real transcript.
 
+- **Fenced-code extraction is implemented twice, and the copies have now diverged.**
+  `_PYTHON_FENCE_RE` in `src/sidekick/agents/planner.py:468` serves the planner path;
+  `_FENCE_LAZY_RE` / `_PY_TAG_RE` in `src/sidekick/protocols/schemas.py` serve the executor
+  path. Tonight only the second gained `<py>` tolerance and salvage of a fence truncated by a
+  token limit, so a planner reply cut off mid-block silently yields `code=None` and falls
+  through to a parse error. Not yet observed — luna's replies are short and well-formed — but
+  it is a latent divergence between two arms of the same experiment, and the planner path
+  should call the shared parser instead of keeping its own regex.
+
 - **`_FENCE_RE` was greedy, so two fenced blocks in one reply captured the prose between them.**
   Latent until now because earlier models emitted one block. Greedy is nonetheless required for a
   block containing a nested ``` inside a triple-quoted string (there is a test pinning it), so the
