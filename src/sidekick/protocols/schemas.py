@@ -153,6 +153,7 @@ class ActionParseError(ValueError):
 _FENCE_LAZY_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n(.*?)```", re.DOTALL | re.IGNORECASE)
 _FENCE_GREEDY_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n(.*)```", re.DOTALL | re.IGNORECASE)
 _FENCE_OPEN_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n", re.IGNORECASE)
+_TRAILING_BACKTICKS_RE = re.compile(r"`+[ \t]*\r?\n?\s*$")
 # Granite 4.2 with thinking off does not reach for a markdown fence: it emits its
 # native tool-call shape, `<tool_call><py>...</py>`, even though no tools are declared.
 # Observed 2026-09-15: every executor_alone episode died parse_error at step 1 while the
@@ -184,8 +185,16 @@ def _fenced_block(raw: str) -> tuple[int, str] | None:
         open_fence = _FENCE_OPEN_RE.search(raw)
         if open_fence:
             tail = raw[open_fence.end():]
-            if _parses(tail):
-                return open_fence.start(), tail
+            # Also try it with a fumbled closing fence trimmed. Observed 2026-09-15,
+            # planner_alone run 383cbac_3 seed 2: the model closed with two backticks
+            # instead of three, so nothing matched a close, and
+            #   print(apis.supervisor.complete_task(answer=42, status="success"))
+            # -- a correct answer -- was discarded as unparseable and the episode scored
+            # 0.0. Both candidates still have to compile, so this cannot turn prose into
+            # an action.
+            for candidate in (tail, _TRAILING_BACKTICKS_RE.sub("", tail)):
+                if _parses(candidate):
+                    return open_fence.start(), candidate
         return None
     if _parses(lazy.group(1)):
         return lazy.start(), lazy.group(1)

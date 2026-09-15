@@ -51,6 +51,14 @@ are docs and tests. Any future change to the `ASK_PLANNER`/`REPORT`/`COMPLETE` l
 to `_maybe_python_fence`, to the planner client, or to `AppWorldEnv` invalidates this and the
 arm must be re-run.
 
+⚠ One known loss the planner arm keeps. Run `383cbac_3` seed 2 scored 0.0 because the model
+closed its code fence with two backticks instead of three, so
+`print(apis.supervisor.complete_task(answer=42, status="success"))` — a correct answer —
+was discarded as unparseable. The parser learned to salvage that afterwards, verified against
+the recorded bytes, but the fix landed while the arm was running and cannot apply to it. One
+episode in 86, and it biases **against** `planner_alone`, so it makes the ≥20 pp gate harder
+to pass rather than easier. Left as-is rather than re-running the arm for 1.2%.
+
 ⚠ Uncovered by the above: there are **two independent implementations of fenced-code
 extraction** — `_PYTHON_FENCE_RE` in the planner client and `_FENCE_LAZY_RE`/`_PY_TAG_RE` in
 `schemas.py` — and tonight they diverged. The schemas one now tolerates a `<py>` tag and a

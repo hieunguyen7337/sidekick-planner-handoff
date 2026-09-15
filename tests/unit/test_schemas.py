@@ -278,6 +278,16 @@ def test_parse_salvages_a_fence_truncated_by_max_tokens():
     assert a.code.endswith("print(songs)")
 
 
+def test_parse_recovers_a_fence_closed_with_two_backticks():
+    # Observed 2026-09-15 in planner_alone 383cbac_3 seed 2: a correct answer discarded
+    # because the model typed `` instead of ``` to close.
+    raw = '```python\nprint(apis.supervisor.complete_task(answer=42, status="success"))\n``\n'
+    a = parse_executor_action(raw)
+    assert a.kind == "CODE"
+    assert a.code.startswith("print(apis.supervisor.complete_task(")
+    assert "`" not in a.code
+
+
 def test_parse_refuses_a_truncated_fence_that_is_not_valid_python():
     # Half a statement is worse than no action: it would run against a live environment.
     with pytest.raises(ActionParseError):
