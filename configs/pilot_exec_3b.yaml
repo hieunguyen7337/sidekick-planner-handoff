@@ -1,0 +1,19 @@
+env: appworld
+campaign_id: hj1a_exec3b_20260915
+planner:
+  type: mock          # never called by executor_alone; must not be codex
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-3b
+  base_url: http://127.0.0.1:8000
+  temperature: 0.7
+  max_tokens: 1024
+  timeout_s: 120
+appworld:
+  root: /scratch/n12194778/sidekick/appworld
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 32000
+  per_step_timeout_s: 120
+  max_planner_calls: 25
+prices: configs/cost/prices_2026-09.yaml

@@ -1,0 +1,283 @@
+#!/bin/bash
+#PBS -N hj1a-exec
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
+#PBS -l walltime=05:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/U7_hj1a.out
+#
+# U7 — HJ-1 Class A executor_alone: 8B then 3B sequentially on one GPU. Zero planner calls
+# (planner.type: mock in both configs; system executor_alone never constructs one).
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+cd "${REPO}"
+mkdir -p "${LOGDIR}" "${OUT}/results"
+
+VLLM_PID=""
+FAILED=0
+
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
+    kill "${VLLM_PID}" 2>/dev/null || true
+    for _ in $(seq 1 12); do
+      kill -0 "${VLLM_PID}" 2>/dev/null || break
+      sleep 5
+    done
+    kill -9 "${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+  pkill -f "vllm serve" 2>/dev/null || true
+  sleep 5
+  echo "[u7] GPU after shutdown:"
+  nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+  nvidia-smi --query-compute-apps=pid,process_name --format=csv,noheader || true
+}
+
+start_vllm () { # $1 model, $2 extra flags string, $3 log path
+  local model="$1" extra="$2" log="$3"
+  # shellcheck disable=SC2086
+  "${SIDEKICK_VENV}/bin/vllm" serve "${model}" \
+    --served-model-name "${model}" \
+    --dtype bfloat16 \
+    --max-model-len 32768 \
+    --host 127.0.0.1 --port 8000 \
+    --gpu-memory-utilization 0.85 \
+    ${extra} > "${log}" 2>&1 &
+  VLLM_PID=$!
+  echo "[u7] vllm serve ${model} pid=${VLLM_PID} extra='${extra}'"
+}
+
+wait_healthy () { # $1 model, $2 log; 300 s budget
+  local model="$1" log="$2"
+  local t0 deadline
+  t0=$(date +%s); deadline=$((t0 + 300))
+  while (( $(date +%s) < deadline )); do
+    if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+      echo "[u7] FATAL: vllm died before healthy (${model}); log tail:"; tail -n 60 "${log}"
+      return 1
+    fi
+    if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+      echo "[u7] vllm healthy for ${model} after $(( $(date +%s) - t0 ))s"
+      return 0
+    fi
+    sleep 5
+  done
+  echo "[u7] FATAL: vllm not healthy within 300s (${model}); log tail:"
+  tail -n 60 "${log}"
+  return 1
+}
+
+# $1 model, $2 config path, $3 campaign_id, $4 vllm log path
+run_model () {
+  local model="$1" cfg="$2" cid="$3" vlog="$4"
+  local parser="" extra="" t_start t_end
+  parser=$(find "${HF_HOME}/hub/models--${model//\//--}" -name granite_thinking_parser.py 2>/dev/null | head -n 1 || true)
+  echo "[u7] === ${model} (${cid}) start=$(date -Iseconds) parser=${parser:-none} ==="
+  t_start=$(date -Iseconds)
+
+  local started=0
+  if [[ -n "${parser}" ]]; then
+    extra="--tool-call-parser qwen3_coder --enable-auto-tool-choice --reasoning-parser granite_thinking_parser --reasoning-parser-plugin ${parser}"
+    start_vllm "${model}" "${extra}" "${vlog}"
+    if wait_healthy "${model}" "${vlog}"; then started=1; fi
+  fi
+  if [[ "${started}" -ne 1 ]]; then
+    kill_vllm
+    start_vllm "${model}" "" "${vlog}"
+    if ! wait_healthy "${model}" "${vlog}"; then
+      kill_vllm
+      echo "[u7] FATAL: could not start vLLM for ${model}; aborting this model"
+      return 1
+    fi
+  fi
+
+  # --- smoke gate (do not skip) ---
+  echo "[u7] --- ${model} smoke gate ---"
+  "${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
+    --system executor_alone --split dev --tasks 3 --seeds 1 \
+    --env appworld --workers 3 \
+    --config "${cfg}" --out "${OUT}"
+  local smoke_rc=$?
+  if [[ "${smoke_rc}" -ne 0 ]]; then
+    echo "[u7] FATAL: smoke runner exited ${smoke_rc} for ${model}"
+    kill_vllm; return 1
+  fi
+  "${SIDEKICK_VENV}/bin/python" - "${OUT}/${cid}" <<'PY'
+import json, sys, pathlib
+root = pathlib.Path(sys.argv[1])
+results = sorted(root.glob("executor_alone/*/*/result.json"))
+if not results:
+    print("[gate] FAIL: no result.json files"); sys.exit(1)
+crashed = 0; parseable = 0
+for r in results:
+    d = json.loads(r.read_text())
+    if d.get("error_type") in ("crash", "timeout"):
+        crashed += 1
+    ev = r.parent / "events.jsonl"
+    if ev.exists():
+        for line in ev.read_text().splitlines():
+            try:
+                e = json.loads(line)
+            except Exception:
+                continue
+            if e.get("event_type") == "action":
+                parseable += 1
+print(f"[gate] runs={len(results)} crashed_or_timed_out={crashed} parseable_actions={parseable}")
+if crashed == len(results):
+    print("[gate] FAIL: all runs crashed or timed out"); sys.exit(1)
+if parseable == 0:
+    print("[gate] FAIL: zero parseable actions"); sys.exit(1)
+print("[gate] PASS")
+PY
+  local gate_rc=$?
+  if [[ "${gate_rc}" -ne 0 ]]; then
+    echo "[u7] FATAL: smoke gate failed for ${model} (rc=${gate_rc})"
+    kill_vllm; return 1
+  fi
+
+  # --- full campaign ---
+  echo "[u7] --- ${model} campaign ---"
+  "${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
+    --system executor_alone --split dev --tasks 57 --seeds 1,2 \
+    --env appworld --workers 10 \
+    --config "${cfg}" --out "${OUT}"
+  local camp_rc=$?
+  t_end=$(date -Iseconds)
+
+  # --- manifest ---
+  "${SIDEKICK_VENV}/bin/python" - "${cid}" "${cfg}" "${t_start}" "${t_end}" <<'PY'
+import hashlib, json, os, pathlib, socket, subprocess, sys
+from datetime import datetime, timezone
+
+cid, cfg_path, t_start, t_end = sys.argv[1:5]
+repo = pathlib.Path("/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15")
+hf = pathlib.Path(os.environ.get("HF_HOME", "/scratch/n12194778/hf"))
+out_root = pathlib.Path("/scratch/n12194778/sidekick/results")
+camp_dir = out_root / cid
+
+def git(*args):
+    try:
+        return subprocess.run(["git", "-C", str(repo), *args],
+                              capture_output=True, text=True, timeout=30).stdout.strip()
+    except Exception:
+        return None
+
+try:
+    import vllm
+    vllm_version = vllm.__version__
+except Exception as e:
+    vllm_version = f"unavailable: {e!r}"
+
+def hf_revision(model_id):
+    if not model_id:
+        return None
+    p = hf / "hub" / ("models--" + model_id.replace("/", "--")) / "refs" / "main"
+    try:
+        return p.read_text().strip()
+    except Exception:
+        return None
+
+model_id = None
+for line in pathlib.Path(cfg_path).read_text().splitlines():
+    s = line.strip()
+    if s.startswith("model:"):
+        model_id = s.split(":", 1)[1].strip()
+        break
+
+results = sorted(camp_dir.glob("executor_alone/*/*/result.json"))
+recs = []
+for r in results:
+    try:
+        recs.append(json.loads(r.read_text()))
+    except Exception:
+        pass
+n_planner = sum(int(d.get("n_planner_calls") or 0) for d in recs)
+exec_tokens = sum(float((d.get("totals") or {}).get("executor_tokens_total") or 0) for d in recs)
+gpu_seconds = sum(float((d.get("totals") or {}).get("gpu_seconds_total") or 0) for d in recs)
+steps = [int(d.get("steps") or 0) for d in recs]
+per_seed = {}
+for d in recs:
+    s = str(d.get("seed"))
+    a = per_seed.setdefault(s, {"n": 0, "success": 0, "tgc": [], "tok": []})
+    a["n"] += 1
+    a["success"] += 1 if d.get("success") else 0
+    if d.get("tgc") is not None:
+        a["tgc"].append(float(d["tgc"]))
+    a["tok"].append(float((d.get("totals") or {}).get("executor_tokens_total") or 0))
+summary = {}
+for s, a in per_seed.items():
+    summary[s] = {
+        "runs": a["n"],
+        "task_goal_completion_rate": round(a["success"] / a["n"], 4) if a["n"] else None,
+        "mean_tgc": round(sum(a["tgc"]) / len(a["tgc"]), 4) if a["tgc"] else None,
+        "mean_executor_tokens_per_episode": round(sum(a["tok"]) / len(a["tok"]), 1) if a["tok"] else None,
+    }
+by_task = {}
+for d in recs:
+    by_task.setdefault(d.get("task_id"), {})[str(d.get("seed"))] = bool(d.get("success"))
+shared = [v for v in by_task.values() if "1" in v and "2" in v]
+diff = sum(1 for v in shared if v["1"] != v["2"]) if shared else 0
+err_types = {d.get("error_type") for d in recs if d.get("error_type")}
+
+manifest = {
+    "campaign_id": cid,
+    "system": "executor_alone",
+    "split": "dev",
+    "n_tasks": 57,
+    "seeds": [1, 2],
+    "model": model_id,
+    "git_commit": git("rev-parse", "HEAD"),
+    "vllm_version": vllm_version,
+    "hf_revision": hf_revision(model_id),
+    "appworld_commit": (pathlib.Path("/scratch/n12194778/sidekick/appworld.commit").read_text().strip()
+                        if pathlib.Path("/scratch/n12194778/sidekick/appworld.commit").exists() else None),
+    "config_path": cfg_path,
+    "config_sha256": hashlib.sha256(pathlib.Path(cfg_path).read_bytes()).hexdigest(),
+    "hostname": socket.gethostname(),
+    "pbs_job_id": os.environ.get("PBS_JOBID"),
+    "start_ts": t_start,
+    "end_ts": t_end,
+    "n_result_json": len(recs),
+    "total_executor_tokens": exec_tokens,
+    "total_gpu_seconds": gpu_seconds,
+    "total_planner_calls": n_planner,
+    "mean_steps_per_episode": round(sum(steps) / len(steps), 2) if steps else None,
+    "per_seed": summary,
+    "seed1_seed2_success_differ_frac": round(diff / len(shared), 4) if shared else None,
+    "error_type_counts": {k: sum(1 for d in recs if d.get("error_type") == k) for k in err_types},
+    "generated_utc": datetime.now(timezone.utc).isoformat(),
+}
+dest = out_root / "results" / cid
+dest.mkdir(parents=True, exist_ok=True)
+(dest / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+print(json.dumps(manifest, indent=2))
+PY
+  local man_rc=$?
+  echo "[u7] manifest rc=${man_rc} for ${cid}"
+  kill_vllm
+  echo "[u7] === ${model} done end=$(date -Iseconds) campaign_rc=${camp_rc} ==="
+  return "${camp_rc}"
+}
+
+T_ALL0=$(date +%s)
+run_model ibm-granite/granite-4.2-8b configs/pilot_exec_8b.yaml hj1a_exec8b_20260915 "${LOGDIR}/hj1a_vllm_8b.log" \
+  || { echo "[u7] 8B arm FAILED"; FAILED=1; }
+run_model ibm-granite/granite-4.2-3b configs/pilot_exec_3b.yaml hj1a_exec3b_20260915 "${LOGDIR}/hj1a_vllm_3b.log" \
+  || { echo "[u7] 3B arm FAILED"; FAILED=1; }
+echo "[u7] total wall $(( $(date +%s) - T_ALL0 ))s, FAILED=${FAILED}, done=$(date -Iseconds)"
+exit "${FAILED}"
+
