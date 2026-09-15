@@ -1,0 +1,23 @@
+#!/bin/bash
+#PBS -N u1-env
+#PBS -q cpu_inter
+#PBS -l select=1:ncpus=8:mem=32gb
+#PBS -l walltime=02:30:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/U1_env_build.out
+
+set -euo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export SIDEKICK_SCRATCH=/scratch/n12194778/sidekick
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export APPWORLD_COMMIT=42b5bcf3cd334fee33f0c37c02070a9f5807add5
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+cd "${REPO}"
+echo "[pbs] host=$(hostname) job=${PBS_JOBID} start=$(date -Iseconds)"
+bash "${REPO}/scripts/setup/build_env.sh"
+echo "[pbs] env build exit=$? at $(date -Iseconds)"
+echo "[pbs] fetching models next"
+bash "${REPO}/scripts/setup/fetch_models.sh"
+echo "[pbs] fetch exit=$? at $(date -Iseconds)"
+echo "[pbs] done"

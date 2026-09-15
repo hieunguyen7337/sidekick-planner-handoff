@@ -1,0 +1,7 @@
+schedule_date: "2026-09-15"
+source: "developers.openai.com/api/docs/models/gpt-5.6-luna (list price, 2026-09-15)"
+models:
+  gpt-5.6-luna:      {input: 0.20, cached_input: 0.02, output: 1.20}   # USD per 1M tokens
+  gpt-5.6-terra:     {input: 2.00, cached_input: 0.20, output: 12.00}
+local:
+  usd_per_gpu_hour: 2.50    # assumption for amortised H100; documented, not a measurement

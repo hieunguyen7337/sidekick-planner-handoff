@@ -1,0 +1,34 @@
+#!/bin/bash
+#PBS -N u1-g3
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
+#PBS -l walltime=02:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/U1_g3_granite.out
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export SIDEKICK_SCRATCH=/scratch/n12194778/sidekick
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export SIDEKICK_LORA_OUT=/scratch/n12194778/sidekick/artifacts/adapters/smoke_lora
+export SIDEKICK_MODEL=ibm-granite/granite-4.2-8b
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export VLLM_ALLOW_RUNTIME_LORA_UPDATING=1
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+cd "${REPO}"
+echo "[pbs] host=$(hostname) job=${PBS_JOBID} start=$(date -Iseconds)"
+nvidia-smi || true
+echo "[pbs] ---- LoRA smoke ----"
+"${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/g3_lora_smoke.py"
+LORA_RC=$?
+echo "[pbs] lora smoke exit=${LORA_RC} at $(date -Iseconds)"
+echo "[pbs] ---- vLLM serve + probe ----"
+bash "${REPO}/scripts/setup/g3_serve_granite.sh"
+SERVE_RC=$?
+echo "[pbs] serve exit=${SERVE_RC} at $(date -Iseconds)"
+echo "[pbs] done"
+if [[ "${LORA_RC}" -ne 0 || "${SERVE_RC}" -ne 0 ]]; then
+  exit 1
+fi
+exit 0
