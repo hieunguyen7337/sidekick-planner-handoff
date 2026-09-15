@@ -18,7 +18,9 @@ executor:
   type: mock          # never called by planner_alone; must not be vllm
 limits:
   max_steps: 40
-  max_tokens_per_episode: 32000
+  max_tokens_per_episode: 2000000   # non-binding: max_planner_calls=25 is the real limit.
+  # 32000 made every episode die at step 2 -- each codex call resends the whole
+  # transcript on ~15.4k scaffolding, so 2 calls cost 88k input tokens.
   per_step_timeout_s: 120
   max_planner_calls: 25
 prices: configs/cost/prices_2026-09.yaml

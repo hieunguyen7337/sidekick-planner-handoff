@@ -108,6 +108,20 @@ def gate(summary: dict, *, expect_planner: bool, expect_model: str | None) -> li
     elif summary["n_broken"] == summary["n_runs"]:
         fails.append(f"every run failed with {summary['errors']}")
 
+    # A run that ends on `limit` after a couple of steps is degenerate: the episode
+    # token budget ended the episode, not the task. That is a broken configuration,
+    # not a low score, and it silently makes an arm score zero everywhere. Seen for
+    # real on 2026-09-15: max_tokens_per_episode=32000 killed planner_alone at step 2,
+    # because each codex call resends the transcript on ~15.4k of scaffolding.
+    if summary["n_runs"]:
+        n_limit = summary["errors"].get("limit", 0)
+        frac = n_limit / summary["n_runs"]
+        if frac >= 0.8 and (summary["steps_mean"] or 0) < 5:
+            fails.append(
+                f"{frac:.0%} of runs ended on 'limit' after only {summary['steps_mean']} "
+                f"steps on average -- the episode token budget is ending episodes, not the task"
+            )
+
     models = summary["planner_models"]
     if expect_planner:
         if summary["planner_calls_total"] == 0:
