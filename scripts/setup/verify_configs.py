@@ -27,6 +27,7 @@ EXPECTED = {
 # free and meaningless; a mock executor makes it need no GPU and measure nothing.
 BOTH_LIVE = {
     "configs/pilot_prompt_only.yaml": ("vllm-executor", "CodexExecPlanner"),
+    "configs/pilot_fixed_k.yaml": ("vllm-executor", "CodexExecPlanner"),
 }
 
 failures: list[str] = []

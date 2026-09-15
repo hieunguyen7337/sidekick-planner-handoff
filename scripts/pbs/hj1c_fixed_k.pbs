@@ -1,0 +1,183 @@
+#!/bin/bash
+#PBS -N hj1c-fixedk
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
+#PBS -l walltime=04:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/U9_hj1c_fixedk.out
+#
+# HJ-1 Class C, fixed_k (k=5): gpt-5.6-luna reviews every 5 steps instead of planning once.
+# prompt_only scored 0.000 -- identical to executor_alone -- so this asks the follow-up
+# directly: does PERIODIC re-entry help where one-shot planning did not? It is also the
+# cost-matched control sidekick must beat, by spending planner calls at chosen moments
+# rather than on a fixed clock.
+# Planner cost is ~9 calls per episode (1 plan + ~8 reviews over 40 steps), so ~1,000 for
+# the arm. Codex is on a ChatGPT plan: no per-token billing, but plan quota is NOT
+# observable from a batch job, so this fails loudly rather than stalling quietly. If the
+# quota is exhausted the job dies with planner errors and costs nothing but time.
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u9] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+CID=hj1c_fixed_k_20260916
+CFG="${REPO}/configs/pilot_fixed_k.yaml"
+VLOG="${LOGDIR}/hj1c_fixedk_vllm_8b.log"
+MODEL=ibm-granite/granite-4.2-8b
+cd "${REPO}"
+mkdir -p "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
+
+VLLM_PID=""
+
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
+    kill "${VLLM_PID}" 2>/dev/null || true
+    for _ in $(seq 1 12); do kill -0 "${VLLM_PID}" 2>/dev/null || break; sleep 5; done
+    kill -9 "${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+  pkill -f "vllm serve" 2>/dev/null || true
+  pkill -f "EngineCore" 2>/dev/null || true
+  sleep 5
+  echo "[u9] GPU after shutdown:"
+  nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+}
+
+# ---- preflight: the planner must be reachable BEFORE a GPU is held ------------
+echo "[u9] ---- preflight ----"
+if ! command -v codex >/dev/null 2>&1; then
+  echo "[u9] FATAL: codex not on PATH"; exit 1
+fi
+if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+  echo "[u9] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate"
+  exit 1
+fi
+echo "[u9] codex $(codex --version 2>/dev/null || echo '?')"
+
+# ---- vLLM --------------------------------------------------------------------
+kill_vllm
+"${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+  --served-model-name "${MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len 32768 \
+  --host 127.0.0.1 --port 8000 \
+  --gpu-memory-utilization 0.85 > "${VLOG}" 2>&1 &
+VLLM_PID=$!
+echo "[u9] vllm serve ${MODEL} pid=${VLLM_PID}"
+t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+while (( $(date +%s) < deadline )); do
+  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+    echo "[u9] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+  fi
+  if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+    echo "[u9] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  fi
+  sleep 5
+done
+if [[ "${healthy}" -ne 1 ]]; then
+  echo "[u9] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
+fi
+
+# ---- smoke gate, in its own campaign, wiped every time ------------------------
+# A gate that can pass or fail on cached results is not a gate; see hj1a for the incident
+# that established this. It also has to prove BOTH halves are live: the executor parses,
+# and the planner is actually being called. A silent fallback to MockPlanner would produce
+# a plausible arm that cost nothing and meant nothing.
+SCID="${CID}_smoke"
+rm -rf "${OUT:?}/${SCID:?}"
+echo "[u9] ---- smoke gate (${SCID}) ----"
+"${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
+  --system fixed_k --split dev --tasks 3 --seeds 1 \
+  --env appworld --workers 3 \
+  --config "${CFG}" --campaign-id "${SCID}" --out "${OUT}"
+smoke_rc=$?
+if [[ "${smoke_rc}" -ne 0 ]]; then
+  echo "[u9] FATAL: smoke runner exited ${smoke_rc}"; kill_vllm; exit 1
+fi
+"${SIDEKICK_VENV}/bin/python" - "${OUT}/${SCID}" <<'PY'
+import json, sys, pathlib
+root = pathlib.Path(sys.argv[1])
+results = sorted(root.glob("fixed_k/*/*/result.json"))
+if not results:
+    print("[gate] FAIL: no result.json files"); sys.exit(1)
+rows = [json.loads(p.read_text()) for p in results]
+parse_errored = sum(1 for d in rows if d.get("error_type") == "parse_error")
+planner_calls = sum(int(d.get("n_planner_calls") or 0) for d in rows)
+actions = 0
+for p in results:
+    ev = p.parent / "events.jsonl"
+    if ev.exists():
+        for line in ev.read_text().splitlines():
+            try:
+                e = json.loads(line)
+            except Exception:
+                continue
+            if e.get("event_type") == "action":
+                actions += 1
+print(f"[gate] runs={len(rows)} actions={actions} planner_calls={planner_calls} "
+      f"ended_in_parse_error={parse_errored}")
+if planner_calls == 0:
+    print("[gate] FAIL: zero planner calls -- this arm is supposed to USE the planner; "
+          "a silent fallback to MockPlanner would look like a cheap success")
+    sys.exit(1)
+if actions == 0:
+    print("[gate] FAIL: zero parseable actions"); sys.exit(1)
+if parse_errored * 2 > len(rows):
+    print(f"[gate] FAIL: {parse_errored}/{len(rows)} episodes ended in parse_error")
+    sys.exit(1)
+print("[gate] PASS")
+PY
+gate_rc=$?
+if [[ "${gate_rc}" -ne 0 ]]; then
+  echo "[u9] FATAL: smoke gate failed (rc=${gate_rc})"; kill_vllm; exit 1
+fi
+
+# ---- clear failures from earlier attempts so resume retries them --------------
+echo "[u9] ---- purge broken runs from earlier attempts ----"
+"${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${CID}" --purge-broken 2>/dev/null | head -2
+
+# ---- full campaign -----------------------------------------------------------
+echo "[u9] ---- campaign ----"
+"${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
+  --system fixed_k --split dev --tasks 57 --seeds 1,2 \
+  --env appworld --workers 6 \
+  --config "${CFG}" --out "${OUT}"
+camp_rc=$?
+
+# ---- summary + manifest ------------------------------------------------------
+echo "[u9] ---- summary + manifest ----"
+"${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${CID}" \
+  --config "${CFG}" \
+  --manifest "${OUT}/results/${CID}/manifest.json" \
+  --gate --expect-planner --expect-model gpt-5.6-luna
+sum_rc=$?
+echo "[u9] manifest/gate rc=${sum_rc} campaign_rc=${camp_rc}"
+
+kill_vllm
+echo "[u9] done=$(date -Iseconds) campaign_rc=${camp_rc}"
+exit "${camp_rc}"
