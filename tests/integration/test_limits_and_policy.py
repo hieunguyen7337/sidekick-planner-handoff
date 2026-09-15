@@ -6,7 +6,7 @@ from sidekick.agents.executor import MockExecutor
 from sidekick.agents.planner import MockPlanner
 from sidekick.agents.verifier import ConstantVerifier
 from sidekick.environments.mock_env import MockEnv
-from sidekick.systems.loop import RunLimits
+from sidekick.systems.loop import MAX_PARSE_RETRIES, RunLimits
 from sidekick.trajectories.eventlog import EventLog
 
 
@@ -45,17 +45,39 @@ def test_max_tokens_limit_after_plan(run_system) -> None:
     assert result.error_type == "limit"
 
 
-def test_parse_error_is_logged_not_retried(run_system) -> None:
+def test_parse_error_is_retried_then_recovers(run_system) -> None:
+    # Deliberate change of contract, 2026-09-15. This previously asserted that a parse
+    # error ended the episode immediately. That made the score a measure of output-format
+    # luck: granite-4.2 emitted five distinct wrappers in one evening, and one unreadable
+    # step killed the whole run. Worse for HJ-1, a format-crippled executor scores LOW,
+    # which makes the "is there a capability gap" gate easier to pass for the wrong
+    # reason. The loop now asks again, bounded by MAX_PARSE_RETRIES.
     result, events_file, *_ = run_system(
         "executor_alone",
         executor=MockExecutor(script=["this is not an action"]),
+        run_id="parse_retry_ok",
+    )
+    assert result.error_type is None
+    events = list(EventLog.read(events_file))
+    retries = [e for e in events if e.error_type == "parse_error_retry"]
+    assert len(retries) == 1, "the one bad reply should be logged as a retry, not a failure"
+    assert not [e for e in events if e.error_type == "parse_error"]
+
+
+def test_parse_error_gives_up_after_the_retry_budget(run_system) -> None:
+    result, events_file, *_ = run_system(
+        "executor_alone",
+        executor=MockExecutor(script=["not an action"] * 10),
         run_id="parse_err",
     )
     assert result.success is False
     assert result.error_type == "parse_error"
     events = list(EventLog.read(events_file))
-    parse_events = [e for e in events if e.event_type == "error" and e.error_type == "parse_error"]
-    assert len(parse_events) == 1
+    retries = [e for e in events if e.error_type == "parse_error_retry"]
+    failures = [e for e in events if e.event_type == "error" and e.error_type == "parse_error"]
+    # Every retry is logged, so the cost of format non-compliance stays measurable.
+    assert len(retries) == MAX_PARSE_RETRIES
+    assert len(failures) == 1
     assert events[-1].event_type == "run_end"
     assert events[-1].error_type == "parse_error"
 

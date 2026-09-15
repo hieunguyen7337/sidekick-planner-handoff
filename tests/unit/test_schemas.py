@@ -322,6 +322,35 @@ def test_unwrapped_salvage_takes_the_action_not_the_hallucinated_reply():
     assert "Transaction(" not in a.code
 
 
+def test_unwrapped_salvage_handles_tags_it_has_never_seen():
+    # Observed 2026-09-15: </sandbox>, which was in no enumerated list. The rule is the
+    # SHAPE of a wrapper line, not a list of tag names.
+    raw = "\n<tool_call>\npython\nprint(apis.spotify.login())\n</sandbox>\n"
+    assert parse_executor_action(raw).code == "print(apis.spotify.login())"
+
+
+def test_unwrapped_salvage_handles_tag_and_marker_on_one_line():
+    raw = "\n</think>\n<tool_call> python\nprint(apis.venmo.login())\n"
+    assert parse_executor_action(raw).code == "print(apis.venmo.login())"
+
+
+def test_unwrapped_salvage_rejects_a_bare_data_literal():
+    # A hallucinated environment reply contains calls and compiles cleanly; executing it
+    # would raise NameError on the model's own invention.
+    raw = "<tool_call>\n[Transaction(id='txn_001', amount=25.0)]\n</tool_call>"
+    with pytest.raises(ActionParseError):
+        parse_executor_action(raw)
+
+
+def test_wrapper_line_rule_does_not_eat_real_python():
+    # Guard against the shape rule being too greedy: ordinary code must survive.
+    raw = "<tool_call>\nfor s in songs:\n    if s['plays'] > 10:\n        print(s)\n</tool_call>"
+    a = parse_executor_action(raw)
+    assert a.kind == "CODE"
+    assert "for s in songs:" in a.code
+    assert "print(s)" in a.code
+
+
 def test_unwrapped_salvage_will_not_execute_a_bare_complete():
     # "COMPLETE" is a valid Python expression (a Name), so compile() alone would accept
     # it and the environment would raise NameError instead of completing the task.

@@ -32,6 +32,12 @@ DEFAULT_MAX_STEPS = 40
 DEFAULT_MAX_TOKENS_PER_EPISODE = 32000
 DEFAULT_PER_STEP_TIMEOUT_S = 120.0
 DEFAULT_MAX_PLANNER_CALLS = 25
+# Extra attempts allowed when the executor's reply cannot be read as an action. Two, not
+# more: a model that has missed the format three times running is not going to find it on
+# the fourth, and the retries are charged to the episode's token budget like any other
+# call. Each retry is logged as `parse_error_retry`, so the cost of format non-compliance
+# stays visible instead of being absorbed into the score.
+MAX_PARSE_RETRIES = 2
 
 
 @dataclass
@@ -297,45 +303,80 @@ def run_episode(
         messages = _executor_messages(
             env.instruction, packet, "\n".join(transcript), env.api_docs_prompt
         )
-        try:
-            text, usage = call_with_timeout(
-                lambda: executor.complete(
-                    messages,
-                    lora_name=policy.adapter_name,
-                    task_id=task_id,
-                ),
-                timeout_s,
-            )
-        except TimeoutError as exc:
-            usage = Usage(
-                model=getattr(executor, "name", "executor"),
-                provider="mock",
-                n_calls=1,
-                raw={"error_type": "timeout"},
-            )
+        # One unparseable generation used to end the episode outright. That makes the
+        # score a measure of output-format luck rather than task ability: Granite 4.2
+        # produced five distinct wrappers on 2026-09-15, so at even a few percent per
+        # step, a 13-step episode dies on format alone about a third of the time -- and a
+        # format-crippled executor scores LOW, which makes HJ-1's "is there a capability
+        # gap" gate easier to pass for entirely the wrong reason. Ask again instead,
+        # bounded, and log every retry so the format burden stays measurable rather than
+        # hidden inside the score.
+        action: ExecutorAction | None = None
+        for attempt in range(MAX_PARSE_RETRIES + 1):
+            try:
+                text, usage = call_with_timeout(
+                    lambda: executor.complete(
+                        messages,
+                        lora_name=policy.adapter_name,
+                        task_id=task_id,
+                    ),
+                    timeout_s,
+                )
+            except TimeoutError as exc:
+                usage = Usage(
+                    model=getattr(executor, "name", "executor"),
+                    provider="mock",
+                    n_calls=1,
+                    raw={"error_type": "timeout"},
+                )
+                charge("executor", usage)
+                emit(
+                    step=step,
+                    actor="executor",
+                    event_type="error",
+                    payload={"detail": str(exc)},
+                    usage=usage,
+                    error="timeout",
+                )
+                error_type = "timeout"
+                return None
             charge("executor", usage)
-            emit(
-                step=step,
-                actor="executor",
-                event_type="error",
-                payload={"detail": str(exc)},
-                usage=usage,
-                error="timeout",
-            )
-            error_type = "timeout"
-            return None
-        charge("executor", usage)
-        try:
-            action = parse_executor_action(text)
-        except ActionParseError as exc:
-            emit(
-                step=step,
-                actor="executor",
-                event_type="error",
-                payload={"raw_output": exc.raw_output[:4000]},
-                usage=usage,
-                error="parse_error",
-            )
+            try:
+                action = parse_executor_action(text)
+                break
+            except ActionParseError as exc:
+                if attempt >= MAX_PARSE_RETRIES:
+                    emit(
+                        step=step,
+                        actor="executor",
+                        event_type="error",
+                        payload={"raw_output": exc.raw_output[:4000], "attempts": attempt + 1},
+                        usage=usage,
+                        error="parse_error",
+                    )
+                    error_type = "parse_error"
+                    return None
+                emit(
+                    step=step,
+                    actor="executor",
+                    event_type="error",
+                    payload={"raw_output": exc.raw_output[:2000], "attempt": attempt + 1},
+                    usage=usage,
+                    error="parse_error_retry",
+                )
+                messages = messages + [
+                    {"role": "assistant", "content": text},
+                    {
+                        "role": "user",
+                        "content": (
+                            "That reply could not be read as an action. Reply with exactly "
+                            "one action and nothing else — a ```python fenced block, or a "
+                            "line starting ASK_PLANNER:, REPORT:, or COMPLETE. No "
+                            "explanation, no tags, no expected output."
+                        ),
+                    },
+                ]
+        if action is None:  # pragma: no cover - the loop above always returns or breaks
             error_type = "parse_error"
             return None
         emit(

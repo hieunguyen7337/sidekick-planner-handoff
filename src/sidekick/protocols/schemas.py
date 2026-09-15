@@ -1,6 +1,7 @@
 """Pydantic schemas for the Sidekick seam contract (v1). Do not rename fields."""
 from __future__ import annotations
 
+import ast
 import re
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
@@ -162,6 +163,23 @@ _TRAILING_BACKTICKS_RE = re.compile(r"`+[ \t]*\r?\n?\s*$")
 _PY_TAG_RE = re.compile(r"<py(?:thon)?>[ \t]*\r?\n?(.*?)(?:</py(?:thon)?>|$)", re.DOTALL | re.IGNORECASE)
 
 
+def _is_data_literal(code: str) -> bool:
+    """True if ``code`` is a single bare literal collection or constant, i.e. data.
+
+    Distinguishes an action from a hallucinated environment reply generically, without the
+    parser needing to know anything about AppWorld's API surface.
+    """
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError):
+        return False
+    if len(tree.body) != 1 or not isinstance(tree.body[0], ast.Expr):
+        return False
+    return isinstance(
+        tree.body[0].value, (ast.List, ast.Dict, ast.Tuple, ast.Set, ast.Constant)
+    )
+
+
 def _parses(code: str) -> bool:
     """True if ``code`` is syntactically valid Python. Blank counts as invalid: an empty
     capture is never the block the model meant, it is a sign the delimiters were read
@@ -211,23 +229,28 @@ def _tagged_block(raw: str) -> tuple[int, str] | None:
 
 # Lines that are pure wrapper: an XML-ish tag on its own, a fence, or a bare language
 # marker. Everything Granite has produced so far is real Python inside one of these.
+# A line made of nothing but markup: any XML-ish tag, a fence, a bare language marker, or
+# a stray angle bracket, in any combination.
+#
+# This deliberately does NOT enumerate tag names. Enumerating lost three times in one
+# evening -- the list had tool_call, function, parameter, py, python, code, and the very
+# next sample closed with </sandbox>, then another put the tag and the language marker on
+# one line as `<tool_call> python`. The invariant is not which tags Granite picks, it is
+# that a wrapper line carries no Python. A real line of Python is never composed solely of
+# tags and markers, so matching the shape is both safer and stable under variants nobody
+# has seen yet.
 _WRAPPER_LINE_RE = re.compile(
-    r"^\s*(?:"
-    # a tag on its own line, opening or closing, with or without attributes
-    r"</?(?:tool_call|tool_response|function|parameter|arguments|py|python|code|output|section)\b[^>]*>"
-    # a markdown fence, opening or closing
-    r"|```[a-zA-Z0-9_+-]*"
-    # a bare language marker, including the mangled forms seen in the wild: `python>`
-    r"|<?/?\s*(?:python|py)\s*>?"
-    r")\s*$",
+    r"^\s*(?:(?:"
+    r"</?[A-Za-z][\w.:-]*[^<>]*/?>"      # <tool_call>, </sandbox>, <function=foo>
+    r"|```[A-Za-z0-9_+-]*"                # fence, opening or closing
+    r"|\b(?:python|py)\b"                 # bare language marker
+    r"|[<>]"                              # stray bracket, as in `python>`
+    r")\s*)+$",
     re.IGNORECASE,
 )
 # Salvage only fires when the model was visibly *trying* to delimit code. Without this
 # gate, prose that happens to be a valid Python expression could be executed.
-_WRAPPER_HINT_RE = re.compile(
-    r"<\s*/?\s*(?:tool_call|tool_response|function|parameter|arguments|py|python|code)\b|```",
-    re.IGNORECASE,
-)
+_WRAPPER_HINT_RE = re.compile(r"</?[A-Za-z][\w.:-]*[^<>]*>|```")
 
 
 def _unwrapped_block(raw: str) -> tuple[int, str] | None:
@@ -275,8 +298,16 @@ def _unwrapped_block(raw: str) -> tuple[int, str] | None:
         candidate = "\n".join(block).strip()
         # A call is the mark of an action; it also rejects a bare COMPLETE, which would
         # otherwise compile as a Name and raise NameError in the environment.
-        if "(" in candidate and _parses(candidate):
-            return 0, candidate
+        if "(" not in candidate or not _parses(candidate):
+            continue
+        # A lone list/dict/tuple literal is data, not an action -- it is what a
+        # hallucinated environment reply looks like, e.g.
+        #   [Transaction(id='txn_001', amount=25.0), Transaction(...)]
+        # which contains calls and compiles cleanly. Executing it would raise NameError
+        # on the model's own invention.
+        if _is_data_literal(candidate):
+            continue
+        return 0, candidate
     return None
 
 
