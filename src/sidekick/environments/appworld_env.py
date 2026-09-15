@@ -61,6 +61,7 @@ class AppWorldEnv(BaseEnv):
         self._obs_history: list[str] = []
         self._instruction = ""
         self._api_docs_digest = ""
+        self._api_docs_prompt = ""
 
     def reset(self, task_id: str, seed: int) -> Observation:
         self.close()
@@ -75,7 +76,9 @@ class AppWorldEnv(BaseEnv):
         kwargs.setdefault("random_seed", seed)
         self._world = AppWorld(task_id=task_id, experiment_name=self.experiment_name, **kwargs)
         self._instruction = str(self._world.task.instruction)
-        self._api_docs_digest = _digest_api_docs(getattr(self._world.task, "api_docs", ""))
+        raw_api_docs = getattr(self._world.task, "api_docs", "")
+        self._api_docs_digest = _digest_api_docs(raw_api_docs)
+        self._api_docs_prompt = _summarise_api_docs(raw_api_docs)
         text = self._instruction
         self._obs_history.append(text)
         return Observation(text=text, step=0, env_state_hash=self.snapshot_hash())
@@ -144,7 +147,13 @@ class AppWorldEnv(BaseEnv):
 
     @property
     def api_docs_digest(self) -> str:
+        """sha256 fingerprint of the API surface, for manifests. NOT for prompts."""
         return self._api_docs_digest
+
+    @property
+    def api_docs_prompt(self) -> str:
+        """Model-readable listing of the available apps and APIs."""
+        return self._api_docs_prompt
 
     def manifest_fields(self) -> dict:
         return {"appworld_root": self.root, "experiment_name": self.experiment_name}
@@ -156,3 +165,46 @@ def _digest_api_docs(api_docs: Any) -> str:
     except TypeError:
         blob = str(api_docs)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _summarise_api_docs(api_docs: Any) -> str:
+    """Render AppWorld's api_docs as a compact one-line-per-API listing.
+
+    ``task.api_docs`` is an ApiDocCollection keyed by app name ("spotify", "gmail",
+    …), each mapping api_name -> {description, parameters, response_schemas}.
+    ``compress_parameters()`` collapses the parameter blocks, which is what PLAN.md
+    asks for in the prompt prefix; full detail stays available to the agent at
+    runtime through ``apis.api_docs.show_api_doc(...)``.
+
+    ⚠ Attribute access on these objects raises fastapi HTTPException rather than
+    AttributeError for an unknown key, so this only ever uses ``.keys()`` and
+    ``[key]`` and never ``hasattr``/``getattr`` probing.
+    """
+    try:
+        compressed = api_docs.compress_parameters()
+    except Exception:  # noqa: BLE001 - fall back to the uncompressed collection
+        compressed = api_docs
+
+    lines: list[str] = []
+    try:
+        app_names = sorted(compressed.keys())
+    except Exception:  # noqa: BLE001 - not a mapping; nothing useful to show
+        return ""
+
+    for app_name in app_names:
+        try:
+            app_apis = compressed[app_name]
+            api_names = sorted(app_apis.keys())
+        except Exception:  # noqa: BLE001 - skip an app we cannot read
+            continue
+        lines.append(f"{app_name}:")
+        for api_name in api_names:
+            description = ""
+            try:
+                entry = app_apis[api_name]
+                if isinstance(entry, dict):
+                    description = str(entry.get("description") or "").strip()
+            except Exception:  # noqa: BLE001
+                description = ""
+            lines.append(f"  {api_name}: {description}" if description else f"  {api_name}")
+    return "\n".join(lines)

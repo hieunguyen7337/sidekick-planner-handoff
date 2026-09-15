@@ -28,4 +28,15 @@ class BaseEnv(ABC):
 
     @property
     @abstractmethod
-    def api_docs_digest(self) -> str: ...
+    def api_docs_digest(self) -> str:
+        """sha256 fingerprint of the API surface, for manifests. NOT for prompts."""
+
+    @property
+    def api_docs_prompt(self) -> str:
+        """Model-readable listing of the available APIs, for the prompt prefix.
+
+        Concrete rather than abstract so existing environments keep working; an env
+        that returns "" simply tells the model nothing about its API surface, which
+        is what every arm did before 2026-09-15 and why they all scored zero.
+        """
+        return ""

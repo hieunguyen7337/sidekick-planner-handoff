@@ -11,8 +11,7 @@ executor:
   timeout_s: 120
 limits:
   max_steps: 40
-  max_tokens_per_episode: 200000   # non-binding: max_steps=40 is the real limit.
-  # 32000 truncated episodes at step 20, which is not comparable to the planner arm.
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
   per_step_timeout_s: 120
   max_planner_calls: 25
 prices: configs/cost/prices_2026-09.yaml

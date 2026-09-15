@@ -295,7 +295,7 @@ def run_episode(
             emit(step=step, actor="system", event_type="error", payload={"detail": "no executor"}, error="crash")
             return None
         messages = _executor_messages(
-            env.instruction, packet, "\n".join(transcript), env.api_docs_digest
+            env.instruction, packet, "\n".join(transcript), env.api_docs_prompt
         )
         try:
             text, usage = call_with_timeout(
@@ -395,7 +395,7 @@ def run_episode(
         if policy.plan_first:
             resp = call_planner(
                 "plan",
-                lambda: planner.plan(task_id, env.instruction, env.api_docs_digest, timeout_s=timeout_s),
+                lambda: planner.plan(task_id, env.instruction, env.api_docs_prompt, timeout_s=timeout_s),
                 0,
             )
             if resp is None:

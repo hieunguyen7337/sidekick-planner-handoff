@@ -109,6 +109,10 @@ class MockEnv(BaseEnv):
     def api_docs_digest(self) -> str:
         return hashlib.sha256(_API_DOCS.encode("utf-8")).hexdigest()
 
+    @property
+    def api_docs_prompt(self) -> str:
+        return _API_DOCS
+
     def _obs_text(self, prefix: str) -> str:
         names = ", ".join(sorted(self._files)) if not self._deleted else "(none)"
         return f"{prefix}: files=[{names}] deleted={self._deleted}"
