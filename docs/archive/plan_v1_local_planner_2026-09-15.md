@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-09-15).** This v1 plan assumed a locally served 120B open-weight planner and two
+> benchmark domains. It was replaced the same day by `../PLAN.md` (Sidekick v2), which uses the hosted
+> `gpt-5.6-luna` planner via the Codex CLI, AppWorld only, and a proof-of-concept scale. Kept for the
+> record because its resource inventory and its reasoning about the local-planner option remain valid.
+
 # IAES — implementation plan for the QUT Aqua HPC
 
 Status: **plan only, nothing launched** (2026-09-15). Companion to `../RESEARCH_PROJECT_SPEC.md`
