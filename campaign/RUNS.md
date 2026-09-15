@@ -1,5 +1,42 @@
 # Run ledger
 
+## HJ-1 gate verdict, 2026-09-16 — **PASS**
+
+Paired on (task_id, seed), all 114 pairs present on both sides, nothing dropped.
+
+| arm | n | TGC | SGC | solved | steps | planner calls |
+|---|---|---|---|---|---|---|
+| `planner_alone` (gpt-5.6-luna) | 114 | **0.684** | 0.447 (17/38 scenarios) | 78 | 13.5 | 1,645 |
+| `executor_alone` (granite-4.2-8b, zero-shot) | 114 | **0.000** | 0.000 | 0 | 39.9 | 0 |
+
+**planner − executor = 68.42 pp, 95% CI [59.65, 76.32]** (10,000 paired bootstrap resamples).
+The gate asks for ≥ 20 pp; even the lower bound clears it threefold. Full report:
+`/scratch/n12194778/sidekick/results/results/hj1_gate.json`.
+
+**What this does and does not license.** It licenses the conclusion the gate exists for:
+there is ample room between a frozen hosted planner and an untrained small executor, so a
+trained executor has something to close and the later milestones are not measuring noise.
+It does **not** license quoting 68.4 pp as the capability gap, for three reasons that all
+push the same way:
+
+1. `executor_alone` is **zero-shot**, while the published frozen-8B ReAct numbers on
+   AppWorld (≈ 1–17 TGC) come from scaffolds that few-shot the very flow ours never
+   discovers. Part of the 68 pp is scaffold, not capability.
+2. `planner_alone` was capped at 25 planner calls (see below) and 10.5% of its episodes
+   were truncated by it, so 0.684 is a floor.
+3. Both are measured on dev, which is the split the prompts were tuned on.
+
+The honest headline is "plenty of headroom, gate passed", and the exact figure is an upper
+bound.
+
+**Why there is no 3B row.** The strengthened smoke gate refused the `granite-4.2-3b` arm:
+`parseable_actions=6, ended_in_parse_error=2/3`. The 3B still cannot hold the action format
+— it narrates its intentions rather than emitting code — and no arm was run. This costs
+nothing: the 3B exists in `PLAN.md` as a fallback for the case where the executor is *too
+strong* and the gap is too small to study, and the 8B scored 0.000, so that risk did not
+materialise. Chasing 3B format compliance would not change the gate.
+
+
 One row per submitted campaign job, written when the job is submitted and closed out when
 it ends. This exists because a campaign's own `manifest.json` records the commit at the
 moment it is *written*, which is when the campaign finishes — and on 2026-09-15 six commits
@@ -14,7 +51,10 @@ must be reconciled against this file before its numbers are quoted anywhere.
 |---|---|---|---|---|---|
 | 25386878 | `planner_alone` (gpt-5.6-luna) | `hj1b_planner_20260915` | 2026-09-15 23:09 | **`6435bc0`** | **COMPLETE 114/114**, see results below |
 | 25386895 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-15 23:15 | `6435bc0` | exited 1 at 23:20 — smoke gate failed, `parse_error` 3/3 on both models. Results purged. |
-| 25387603 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-15 23:25 | **`419c0f6`** | see below |
+| 25387603 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-15 23:25 | `419c0f6` | exited 1 at 23:41 — the smoke gate shared a campaign_id with the main run, so `run_campaign` skipped all 3 tasks (`n_jobs: 0, n_skipped: 3`) and the gate re-graded the *previous* build's results. Ran no episodes. |
+| 25388321 | `executor_alone` (granite-4.2-8b) | `hj1a_exec8b_20260915` | 2026-09-15 23:45 | `ec3f29e` | **killed by me** at 23:57. The old gate passed on "any action parsed anywhere" and the arm ran to completion at 108 runs / 108 `parse_error` / 0 solved. Results purged; gate rewritten. |
+| 25388996 | `executor_alone` (granite-4.2-8b) | `hj1a_exec8b_20260915` | 2026-09-16 00:01 | `6ba8270` | **killed by me** at 00:07. Parsing worked (episodes reached step 3 instead of 1) but a single unparseable step still ended an episode, so ~⅓ would have died on format. Killed rather than bank a gate that passes *because* the executor looks weak. |
+| 25389506 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-16 00:13 | **`7829a4c`** | **8B COMPLETE 114/114** (gate: 120 parseable actions, 0 parse errors). 3B arm **refused by the gate** (2/3 episodes ended in parse_error). Job exit 1 is the 3B refusal, not an 8B failure. |
 
 ## `planner_alone` result, 2026-09-15 (114/114, code `6435bc0`)
 

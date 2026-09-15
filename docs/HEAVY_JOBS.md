@@ -1,6 +1,18 @@
 # Sidekick — heavy jobs, specified in full
 
-Status **2026-09-15 22:35: HJ-1 is partly running, by user approval. HJ-2 … HJ-8 are unsubmitted.**
+Status **2026-09-16 00:45: HJ-1's go/no-go gate is settled — PASS.** Classes A and B both ran
+before the maintenance window. `planner_alone` TGC **0.684** (114/114), `executor_alone`
+(granite-4.2-8b, zero-shot) TGC **0.000** (114/114); paired difference **68.42 pp**, 95 % CI
+**[59.65, 76.32]** against a ≥ 20 pp threshold. The `granite-4.2-3b` arm was refused by its smoke
+gate (the 3B cannot hold the action format) and was not needed: it exists as a fallback for the
+executor being *too strong*, which did not happen. Class C is unrun and needs a GPU and the planner
+at once. **HJ-2 … HJ-8 are unsubmitted.** Full numbers, caveats and per-job provenance:
+`campaign/RUNS.md`; machine-readable report: `campaign/hj1_gate.json`.
+
+⚠ The gate licenses "there is ample headroom", not "the gap is 68 points" — `executor_alone` is
+zero-shot where the literature's frozen-8B numbers are few-shot, and `planner_alone` was truncated
+by a 25-call cap on 10.5 % of episodes, so the figure is an upper bound. See `campaign/RUNS.md`.
+
 All M0 feasibility gates passed on 2026-09-15 (see `feasibility/M0_RESULTS.md`). Every job below
 still needs explicit approval before it runs.
 

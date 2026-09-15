@@ -1,0 +1,65 @@
+{
+  "arms": {
+    "executor_alone_3b": {
+      "n": 0
+    },
+    "executor_alone_8b": {
+      "errors": {
+        "limit": 113,
+        "parse_error": 1
+      },
+      "n": 114,
+      "planner_calls_total": 0,
+      "sgc": {
+        "dropped_incomplete": 0,
+        "scenarios_complete": 0,
+        "scenarios_scored": 38,
+        "value": 0.0
+      },
+      "solved": 0,
+      "steps_mean": 39.89,
+      "tgc_mean": 0.0
+    },
+    "planner_alone": {
+      "errors": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      },
+      "n": 114,
+      "planner_calls_total": 1645,
+      "sgc": {
+        "dropped_incomplete": 0,
+        "scenarios_complete": 17,
+        "scenarios_scored": 38,
+        "value": 0.4474
+      },
+      "solved": 78,
+      "steps_mean": 13.52,
+      "tgc_mean": 0.6842
+    }
+  },
+  "baseline": "planner_alone",
+  "comparisons": {
+    "planner_alone - executor_alone_3b": {
+      "n_pairs": 0,
+      "note": "no overlapping (task_id, seed) -- nothing to compare"
+    },
+    "planner_alone - executor_alone_8b": {
+      "bootstrap": 10000,
+      "ci95_pp": [
+        59.65,
+        76.32
+      ],
+      "ci_lower_at_least_margin": true,
+      "diff_pp": 68.42,
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "gap_at_least_margin": true,
+      "n_pairs": 114
+    }
+  },
+  "field": "tgc",
+  "margin_pp": 20.0,
+  "warning": "arms with no results: executor_alone_3b"
+}
