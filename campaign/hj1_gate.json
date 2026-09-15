@@ -37,6 +37,23 @@
       "solved": 78,
       "steps_mean": 13.52,
       "tgc_mean": 0.6842
+    },
+    "prompt_only": {
+      "errors": {
+        "crash": 1,
+        "limit": 113
+      },
+      "n": 114,
+      "planner_calls_total": 114,
+      "sgc": {
+        "dropped_incomplete": 0,
+        "scenarios_complete": 0,
+        "scenarios_scored": 38,
+        "value": 0.0
+      },
+      "solved": 0,
+      "steps_mean": 39.87,
+      "tgc_mean": 0.0
     }
   },
   "baseline": "planner_alone",
@@ -46,6 +63,19 @@
       "note": "no overlapping (task_id, seed) -- nothing to compare"
     },
     "planner_alone - executor_alone_8b": {
+      "bootstrap": 10000,
+      "ci95_pp": [
+        59.65,
+        76.32
+      ],
+      "ci_lower_at_least_margin": true,
+      "diff_pp": 68.42,
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "gap_at_least_margin": true,
+      "n_pairs": 114
+    },
+    "planner_alone - prompt_only": {
       "bootstrap": 10000,
       "ci95_pp": [
         59.65,

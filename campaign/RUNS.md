@@ -8,10 +8,11 @@ Paired on (task_id, seed), all 114 pairs present on both sides, nothing dropped.
 |---|---|---|---|---|---|---|
 | `planner_alone` (gpt-5.6-luna) | 114 | **0.684** | 0.447 (17/38 scenarios) | 78 | 13.5 | 1,645 |
 | `executor_alone` (granite-4.2-8b, zero-shot) | 114 | **0.000** | 0.000 | 0 | 39.9 | 0 |
+| `prompt_only` (luna plans once, 8b executes) | 114 | **0.000** | 0.000 | 0 | 39.9 | 114 |
 
-**planner − executor = 68.42 pp, 95% CI [59.65, 76.32]** (10,000 paired bootstrap resamples).
-The gate asks for ≥ 20 pp; even the lower bound clears it threefold. Full report:
-`/scratch/n12194778/sidekick/results/results/hj1_gate.json`.
+**planner − executor = 68.42 pp, 95% CI [59.65, 76.32]** (10,000 paired bootstrap resamples), and
+**planner − prompt_only is the same 68.42 pp [59.65, 76.32]**. The gate asks for ≥ 20 pp; even the
+lower bound clears it threefold. Full report: `campaign/hj1_gate.json`.
 
 **What this does and does not license.** It licenses the conclusion the gate exists for:
 there is ample room between a frozen hosted planner and an untrained small executor, so a
@@ -55,6 +56,7 @@ must be reconciled against this file before its numbers are quoted anywhere.
 | 25388321 | `executor_alone` (granite-4.2-8b) | `hj1a_exec8b_20260915` | 2026-09-15 23:45 | `ec3f29e` | **killed by me** at 23:57. The old gate passed on "any action parsed anywhere" and the arm ran to completion at 108 runs / 108 `parse_error` / 0 solved. Results purged; gate rewritten. |
 | 25388996 | `executor_alone` (granite-4.2-8b) | `hj1a_exec8b_20260915` | 2026-09-16 00:01 | `6ba8270` | **killed by me** at 00:07. Parsing worked (episodes reached step 3 instead of 1) but a single unparseable step still ended an episode, so ~⅓ would have died on format. Killed rather than bank a gate that passes *because* the executor looks weak. |
 | 25389506 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-16 00:13 | **`7829a4c`** | **8B COMPLETE 114/114** (gate: 120 parseable actions, 0 parse errors). 3B arm **refused by the gate** (2/3 episodes ended in parse_error). Job exit 1 is the 3B refusal, not an 8B failure. |
+| 25390326 | `prompt_only` (luna + granite-4.2-8b) | `hj1c_prompt_only_20260916` | 2026-09-16 00:49 | **`a733865`** | **COMPLETE 114/114**, exit 0. Gate PASS (120 actions, 3 planner calls, 0 parse errors); final gate PASS with the expected planner and model. |
 
 ## `planner_alone` result, 2026-09-15 (114/114, code `6435bc0`)
 
@@ -84,41 +86,52 @@ clean read on the frozen planner's sampling noise, since nothing else differs. `
 measured against. Pairing by task removes task difficulty but not this, so ε = 5 pp with 2
 seeds is likely unresolvable. Either widen ε or budget more seeds; decide before M6, not after.
 
-## Preliminary, from the Class C smoke gate: the plan omits the thing the executor cannot do
+## `prompt_only`: a one-shot plan from a strong planner does not help a weak executor at all
 
-⚠ Three tasks, smoke-stage. To be confirmed or dropped when the 114-run arm finishes.
+**Completed 114/114 on 2026-09-16. TGC 0.000, SGC 0.000, 0 solved, 114 planner calls (exactly one
+per episode), 113 `limit` + 1 `crash`, 39.87 mean steps.** Identical to `executor_alone`.
 
-The `prompt_only` smoke ran clean — 3 episodes, 3 planner calls, 0 parse errors, 40 steps each —
-and solved none of them, the same as `executor_alone`. The plans are not the problem; they are
-good. Here is the shape of one:
+⚠ **This corrects a preliminary reading taken from the 3-task smoke.** At n=3, none of the plans
+mentioned authentication, and I recorded the hypothesis that the planner omits the operational
+prerequisite the executor cannot discover. **At n=114 that is false: 48 of 114 plans (42%) do
+mention `login`/`password`/`authenticat`/`access_token`/`supervisor`** — and TGC is 0.000 anyway,
+including on those 48. The small sample was unrepresentative, which is exactly why it was marked
+preliminary.
 
-1. retrieve API docs for the Spotify song/album/playlist endpoints, including play-count fields
-2. query the song, album and playlist libraries
-3. expand albums and playlists, combine and deduplicate by song id
-4. filter to R&B by genre metadata and rank by play count
-5. …
+The real mechanism is worse for the plan-only approach, and was checked directly. In episode
+`23cf851_2`, whose plan names the supervisor app, the executor calls `supervisor` **zero times in
+40 actions** and instead loops:
 
-Competent, correctly routed, and it **never mentions authentication**. Grepped across all three
-plans for `login|password|authenticat|access_token|supervisor`: **zero matches in all three.**
+```
+print(apis.api_docs.show_api_doc(app_name="venmo", api_name="show_transactions"))
+print(apis.phone.get_current_date_and_time())
+print(apis.phone.get_current_date_and_time())
+print(apis.phone.get_current_date_and_time())   ← and on, to the step cap
+```
 
-That lines up exactly with the three arms:
+So granite-4.2-8b does not fail for want of being told. It fails to *follow* a plan it has been
+given, and degenerates into repeating one harmless call. The bottleneck is executor agency, not plan
+content.
 
-| | what happens | TGC |
+What this licenses, at n=114 and paired:
+
+| arm | TGC | vs planner_alone |
 |---|---|---|
-| planner executes (`planner_alone`) | hits the 401 at runtime, handles it | 0.684 |
-| planner only plans (`prompt_only`) | never anticipates auth, so never mentions it | ? |
-| executor alone | cannot discover the auth flow at all | 0.000 |
+| `planner_alone` | 0.684 | — |
+| `executor_alone` (8b) | 0.000 | 68.42 pp [59.65, 76.32] |
+| `prompt_only` (luna plan + 8b) | 0.000 | 68.42 pp [59.65, 76.32] |
 
-The planner knows how to authenticate — it demonstrably does so when executing. It simply does not
-*anticipate* the need when planning ahead without execution feedback. So `prompt_only` hands the
-executor an excellent task-level plan that omits the single operational prerequisite it cannot work
-out for itself.
+**One frozen plan buys exactly nothing here — 0.000 either way.** That is a real result for the
+project's premise rather than a null: it says the gap is not an information gap that a better prompt
+closes, so the remaining arms have to earn their improvement through *when and how* the planner
+re-enters, not by planning harder up front. It makes `fixed_k` (periodic review) and `sidekick`
+(verifier-gated escalation) the load-bearing comparisons, and it predicts `prompt_only ≈
+executor_alone ≪ fixed_k ≤ sidekick` — falsifiable by the arms that have not run.
 
-If this holds at n=114, it is direct evidence for the thesis the project is built on: the value is
-not in the plan, it is in **intervention at the point of failure** — which is precisely what
-`ASK_PLANNER` and verifier-gated escalation provide, and what `sidekick` is trained to time. It also
-predicts the ordering `prompt_only ≈ executor_alone ≪ sidekick`, which is a falsifiable claim the
-remaining arms can check.
+⚠ It also raises a live risk for the project: if the 8B cannot follow a good plan at all, training it
+to *ask* may not be enough either, and the 30B or a stronger executor may be needed for the method to
+have anything to work with. That is a question for M3, and it should be asked explicitly rather than
+discovered at M6.
 
 ## What `executor_alone` actually fails at (granite-4.2-8b, zero-shot)
 
