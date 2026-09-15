@@ -94,9 +94,11 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
   be read as a token-volume proxy. The binding limit is plan quota, which is not observable from a
   batch job (`rate_limits` is absent from exec JSON). Jobs must fail loudly rather than stall.
 
-- **`HEAVY_JOBS.md` HJ-1 is internally inconsistent**: 57 x 6 arms x 2 seeds = 684 requires
+- ~~**`HEAVY_JOBS.md` HJ-1 is internally inconsistent**: 57 x 6 arms x 2 seeds = 684 requires
   `oracle_escalation` at all 57 tasks, but the arm description says a 20-task probe, which would give
-  610. Pick one before HJ-1 is reported.
+  610.~~ Resolved 2026-09-15: **610** is correct. `oracle_escalation` is a dev-only diagnostic that
+  reads oracle labels, so running it at full scale buys nothing; it stays a 20-task probe. Class C's
+  run count was corrected from 342 to 268 at the same time.
 
 - **Every event-log timestamp is frozen at `2023-05-18T12:00:00+00:00` once an episode starts.**
   AppWorld mocks time process-wide with freezegun, so `Event.ts` is AppWorld's simulated clock, not

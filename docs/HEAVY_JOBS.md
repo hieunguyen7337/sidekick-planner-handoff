@@ -11,7 +11,7 @@ still needs explicit approval before it runs.
 |---|---|---|---|---|
 | A | `executor_alone` (8b, 3b) | GPU only, **zero planner calls** | 228 | `scripts/pbs/hj1a_executor_alone.pbs` |
 | B | `planner_alone` | luna only, **no GPU** | 114 | `scripts/pbs/hj1b_planner_alone.pbs` |
-| C | `prompt_only`, `fixed_k`, `oracle_escalation` | both at once | 342 | after maintenance |
+| C | `prompt_only`, `fixed_k`, `oracle_escalation` | both at once | 268 | after maintenance |
 
 Classes A and B together settle HJ-1's go/no-go gate (`planner_alone − executor_alone ≥ 20 pp`) and
 were run on the evening of 2026-09-15 ahead of the ~08:00 2026-09-16 maintenance shutdown. Class C
@@ -63,7 +63,7 @@ margin on our own scaffold, there is nothing to displace.
 
 | field | value |
 |---|---|
-| Runs | 57 dev tasks × 6 arms × 2 seeds = **684 runs** |
+| Runs | **610 runs** = 5 full arms × 57 dev tasks × 2 seeds (570) + a 20-task `oracle_escalation` probe × 2 seeds (40). Not 684: `oracle_escalation` is a diagnostic probe, not a sixth full arm, so 57 × 6 × 2 overcounts it by 74 |
 | Arms | `planner_alone`, `executor_alone` (granite-4.2-8b), `executor_alone` (granite-4.2-3b), `prompt_only`, `fixed_k` (k=5), plus a 20-task `oracle_escalation` probe |
 | PBS | `select=1:ncpus=32:ngpus=1:mem=128gb`, `-q gpu_batch_exec`, walltime **08:00:00** |
 | Layout | vLLM serves granite-8b and granite-3b (adapters off) on the one H100; 16 AppWorld worker processes; 6 concurrent `codex exec` subprocesses |
@@ -71,7 +71,7 @@ margin on our own scaffold, there is nothing to displace.
 | Planner turns | ≈ 3,500 |
 | Planner cost | **US$8–14** |
 | GPU-hours | ≈ 6 |
-| Outputs | `results/pilot_<date>/runs.jsonl`, 684 event logs, a variance table, the delegable-step histogram |
+| Outputs | `results/pilot_<date>/runs.jsonl`, 610 event logs, a variance table, the delegable-step histogram |
 | Gate | proceed only if `planner_alone − executor_alone ≥ 20 pp` TGC and ≥ 30% of steps are delegable. If the 8B gap is too small, the 3B arm becomes the executor |
 | Risk | a systematically broken prompt wastes the whole run → the job runs a **10-task smoke slice first** and stops if any arm returns 0 successes |
 
