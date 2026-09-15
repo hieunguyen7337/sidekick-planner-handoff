@@ -44,6 +44,39 @@ clean read on the frozen planner's sampling noise, since nothing else differs. `
 measured against. Pairing by task removes task difficulty but not this, so ε = 5 pp with 2
 seeds is likely unresolvable. Either widen ε or budget more seeds; decide before M6, not after.
 
+## What `executor_alone` actually fails at (granite-4.2-8b, zero-shot)
+
+Once the harness could read its output, the 8B executor stopped failing on format and
+started failing on the task — and it fails the same way almost every time. A representative
+episode, 40 actions, **0 parse errors, 12 distinct actions**:
+
+```
+print(apis.spotify.show_song_library())
+print(apis.spotify.show_account())
+print(apis.spotify.login())
+print(apis.spotify.login(username="test_user", password="test_password"))   <- then repeats
+```
+
+It does not know how to obtain credentials — AppWorld requires looking them up through the
+supervisor app — so it **invents** them and loops until the step cap. Every task needs a
+login, so one unsolved sub-problem gates everything and the arm lands near TGC 0.
+
+Two things follow, and both belong in how HJ-1 is reported:
+
+- **The comparison is fair.** Both arms receive exactly the same information: the same API
+  listing, no worked examples, no demonstrations. `gpt-5.6-luna` works the credential flow
+  out for itself (it calls `apis.api_docs.show_api_doc(...)` and the supervisor APIs); the
+  8B does not. That difference *is* the capability gap the pilot is meant to find.
+- **This is a harsher baseline than the literature's.** Published frozen-8B ReAct numbers on
+  AppWorld are ≈ 1–17 TGC, from scaffolds that include few-shot demonstrations of exactly
+  this flow. Ours is zero-shot. So the measured gap is partly scaffold, not purely
+  capability, and the pilot must say so rather than let a large number stand unqualified.
+  It also means the headroom for a trained executor is, if anything, overstated by this
+  arm — the right read is "there is plenty of room", not "the gap is 68 points".
+
+The credential lookup is also the first concrete entry for the delegable-step analysis: it
+is precisely the kind of step a planner knows and an executor does not.
+
 ## Why 25386895 does not count as a result
 
 Both models scored 0.0 on every episode, and neither number was about the model. Granite
