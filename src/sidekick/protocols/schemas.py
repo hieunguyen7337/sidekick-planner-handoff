@@ -168,8 +168,15 @@ def parse_executor_action(raw: str) -> ExecutorAction:
             continue  # empty reason would fail the model validator; treat as no match
         if stripped.startswith("REPORT:"):
             return ExecutorAction(kind="REPORT", message=stripped[len("REPORT:"):].strip(), raw_output=raw)
-        if stripped == "COMPLETE":
-            return ExecutorAction(kind="COMPLETE", raw_output=raw)
+        # "COMPLETE: <answer>" as well as a bare "COMPLETE". AppWorld scores
+        # answer-returning tasks on the answer passed to
+        # apis.supervisor.complete_task(answer=...), so dropping the text after the
+        # colon throws away the result. Observed 2026-09-15: a planner answered
+        # "COMPLETE: Placeholder Song A, Placeholder Song B, ..." and the exact-match
+        # test rejected it as unparseable, scoring a solved task 0.0.
+        if stripped == "COMPLETE" or stripped.startswith("COMPLETE:"):
+            answer = stripped[len("COMPLETE:"):].strip() if ":" in stripped else ""
+            return ExecutorAction(kind="COMPLETE", message=answer or None, raw_output=raw)
     raise ActionParseError(raw_output=raw)
 
 

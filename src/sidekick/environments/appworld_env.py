@@ -87,7 +87,17 @@ class AppWorldEnv(BaseEnv):
         if self._world is None:
             raise RuntimeError("AppWorldEnv.reset() must be called before step()")
         if action.kind == "COMPLETE":
-            text = self._world.execute("apis.supervisor.complete_task()")
+            # AppWorld scores answer-returning tasks ("Give me a list of ...") on the
+            # answer passed here, and its own doc says to pass it "if and only if the
+            # task requests an answer". Calling complete_task() bare made every such
+            # task unscoreable no matter how well the agent had done.
+            answer = (action.message or "").strip()
+            if answer:
+                text = self._world.execute(
+                    f"apis.supervisor.complete_task(answer={answer!r})"
+                )
+            else:
+                text = self._world.execute("apis.supervisor.complete_task()")
             done = True
         elif action.kind == "CODE":
             text = self._world.execute(action.code or "")
@@ -175,6 +185,9 @@ _API_USAGE_PREAMBLE = (
     "outside a function and top-level `await` are syntax errors here.\n"
     "Only the APIs listed below exist. For full parameter details call "
     "apis.api_docs.show_api_doc(app_name=..., api_name=...).\n"
+    "When the task asks a question, finish with `COMPLETE: <answer>` and keep the "
+    "answer concise (a number, a yes/no, or a comma-separated list of names). When "
+    "the task is an action rather than a question, finish with a bare `COMPLETE`.\n"
     "\nAvailable APIs:\n"
 )
 
