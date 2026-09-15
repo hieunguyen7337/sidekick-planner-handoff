@@ -1,0 +1,46 @@
+{
+  "campaign_id": "hj1a_exec8b_20260915",
+  "system": "executor_alone",
+  "split": "dev",
+  "n_tasks": 57,
+  "seeds": [
+    1,
+    2
+  ],
+  "model": "ibm-granite/granite-4.2-8b",
+  "git_commit": "ca2f598c37b5f0e40198c1589dc818e760602cbe",
+  "vllm_version": "0.29.0",
+  "hf_revision": "f8de16cdcdbc6c779ca517604e050d82cc119e44",
+  "appworld_commit": "42b5bcf3cd334fee33f0c37c02070a9f5807add5",
+  "config_path": "configs/pilot_exec_8b.yaml",
+  "config_sha256": "ff1e11c7774c86114e1a015b06eec686ccdebf22b77fd71647e4f65f37c8cbd0",
+  "hostname": "gpu1n012",
+  "pbs_job_id": "25389506.aqua",
+  "start_ts": "2026-09-16T00:13:58+10:00",
+  "end_ts": "2026-09-16T00:41:17+10:00",
+  "n_result_json": 114,
+  "total_executor_tokens": 58192338.0,
+  "total_gpu_seconds": 0.0,
+  "total_planner_calls": 0,
+  "mean_steps_per_episode": 39.89,
+  "per_seed": {
+    "1": {
+      "runs": 57,
+      "task_goal_completion_rate": 0.0,
+      "mean_tgc": 0.0,
+      "mean_executor_tokens_per_episode": 509358.9
+    },
+    "2": {
+      "runs": 57,
+      "task_goal_completion_rate": 0.0,
+      "mean_tgc": 0.0,
+      "mean_executor_tokens_per_episode": 511559.3
+    }
+  },
+  "seed1_seed2_success_differ_frac": 0.0,
+  "error_type_counts": {
+    "limit": 113,
+    "parse_error": 1
+  },
+  "generated_utc": "2026-09-15T14:41:21.635053+00:00"
+}
