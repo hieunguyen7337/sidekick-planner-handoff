@@ -15,10 +15,18 @@ from sidekick.runner import load_config, make_executor, make_planner
 
 WANT_STOP = ["</py>", "</python>", "</tool_call>"]
 
+# label -> (expected executor .name or None for mock, expected planner class name)
 EXPECTED = {
     "configs/pilot_exec_8b.yaml": ("vllm-executor", {"enable_thinking": False}),
     "configs/pilot_exec_3b.yaml": ("vllm-executor", {"enable_thinking": False}),
     "configs/pilot_planner_alone.yaml": (None, None),
+}
+
+# Class C needs BOTH live at once, which is the combination nothing else checks: a mock on
+# either side produces a plausible campaign. A mock planner makes the collaboration arm
+# free and meaningless; a mock executor makes it need no GPU and measure nothing.
+BOTH_LIVE = {
+    "configs/pilot_prompt_only.yaml": ("vllm-executor", "CodexExecPlanner"),
 }
 
 failures: list[str] = []
@@ -50,6 +58,25 @@ for rel, (want_exec_name, want_ctk) in EXPECTED.items():
         if type(pl).__name__ != "CodexExecPlanner":
             failures.append(f"{rel}: planner is {type(pl).__name__}, expected CodexExecPlanner")
         print(f"  planner model -> {getattr(getattr(pl, 'cfg', None), 'model', '?')}")
+
+for rel, (want_exec_name, want_planner) in BOTH_LIVE.items():
+    cfg = load_config(rel)
+    ex = make_executor(cfg)
+    pl = make_planner(cfg)
+    name = getattr(ex, "name", type(ex).__name__)
+    print(f"\n{rel}")
+    print(f"  executor -> {name}")
+    print(f"  planner  -> {type(pl).__name__}")
+    print(f"  stop -> {getattr(ex, 'stop', None)}")
+    print(f"  chat_template_kwargs -> {getattr(ex, 'chat_template_kwargs', None)}")
+    if name != want_exec_name:
+        failures.append(f"{rel}: executor is {name}, expected {want_exec_name}")
+    if type(pl).__name__ != want_planner:
+        failures.append(f"{rel}: planner is {type(pl).__name__}, expected {want_planner}")
+    if getattr(ex, "stop", None) != WANT_STOP:
+        failures.append(f"{rel}: stop is {getattr(ex, 'stop', None)!r}, expected {WANT_STOP!r}")
+    if getattr(ex, "chat_template_kwargs", None) != {"enable_thinking": False}:
+        failures.append(f"{rel}: thinking is not disabled")
 
 if failures:
     print("\nFAILURES:")
