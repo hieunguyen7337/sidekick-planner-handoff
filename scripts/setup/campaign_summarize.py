@@ -179,9 +179,16 @@ def manifest(out_root: Path, campaign_id: str, config_path: Path, repo: Path) ->
     if ac.exists():
         appworld_commit = ac.read_text(encoding="utf-8").strip()
 
+    # The manifest is written when the campaign FINISHES, which can be hours after it
+    # started, and the tree may have moved on -- on 2026-09-15 four commits landed while
+    # an arm was running. `git rev-parse HEAD` here would credit the results to code that
+    # never produced them, which is worse than not recording a commit at all. The job
+    # captures its SHA at start and exports it; fall back only when it did not.
+    start_commit = os.environ.get("SIDEKICK_START_COMMIT", "").strip()
     return {
         "campaign_id": campaign_id,
-        "git_commit": _run(["git", "rev-parse", "HEAD"]),
+        "git_commit": start_commit or _run(["git", "rev-parse", "HEAD"]),
+        "git_commit_source": "job start" if start_commit else "manifest time (MAY NOT be the code that ran)",
         "git_branch": _run(["git", "rev-parse", "--abbrev-ref", "HEAD"]),
         "git_dirty": bool(_run(["git", "status", "--short"])),
         "config_path": str(config_path),

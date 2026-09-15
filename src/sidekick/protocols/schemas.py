@@ -152,6 +152,7 @@ class ActionParseError(ValueError):
 # that settles it.
 _FENCE_LAZY_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n(.*?)```", re.DOTALL | re.IGNORECASE)
 _FENCE_GREEDY_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n(.*)```", re.DOTALL | re.IGNORECASE)
+_FENCE_OPEN_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n", re.IGNORECASE)
 # Granite 4.2 with thinking off does not reach for a markdown fence: it emits its
 # native tool-call shape, `<tool_call><py>...</py>`, even though no tools are declared.
 # Observed 2026-09-15: every executor_alone episode died parse_error at step 1 while the
@@ -176,6 +177,15 @@ def _parses(code: str) -> bool:
 def _fenced_block(raw: str) -> tuple[int, str] | None:
     lazy = _FENCE_LAZY_RE.search(raw)
     if not lazy:
+        # No closing fence anywhere. Either the model never finished the block or
+        # max_tokens cut it off mid-generation. Salvage it only if what we got is
+        # valid Python: a truncated block usually is not, and running half a
+        # statement against a live environment is worse than reporting a parse error.
+        open_fence = _FENCE_OPEN_RE.search(raw)
+        if open_fence:
+            tail = raw[open_fence.end():]
+            if _parses(tail):
+                return open_fence.start(), tail
         return None
     if _parses(lazy.group(1)):
         return lazy.start(), lazy.group(1)

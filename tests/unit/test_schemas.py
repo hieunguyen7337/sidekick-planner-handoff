@@ -271,6 +271,19 @@ def test_parse_fence_is_not_greedy_across_two_blocks():
     assert a.code == "first = 1"
 
 
+def test_parse_salvages_a_fence_truncated_by_max_tokens():
+    raw = "Here goes.\n```python\nsongs = apis.spotify.show_song_library()\nprint(songs)\n"
+    a = parse_executor_action(raw)
+    assert a.kind == "CODE"
+    assert a.code.endswith("print(songs)")
+
+
+def test_parse_refuses_a_truncated_fence_that_is_not_valid_python():
+    # Half a statement is worse than no action: it would run against a live environment.
+    with pytest.raises(ActionParseError):
+        parse_executor_action("```python\nsongs = apis.spotify.show_song_library(")
+
+
 def test_parse_takes_whichever_code_block_comes_first():
     fence_first = "```python\na = 1\n```\n<py>\nb = 2\n</py>"
     assert parse_executor_action(fence_first).code == "a = 1"
