@@ -294,7 +294,9 @@ def run_episode(
             error_type = "crash"
             emit(step=step, actor="system", event_type="error", payload={"detail": "no executor"}, error="crash")
             return None
-        messages = _executor_messages(env.instruction, packet, "\n".join(transcript))
+        messages = _executor_messages(
+            env.instruction, packet, "\n".join(transcript), env.api_docs_digest
+        )
         try:
             text, usage = call_with_timeout(
                 lambda: executor.complete(
@@ -670,12 +672,32 @@ def run_episode(
     return result
 
 
-def _executor_messages(instruction: str, packet: DelegationPacket | None, transcript: str) -> list[dict]:
+def _executor_messages(
+    instruction: str,
+    packet: DelegationPacket | None,
+    transcript: str,
+    api_docs: str = "",
+) -> list[dict]:
+    """Build the executor prompt.
+
+    ``api_docs`` is not optional in practice. Without it the model is never told it
+    is inside AppWorld and has an ``apis`` object to call, so it concludes the task
+    is impossible -- observed 2026-09-15, where planner_alone answered a Spotify
+    task with "the Spotify plugin is not installed" and every arm scored 0.0 TGC.
+    The environment computes the digest for exactly this purpose.
+    """
     system = (
         "You are an executor. Output exactly one action: a ```python fenced block, "
         "a line starting with ASK_PLANNER:, a line starting with REPORT:, or COMPLETE."
     )
     user = f"Task: {instruction}\n"
+    if api_docs:
+        user += (
+            "Your code runs in a Python session against the AppWorld APIs. Call them "
+            "through the `apis` object, and use `apis.api_docs` to look up any API you "
+            "need in more detail. Available APIs:\n"
+            f"{api_docs}\n"
+        )
     if packet is not None:
         user += f"Plan: {packet.model_dump_json()}\n"
     user += f"Transcript:\n{transcript}\n"
