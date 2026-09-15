@@ -115,3 +115,26 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
   the cost (74.5% hit rate measured), but it is charged in full against any per-episode token budget,
   which is the second reason such budgets need to exclude cached input. For a 40-step episode the
   prefix alone accounts for roughly 320k counted input tokens.
+
+- **The action parser recognised one spelling of a code block, and the executor model uses another.**
+  Granite 4.2 with thinking off emits its native `<tool_call><py>...</py>` shape even though the
+  harness declares no tools; the Python inside was correct, so a working arm scored 0.0 on every
+  episode with `parse_error`. Fixed by accepting `<py>`/`<python>` alongside the fence. The general
+  lesson for later executors: **a new model family needs its output format checked against the parser
+  before an arm is trusted**, because the failure is silent and looks like model incapability. A
+  format-coverage smoke test over each model's first generation would catch it in seconds.
+
+- **The executor hallucinated the environment's response and then reasoned over it.** Given no stop
+  sequence, Granite wrote `apis.spotify.show_song_library()`, invented a plausible result
+  (`Songs: [{'id': 'song1', 'title': 'Song A', 'plays': 100} ...]`), and spent the remaining ~2000
+  tokens analysing data that does not exist, never taking a second action. Mitigated with an explicit
+  prompt instruction plus vLLM `stop` sequences on the closing tags. Note this cannot be fully fixed
+  by prompting — **the trained Sidekick executor should have this suppressed in SFT**, since every
+  hallucinated observation is a training-time distribution mismatch with the real transcript.
+
+- **`_FENCE_RE` was greedy, so two fenced blocks in one reply captured the prose between them.**
+  Latent until now because earlier models emitted one block. Greedy is nonetheless required for a
+  block containing a nested ``` inside a triple-quoted string (there is a test pinning it), so the
+  parser now tries the short read and widens only when it fails to `compile()`. Flagged here because
+  **the same ambiguity exists anywhere else fenced output is parsed** — check the trajectory tooling
+  before HJ-4 uses it on training data.
