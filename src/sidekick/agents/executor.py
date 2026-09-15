@@ -40,6 +40,7 @@ class VLLMExecutor:
         gpu_fraction: float = 1.0,
         timeout_s: float = 120.0,
         http_client: Any | None = None,
+        chat_template_kwargs: Optional[dict] = None,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -49,6 +50,12 @@ class VLLMExecutor:
         self.gpu_fraction = gpu_fraction
         self.timeout_s = timeout_s
         self._http = http_client
+        # Passed straight through to vLLM, which hands them to the model's Jinja
+        # chat template. Granite 4.2's template defines `enable_thinking`, default
+        # True, and a thinking model will spend its whole budget reasoning without
+        # ever emitting an action -- measured 2026-09-15: 3072 output tokens of
+        # deliberation and no fenced block.
+        self.chat_template_kwargs = chat_template_kwargs or None
 
     def complete(self, messages: list[dict], **kw) -> tuple[str, Usage]:
         client = self._ensure_client()
@@ -59,6 +66,9 @@ class VLLMExecutor:
             "temperature": kw.get("temperature", self.temperature),
             "max_tokens": kw.get("max_tokens", self.max_tokens),
         }
+        ctk = kw.get("chat_template_kwargs", self.chat_template_kwargs)
+        if ctk:
+            payload["chat_template_kwargs"] = ctk
         url = self._chat_url()
         t0 = time.perf_counter()
         response = client.post(url, json=payload)

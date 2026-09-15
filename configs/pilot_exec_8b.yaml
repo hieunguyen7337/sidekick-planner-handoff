@@ -7,7 +7,10 @@ executor:
   model: ibm-granite/granite-4.2-8b
   base_url: http://127.0.0.1:8000
   temperature: 0.7
-  max_tokens: 3072   # 1024 was spent entirely on Granite thinking, returning ""
+  max_tokens: 2048
+  chat_template_kwargs:
+    enable_thinking: false   # Granite 4.2 template defaults it True and then
+    # spends the whole budget reasoning without ever emitting an action
   timeout_s: 120
 limits:
   max_steps: 40
