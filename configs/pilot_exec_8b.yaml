@@ -7,7 +7,7 @@ executor:
   model: ibm-granite/granite-4.2-8b
   base_url: http://127.0.0.1:8000
   temperature: 0.7
-  max_tokens: 1024
+  max_tokens: 3072   # 1024 was spent entirely on Granite thinking, returning ""
   timeout_s: 120
 limits:
   max_steps: 40

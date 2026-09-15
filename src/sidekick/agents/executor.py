@@ -70,6 +70,13 @@ class VLLMExecutor:
         if choices:
             message = choices[0].get("message") or {}
             text = message.get("content") or ""
+            if not text:
+                # With a reasoning parser enabled (e.g. granite_thinking_parser) the
+                # model's whole generation can land in reasoning_content, leaving
+                # content empty -- which reaches the loop as an unparseable "" and is
+                # logged as parse_error with no hint of why. Observed 2026-09-15:
+                # granite-4.2-8b spent all 1024 max_tokens and returned "".
+                text = message.get("reasoning_content") or ""
         usage_raw = body.get("usage") or {}
         cached = 0
         details = usage_raw.get("prompt_tokens_details") or {}

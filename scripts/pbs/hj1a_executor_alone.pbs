@@ -105,12 +105,15 @@ run_model () {
   echo "[u7] === ${model} (${cid}) start=$(date -Iseconds) parser=${parser:-none} ==="
   t_start=$(date -Iseconds)
 
+  # The reasoning parser is deliberately NOT used. With
+  # --reasoning-parser granite_thinking_parser, Granite's generation is split and
+  # the thinking goes to message.reasoning_content; if the budget runs out before a
+  # final answer, message.content comes back "" and the loop records parse_error
+  # with no clue why. Observed 2026-09-15: all 3 smoke episodes spent the full
+  # max_tokens and returned an empty string. Serving plain keeps the whole
+  # generation in content, where parse_executor_action finds the ```python fence
+  # wherever it sits. PLAN.md also specifies thinking off for v0.
   local started=0
-  if [[ -n "${parser}" ]]; then
-    extra="--tool-call-parser qwen3_coder --enable-auto-tool-choice --reasoning-parser granite_thinking_parser --reasoning-parser-plugin ${parser}"
-    start_vllm "${model}" "${extra}" "${vlog}"
-    if wait_healthy "${model}" "${vlog}"; then started=1; fi
-  fi
   if [[ "${started}" -ne 1 ]]; then
     kill_vllm
     start_vllm "${model}" "" "${vlog}"
