@@ -84,6 +84,42 @@ clean read on the frozen planner's sampling noise, since nothing else differs. `
 measured against. Pairing by task removes task difficulty but not this, so ε = 5 pp with 2
 seeds is likely unresolvable. Either widen ε or budget more seeds; decide before M6, not after.
 
+## Preliminary, from the Class C smoke gate: the plan omits the thing the executor cannot do
+
+⚠ Three tasks, smoke-stage. To be confirmed or dropped when the 114-run arm finishes.
+
+The `prompt_only` smoke ran clean — 3 episodes, 3 planner calls, 0 parse errors, 40 steps each —
+and solved none of them, the same as `executor_alone`. The plans are not the problem; they are
+good. Here is the shape of one:
+
+1. retrieve API docs for the Spotify song/album/playlist endpoints, including play-count fields
+2. query the song, album and playlist libraries
+3. expand albums and playlists, combine and deduplicate by song id
+4. filter to R&B by genre metadata and rank by play count
+5. …
+
+Competent, correctly routed, and it **never mentions authentication**. Grepped across all three
+plans for `login|password|authenticat|access_token|supervisor`: **zero matches in all three.**
+
+That lines up exactly with the three arms:
+
+| | what happens | TGC |
+|---|---|---|
+| planner executes (`planner_alone`) | hits the 401 at runtime, handles it | 0.684 |
+| planner only plans (`prompt_only`) | never anticipates auth, so never mentions it | ? |
+| executor alone | cannot discover the auth flow at all | 0.000 |
+
+The planner knows how to authenticate — it demonstrably does so when executing. It simply does not
+*anticipate* the need when planning ahead without execution feedback. So `prompt_only` hands the
+executor an excellent task-level plan that omits the single operational prerequisite it cannot work
+out for itself.
+
+If this holds at n=114, it is direct evidence for the thesis the project is built on: the value is
+not in the plan, it is in **intervention at the point of failure** — which is precisely what
+`ASK_PLANNER` and verifier-gated escalation provide, and what `sidekick` is trained to time. It also
+predicts the ordering `prompt_only ≈ executor_alone ≪ sidekick`, which is a falsifiable claim the
+remaining arms can check.
+
 ## What `executor_alone` actually fails at (granite-4.2-8b, zero-shot)
 
 Once the harness could read its output, the 8B executor stopped failing on format and
