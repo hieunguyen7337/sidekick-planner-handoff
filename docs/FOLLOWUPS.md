@@ -97,3 +97,21 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
 - **`HEAVY_JOBS.md` HJ-1 is internally inconsistent**: 57 x 6 arms x 2 seeds = 684 requires
   `oracle_escalation` at all 57 tasks, but the arm description says a 20-task probe, which would give
   610. Pick one before HJ-1 is reported.
+
+- **Every event-log timestamp is frozen at `2023-05-18T12:00:00+00:00` once an episode starts.**
+  AppWorld mocks time process-wide with freezegun, so `Event.ts` is AppWorld's simulated clock, not
+  wall time — it is identical for every event in an episode and cannot order events or measure
+  latency. Events emitted before `env.reset()` carry real timestamps, which makes the log look
+  plausible at a glance. Anything that needs real time (per-step latency, `Usage.latency_s`, ordering
+  across runs) must capture it outside the mocked window or use `time.monotonic` captured before
+  reset. The `step` field is still a reliable ordering key within an episode.
+
+- **`api_docs_digest` was a sha256 hash being used where documentation was meant.** Fixed 2026-09-15
+  by splitting it into `api_docs_digest` (manifest fingerprint) and `api_docs_prompt` (one line per
+  API, ~8k tokens for 473 APIs across 11 apps). Worth a test asserting the prompt digest names at
+  least one real app, so this cannot silently regress to an unusable string again.
+
+- **The ~8k-token API prefix is re-sent on every executor step.** vLLM prefix caching absorbs most of
+  the cost (74.5% hit rate measured), but it is charged in full against any per-episode token budget,
+  which is the second reason such budgets need to exclude cached input. For a 40-step episode the
+  prefix alone accounts for roughly 320k counted input tokens.
