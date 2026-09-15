@@ -55,6 +55,10 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
   keep reporting GPU-seconds as the primary unit and dollars as secondary.
 - `/scratch` purge policy is still unknown. Manifests and re-derivation scripts are in git, but the
   policy should be confirmed before 28 GB of models and any checkpoints accumulate.
+- `loop.py` still stamps the **executor** class name (`vllm-executor`) on the zero-token bookkeeping
+  `Usage` it charges for a failed executor call — the same defect that made the `fixed_k` gate report
+  the wrong planner model on 2026-09-16. The planner side is fixed and tested; the executor side is
+  harmless only because no gate reads executor model provenance yet. Fix it before one does.
 - The luna worker lane on the login node remains broken under memory pressure; the planner path is
   unaffected because it disables the shell tool and creates no sandbox.
 

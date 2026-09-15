@@ -20,6 +20,25 @@
       "steps_mean": 39.89,
       "tgc_mean": 0.0
     },
+    "fixed_k": {
+      "errors": {
+        "crash": 4,
+        "limit": 96,
+        "none": 2,
+        "parse_error": 12
+      },
+      "n": 114,
+      "planner_calls_total": 936,
+      "sgc": {
+        "dropped_incomplete": 0,
+        "scenarios_complete": 0,
+        "scenarios_scored": 38,
+        "value": 0.0
+      },
+      "solved": 0,
+      "steps_mean": 36.21,
+      "tgc_mean": 0.0
+    },
     "planner_alone": {
       "errors": {
         "limit": 12,
@@ -63,6 +82,19 @@
       "note": "no overlapping (task_id, seed) -- nothing to compare"
     },
     "planner_alone - executor_alone_8b": {
+      "bootstrap": 10000,
+      "ci95_pp": [
+        59.65,
+        76.32
+      ],
+      "ci_lower_at_least_margin": true,
+      "diff_pp": 68.42,
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "gap_at_least_margin": true,
+      "n_pairs": 114
+    },
+    "planner_alone - fixed_k": {
       "bootstrap": 10000,
       "ci95_pp": [
         59.65,

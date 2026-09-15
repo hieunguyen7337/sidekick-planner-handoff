@@ -225,7 +225,7 @@ def run_episode(
             except TimeoutError as exc:
                 last_exc = exc
                 usage = Usage(
-                    model=getattr(planner, "name", "planner"),
+                    model=_planner_model_id(planner),
                     provider="mock",
                     n_calls=attempts,
                     raw={"error_type": "timeout"},
@@ -245,7 +245,7 @@ def run_episode(
                 continue
             except PacketParseError as exc:
                 usage = Usage(
-                    model=getattr(planner, "name", "planner"),
+                    model=_planner_model_id(planner),
                     provider="mock",
                     n_calls=attempts,
                     raw={"error_type": "parse_error"},
@@ -711,6 +711,19 @@ def run_episode(
         error=error_type,
     )
     return result
+
+
+
+def _planner_model_id(planner: Any) -> str:
+    """Model id to stamp on the bookkeeping Usage of a FAILED planner call.
+
+    Prefer the configured model over the client CLASS name. `getattr(planner,
+    "name")` is "codex-exec", and `campaign_summarize` reads `usage.model` as
+    model provenance -- so a class name there makes the gate report "the wrong
+    model ran" for an arm that ran the right one.
+    """
+    model = getattr(getattr(planner, "config", None), "model", None)
+    return model or getattr(planner, "name", "planner")
 
 
 def _executor_messages(

@@ -7,11 +7,15 @@ before the maintenance window. `planner_alone` TGC **0.684** (114/114), `executo
 gate (the 3B cannot hold the action format) and was not needed: it exists as a fallback for the
 executor being *too strong*, which did not happen.
 
-**Class C's first arm also ran**: `prompt_only` (luna plans once, granite-4.2-8b executes) completed
-114/114 and scored TGC **0.000** — identical to `executor_alone`, so the paired difference from
-`planner_alone` is the same 68.42 pp [59.65, 76.32]. One frozen plan buys nothing here. `fixed_k`
-and `oracle_escalation` remain unrun. **HJ-2 … HJ-8 are unsubmitted.** Full numbers, caveats and
-per-job provenance: `campaign/RUNS.md`; machine-readable report: `campaign/hj1_gate.json`.
+**Two Class C arms also ran, and produced the night's most important result.** `prompt_only` (one
+plan) and `fixed_k` (review every 5 steps) both completed 114/114 and both scored TGC **0.000** —
+identical to `executor_alone` — so all three differ from `planner_alone` by the same 68.42 pp
+[59.65, 76.32]. **936 planner calls in `fixed_k` bought nothing.** The reviews were correct and
+specific (they named `apis.supervisor.show_account_passwords()`), the executor often complied, and
+it still could not carry the resulting `access_token` across steps. What separates luna from
+granite-4.2-8b here is not information that can be handed over in text. `oracle_escalation` remains
+unrun. **HJ-2 … HJ-8 are unsubmitted.** Full numbers, the diagnosis and per-job provenance:
+`campaign/RUNS.md`; machine-readable report: `campaign/hj1_gate.json`.
 
 ⚠ The gate licenses "there is ample headroom", not "the gap is 68 points" — `executor_alone` is
 zero-shot where the literature's frozen-8B numbers are few-shot, and `planner_alone` was truncated

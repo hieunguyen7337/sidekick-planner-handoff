@@ -9,10 +9,17 @@ Paired on (task_id, seed), all 114 pairs present on both sides, nothing dropped.
 | `planner_alone` (gpt-5.6-luna) | 114 | **0.684** | 0.447 (17/38 scenarios) | 78 | 13.5 | 1,645 |
 | `executor_alone` (granite-4.2-8b, zero-shot) | 114 | **0.000** | 0.000 | 0 | 39.9 | 0 |
 | `prompt_only` (luna plans once, 8b executes) | 114 | **0.000** | 0.000 | 0 | 39.9 | 114 |
+| `fixed_k` (luna reviews every 5 steps) | 114 | **0.000** | 0.000 | 0 | 36.2 | 936 |
 
-**planner − executor = 68.42 pp, 95% CI [59.65, 76.32]** (10,000 paired bootstrap resamples), and
-**planner − prompt_only is the same 68.42 pp [59.65, 76.32]**. The gate asks for ≥ 20 pp; even the
-lower bound clears it threefold. Full report: `campaign/hj1_gate.json`.
+All three executor-driven arms sit at exactly 0.000, so each differs from `planner_alone` by the
+identical **68.42 pp, 95 % CI [59.65, 76.32]** (10,000 paired bootstrap resamples, 114 pairs, none
+dropped). The gate asks for ≥ 20 pp; even the lower bound clears it threefold. Full report:
+`campaign/hj1_gate.json`.
+
+🔺 **The headline is no longer the gate — it is that 936 planner calls bought nothing.**
+(936 attempted, 931 billed — reconciled in the `fixed_k` section.) One plan:
+nothing. Eight expert reviews per episode: nothing. Whatever separates luna from granite-4.2-8b on
+AppWorld, it is not information that can be handed over in text.
 
 **What this does and does not license.** It licenses the conclusion the gate exists for:
 there is ample room between a frozen hosted planner and an untrained small executor, so a
@@ -57,6 +64,7 @@ must be reconciled against this file before its numbers are quoted anywhere.
 | 25388996 | `executor_alone` (granite-4.2-8b) | `hj1a_exec8b_20260915` | 2026-09-16 00:01 | `6ba8270` | **killed by me** at 00:07. Parsing worked (episodes reached step 3 instead of 1) but a single unparseable step still ended an episode, so ~⅓ would have died on format. Killed rather than bank a gate that passes *because* the executor looks weak. |
 | 25389506 | `executor_alone` (granite-4.2-8b, -3b) | `hj1a_exec8b/3b_20260915` | 2026-09-16 00:13 | **`7829a4c`** | **8B COMPLETE 114/114** (gate: 120 parseable actions, 0 parse errors). 3B arm **refused by the gate** (2/3 episodes ended in parse_error). Job exit 1 is the 3B refusal, not an 8B failure. |
 | 25390326 | `prompt_only` (luna + granite-4.2-8b) | `hj1c_prompt_only_20260916` | 2026-09-16 00:49 | **`a733865`** | **COMPLETE 114/114**, exit 0. Gate PASS (120 actions, 3 planner calls, 0 parse errors); final gate PASS with the expected planner and model. |
+| 25392080 | `fixed_k` (luna every 5 steps + granite-4.2-8b) | `hj1c_fixed_k_20260916` | 2026-09-16 01:52 | **`b2a1160`** | **COMPLETE 114/114**, exit 0, 52 min wall. The final gate printed FAIL — a **gate defect, not a run defect** (see below). Re-graded **PASS** after the fix, from the same archived results.
 
 ## `planner_alone` result, 2026-09-15 (114/114, code `6435bc0`)
 
@@ -132,6 +140,73 @@ executor_alone ≪ fixed_k ≤ sidekick` — falsifiable by the arms that have n
 to *ask* may not be enough either, and the 30B or a stronger executor may be needed for the method to
 have anything to work with. That is a question for M3, and it should be asked explicitly rather than
 discovered at M6.
+
+## `fixed_k`: 936 expert corrections, and the diagnosis they produced
+
+**Completed 114/114. TGC 0.000, 936 planner calls (8.2/episode), 96 `limit`, 12 `parse_error`,
+4 `crash`, 2 finished cleanly but wrong, 36.2 mean steps.**
+
+⚠ **This arm's final gate printed `FAIL`, and the gate was wrong.** The reason it gave was
+`planner ran as ['codex-exec'], expected only 'gpt-5.6-luna'` — but no call went to any model
+called `codex-exec`. `codex-exec` is the *class name* of the planner client, and `loop.py` stamped
+it on the zero-token bookkeeping `Usage` it charges when a planner call **fails** (timeout or
+`PacketParseError`). Three of the 114 runs hit a packet parse error, so three synthetic records
+entered the ledger, and `campaign_summarize._planner_models` read them as model provenance. The
+gate's message lists only the *unexpected* models, which is why the real `gpt-5.6-luna` records
+did not appear in it and the failure looked total rather than 3-in-114.
+
+Both halves are fixed: `loop.py` now stamps the *configured* model on a failed-call record, and
+the summariser ignores a zero-token placeholder that carries an `error_type`. A genuine
+`MockPlanner` fallback — the mistyped-`planner.type` case this check exists for — is deliberately
+**not** filtered, because its usage carries real token counts (15,378 input); `tests/unit/
+test_campaign_gate.py` pins both directions. Re-graded from the same archived results, all three
+planner-using arms now gate **PASS**.
+
+**Three different planner-call totals, all correct, none interchangeable:**
+
+| figure | count | what it is |
+|---|---|---|
+| loop counter (`n_planner_calls`) | **936** | every call the episode loop *attempted* |
+| ledger records (`planner_calls_total`) | **934** | every call that recorded a usage row |
+| real billed calls | **931** | the above minus the 3 zero-token failure placeholders |
+
+The loop/ledger gap of 2 is entirely in the **2 crashed runs** (`23cf851_1`, `57c3486_2`), where
+the episode died before the usage row was written. All 112 healthy runs agree exactly. Quote
+**931** for spend and **936** for intervention burden.
+
+`fixed_k` was run precisely because `prompt_only` failed: if one plan does nothing, does periodic
+re-entry? It does not. But *how* it fails is the most useful thing HJ-1 produced, because the
+planner's reviews are not vague — they are correct, specific, and they name the exact call:
+
+> "Authenticate first: call `apis.supervisor.show_account_passwords()` to obtain the phone account
+> credentials, then call `apis.phone.login(username=..., password=...)`; only after a successful
+> login, search contacts and send the exact message."
+
+> "Use `apis.supervisor.show_profile()` to obtain the correct phone-account username … Do not use
+> `"phone"` as the username or expose credentials."
+
+The second review has even diagnosed the executor's specific error. And in that episode the executor
+**complied**: it called `show_account_passwords()`, obtained real credentials, and logged in
+successfully — the environment returned a genuine `access_token`. It then called `login` again. And
+again. It never passed the token to anything.
+
+So the failure is not ignorance, and it is not disobedience. Across the whole arm, **34 of 114
+episodes (30%) did eventually pass an `access_token` to a later call** — and none of them finished
+either. Auth is only the first wall; the executor fails at the next composition point too. The
+defect is **carrying state across steps**, and it is general rather than a single missing fact.
+
+Three consequences worth carrying into M3/M4:
+
+1. **This is the best possible case for the project's premise and its biggest risk at once.** Text
+   cannot transfer what luna has; that is why an executor must be *trained* rather than prompted. But
+   if the 8B cannot hold state across five steps even under expert correction, teaching it *when to
+   ask* may not be enough — the thing it lacks is not timing.
+2. **The SFT target is now concrete.** `planner_alone` produced 78 solved trajectories that do carry
+   state correctly. That is exactly the behaviour to distil, and it is already on disk.
+3. **Check this before spending M4's 20 GPU-hours.** A cheap M3 probe — does granite-4.2-8b complete
+   *any* AppWorld task when handed a correct, fully-specified action sequence? — separates "needs
+   training" from "cannot be trained at this scale", and it costs a few GPU-minutes. If the answer is
+   no, the executor choice should change before, not after, the training milestone.
 
 ## What `executor_alone` actually fails at (granite-4.2-8b, zero-shot)
 

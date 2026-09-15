@@ -45,6 +45,36 @@ def _results(root: Path) -> list[dict]:
     return out
 
 
+_TOKEN_FIELDS = (
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "reasoning_output_tokens",
+)
+
+
+def _is_failed_call_placeholder(usage: dict) -> bool:
+    """True for the zero-token bookkeeping record written when a call FAILED.
+
+    `loop.py` charges a synthetic Usage on planner timeout / PacketParseError so the
+    failed attempt still shows up in the ledger. Before 2026-09-16 it was labelled
+    with the planner CLASS name ("codex-exec"), not a model id -- and reading that as
+    model provenance failed `hj1c_fixed_k` on 2026-09-16 with "planner ran as
+    ['codex-exec']" on an arm where all 931 real calls went to gpt-5.6-luna. Only 3
+    of 114 runs carried one, so the gate turned 3 parse errors into a wrong-model
+    verdict for the whole campaign.
+
+    A genuine MockPlanner fallback is deliberately NOT filtered: its usage carries
+    real token counts (15,378 input), so the mistyped-`planner.type` check this gate
+    exists for still fires.
+    """
+    if (usage.get("provider") or "") != "mock":
+        return False
+    if any(int(usage.get(f) or 0) for f in _TOKEN_FIELDS):
+        return False
+    return bool((usage.get("raw") or {}).get("error_type"))
+
+
 def _planner_models(root: Path) -> Counter:
     """Distinct model ids seen on planner-attributed usage records."""
     seen: Counter = Counter()
@@ -60,8 +90,11 @@ def _planner_models(root: Path) -> Counter:
                     continue
                 usage = ev.get("usage") or {}
                 model = usage.get("model")
-                if model and ev.get("actor") == "planner":
-                    seen[model] += 1
+                if not model or ev.get("actor") != "planner":
+                    continue
+                if _is_failed_call_placeholder(usage):
+                    continue
+                seen[model] += 1
         except OSError:
             continue
     return seen
