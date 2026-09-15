@@ -167,6 +167,18 @@ def _digest_api_docs(api_docs: Any) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
+_API_USAGE_PREAMBLE = (
+    "You are controlling an AppWorld environment from a Python session.\n"
+    "Call APIs as apis.<app>.<api>(...), for example "
+    "apis.spotify.show_song_library().\n"
+    "Your code runs at module level: use print(...) to see a value. `return` "
+    "outside a function and top-level `await` are syntax errors here.\n"
+    "Only the APIs listed below exist. For full parameter details call "
+    "apis.api_docs.show_api_doc(app_name=..., api_name=...).\n"
+    "\nAvailable APIs:\n"
+)
+
+
 def _summarise_api_docs(api_docs: Any) -> str:
     """Render AppWorld's api_docs as a compact one-line-per-API listing.
 
@@ -206,5 +218,11 @@ def _summarise_api_docs(api_docs: Any) -> str:
                     description = str(entry.get("description") or "").strip()
             except Exception:  # noqa: BLE001
                 description = ""
-            lines.append(f"  {api_name}: {description}" if description else f"  {api_name}")
-    return "\n".join(lines)
+            # Fully qualified on purpose. Listing a bare `show_song_library` under a
+            # `spotify:` heading invites `spotify.show_song_library()`, which fails
+            # with NameError: name 'spotify' is not defined -- observed 2026-09-15.
+            call = f"  apis.{app_name}.{api_name}"
+            lines.append(f"{call}: {description}" if description else call)
+    if not lines:
+        return ""
+    return _API_USAGE_PREAMBLE + "\n".join(lines)

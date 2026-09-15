@@ -692,12 +692,10 @@ def _executor_messages(
     )
     user = f"Task: {instruction}\n"
     if api_docs:
-        user += (
-            "Your code runs in a Python session against the AppWorld APIs. Call them "
-            "through the `apis` object, and use `apis.api_docs` to look up any API you "
-            "need in more detail. Available APIs:\n"
-            f"{api_docs}\n"
-        )
+        # api_docs already carries its own usage preamble (calling convention, print
+        # vs return, how to get full parameter detail). Do not restate it here: two
+        # sets of instructions that drift apart is worse than one.
+        user += f"{api_docs}\n"
     if packet is not None:
         user += f"Plan: {packet.model_dump_json()}\n"
     user += f"Transcript:\n{transcript}\n"
