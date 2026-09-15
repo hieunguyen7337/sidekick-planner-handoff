@@ -13,6 +13,8 @@ from pathlib import Path
 
 from sidekick.runner import load_config, make_executor, make_planner
 
+WANT_STOP = ["</py>", "</python>", "</tool_call>"]
+
 EXPECTED = {
     "configs/pilot_exec_8b.yaml": ("vllm-executor", {"enable_thinking": False}),
     "configs/pilot_exec_3b.yaml": ("vllm-executor", {"enable_thinking": False}),
@@ -37,6 +39,10 @@ for rel, (want_exec_name, want_ctk) in EXPECTED.items():
         print(f"  chat_template_kwargs -> {ctk}")
         if ctk != want_ctk:
             failures.append(f"{rel}: chat_template_kwargs is {ctk!r}, expected {want_ctk!r}")
+        stop = getattr(ex, "stop", None)
+        print(f"  stop -> {stop}")
+        if stop != WANT_STOP:
+            failures.append(f"{rel}: stop is {stop!r}, expected {WANT_STOP!r}")
         print(f"  max_tokens -> {getattr(ex, 'max_tokens', None)}")
         if type(pl).__name__ != "MockPlanner":
             failures.append(f"{rel}: planner is {type(pl).__name__}, expected MockPlanner (must cost nothing)")

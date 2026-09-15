@@ -688,7 +688,13 @@ def _executor_messages(
     """
     system = (
         "You are an executor. Output exactly one action: a ```python fenced block, "
-        "a line starting with ASK_PLANNER:, a line starting with REPORT:, or COMPLETE."
+        "a line starting with ASK_PLANNER:, a line starting with REPORT:, or COMPLETE.\n"
+        "Emit that one action, then stop. Do not write what you expect the output to be: "
+        "the environment runs your code and puts the real output in the transcript on the "
+        "next turn, and anything you write after the action is discarded. Observed "
+        "2026-09-15: a model wrote a call to show_song_library() and then invented a "
+        "plausible song list as its result, reasoned over the invention for 2000 tokens "
+        "and never acted."
     )
     user = f"Task: {instruction}\n"
     if api_docs:

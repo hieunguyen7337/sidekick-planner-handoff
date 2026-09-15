@@ -144,19 +144,78 @@ class ActionParseError(ValueError):
         self.raw_output = raw_output
 
 
-_FENCE_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n(.*)```", re.DOTALL | re.IGNORECASE)
+# Two readings of the same text, and neither is right on its own. Greedy `(.*)` runs to
+# the LAST closing fence, which is what a block containing a nested ``` inside a
+# triple-quoted string needs, but on a reply carrying two separate blocks it swallows the
+# prose between them. Lazy `(.*?)` is the reverse. So try the short read and widen only
+# when it does not parse as Python -- the ambiguity is real, and syntax is the evidence
+# that settles it.
+_FENCE_LAZY_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n(.*?)```", re.DOTALL | re.IGNORECASE)
+_FENCE_GREEDY_RE = re.compile(r"```[ \t]*python[ \t]*\r?\n(.*)```", re.DOTALL | re.IGNORECASE)
+# Granite 4.2 with thinking off does not reach for a markdown fence: it emits its
+# native tool-call shape, `<tool_call><py>...</py>`, even though no tools are declared.
+# Observed 2026-09-15: every executor_alone episode died parse_error at step 1 while the
+# code inside the tag was perfectly good Python. The closing tag is optional so a stop
+# sequence may cut it off without costing us the action.
+_PY_TAG_RE = re.compile(r"<py(?:thon)?>[ \t]*\r?\n?(.*?)(?:</py(?:thon)?>|$)", re.DOTALL | re.IGNORECASE)
+
+
+def _parses(code: str) -> bool:
+    """True if ``code`` is syntactically valid Python. Blank counts as invalid: an empty
+    capture is never the block the model meant, it is a sign the delimiters were read
+    wrongly."""
+    if not code.strip():
+        return False
+    try:
+        compile(code, "<executor-action>", "exec")
+    except (SyntaxError, ValueError):  # ValueError: source containing null bytes
+        return False
+    return True
+
+
+def _fenced_block(raw: str) -> tuple[int, str] | None:
+    lazy = _FENCE_LAZY_RE.search(raw)
+    if not lazy:
+        return None
+    if _parses(lazy.group(1)):
+        return lazy.start(), lazy.group(1)
+    greedy = _FENCE_GREEDY_RE.search(raw)
+    if greedy and _parses(greedy.group(1)):
+        return greedy.start(), greedy.group(1)
+    return lazy.start(), lazy.group(1)  # neither parses; report the short read
+
+
+def _tagged_block(raw: str) -> tuple[int, str] | None:
+    m = _PY_TAG_RE.search(raw)
+    return (m.start(), m.group(1)) if m else None
+
+
+def _first_code_block(raw: str) -> str | None:
+    """Return the earliest python block, in whichever of the two spellings comes first.
+
+    Earliest rather than fence-first: a reply that narrates in a fence and then acts in
+    a `<py>` tag (or the reverse) should run the action the model reached for first,
+    the same one a human reading top to bottom would take.
+    """
+    best: tuple[int, str] | None = None
+    for finder in (_fenced_block, _tagged_block):
+        found = finder(raw)
+        if found and (best is None or found[0] < best[0]):
+            best = found
+    return best[1] if best else None
 
 
 def parse_executor_action(raw: str) -> ExecutorAction:
     """Extract an ExecutorAction from model text.
 
-    Priority order: fenced ```python block -> CODE, "ASK_PLANNER:" line -> ASK_PLANNER,
+    Priority order: first python block (a ```python fence or a <py> tag, whichever the
+    model reached for first) -> CODE, "ASK_PLANNER:" line -> ASK_PLANNER,
     "REPORT:" line -> REPORT, "COMPLETE" -> COMPLETE. raw_output is always the
     untouched input. Raises ActionParseError(raw_output=raw) on no match.
     """
-    m = _FENCE_RE.search(raw)
-    if m:
-        code = m.group(1).strip()
+    block = _first_code_block(raw)
+    if block:
+        code = block.strip()
         if code:
             return ExecutorAction(kind="CODE", code=code, raw_output=raw)
     for line in raw.splitlines():

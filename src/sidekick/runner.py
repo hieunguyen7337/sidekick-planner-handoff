@@ -113,6 +113,7 @@ def make_executor(cfg: dict[str, Any]) -> Any:
             gpu_fraction=float(exec_cfg.get("gpu_fraction", 1.0)),
             timeout_s=float(exec_cfg.get("timeout_s", 120)),
             chat_template_kwargs=exec_cfg.get("chat_template_kwargs"),
+            stop=exec_cfg.get("stop"),
         )
     return MockExecutor()
 

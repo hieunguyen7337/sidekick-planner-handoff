@@ -244,3 +244,35 @@ def test_parsed_action_passes_model_validator():
     a = parse_executor_action("```python\nx = 1\n```")
     assert isinstance(a, ExecutorAction)
     assert a.code == "x = 1"
+
+
+def test_parse_accepts_granites_py_tag():
+    # Granite 4.2 with thinking off emits its native tool-call shape, not a fence.
+    # Observed 2026-09-15: good code inside <py> scored parse_error on every episode.
+    raw = "<tool_call>\n<py>\nsongs = apis.spotify.show_song_library()\n</py>\n</tool_call>"
+    a = parse_executor_action(raw)
+    assert a.kind == "CODE"
+    assert a.code == "songs = apis.spotify.show_song_library()"
+
+
+def test_parse_py_tag_survives_a_stop_sequence_eating_the_close():
+    # The vLLM stop sequence is "</py>", so the close is absent from the text we see.
+    raw = "<tool_call>\n<py>\nprint(apis.api_docs.show_app_descriptions())\n"
+    a = parse_executor_action(raw)
+    assert a.kind == "CODE"
+    assert a.code == "print(apis.api_docs.show_app_descriptions())"
+
+
+def test_parse_fence_is_not_greedy_across_two_blocks():
+    # A greedy (.*) ran from the first opening fence to the LAST closing one, so the
+    # "code" carried the prose between the blocks and could never compile.
+    raw = "```python\nfirst = 1\n```\nthen I thought again\n```python\nsecond = 2\n```"
+    a = parse_executor_action(raw)
+    assert a.code == "first = 1"
+
+
+def test_parse_takes_whichever_code_block_comes_first():
+    fence_first = "```python\na = 1\n```\n<py>\nb = 2\n</py>"
+    assert parse_executor_action(fence_first).code == "a = 1"
+    tag_first = "<py>\nb = 2\n</py>\n```python\na = 1\n```"
+    assert parse_executor_action(tag_first).code == "b = 2"

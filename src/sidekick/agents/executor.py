@@ -41,6 +41,7 @@ class VLLMExecutor:
         timeout_s: float = 120.0,
         http_client: Any | None = None,
         chat_template_kwargs: Optional[dict] = None,
+        stop: Optional[list[str]] = None,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -56,6 +57,13 @@ class VLLMExecutor:
         # ever emitting an action -- measured 2026-09-15: 3072 output tokens of
         # deliberation and no fenced block.
         self.chat_template_kwargs = chat_template_kwargs or None
+        # Stop sequences end the generation at the close of the first action. Without
+        # them Granite writes an action, then invents the output it expects, then
+        # reasons over its own invention for the rest of the budget -- observed
+        # 2026-09-15 on every executor_alone episode. The parser only ever reads the
+        # first block, so the rest was pure GPU cost. Do NOT put a bare "```" here: it
+        # matches the OPENING fence of a fenced block and truncates to nothing.
+        self.stop = list(stop) if stop else None
 
     def complete(self, messages: list[dict], **kw) -> tuple[str, Usage]:
         client = self._ensure_client()
@@ -69,6 +77,9 @@ class VLLMExecutor:
         ctk = kw.get("chat_template_kwargs", self.chat_template_kwargs)
         if ctk:
             payload["chat_template_kwargs"] = ctk
+        stop = kw.get("stop", self.stop)
+        if stop:
+            payload["stop"] = stop
         url = self._chat_url()
         t0 = time.perf_counter()
         response = client.post(url, json=payload)
