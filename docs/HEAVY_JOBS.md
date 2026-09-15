@@ -1,8 +1,30 @@
-# Sidekick — heavy jobs, specified in full and **not submitted**
+# Sidekick — heavy jobs, specified in full
 
-Status **2026-09-16: nothing in this file has been submitted.** All M0 feasibility gates passed on 2026-09-15 (see `feasibility/M0_RESULTS.md`), so these jobs are technically unblocked and wait only on approval. Each job below needs
-explicit approval before it runs. Tonight only the M0 feasibility gates run, because the cluster enters
-maintenance at ~08:00 on 2026-09-16 and PBS refuses to start any job whose walltime crosses that.
+Status **2026-09-15 22:35: HJ-1 is partly running, by user approval. HJ-2 … HJ-8 are unsubmitted.**
+All M0 feasibility gates passed on 2026-09-15 (see `feasibility/M0_RESULTS.md`). Every job below
+still needs explicit approval before it runs.
+
+**HJ-1 was split by resource class**, because its six arms barely overlap in what they need and
+`runner.py` already takes one `--system` per invocation, so no code change was required:
+
+| class | arms | needs | runs | job |
+|---|---|---|---|---|
+| A | `executor_alone` (8b, 3b) | GPU only, **zero planner calls** | 228 | `scripts/pbs/hj1a_executor_alone.pbs` |
+| B | `planner_alone` | luna only, **no GPU** | 114 | `scripts/pbs/hj1b_planner_alone.pbs` |
+| C | `prompt_only`, `fixed_k`, `oracle_escalation` | both at once | 342 | after maintenance |
+
+Classes A and B together settle HJ-1's go/no-go gate (`planner_alone − executor_alone ≥ 20 pp`) and
+were run on the evening of 2026-09-15 ahead of the ~08:00 2026-09-16 maintenance shutdown. Class C
+needs a GPU and the planner simultaneously and was deferred.
+
+⚠ Splitting arms across calendar windows is acceptable for a **pilot** hunting a ~20 pp effect, where
+planner drift is far smaller than the effect. It must **not** be done for HJ-7, where all six systems
+must run in one window.
+
+⚠ **Every dollar figure below is luna API list pricing and does not describe spend.** Codex here
+authenticates through a ChatGPT plan, so planner calls are covered by the subscription; read the
+dollar columns as a token-volume proxy. The binding limit is plan quota, which a batch job cannot
+observe. See `FOLLOWUPS.md` §6 for what running HJ-1 actually exposed.
 
 Read with `PLAN.md`. Every job here:
 
