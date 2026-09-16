@@ -1,0 +1,38 @@
+# HJ-3a dev evaluation: paired against HJ-1R prompt_only; only the adapter differs.
+# Dev is the tuning split, so these numbers are for gating the next step, not for publication.
+env: appworld
+campaign_id: hj3_sft_plan_20260916
+# HJ-1 Class C. The collaboration arm: luna writes one plan up front, granite executes it.
+# Unlike Classes A and B this needs the GPU and the planner at the same time, which is why
+# it was deferred until both of those had finished.
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays HJ-1 packets: this arm spends zero hosted planner calls, so every arm sees
+  # the identical plan per task and plan-sampling noise is removed from the comparison.
+  packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  # See pilot_exec_8b.yaml: ends generation at the first action instead of paying for the
+  # model to invent the environment's reply. Never a bare "```" -- it matches the opener.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 120
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 120
+  # prompt_only calls the planner once per episode (plan_first, planner_drives=False), so
+  # this is nowhere near binding here. It IS binding for planner_alone, where the planner
+  # takes every step -- see docs/FOLLOWUPS.md.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

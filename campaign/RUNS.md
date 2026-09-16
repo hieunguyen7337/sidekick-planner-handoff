@@ -314,3 +314,51 @@ extraction** — `_PYTHON_FENCE_RE` in the planner client and `_FENCE_LAZY_RE`/`
 fence truncated by a token limit; the planner one does not, so a planner reply cut off
 mid-block silently yields `code=None` and falls through to a parse error. Logged in
 `docs/FOLLOWUPS.md`; it has not bitten because luna's replies are short and well-formed.
+
+---
+
+## HJ-1R + HJ-1.5 (job J1) — decision rules, recorded before submission
+
+These are written down **before** the job is submitted, so that the reading of its result is not
+chosen after seeing it. Campaigns: `hj1r_exec8b_20260916`, `hj1r_prompt_only_20260916`; probes to
+`probe_granite8b.json` and `probe_qwen3_8b.json`.
+
+**What changed since HJ-1, and what deliberately did not.** Only the executor prompt: it is now a
+multi-turn conversation including the executor's own actions (commit `b6e31ca`). The configs differ
+from the frozen pilots in campaign id, `max_planner_calls`, and `prompt_only`'s `packet_source` —
+nothing else. `prompt_only` replays HJ-1's archived packets, so every task gets the identical plan it
+got in HJ-1 and the arm spends zero hosted planner calls. Same split, same tasks, same seeds.
+
+### HJ-1R — the honest untrained baseline
+
+| outcome | reading | consequence |
+|---|---|---|
+| `prompt_only` TGC still 0.000, CI excluding any positive effect | the prompt was not the binding constraint; HJ-1's mechanism claim was wrong but its numbers stand | restore a *narrowed* version of the claim, and proceed to SFT with HJ-1R as the baseline |
+| `prompt_only` > 0 with a bootstrap CI excluding 0 | part of HJ-1's 68.42 pp gap was harness, not model | report **both** numbers; the ≥20 pp gate is re-evaluated on HJ-1R, not assumed to carry over |
+| `prompt_only` ≥ `planner_alone` − 20 pp | the gate no longer passes on the honest baseline | stop; the project's premise needs restating before any training spend |
+
+The gate verdict is expected to survive — the old baselines were handicapped, so 68.42 pp is an
+upper bound — but it is **re-computed**, not inherited. `hj1_gate.py` is re-run pairing
+`hj1b_planner_20260915` against the two HJ-1R arms on their shared (task_id, seed) pairs.
+
+⚠ Whatever HJ-1R reports, **it, and not HJ-1's zeros, is the baseline every SFT number is compared
+against.** Comparing a trained executor under the fixed prompt to an untrained one under the broken
+prompt would credit the prompt fix to training.
+
+### HJ-1.5 — the state probe
+
+Primary metric: given a correct gold history replayed into a fresh world, the model's next action
+executes without error and calls the same `apis.<app>.<api>` set as the teacher's. Temperature 0.
+
+| primary agreement | reading | consequence |
+|---|---|---|
+| ≥ 40% overall, not collapsing with depth | granite-4.2-8b can act from a correct history; it needs training, not replacing | train SFT(b) on Granite as planned |
+| < 15% on Granite **and** materially better on Qwen3-8B | the executor choice is wrong, and cheaply fixable | switch the executor before J3, not after |
+| between, or degrading sharply with depth | trainable but marginal | proceed on Granite **and** add a third seed to HJ-2B for more teacher data |
+
+`hash_match` (byte-identical `env_state_hash`) is reported but **gates nothing**: `snapshot_hash`
+hashes `environment_io`, which includes the input code, so it can only match when the model emits
+byte-identical code to the teacher. Reading a near-zero there as failure would be a measurement
+artefact, not a finding.
+
+These probe numbers are the **pre-SFT baseline** the post-SFT probe in J3 is compared against.

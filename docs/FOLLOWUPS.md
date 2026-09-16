@@ -185,3 +185,21 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
   parser now tries the short read and widens only when it fails to `compile()`. Flagged here because
   **the same ambiguity exists anywhere else fenced output is parsed** — check the trajectory tooling
   before HJ-4 uses it on training data.
+
+## 7. Found while building the follow-up jobs on 2026-09-16
+
+- **`replay()` reads from the FIRST `run_start`, not the last, and steps every action in the
+  file.** A retried run appends to the dead attempt's log (section 5), so a two-attempt file is
+  replayed as one trajectory: the first attempt's actions are stepped, then the second's, against a
+  single world. `replay_prefix()` (added for the HJ-1.5 probe) takes the last `run_start`; `replay()`
+  was deliberately left alone so its behaviour would not change under the reproducibility tests.
+  Fix it together with those tests, and note that any `ReplayReport` produced from a re-run task's
+  log before this is fixed is not trustworthy.
+
+- **Two independent fenced-code extractors remain** (`_PYTHON_FENCE_RE` in the planner client vs
+  `_FENCE_LAZY_RE`/`_PY_TAG_RE` in `schemas.py`). Unify before HJ-4 (J6), where branch actions are
+  parsed from both sides.
+
+- **`runner.run_campaign` still has no `--retry-broken` flag**; every PBS job calls
+  `campaign_summarize --purge-broken` first instead. That works, but it is a convention a new job
+  script can forget, and forgetting it means crashed runs are skipped forever on resume.
