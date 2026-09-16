@@ -878,3 +878,60 @@ paths costs nothing and catches the rest.
 excluding 0, paired against HJ-1R's `prompt_only` on the same tasks and the same cached
 plans; and probe agreement up, phase 4 against phase 3. Below the gate: stop and decide
 before further GPU spend.
+
+### J3 arm A — `executor_alone(sft_b)` on dev, complete (2026-09-17)
+
+Campaign `hj3_sft_b_exec_20260917`, job `25401780`, adapter `sft_b_s123_granite8b`
+served as LoRA alias `sft_b`. **114/114 episodes, zero crashes.**
+
+Paired against `hj1r_exec8b_20260916` — the same arm, same 57 dev tasks × 2 seeds, same
+multi-turn executor prompt, differing **only** in the adapter.
+
+| | untrained | SFT(b) |
+|---|---|---|
+| solved / 114 | 2 | **24** |
+| TGC | 0.0175 | **0.2105** |
+| mean goal_pass_rate | 0.190 | **0.614** |
+| mean steps | 30.16 | **19.17** |
+| `limit` episodes | 37 | 15 |
+| planner calls | 0 | 0 |
+
+**Paired bootstrap, `hj1_gate.py`, 10,000 resamples, 114 pairs, 0 dropped:
++19.3 pp TGC, 95% CI [12.28, 27.19].** The interval excludes zero.
+
+**This answers J3's stated question — "is the 8B trainable at this data scale" — yes.**
+230 teacher trajectories, drawn from a train split hard-capped at 90 tasks, took a local
+8B executor from 2 solved to 24 on held-out dev tasks, with no planner involved at
+inference at all (`planner_calls: 0` in both arms).
+
+🔺 **The step count is the more interesting number than the pass rate.** The untrained
+executor averaged 30.16 steps against a 40-step ceiling and hit `limit` in 37 of 114
+episodes: it was not failing to know what to do so much as failing to stop. SFT halved
+`limit` episodes and cut mean steps by a third. Two independent signals of the same
+learned behaviour — termination — which is exactly what training on *complete* teacher
+trajectories with the terminal `COMPLETE` preserved should produce, and is the direct
+payoff of the terminal-action masking done when the partial-credit set was built.
+
+**Read TGC beside goal_pass_rate here, not instead of it.** Mean goal-pass is 0.614 while
+TGC is 0.2105, because AppWorld success requires *every* goal-check to pass. Of the 90
+unsolved episodes, only 2 scored 0.0; the modal unsolved score is 0.5, with a long tail at
+0.667–0.833. The adapter completes most of most tasks and misses one or two checks. Any
+write-up that quotes 0.21 alone will substantially understate what was learned — and,
+symmetrically, quoting 0.614 as a success rate would overstate it.
+
+⚠ **Not the gate.** The pre-registered J3 gate turns on arm B (`sft_plan`) paired against
+HJ-1R's `prompt_only`, plus the probe delta. Arm A is supporting evidence, and it is
+reported here because it is complete, not because it decides anything.
+
+**Baselines re-measured this session for the record**, both under the fixed prompt, both
+n=114 with all results present:
+
+| HJ-1R arm | solved | TGC | mean gpr | `limit` |
+|---|---|---|---|---|
+| `executor_alone` | 2 | 0.0175 | 0.190 | 37 |
+| `prompt_only` | 6 | 0.0526 | 0.288 | 40 |
+
+✅ **The previously-flagged "HJ-1R `prompt_only` is short 6 crashed episodes" item is
+closed as a non-issue.** Verified directly: 114 `events.jsonl`, 114 `result.json`, zero
+directories with events but no result, and no `crash` error type in the arm. No re-run is
+needed and no ledger number needs revising.
