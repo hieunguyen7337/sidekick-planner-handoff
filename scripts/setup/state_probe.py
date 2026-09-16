@@ -47,6 +47,12 @@ STR_LITERAL_RE = re.compile(r"[\"']([A-Za-z0-9_@.\-]{3,})[\"']")
 
 DEFAULT_CAMPAIGN = "/scratch/n12194778/sidekick/results/hj1b_planner_20260915"
 
+# Bump when the record shape or a metric's SEMANTICS change, so resume refuses
+# to mix results across the change. 2026-09-17: bumped to 2 -- the probe now
+# runs in AppWorldEnv rather than MockEnv, and `agreement` no longer counts an
+# empty gold API set as a match. Results from version 1 are not comparable.
+PROBE_SCHEMA_VERSION = 2
+
 
 def extract_api_ids(code: str) -> set[str]:
     """Set of ``app.api`` identifiers called in a code block."""
@@ -177,6 +183,7 @@ def probe_step(
     must produce step k+1 (= ``pairs[k]``, which it does NOT see — the history is
     ``pairs[:k]``). Every failure is recorded with an error_type, never dropped."""
     rec: dict[str, Any] = {
+        "schema_version": PROBE_SCHEMA_VERSION,
         "k": k + 1,
         "gold_kind": None,
         "agreement_defined": False,
@@ -353,6 +360,8 @@ def _read_partial(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     records: list[dict[str, Any]] = []
+    discarded_missing_schema = 0
+    discarded_mismatched_schema = 0
     with path.open(encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
             if not line.strip():
@@ -371,7 +380,23 @@ def _read_partial(path: Path) -> list[dict[str, Any]]:
                     file=sys.stderr,
                 )
                 continue
+            if "schema_version" not in record_value:
+                discarded_missing_schema += 1
+                continue
+            if record_value["schema_version"] != PROBE_SCHEMA_VERSION:
+                discarded_mismatched_schema += 1
+                continue
             records.append(record_value)
+    discarded = discarded_missing_schema + discarded_mismatched_schema
+    if discarded:
+        print(
+            f"[state_probe] discarded {discarded} partial record(s) with "
+            f"missing or mismatched schema_version "
+            f"(missing={discarded_missing_schema}, "
+            f"mismatched={discarded_mismatched_schema}, "
+            f"expected={PROBE_SCHEMA_VERSION})",
+            file=sys.stderr,
+        )
     return records
 
 
@@ -481,6 +506,7 @@ def _report_from_records(
         if rec.get("value_forwarding"):
             record(buckets["value_forwarding"], rec)
     return {
+        "schema_version": PROBE_SCHEMA_VERSION,
         "model": model,
         "lora_name": lora_name,
         "campaign_root": str(campaign_root),

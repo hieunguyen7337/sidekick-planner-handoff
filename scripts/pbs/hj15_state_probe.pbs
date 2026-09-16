@@ -63,7 +63,8 @@ probe_qwen_rc=125
 summary_archive_rc=125
 
 probe_report_status () {
-  "${SIDEKICK_VENV}/bin/python" -c 'import json,sys; r=json.load(open(sys.argv[1])); assert isinstance(r,dict) and isinstance(r["budget_exhausted"],bool); print(("complete" if r["budget_exhausted"] is False else "partial") + " " + str(r["n_completed"]) + "/" + str(r["n_planned"]))' "$1" 2>/dev/null
+  PYTHONPATH="${REPO}/scripts/setup:${PYTHONPATH:-}" \
+    "${SIDEKICK_VENV}/bin/python" -c 'import json,sys; import state_probe; r=json.load(open(sys.argv[1])); assert isinstance(r,dict) and isinstance(r["budget_exhausted"],bool); print("stale" if r.get("schema_version") != state_probe.PROBE_SCHEMA_VERSION else (("complete" if r["budget_exhausted"] is False else "partial") + " " + str(r["n_completed"]) + "/" + str(r["n_planned"])))' "$1" 2>/dev/null
 }
 
 run_probe_smoke () {

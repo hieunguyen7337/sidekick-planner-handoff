@@ -183,6 +183,68 @@ def test_partial_jsonl_resumes_by_run_and_step(tmp_path):
     assert resumed["steps"][0]["step_index"] == resumed["sampled_points"][0]["step"]
 
 
+def test_resume_discards_records_from_old_schema(tmp_path, capsys):
+    campaign = _write_campaign(tmp_path)
+    out = tmp_path / "old-schema.json"
+    partial = Path(f"{out}.partial.jsonl")
+    partial.write_text(
+        json.dumps({"run_id": "run-1", "step_index": 1, "schema_version": 1}) + "\n"
+    )
+
+    executor = StubExecutor()
+    report = sp.run_probe(
+        str(campaign), "planner_alone", executor, 0, 0,
+        out_path=out, max_points=1, seed=0
+    )
+
+    assert executor.calls == 1
+    assert report["n_completed"] == 1
+    assert report["schema_version"] == sp.PROBE_SCHEMA_VERSION
+    assert report["steps"][0]["schema_version"] == sp.PROBE_SCHEMA_VERSION
+    assert "schema_version" in json.loads(partial.read_text().splitlines()[-1])
+    assert "discarded 1 partial record" in capsys.readouterr().err
+
+
+def test_resume_discards_records_with_no_schema_version(tmp_path, capsys):
+    campaign = _write_campaign(tmp_path)
+    out = tmp_path / "missing-schema.json"
+    partial = Path(f"{out}.partial.jsonl")
+    partial.write_text(json.dumps({"run_id": "run-1", "step_index": 1}) + "\n")
+
+    executor = StubExecutor()
+    report = sp.run_probe(
+        str(campaign), "planner_alone", executor, 0, 0,
+        out_path=out, max_points=1, seed=0
+    )
+
+    assert executor.calls == 1
+    assert report["n_completed"] == 1
+    assert report["steps"][0]["schema_version"] == sp.PROBE_SCHEMA_VERSION
+    assert "discarded 1 partial record" in capsys.readouterr().err
+
+
+def test_resume_keeps_current_schema_records(tmp_path):
+    campaign = _write_campaign(tmp_path)
+    out = tmp_path / "current-schema.json"
+
+    first_executor = StubExecutor("granite")
+    first = sp.run_probe(
+        str(campaign), "planner_alone", first_executor, 0, 0,
+        out_path=out, max_points=1, seed=0
+    )
+    assert first["steps"][0]["schema_version"] == sp.PROBE_SCHEMA_VERSION
+
+    resumed_executor = StubExecutor("qwen")
+    resumed = sp.run_probe(
+        str(campaign), "planner_alone", resumed_executor, 0, 0,
+        out_path=out, max_points=1, seed=0
+    )
+
+    assert resumed_executor.calls == 0
+    assert resumed["n_completed"] == 1
+    assert resumed["steps"][0]["schema_version"] == sp.PROBE_SCHEMA_VERSION
+
+
 def test_time_budget_writes_clean_partial_report(tmp_path, monkeypatch):
     campaign = _write_campaign(tmp_path, n_pairs=4)
     out = tmp_path / "budget.json"
