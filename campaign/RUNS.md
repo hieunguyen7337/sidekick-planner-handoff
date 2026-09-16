@@ -1059,9 +1059,21 @@ The state-equivalence jump (0.676 → 0.866) is the clearest single symptom: whe
 emits an action instead of narrating, its wrong actions are far more often harmless ones
 the teacher's next step can still recover from.
 
-**`probe_granite8b.json` (v2) is superseded for every purpose except the Granite-vs-Qwen
-comparison it was built for**, where both arms carried the identical handicap. It must
-never be compared against a v3 report; `PROBE_SCHEMA_VERSION` enforces that mechanically.
+**`probe_granite8b.json` (v2) is superseded.** It must never be compared against a v3
+report; `PROBE_SCHEMA_VERSION` enforces that mechanically.
+
+🔺 **Amended 2026-09-17.** This paragraph previously kept the v2 Granite-vs-Qwen comparison
+alive on the grounds that "both arms carried the identical handicap". The *configuration*
+was identical; the *damage* was not. The missing `enable_thinking: false` cost Qwen
+**139/300** points to parse errors against Granite's **77/300** — nearly double. That is
+plausibly a property of the misconfiguration meeting a reasoning-first model rather than of
+Qwen's ability to act, so the raw 0.224-vs-0.104 gap overstates the real one. Correcting
+for it on parsed points only gives Granite ≈0.301 vs Qwen ≈0.194 (proportional allocation
+of parse errors across scorable points — an estimate, not a measurement); scaling by the
+0.256/0.301 ratio Granite actually exhibited when fixed puts Qwen near **0.165**.
+
+**Do not quote 0.224 vs 0.104 as the reason Granite was chosen.** See the selection
+rationale below, which does not depend on Qwen at all.
 
 ---
 
@@ -1252,3 +1264,68 @@ exactly what distinguishes a real escalation point from step 5.
 
 This costs nothing in wall-clock — J6 was already on the critical path — and it stops H2
 from being decided by a timer.
+
+---
+
+## Executor selection: the defensible rationale, and why Qwen was not re-probed (2026-09-17)
+
+**This is the statement to use in the prereg and the write-up.** It replaces any framing
+built on the v2 Granite-vs-Qwen numbers.
+
+The pre-registered rule, recorded before HJ-1.5 ran:
+
+> agreement ≥ 0.40 overall and not collapsing with depth → train Granite;
+> **< 0.15 on Granite *and* materially better on Qwen3-8B → switch executor before J3**;
+> between → proceed with Granite and add J2's third seed.
+
+Granite, measured under the **serving configuration** (`probe_granite8b_serving.json`,
+`PROBE_SCHEMA_VERSION` 3, `enable_thinking: false`, stop sequences set):
+
+| | value |
+|---|---|
+| agreement, overall | **0.256** (64 / 250) |
+| by depth 1–5 / 6–10 / 11+ | 0.167 / 0.213 / **0.400** — rising, not collapsing |
+| parse errors | 2 / 300 |
+| state-equivalence | 0.866 |
+
+0.256 lands in the **"between"** band, so the rule says *proceed with Granite and add a
+third J2 seed*. That was done, and the third seed was collected.
+
+🔺 **The switch branch is conjunctive and its first clause fails.** It requires Granite
+below 0.15. Granite is at 0.256 — 1.7× the threshold — so the branch is closed **whatever
+Qwen's true value is**. The decision therefore never depended on the Granite-vs-Qwen
+comparison, which is fortunate, because that comparison came from a configuration no arm
+runs in.
+
+### Why Qwen was not re-measured at v3 — a deliberate decision, not an oversight
+
+`probe_qwen3_8b.json` is the only report still at schema v2; Granite and `sft_b` were both
+re-run at v3. A v3 Qwen run would cost about 20 minutes of GPU and zero hosted calls.
+**It was considered and dropped**, on the reasoning that:
+
+- It is **not decision-relevant.** J3 and J4 are complete and the J3 gate passed on both
+  criteria (+37.72 pp, CI [28.07, 47.37]). No Qwen result would cause an executor switch
+  at this point, so the run could only produce a number nobody would act on.
+- The executor choice is a **methods footnote, not a thesis claim.** The hypotheses concern
+  planner–executor collaboration and the ASK channel; which 8B model carries the adapter is
+  implementation detail, and a Qwen figure would not appear in the findings.
+
+**What must therefore be said, and not said.** The selection is justified by Granite
+clearing the pre-registered threshold on a correctly-configured measurement — full stop.
+Any claim of the form "Granite outperformed Qwen" is **unsupported** and must not be made:
+Qwen's performance under the serving configuration was never measured, and the best
+available estimate (~0.165, inferred) carries no measurement behind it.
+
+### Independent corroboration that the choice works
+
+Not part of the selection rule — it postdates it — but it is real evidence the chosen
+executor is adequate:
+
+| | untrained Granite | SFT(b) |
+|---|---|---|
+| probe agreement | 0.256 | **0.492** |
+| `sft_plan` TGC (dev) | 0.0526 | **0.4298** |
+| state-equivalence | 0.866 | **0.920** |
+
+Granite is trainable at this data scale. That does not establish it was the *best* choice,
+and the write-up should not imply it does.
