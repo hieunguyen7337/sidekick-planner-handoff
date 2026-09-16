@@ -803,3 +803,78 @@ trustworthy — `silent-zeros-in-eval-harnesses` point 5, arriving on schedule.
 The honest claim is the relative one, and it is the only claim the decision needed:
 **under identical conditions, Granite is about twice as good at predicting the teacher's
 next action, and Qwen is not a cheap fix for a marginal executor.**
+
+---
+
+## J3 — HJ-3a SFT(b): the adapter (2026-09-17)
+
+### Training — job 25401722, exit 0
+
+`scripts/pbs/train_sft.pbs`, submitted with
+`-v DATA_JSONL=…/sft_b_s123_p075.jsonl,ADAPTER_OUT=…/adapters/sft_b_s123_granite8b`
+so the frozen 133-trajectory dataset and its adapter are untouched.
+
+| | |
+|---|---|
+| data | `sft_b_s123_p075.jsonl`, **230 trajectories** (196 solved + 34 partial ≥ 0.75) |
+| `data_sha256` | `f56fe6ea21b0…5ef812` |
+| base | `ibm-granite/granite-4.2-8b` |
+| adapter | `/scratch/n12194778/sidekick/artifacts/adapters/sft_b_s123_granite8b` (791 MB) |
+| LoRA | r=64, α=128, dropout 0.05, q/k/v/o/gate/up/down |
+| schedule | 2 epochs, lr 1e-4 cosine, effective batch 8 (grad-accum 8), bf16, grad checkpointing |
+| masking | `manual_assistant_token_spans` — not `{% generation %}` markers |
+| max_length | 32768 |
+| **final train loss** | **0.1414** |
+| runtime | 2059 s (34 min) on one H100, plus a 103 s dry-run |
+| commit | `e4580d8` |
+
+Loss fell 0.566 → 0.073 with token accuracy 0.902 → 0.977 and grad-norm settling
+7.0 → 0.45. Nothing diverged; the cosine schedule annealed to ~0 as intended.
+
+🔺 **The dataset identity was verified observationally, not assumed.** PBS `-v` silently
+failing to propagate would have trained on the superseded 133-trajectory file and produced
+a perfectly plausible adapter measuring the wrong thing — the defect shape that has cost
+this project three probe attempts. Three independent confirmations:
+
+1. the dry-run wrote to `…sft_b_s123_granite8b_dryrun` while the old
+   `…sft_b_granite8b_dryrun` kept its previous-day mtime;
+2. `manifest.json` records `"data": "…/sft_b_s123_p075.jsonl"` with the matching sha256
+   and `"n_sequences": 230`;
+3. the job log's own `[sft] data=…` line and the PBS epilogue's `Submit_arguments` both
+   name the `s123_p075` file.
+
+The 2-epoch run is `dry_run: false`, `epochs: 2.0`, and its `effective_batch: 8` explains
+the ~28.75 optimiser steps per epoch (230 / 8).
+
+### Evaluation — job 25401780, submitted 2026-09-17 02:3x, queued
+
+`scripts/pbs/hj3_eval.pbs`, walltime 08:00, four phases on one vLLM server holding
+`granite-4.2-8b` with `--lora-modules sft_b=…sft_b_s123_granite8b`:
+
+1. **arm A** `executor_alone` (`lora_name: sft_b`), dev 57 × seeds 1,2 →
+   `hj3_sft_b_exec_20260917`. No `--expect-planner`: this arm never calls the planner and
+   the flag would fail a healthy arm.
+2. **arm B** `sft_plan` with `packet_source: hj1b_planner_20260915`, dev 57 × seeds 1,2 →
+   `hj3_sft_plan_20260917`, gated `--expect-planner --expect-model gpt-5.6-luna`.
+3. **pre-SFT baseline probe** — same server, **no** `--lora-name` → base model →
+   `probe_granite8b_serving.json`.
+4. **post-SFT probe** — same server, `--lora-name sft_b` → `probe_sft_b.json`.
+
+Phases 3 and 4 are the J3 gate's "probe agreement up vs J1" criterion, **re-based**. They
+do not compare against `probe_granite8b.json`, because that report carries defect #18 (no
+serving chat-template kwargs or stop sequences) and `sft_b` is trained on renderings
+without thinking blocks. Comparing a thinking-off adapter against a thinking-on baseline
+would measure the adapter off its own distribution. Both new probes share
+`invoke_state_probe`, so their sampling arguments and template/stop cannot drift; only
+`--lora-name` and `--out` differ. They are `PROBE_SCHEMA_VERSION 3`.
+
+**All four output paths were verified absent before submission** —
+`probe_granite8b_serving.json`, `probe_sft_b.json`, `hj3_sft_b_exec_20260917`,
+`hj3_sft_plan_20260917`. A stale artefact at an output path silently voided job 25401656
+earlier the same night; the schema-version guard now catches that class, but checking the
+paths costs nothing and catches the rest.
+
+**Gate, restated before the numbers exist:** `sft_plan` TGC > 0 with a bootstrap CI
+excluding 0, paired against HJ-1R's `prompt_only` on the same tasks and the same cached
+plans; and probe agreement up, phase 4 against phase 3. Below the gate: stop and decide
+before further GPU spend.
