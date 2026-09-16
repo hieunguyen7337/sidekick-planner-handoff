@@ -203,3 +203,38 @@ four vLLM flag combinations if the Granite-specific parsers are rejected.
 - **`runner.run_campaign` still has no `--retry-broken` flag**; every PBS job calls
   `campaign_summarize --purge-broken` first instead. That works, but it is a convention a new job
   script can forget, and forgetting it means crashed runs are skipped forever on resume.
+
+### 7.4 — the executor truncates at TRAIN time but 400s at SERVE time (found 2026-09-16, J1 re-run)
+
+HJ-1R arm B (`prompt_only`, cached plans) crashes a minority of episodes with
+
+```
+Client error '400 Bad Request' for url 'http://127.0.0.1:8000/v1/chat/completions'
+exc_type: HTTPStatusError
+```
+
+4 of the first 24 episodes. Arm A, same model and same server, produced **zero** of these —
+its only failures were `ReadTimeout`, now fixed by the 120s→300s bound. The difference
+between the arms is that `prompt_only` prepends the plan packet and the api digest to the
+executor prompt, so its prompts are strictly longer. vLLM was launched with
+`max_model_len: 32768` [OBSERVED /scratch/n12194778/sidekick/logs/hj15_vllm_granite8b.log].
+
+**The asymmetry.** `sft_data.tokenize_and_mask` truncates a long conversation by keeping the
+head and tail and dropping whole middle messages (`MAX_LENGTH = 32768`). The INFERENCE path
+has no equivalent: `render_executor_messages` builds the full history and hands it to vLLM,
+which rejects it. So the model is TRAINED on truncated conversations and, at serving time, a
+conversation of the same length crashes the episode instead of being truncated the same way.
+
+This matters beyond the crash count. Train/serve prompt-distribution drift is precisely the
+defect class the shared renderer exists to prevent, and it is invisible in aggregate metrics:
+a 400 becomes a `crash`, `--purge-broken` retries it, it crashes again, and the episode is
+simply absent from the denominator. The measured set is then biased against exactly the
+longest — i.e. hardest — episodes, the same censoring problem the ReadTimeout bound had.
+
+**Scope.** Every cached-plan arm: J3 `sft_plan`, J5 `sidekick` and `sft_b_plus`, J10. Arm A
+is unaffected only because its prompts are shorter.
+
+**Fix**: apply the same head+tail message-dropping in the serving path, ideally by calling one
+shared helper from both `sft_data` and `render_executor_messages` so they cannot diverge again,
+and surface a per-episode `n_messages_dropped` so truncation at serve time is counted rather
+than silent. Do this before J3, since `sft_plan` is a cached-plan arm.
