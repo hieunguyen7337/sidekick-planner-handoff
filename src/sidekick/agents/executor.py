@@ -85,12 +85,18 @@ class VLLMExecutor:
         model = kw.get("lora_name") or self.lora_name or self.model
         messages = list(messages)
         n_messages_dropped = 0
+        n_chars_elided = 0
+        representable = True
         if self.max_prompt_tokens is not None:
-            messages, n_messages_dropped, _ = fit_messages_to_budget(
+            fit = fit_messages_to_budget(
                 messages,
                 max_tokens=self.max_prompt_tokens,
                 length_fn=self._count_prompt_tokens,
             )
+            messages = fit.selected
+            n_messages_dropped = fit.n_messages_dropped
+            representable = fit.representable
+            n_chars_elided = fit.n_chars_elided
         payload = {
             "model": model,
             "messages": messages,
@@ -162,6 +168,8 @@ class VLLMExecutor:
                 "lora_name": self.lora_name,
                 "max_prompt_tokens": self.max_prompt_tokens,
                 "n_messages_dropped": n_messages_dropped,
+                "n_chars_elided": n_chars_elided,
+                "representable": representable,
                 "n_400_retries": n_400_retries,
             },
         )

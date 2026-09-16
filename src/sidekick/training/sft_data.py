@@ -343,35 +343,46 @@ def tokenize_and_mask(
         return {
             **full,
             "n_messages_dropped": 0,
+            "n_chars_elided": 0,
             "truncated": False,
             "representable": True,
         }
 
     # Keep the framing messages and the terminal message as indivisible anchors.  The
     # only messages eligible for removal are the oldest messages between the framing
-    # pair and the final message.  The selection policy lives in
-    # prompts.fit_messages_to_budget so serving (VLLMExecutor) drops the SAME messages.
+    # pair and the final message.  Oversized anchor *content* is middle-elided by the
+    # same helper serving uses, so the SFT prompt matches inference.
     def _length_fn(ms: list[dict]) -> int:
         return len(_tokenize_messages(ms, tokenizer)["input_ids"])
 
-    selected, n_messages_dropped, representable = fit_messages_to_budget(
+    fit = fit_messages_to_budget(
         messages, max_tokens=max_length, length_fn=_length_fn
     )
+    selected = fit.selected
+    n_messages_dropped = fit.n_messages_dropped
+    representable = fit.representable
+    n_chars_elided = fit.n_chars_elided
     if not representable:
         # No valid under-budget representation exists.  Return the unmodified tokenisation
         # so the caller can drop it explicitly instead of receiving a damaged target.
         return {
             **full,
             "n_messages_dropped": 0,
+            "n_chars_elided": 0,
             "truncated": False,
             "representable": False,
         }
 
-    selected_output = _tokenize_messages(selected, tokenizer) if n_messages_dropped else full
+    selected_output = (
+        _tokenize_messages(selected, tokenizer)
+        if n_messages_dropped or n_chars_elided
+        else full
+    )
     return {
         **selected_output,
         "n_messages_dropped": n_messages_dropped,
-        "truncated": n_messages_dropped > 0,
+        "n_chars_elided": n_chars_elided,
+        "truncated": n_messages_dropped > 0 or n_chars_elided > 0,
         "representable": True,
     }
 

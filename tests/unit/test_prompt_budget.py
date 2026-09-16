@@ -43,9 +43,10 @@ def _char_len(messages: list[dict]) -> int:
 
 def test_head_tail_retained_only_middle_dropped():
     messages = _messages(8)
-    selected, dropped, representable = fit_messages_to_budget(
+    selected, dropped, representable, n_elided = fit_messages_to_budget(
         messages, max_tokens=_char_len(messages) - 10, length_fn=_char_len
     )
+    assert n_elided == 0
     assert representable is True
     assert dropped == 1
     assert selected[0] == messages[0]
@@ -59,9 +60,10 @@ def test_head_tail_retained_only_middle_dropped():
 def test_never_splits_a_message():
     messages = _messages(6)
     tok = CharChatTokenizer()
-    selected, dropped, representable = fit_messages_to_budget(
+    selected, dropped, representable, n_elided = fit_messages_to_budget(
         messages, max_tokens=_char_len(messages) - 5, length_fn=_char_len
     )
+    assert n_elided == 0
     assert representable is True
     assert dropped == 1
     # every retained message appears whole; the dropped one is gone entirely
@@ -74,11 +76,12 @@ def test_never_splits_a_message():
 def test_unrepresentable_when_anchors_alone_over_budget():
     messages = _messages(8)
     original = [dict(m) for m in messages]
-    selected, dropped, representable = fit_messages_to_budget(
+    selected, dropped, representable, n_elided = fit_messages_to_budget(
         messages, max_tokens=1, length_fn=_char_len
     )
     assert representable is False
     assert dropped == 0
+    assert n_elided == 0
     assert selected == original  # unmodified list returned
 
 
@@ -87,9 +90,10 @@ def test_training_and_serving_select_identical_messages():
     tok = CharChatTokenizer()
     budget = _char_len(messages) - 30
 
-    serving_selected, serving_dropped, _ = fit_messages_to_budget(
+    serving_selected, serving_dropped, _, serving_elided = fit_messages_to_budget(
         messages, max_tokens=budget, length_fn=_char_len
     )
+    assert serving_elided == 0
     out = tokenize_and_mask(messages, tok, max_length=budget)
     assert out["truncated"] is True
     assert out["n_messages_dropped"] == serving_dropped
@@ -219,3 +223,131 @@ def test_runner_defaults_max_prompt_tokens_to_none():
         }
     )
     assert ex.max_prompt_tokens is None
+
+
+# ---------------------------------------------------------------------------
+# U-Z: middle-elide an oversized last observation (defect #19)
+# ---------------------------------------------------------------------------
+
+_OVERSIZE_HEAD = 'BEGIN_SHAPE_[{"id": 1'
+_OVERSIZE_TAIL = '"id": 999}]_END'
+
+
+def _oversize_last_messages() -> tuple[list[dict], str]:
+    huge = _OVERSIZE_HEAD + ("M" * 8000) + _OVERSIZE_TAIL
+    messages = [
+        {"role": "system", "content": "SYSTEM framing"},
+        {"role": "user", "content": "TASK framing"},
+        {"role": "assistant", "content": "ok"},
+        {"role": "user", "content": huge},
+    ]
+    return messages, huge
+
+
+def test_oversize_last_message_fits_after_elision():
+    messages, huge = _oversize_last_messages()
+    anchors = [messages[0], messages[1], messages[-1]]
+    budget = _char_len(anchors) - 2000
+    assert _char_len(anchors) > budget
+    selected, dropped, representable, n_elided = fit_messages_to_budget(
+        messages, max_tokens=budget, length_fn=_char_len
+    )
+    assert representable is True
+    assert n_elided > 0
+    assert dropped == 1
+    assert _char_len(selected) <= budget
+    assert selected[0]["content"] == messages[0]["content"]
+    assert selected[1]["content"] == messages[1]["content"]
+    assert selected[-1]["content"] != huge
+    assert all(m["content"] != "ok" for m in selected)
+
+
+def test_elision_keeps_head_tail_and_marker():
+    messages, huge = _oversize_last_messages()
+    budget = _char_len([messages[0], messages[1], messages[-1]]) - 2000
+    selected, _, representable, n_elided = fit_messages_to_budget(
+        messages, max_tokens=budget, length_fn=_char_len
+    )
+    assert representable is True
+    content = selected[-1]["content"]
+    assert content.startswith(_OVERSIZE_HEAD)
+    assert content.endswith(_OVERSIZE_TAIL)
+    assert f"[{n_elided} characters elided]" in content
+    marker = f"\n... [{n_elided} characters elided] ...\n"
+    assert marker in content
+    head, tail = content.split(marker, 1)
+    assert huge.startswith(head)
+    assert huge.endswith(tail)
+    assert n_elided == len(huge) - len(head) - len(tail)
+
+
+def test_elided_character_count_is_nonzero():
+    messages, huge = _oversize_last_messages()
+    budget = _char_len([messages[0], messages[1], messages[-1]]) - 2000
+    _, _, representable, n_elided = fit_messages_to_budget(
+        messages, max_tokens=budget, length_fn=_char_len
+    )
+    assert representable is True
+    assert n_elided > 0
+    assert n_elided < len(huge)
+
+
+def test_already_fitting_unchanged_zero_elided():
+    messages = _messages(6)
+    original = [dict(m) for m in messages]
+    selected, dropped, representable, n_elided = fit_messages_to_budget(
+        messages, max_tokens=_char_len(messages) + 10, length_fn=_char_len
+    )
+    assert representable is True
+    assert dropped == 0
+    assert n_elided == 0
+    assert selected == original
+    assert [m["content"] for m in selected] == [m["content"] for m in messages]
+
+
+def test_executor_records_elision_count_and_representable():
+    messages, _huge = _oversize_last_messages()
+    budget = _char_len([messages[0], messages[1], messages[-1]]) - 2000
+
+    class FakeClient:
+        def __init__(self):
+            self.payload = None
+
+        def post(self, url, json=None):
+            self.payload = json
+            return _FakeResponse200()
+
+    client = FakeClient()
+    ex = VLLMExecutor(
+        "test-model", "http://x", http_client=client, max_prompt_tokens=budget
+    )
+    ex._tokenizer = CharChatTokenizer()
+    ex._tokenizer_loaded = True
+    _text, usage = ex.complete(messages)
+    assert usage.raw["n_chars_elided"] > 0
+    assert usage.raw["representable"] is True
+    assert usage.raw["n_messages_dropped"] >= 0
+    sent = client.payload["messages"]
+    assert "characters elided" in sent[-1]["content"]
+    assert _char_len(sent) <= budget
+
+
+def test_training_and_serving_elide_identically():
+    messages, _huge = _oversize_last_messages()
+    tok = CharChatTokenizer()
+    budget = _char_len([messages[0], messages[1], messages[-1]]) - 2000
+
+    serving_selected, serving_dropped, representable, serving_elided = (
+        fit_messages_to_budget(messages, max_tokens=budget, length_fn=_char_len)
+    )
+    assert representable is True
+    assert serving_elided > 0
+    out = tokenize_and_mask(messages, tok, max_length=budget)
+    assert out["representable"] is True
+    assert out["n_chars_elided"] == serving_elided
+    assert out["n_messages_dropped"] == serving_dropped
+    serving_rendered = tok.apply_chat_template(serving_selected)
+    training_rendered = "".join(chr(t) for t in out["input_ids"])
+    assert training_rendered == serving_rendered
+    assert serving_selected[-1]["content"] in training_rendered
+
