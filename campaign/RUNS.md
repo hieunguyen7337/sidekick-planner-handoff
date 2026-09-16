@@ -195,6 +195,30 @@ episodes (30%) did eventually pass an `access_token` to a later call** — and n
 either. Auth is only the first wall; the executor fails at the next composition point too. The
 defect is **carrying state across steps**, and it is general rather than a single missing fact.
 
+> 🔺 **Correction, 2026-09-16 — this mechanism is withdrawn pending HJ-1R.** The paragraph above
+> reads a prompt-level defect as a model-level one. The executor's prompt is a system message plus a
+> single user message holding a rendered transcript (`src/sidekick/systems/loop.py:729-781`), and
+> that transcript is built by appending `OBS: <output>` for every executed action
+> (`loop.py:647-651`) — the `ACTION:` line is reached **only** for action kinds that do not execute.
+> So the executor never saw the code it had just written. It was shown a stream of outputs with no
+> record of what produced them. The planner, by contrast, saw its whole history through its codex
+> thread.
+>
+> "Logged in, then called `login` again" is exactly what an agent does when its own previous action
+> is not in its context. The observation is real; the inference that granite-4.2-8b **cannot** carry
+> state is not supported, because it was never given the state to carry. Measured corroboration:
+> executor input grew only 11.5k → 13.2k tokens across 40 steps, and steps 1 and 2 of
+> `prompt_only/1/0d8a4ee_1` carry an identical failing observation.
+>
+> **What still stands:** the HJ-1 gate verdict. `planner_alone` beat all three untrained-executor
+> arms by 68.42 pp [59.65, 76.32] against a ≥ 20 pp threshold, and that comparison is unaffected —
+> if anything the baselines were handicapped, so the gap is an upper bound on the true one.
+> **What does not stand:** any claim about *why* the executor failed, and therefore any SFT result
+> compared against these zeros. HJ-1R re-runs `executor_alone` and `prompt_only` on dev under a
+> multi-turn prompt that includes the executor's own actions, and those numbers — not these — are
+> the baseline for SFT(b). Consequence 1 below is on hold until HJ-1R reports; consequences 2 and 3
+> are unaffected.
+
 Three consequences worth carrying into M3/M4:
 
 1. **This is the best possible case for the project's premise and its biggest risk at once.** Text

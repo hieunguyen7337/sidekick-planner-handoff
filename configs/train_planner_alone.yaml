@@ -1,0 +1,24 @@
+# HJ-2B teacher-demo collection — planner_alone on the AppWorld train split.
+# planner_drives=True, plan_first=False: luna acts every step, the executor is never
+# constructed, so this arm needs no GPU and no vLLM server. Solved trajectories feed SFT(b).
+#
+# The model and effort MUST be stated explicitly. ~/.codex/config.toml on this box
+# defaults to gpt-5.6-sol at xhigh; relying on the default would run a different and
+# far more expensive model and invalidate the arm.
+env: appworld
+campaign_id: hj2b_planner_train_20260916  # teacher-demo collection, not an HJ-1 arm.
+planner:
+  type: codex
+  binary: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+executor:
+  type: mock          # never called by planner_alone; must not be vllm
+limits:
+  max_steps: 40  # full 40-step teacher trajectories are retained for SFT(b).
+  max_tokens_per_episode: 20000000  # non-binding: cached-input accounting must not stop 40 steps.
+  per_step_timeout_s: 120  # bound each planner step while allowing the hosted call to finish.
+  max_planner_calls: 81  # 2 * 40 + 1: max_steps binds, with room for step-0 and retries.
+prices: configs/cost/prices_2026-09.yaml
