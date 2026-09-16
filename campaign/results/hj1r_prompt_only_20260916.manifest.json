@@ -1,0 +1,54 @@
+{
+  "campaign_id": "hj1r_prompt_only_20260916",
+  "git_commit": "1e3dc38ad5e376fdd019f26aae5c8d5473f53dbd",
+  "git_commit_source": "job start",
+  "git_branch": "worktree-plan-2026-09-15",
+  "git_dirty": false,
+  "config_path": "/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/configs/hj1r_prompt_only.yaml",
+  "config_sha256": "739a5cc67552db81cbb05afa939aa9dab21c38aaf7b013c2caaf5f0278349d52",
+  "appworld_commit": "42b5bcf3cd334fee33f0c37c02070a9f5807add5",
+  "codex_version": "codex-cli 0.153.4",
+  "hostname": "gpu1n009",
+  "pbs_jobid": "25401397.aqua",
+  "python": "3.12.13",
+  "summary": {
+    "campaign_id": "hj1r_prompt_only_20260916",
+    "root": "/scratch/n12194778/sidekick/results/hj1r_prompt_only_20260916",
+    "n_runs": 114,
+    "n_success": 5,
+    "success_rate": 0.0439,
+    "by_seed": {
+      "1": {
+        "n": 57,
+        "success": 3,
+        "tgc_mean": 0.0556
+      },
+      "2": {
+        "n": 57,
+        "success": 2,
+        "tgc_mean": 0.037
+      }
+    },
+    "errors": {
+      "none": 69,
+      "crash": 6,
+      "limit": 39
+    },
+    "n_broken": 6,
+    "planner_calls_total": 115,
+    "planner_calls_mean": 1.01,
+    "steps_mean": 32,
+    "mean_goal_pass_rate": 0.286,
+    "n_goal_pass_rate": 108,
+    "planner_models": {
+      "gpt-5.6-luna": 115
+    },
+    "ledger_totals": {
+      "executor_tokens_total": 59918163,
+      "gpu_seconds_total": 0.0,
+      "planner_calls_total": 115,
+      "planner_tokens_total": 34650,
+      "usd_total": 0.00377
+    }
+  }
+}

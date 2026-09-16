@@ -1,0 +1,88 @@
+{
+  "arms": {
+    "executor_alone_R": {
+      "errors": {
+        "limit": 37,
+        "none": 77
+      },
+      "n": 114,
+      "planner_calls_total": 0,
+      "sgc": {
+        "dropped_incomplete": 0,
+        "scenarios_complete": 0,
+        "scenarios_scored": 38,
+        "value": 0.0
+      },
+      "solved": 2,
+      "steps_mean": 30.16,
+      "tgc_mean": 0.0175
+    },
+    "planner_alone": {
+      "errors": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      },
+      "n": 114,
+      "planner_calls_total": 1645,
+      "sgc": {
+        "dropped_incomplete": 0,
+        "scenarios_complete": 17,
+        "scenarios_scored": 38,
+        "value": 0.4474
+      },
+      "solved": 78,
+      "steps_mean": 13.52,
+      "tgc_mean": 0.6842
+    },
+    "prompt_only_R": {
+      "errors": {
+        "crash": 6,
+        "limit": 39,
+        "none": 69
+      },
+      "n": 114,
+      "planner_calls_total": 115,
+      "sgc": {
+        "dropped_incomplete": 0,
+        "scenarios_complete": 0,
+        "scenarios_scored": 38,
+        "value": 0.0
+      },
+      "solved": 5,
+      "steps_mean": 32.0,
+      "tgc_mean": 0.0439
+    }
+  },
+  "baseline": "planner_alone",
+  "comparisons": {
+    "planner_alone - executor_alone_R": {
+      "bootstrap": 10000,
+      "ci95_pp": [
+        57.89,
+        75.44
+      ],
+      "ci_lower_at_least_margin": true,
+      "diff_pp": 66.67,
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "gap_at_least_margin": true,
+      "n_pairs": 114
+    },
+    "planner_alone - prompt_only_R": {
+      "bootstrap": 10000,
+      "ci95_pp": [
+        54.39,
+        72.81
+      ],
+      "ci_lower_at_least_margin": true,
+      "diff_pp": 64.04,
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "gap_at_least_margin": true,
+      "n_pairs": 114
+    }
+  },
+  "field": "tgc",
+  "margin_pp": 20.0
+}

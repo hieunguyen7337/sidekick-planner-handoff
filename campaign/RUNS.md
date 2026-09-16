@@ -419,3 +419,87 @@ gap that prompted the HJ-7 power analysis looks like an unlucky draw on 57 tasks
 property of the planner. **ε = 7 pp stays**, calibrated on the pessimistic dev figure: revising a
 margin downward after seeing a friendlier number is the post-hoc selection preregistration exists to
 prevent, and if the truth is nearer 19% the realised power simply exceeds the stated 0.860.
+
+---
+
+## HJ-1R — the untrained baselines, re-run under the fixed executor prompt (2026-09-16)
+
+Jobs `25400264` (aborted at phase 4, see below) and `25401397`; commit `1e3dc38`, clean tree;
+AppWorld `42b5bcf`; granite-4.2-8b via vLLM, dev 57 × seeds 1,2 = 114 episodes per arm.
+Artefacts: `campaign/results/hj1r_{exec8b,prompt_only}_20260916.{runs.jsonl,manifest.json}`,
+gate in `campaign/results/hj1r_gate.json`. Both campaign gates **PASS**.
+
+### Why it was re-run
+
+Defect #16: `loop.py` appended `OBS:` for every executed action but reached the `ACTION:` line only
+for non-executing kinds, so the executor's prompt held outputs but never the code that produced
+them. HJ-1's executor-arm zeros were therefore produced under a prompt that hid the executor's own
+actions, and the "cannot carry state" mechanism could not be distinguished from that artefact.
+
+### Results
+
+| arm | prompt | n | TGC | goal-pass | steps | ended normally | hit cap | crash |
+|---|---|---|---|---|---|---|---|---|
+| `executor_alone` (HJ-1) | old | 114 | 0.000 | 0.213 | 39.89 | 0 | 113 | 0 |
+| `prompt_only` (HJ-1) | old | 114 | 0.000 | 0.250 | 39.87 | — | — | — |
+| **`executor_alone` (HJ-1R)** | fixed | 114 | **0.0175** | 0.1903 | 30.16 | 77 | 37 | 0 |
+| **`prompt_only` (HJ-1R)** | fixed | 114 | **0.0439** | 0.286 ⚠ | 32.00 | 69 | 39 | 6 |
+| `planner_alone` (teacher) | — | 114 | 0.684 | 0.828 | 13.52 | — | — | — |
+
+⚠ `prompt_only`'s goal-pass is over n=108: 6 episodes died on vLLM HTTP 400 (context overflow,
+FOLLOWUPS §7.4) and carry no rate. The censored episodes are the longest, so 0.286 is biased
+slightly **down**.
+
+### Verdict against the rule recorded before submission
+
+The rule required: if `prompt_only` under the fixed prompt is > 0 with CI excluding 0, part of
+HJ-1's gap was the harness — report both numbers and keep the 20 pp gate, which holds *a fortiori*
+only if the re-run stays ≥ 20 pp below the planner.
+
+`prompt_only` is **0.0439, not 0.000** — five solved tasks where the old prompt solved none. Paired
+bootstrap (10,000 resamples, 114 pairs, `hj1r_gate.json`):
+
+| comparison | gap | CI95 | ≥ 20 pp margin |
+|---|---|---|---|
+| `planner_alone` − `executor_alone_R` | 66.67 pp | [57.89, 75.44] | **yes** |
+| `planner_alone` − `prompt_only_R` | 64.04 pp | [54.39, 72.81] | **yes** |
+
+**HJ-1's gate stands** on the honest baseline, with a CI lower bound of 54.4 pp against a 20 pp
+margin. The headline number changes from 68.4 pp to 64.0 pp.
+
+**The mechanism claim is narrowed, not restored.** The prompt fix changed the failure mode — cap-
+hitting fell from 113/114 to 37/114 and mean steps from 39.9 to 30.2, i.e. the executor now
+terminates instead of looping — but it did not make the executor competent. What it did establish,
+which HJ-1 could not, is that **the plan transfers measurable value**: `prompt_only` beats
+`executor_alone` by +2.6 pp TGC and +9.6 pp goal-pass on identical tasks and seeds. Under the old
+prompt both arms were pinned at 0.000 and that effect was unmeasurable. "Cannot carry state" stays
+withdrawn.
+
+### Two observations worth recording
+
+**The graded metric is what makes the untrained arms distinguishable at all.** Under TGC the three
+HJ-1 baselines were 0.000, 0.000, 0.000. Under goal-pass they are ordered — `executor_alone` 0.213 <
+`prompt_only` 0.250 ≈ `fixed_k` 0.252 — and all three ran the same prompt, so that ordering is
+attributable to the plan and the corrections respectively. `fixed_k`'s +0.2 pp over `prompt_only`
+is the weaker signal: corrections bought almost nothing under a prompt the executor could not use.
+
+**The ASK channel fired once, and it worked.** One episode of 114 escalated (`n_asks: 1`) — one live
+`codex` call among 114 cached replays, 34,650 tokens, correctly tagged `provider="codex"` against
+114 `provider="cache"`. That episode solved its task with `goal_pass_rate 1.0`. Its counterfactual,
+the same task and seed in `executor_alone`, scored **0.0** goal-pass and failed. n=1 proves no
+effect size, but HJ-1 recorded zero ASKs in 114 episodes and so demonstrated nothing either way.
+
+### What did NOT run
+
+**The state probe produced no data, in two successive jobs.** `25400264` aborted at phase 4 on the
+cached-packet resolution bug (commit `1e3dc38`); `25401397` reached both probe phases and both died
+on `timeout 1800` (rc=124). `state_probe.py` buffered every result in memory and wrote once at the
+end, so ~60 minutes of probe work was discarded rather than partially recovered. That is a briefing
+failure — the unit's brief specified the metrics and denominators in detail and never required the
+script to survive being killed — compounded by a 1800 s budget set without measuring the per-point
+cost. Fixed under U-G: append-per-point JSONL, exact `(run_id, step)` resume, an in-process
+`--time-budget-s` that writes a valid partial report and exits 0, and a depth-stratified
+`--max-points 300` sampled from a fixed seed so both models are probed on identical points.
+
+Qwen3-8B itself is not implicated: it served healthy in 121 s under `HF_HOME=~/.cache/huggingface`.
+**Granite vs Qwen remains undecided**, and no evidence bearing on it has been collected.
