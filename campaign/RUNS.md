@@ -935,3 +935,61 @@ n=114 with all results present:
 closed as a non-issue.** Verified directly: 114 `events.jsonl`, 114 `result.json`, zero
 directories with events but no result, and no `crash` error type in the arm. No re-run is
 needed and no ledger number needs revising.
+
+### J3 arm B — `sft_plan(sft_b)` on dev, and the gate (2026-09-17)
+
+Campaign `hj3_sft_plan_20260917`, job `25401780`. **114/114 episodes, zero crashes.**
+Plans replayed from `hj1b_planner_20260915` via `CachedPacketPlanner`, so the arm spends
+**zero live hosted-planner calls** — `planner_calls_total: 114` is exactly one cached
+packet per episode.
+
+Paired against `hj1r_prompt_only_20260916`: same 57 dev tasks × 2 seeds, same cached
+plans, same multi-turn executor prompt. **The only difference between the two arms is the
+LoRA adapter.**
+
+| | `prompt_only` untrained | `sft_plan` (sft_b) | teacher `planner_alone` |
+|---|---|---|---|
+| solved / 114 | 6 | **49** | 78 |
+| TGC | 0.0526 | **0.4298** | 0.684 |
+| SGC | 0.000 (0/38) | **0.2895** (11/38) | 0.447 (17/38) |
+| mean goal_pass_rate | 0.288 | **0.713** | — |
+| mean steps | 31.79 | **17.68** | — |
+| `limit` episodes | 40 | 15 | — |
+| live planner calls | 0 | **0** | 936 |
+
+## ✅ GATE — primary criterion PASSED
+
+Pre-registered: *`sft_plan` TGC > 0 with a bootstrap CI excluding 0, paired against
+HJ-1R's `prompt_only` on the same tasks and the same cached plans.*
+
+**`hj1_gate.py`, 10,000 bootstrap resamples, 114 pairs, 0 dropped from either arm:
++37.72 pp TGC, 95% CI [28.07, 47.37].** Report at
+`/scratch/n12194778/sidekick/results/hj3_gate.json`. The interval clears zero by 28
+points; this is not a marginal pass.
+
+**The interpretation that matters.** `prompt_only` and `sft_plan` receive the *identical*
+plan for the identical task and seed. HJ-1's central negative finding was that 936 planner
+calls bought nothing — one plan changed nothing, eight expert reviews per episode changed
+nothing. This arm shows why: **the plans were never the bottleneck, the executor was.**
+Hold the plan fixed, train only the executor, and the same plans go from 6 solved to 49.
+
+A LoRA-tuned local 8B replaying cached plans reaches **63% of the hosted frontier
+teacher's TGC** and **65% of its SGC**, at zero live planner cost, on held-out dev tasks.
+The training set was 230 trajectories drawn from a train split hard-capped at 90 tasks.
+
+⚠ **The gate's second criterion is not yet in.** It also requires probe agreement to rise
+post-SFT, measured against the re-based pre-SFT baseline (phases 3 and 4 of this job, both
+at `PROBE_SCHEMA_VERSION 3` under the serving configuration). Until those land the gate is
+**passed on its primary criterion only**, and J4 stays unsubmitted.
+
+⚠ **Read TGC beside goal_pass_rate, as in arm A.** 0.4298 against a mean goal-pass of
+0.713 means most unsolved episodes are near-misses; AppWorld requires *every* goal-check.
+Quoting either number alone misrepresents the arm in opposite directions.
+
+⚠ **`steps_mean` 31.79 → 17.68** repeats arm A's finding independently on a second arm:
+the untrained executor ran to the ceiling, the trained one terminates. `limit` episodes
+fell 40 → 15.
+
+**Comparison hygiene**: both arms are n=114 with every episode present and no dropped
+pairs, so the paired statistic uses the full sample. The `prompt_only` arm was verified
+complete this session (114 `events.jsonl`, 114 `result.json`, zero mismatches).
