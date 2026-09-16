@@ -8,6 +8,7 @@ from typing import Any, Callable, Optional
 from sidekick.agents.planner import CodexTimeoutError, PacketParseError, PlannerClient
 from sidekick.agents.verifier import ConstantVerifier, ThresholdRouter, Verifier
 from sidekick.environments.base import BaseEnv
+from sidekick.protocols.prompts import format_executor_action, render_executor_messages
 from sidekick.protocols.schemas import (
     ActionParseError,
     DelegationPacket,
@@ -62,7 +63,16 @@ class SystemPolicy:
 
 
 def token_count(usage: Usage) -> int:
-    return int(usage.input_tokens + usage.output_tokens + usage.reasoning_output_tokens)
+    """Count uncached input, output, and reasoning tokens for the episode budget.
+
+    Cached input is excluded because it is resent transcript context, not new work
+    that should consume the nominal per-episode token budget.
+    """
+    return int(
+        max(0, usage.input_tokens - usage.cached_input_tokens)
+        + usage.output_tokens
+        + usage.reasoning_output_tokens
+    )
 
 
 def call_with_timeout(fn: Callable[[], Any], timeout_s: float) -> Any:
@@ -145,6 +155,11 @@ def run_episode(
     last_obs: Optional[Observation] = None
     last_action: Optional[ExecutorAction] = None
     transcript: list[str] = []
+    # `transcript` is a frozen wire format for the planner (INSTRUCTION:/PLAN:/OBS:/...).
+    # `exec_turns` is the executor's conversation (assistant actions, user observations).
+    # The redundancy is deliberate: changing `transcript` would invalidate a running
+    # teacher-data campaign and the HJ-1 planner baseline.
+    exec_turns: list[dict] = []
     steps_taken = 0
     eval_result: dict[str, Any] = {"success": False, "tgc": None, "sgc": None, "report": {}}
     timeout_s = limits.per_step_timeout_s
@@ -225,7 +240,7 @@ def run_episode(
             except TimeoutError as exc:
                 last_exc = exc
                 usage = Usage(
-                    model=_planner_model_id(planner),
+                    model=_client_model_id(planner, "planner"),
                     provider="mock",
                     n_calls=attempts,
                     raw={"error_type": "timeout"},
@@ -245,7 +260,7 @@ def run_episode(
                 continue
             except PacketParseError as exc:
                 usage = Usage(
-                    model=_planner_model_id(planner),
+                    model=_client_model_id(planner, "planner"),
                     provider="mock",
                     n_calls=attempts,
                     raw={"error_type": "parse_error"},
@@ -300,8 +315,11 @@ def run_episode(
             error_type = "crash"
             emit(step=step, actor="system", event_type="error", payload={"detail": "no executor"}, error="crash")
             return None
-        messages = _executor_messages(
-            env.instruction, packet, "\n".join(transcript), env.api_docs_prompt
+        messages = render_executor_messages(
+            instruction=env.instruction,
+            api_docs=env.api_docs_prompt,
+            packet=packet,
+            history=exec_turns,
         )
         # One unparseable generation used to end the episode outright. That makes the
         # score a measure of output-format luck rather than task ability: Granite 4.2
@@ -324,7 +342,7 @@ def run_episode(
                 )
             except TimeoutError as exc:
                 usage = Usage(
-                    model=getattr(executor, "name", "executor"),
+                    model=_client_model_id(executor, "executor"),
                     provider="mock",
                     n_calls=1,
                     raw={"error_type": "timeout"},
@@ -463,6 +481,7 @@ def run_episode(
                         "model": resp.usage.raw.get("resolved_model") or resp.usage.model,
                         "model_reasoning_effort": resp.usage.raw.get("resolved_model_reasoning_effort")
                         or resp.usage.raw.get("model_reasoning_effort"),
+                        "thread_id": resp.thread_id,
                     },
                     usage=resp.usage,
                 )
@@ -520,6 +539,7 @@ def run_episode(
                     usage=resp.usage,
                 )
                 transcript.append(f"INTERVENTION: {correction}")
+                exec_turns.append({"role": "user", "content": f"INTERVENTION: {correction}"})
                 if over_token_limit():
                     error_type = "limit"
                     emit(
@@ -597,6 +617,8 @@ def run_episode(
                     )
                     transcript.append(f"ASK: {action.ask_reason}")
                     transcript.append(f"ANSWER: {answer}")
+                    exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
+                    exec_turns.append({"role": "user", "content": f"ANSWER: {answer}"})
                     continue
                 emit(
                     step=step,
@@ -606,6 +628,8 @@ def run_episode(
                     env_state_hash=env.snapshot_hash(),
                 )
                 transcript.append(f"ASK_IGNORED: {action.ask_reason}")
+                exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
+                exec_turns.append({"role": "user", "content": "ASK_IGNORED"})
                 continue
 
             if action.kind == "REPORT":
@@ -617,6 +641,7 @@ def run_episode(
                     env_state_hash=env.snapshot_hash(),
                 )
                 transcript.append(f"REPORT: {action.message}")
+                exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
                 continue
 
             if action.kind in ("CODE", "COMPLETE"):
@@ -644,7 +669,9 @@ def run_episode(
                     env_state_hash=last_obs.env_state_hash,
                     error=last_obs.error_type,
                 )
+                exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
                 transcript.append(f"OBS: {last_obs.text}")
+                exec_turns.append({"role": "user", "content": f"OBS: {last_obs.text}"})
                 if action.kind == "COMPLETE" or last_obs.done:
                     break
             else:
@@ -714,68 +741,14 @@ def run_episode(
 
 
 
-def _planner_model_id(planner: Any) -> str:
-    """Model id to stamp on the bookkeeping Usage of a FAILED planner call.
+def _client_model_id(client: Any, fallback: str) -> str:
+    """Model id to stamp on the bookkeeping Usage of a FAILED client call.
 
-    Prefer the configured model over the client CLASS name. `getattr(planner,
-    "name")` is "codex-exec", and `campaign_summarize` reads `usage.model` as
-    model provenance -- so a class name there makes the gate report "the wrong
-    model ran" for an arm that ran the right one.
+    Prefer the configured model, then the client model, over the client CLASS name.
+    `getattr(client, "name")` can be "codex-exec" or "vllm-executor", and
+    `campaign_summarize` reads `usage.model` as model provenance -- so a class name
+    there makes the gate report "the wrong model ran" for an arm that ran the right
+    one. The fallback keeps mock clients without model metadata usable.
     """
-    model = getattr(getattr(planner, "config", None), "model", None)
-    return model or getattr(planner, "name", "planner")
-
-
-def _executor_messages(
-    instruction: str,
-    packet: DelegationPacket | None,
-    transcript: str,
-    api_docs: str = "",
-) -> list[dict]:
-    """Build the executor prompt.
-
-    ``api_docs`` is not optional in practice. Without it the model is never told it
-    is inside AppWorld and has an ``apis`` object to call, so it concludes the task
-    is impossible -- observed 2026-09-15, where planner_alone answered a Spotify
-    task with "the Spotify plugin is not installed" and every arm scored 0.0 TGC.
-    The environment computes the digest for exactly this purpose.
-    """
-    system = (
-        "You are an executor acting in a live environment. Each turn you emit exactly "
-        "one action and nothing else.\n"
-        "\n"
-        "The four actions:\n"
-        "  a ```python fenced block, to run code\n"
-        "  ASK_PLANNER: <what you need decided>\n"
-        "  REPORT: <what you found>\n"
-        "  COMPLETE, or COMPLETE: <answer> when the task asked a question\n"
-        "\n"
-        "A complete turn looks like this, in full:\n"
-        "\n"
-        "```python\n"
-        "print(apis.spotify.show_song_library())\n"
-        "```\n"
-        "\n"
-        "That is the entire reply. Do not reason out loud first, do not emit more than "
-        "one action, and do not write what you expect the output to be: the environment "
-        "runs your code and puts the real output in the transcript next turn. Everything "
-        "after the first action is discarded. When you do not know what an API returns, "
-        "call it and look rather than guessing.\n"
-        "\n"
-        "Both failure modes here are measured, on 2026-09-15, and both scored 0.0 on "
-        "tasks the model could otherwise do. granite-4.2-8b wrote a correct call to "
-        "show_song_library(), then invented a plausible song list as its result and "
-        "reasoned over the invention until its budget ran out. granite-4.2-3b narrated "
-        "its intentions for 1,661 tokens -- \"I'll use the search_songs API\", \"let me "
-        "check the API docs first\" -- and never emitted a single line of code."
-    )
-    user = f"Task: {instruction}\n"
-    if api_docs:
-        # api_docs already carries its own usage preamble (calling convention, print
-        # vs return, how to get full parameter detail). Do not restate it here: two
-        # sets of instructions that drift apart is worse than one.
-        user += f"{api_docs}\n"
-    if packet is not None:
-        user += f"Plan: {packet.model_dump_json()}\n"
-    user += f"Transcript:\n{transcript}\n"
-    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    model = getattr(getattr(client, "config", None), "model", None)
+    return model or getattr(client, "model", None) or getattr(client, "name", None) or fallback
