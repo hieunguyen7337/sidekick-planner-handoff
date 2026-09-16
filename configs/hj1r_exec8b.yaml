@@ -1,0 +1,26 @@
+# HJ-1R re-run under the fixed multi-turn executor prompt.
+# Paired against the HJ-1 originals; only the prompt differs.
+env: appworld
+campaign_id: hj1r_exec8b_20260916
+planner:
+  type: mock          # never called by executor_alone; must not be codex
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  temperature: 0.7
+  max_tokens: 2048
+  # End generation at the close of the first action. Without this the model writes an
+  # action, invents the output it expects and reasons over the invention for the rest
+  # of the budget. Never add a bare "```": it matches the opening fence.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false   # Granite 4.2 template defaults it True and then
+    # spends the whole budget reasoning without ever emitting an action
+  timeout_s: 120
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 120
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

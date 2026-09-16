@@ -1,0 +1,325 @@
+#!/bin/bash
+#PBS -N hj15-state-probe
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
+#PBS -l walltime=04:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj15_state_probe.out
+#
+# U-D2 — HJ-1R under the fixed multi-turn executor prompt, plus the granite/Qwen state probe.
+# Full campaigns and probes are resumable: completed result.json/probe JSON files are retained.
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u9] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+ARCHIVE=${HOME}/sidekick_data
+CID_A=hj1r_exec8b_20260916
+CID_B=hj1r_prompt_only_20260916
+SMOKE_CID=hj1r_exec8b_20260916_smoke
+CFG_A="${REPO}/configs/hj1r_exec8b.yaml"
+CFG_B="${REPO}/configs/hj1r_prompt_only.yaml"
+PACKET_SOURCE=/scratch/n12194778/sidekick/results/hj1b_planner_20260915
+PROBE_GRANITE=/scratch/n12194778/sidekick/results/probe_granite8b.json
+PROBE_QWEN=/scratch/n12194778/sidekick/results/probe_qwen3_8b.json
+VLOG="${LOGDIR}/hj15_vllm_granite8b.log"
+MODEL=ibm-granite/granite-4.2-8b
+cd "${REPO}"
+mkdir -p "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
+
+VLLM_PID=""
+serve_granite_rc=125
+smoke_rc=125
+arm_a_rc=125
+arm_b_rc=125
+probe_granite_rc=125
+swap_rc=125
+probe_qwen_rc=125
+summary_archive_rc=125
+
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
+    kill "${VLLM_PID}" 2>/dev/null || true
+    for _ in $(seq 1 12); do kill -0 "${VLLM_PID}" 2>/dev/null || break; sleep 5; done
+    kill -9 "${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+  pkill -f "vllm serve" 2>/dev/null || true
+  pkill -f "EngineCore" 2>/dev/null || true
+  sleep 5
+  echo "[u9] GPU after shutdown:"
+  nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+}
+
+finish () {
+  local overall="$1"
+  kill_vllm
+  echo "[hj15] final phase_rc serve_granite=${serve_granite_rc} smoke=${smoke_rc} arm_a=${arm_a_rc} arm_b=${arm_b_rc} probe_granite=${probe_granite_rc} swap=${swap_rc} probe_qwen=${probe_qwen_rc} summary_archive=${summary_archive_rc} overall=${overall}"
+  exit "${overall}"
+}
+
+# ---- preflight: the planner must be reachable BEFORE a GPU is held ------------
+echo "[u9] ---- preflight ----"
+if ! command -v codex >/dev/null 2>&1; then
+  echo "[u9] FATAL: codex not on PATH"; finish 1
+fi
+if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+  echo "[u9] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate"
+  finish 1
+fi
+echo "[u9] codex $(codex --version 2>/dev/null || echo '?')"
+
+# ---- phase 1: granite service -------------------------------------------------
+echo "[hj15] ---- phase 1: serve granite ----"
+kill_vllm
+"${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+  --served-model-name "${MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len 32768 \
+  --host 127.0.0.1 --port 8000 \
+  --gpu-memory-utilization 0.85 > "${VLOG}" 2>&1 &
+VLLM_PID=$!
+echo "[u9] vllm serve ${MODEL} pid=${VLLM_PID}"
+t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+while (( $(date +%s) < deadline )); do
+  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+    echo "[u9] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"
+    serve_granite_rc=1
+    finish 1
+  fi
+  if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+    echo "[u9] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  fi
+  sleep 5
+done
+if [[ "${healthy}" -ne 1 ]]; then
+  echo "[u9] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"
+  serve_granite_rc=1
+  finish 1
+fi
+serve_granite_rc=0
+echo "[hj15] phase serve_granite rc=${serve_granite_rc}"
+
+# ---- phase 2: fresh smoke gate ------------------------------------------------
+echo "[hj15] ---- phase 2: smoke gate (${SMOKE_CID}) ----"
+rm -rf "${OUT:?}/${SMOKE_CID:?}"
+timeout 900 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${SMOKE_CID}" --purge-broken
+smoke_purge_rc=$?
+echo "[hj15] smoke purge rc=${smoke_purge_rc}"
+if [[ "${smoke_purge_rc}" -ne 0 ]]; then
+  smoke_rc="${smoke_purge_rc}"
+  finish 1
+fi
+timeout 1200 "${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
+  --system executor_alone --split dev --tasks 3 --seeds 1 \
+  --env appworld --workers 3 \
+  --config "${CFG_A}" --campaign-id "${SMOKE_CID}" --out "${OUT}"
+smoke_runner_rc=$?
+echo "[hj15] smoke runner rc=${smoke_runner_rc}"
+if [[ "${smoke_runner_rc}" -ne 0 ]]; then
+  smoke_rc="${smoke_runner_rc}"
+  finish 1
+fi
+timeout 300 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${SMOKE_CID}" --gate
+smoke_rc=$?
+echo "[hj15] smoke gate rc=${smoke_rc}"
+if [[ "${smoke_rc}" -ne 0 ]]; then
+  echo "[hj15] FATAL: smoke gate failed"
+  finish 1
+fi
+rm -rf "${OUT:?}/${SMOKE_CID:?}"
+
+# ---- phase 3: HJ-1R arm A -----------------------------------------------------
+echo "[hj15] ---- phase 3: ${CID_A} ----"
+timeout 900 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${CID_A}" --purge-broken
+arm_a_purge_rc=$?
+echo "[hj15] arm A purge rc=${arm_a_purge_rc}"
+if [[ "${arm_a_purge_rc}" -ne 0 ]]; then
+  arm_a_rc="${arm_a_purge_rc}"
+else
+  timeout 3600 "${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
+    --system executor_alone --split dev --tasks 57 --seeds 1,2 \
+    --env appworld --workers 10 \
+    --config "${CFG_A}" --campaign-id "${CID_A}" --out "${OUT}"
+  arm_a_rc=$?
+fi
+echo "[hj15] phase arm_a rc=${arm_a_rc}"
+
+# ---- phase 4: HJ-1R arm B -----------------------------------------------------
+echo "[hj15] ---- phase 4: ${CID_B} ----"
+timeout 900 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${CID_B}" --purge-broken
+arm_b_purge_rc=$?
+echo "[hj15] arm B purge rc=${arm_b_purge_rc}"
+if [[ "${arm_b_purge_rc}" -ne 0 ]]; then
+  arm_b_rc="${arm_b_purge_rc}"
+else
+  timeout 3600 "${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
+    --system prompt_only --split dev --tasks 57 --seeds 1,2 \
+    --env appworld --workers 10 \
+    --config "${CFG_B}" --campaign-id "${CID_B}" --out "${OUT}"
+  arm_b_runner_rc=$?
+  echo "[hj15] arm B runner rc=${arm_b_runner_rc}"
+  if [[ "${arm_b_runner_rc}" -ne 0 ]]; then
+    arm_b_rc="${arm_b_runner_rc}"
+  else
+    timeout 300 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+      --out "${OUT}" --campaign-id "${CID_B}" --gate \
+      --expect-planner --expect-model gpt-5.6-luna
+    arm_b_gate_rc=$?
+    echo "[hj15] arm B gate rc=${arm_b_gate_rc}"
+    arm_b_rc="${arm_b_gate_rc}"
+  fi
+fi
+echo "[hj15] phase arm_b rc=${arm_b_rc}"
+if [[ "${arm_b_rc}" -ne 0 ]]; then
+  echo "[hj15] FATAL: arm B gate/campaign failed; cached provenance gate was not loosened"
+  finish 1
+fi
+
+# ---- phase 5: granite state probe ---------------------------------------------
+echo "[hj15] ---- phase 5: granite state probe ----"
+if [[ -s "${PROBE_GRANITE}" ]]; then
+  probe_granite_rc=0
+  echo "[hj15] resume: ${PROBE_GRANITE} already exists; probe skipped"
+else
+  timeout 1800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+    --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+    --model ibm-granite/granite-4.2-8b --base-url http://127.0.0.1:8000 \
+    --max-steps-per-run 40 --max-runs 114 --out "${PROBE_GRANITE}"
+  probe_granite_rc=$?
+fi
+echo "[hj15] phase probe_granite rc=${probe_granite_rc}"
+
+# ---- phase 6: swap models -----------------------------------------------------
+echo "[hj15] ---- phase 6: swap to Qwen3-8B ----"
+if [[ -s "${PROBE_QWEN}" ]]; then
+  swap_rc=0
+  echo "[hj15] resume: ${PROBE_QWEN} already exists; Qwen service swap skipped"
+else
+  kill_vllm
+  timeout 60 bash -c 'while curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; do sleep 1; done'
+  port_rc=$?
+  echo "[hj15] port-free wait rc=${port_rc}"
+  if [[ "${port_rc}" -ne 0 ]]; then
+    swap_rc="${port_rc}"
+  else
+    export HF_HOME="${HOME}/.cache/huggingface"
+    MODEL=Qwen/Qwen3-8B
+    VLOG="${LOGDIR}/hj15_vllm_qwen3_8b.log"
+    "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+      --served-model-name "${MODEL}" \
+      --dtype bfloat16 \
+      --max-model-len 32768 \
+      --host 127.0.0.1 --port 8000 \
+      --gpu-memory-utilization 0.85 > "${VLOG}" 2>&1 &
+    VLLM_PID=$!
+    echo "[u9] vllm serve ${MODEL} pid=${VLLM_PID}"
+    t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+    while (( $(date +%s) < deadline )); do
+      if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+        echo "[u9] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"
+        break
+      fi
+      if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+        echo "[u9] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+      fi
+      sleep 5
+    done
+    if [[ "${healthy}" -eq 1 ]]; then
+      swap_rc=0
+    else
+      echo "[u9] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"
+      swap_rc=1
+    fi
+  fi
+fi
+echo "[hj15] phase swap rc=${swap_rc}"
+if [[ "${swap_rc}" -ne 0 ]]; then
+  finish 1
+fi
+
+# ---- phase 7: Qwen state probe -------------------------------------------------
+echo "[hj15] ---- phase 7: Qwen3-8B state probe ----"
+if [[ -s "${PROBE_QWEN}" ]]; then
+  probe_qwen_rc=0
+  echo "[hj15] resume: ${PROBE_QWEN} already exists; probe skipped"
+else
+  timeout 1800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+    --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+    --model Qwen/Qwen3-8B --base-url http://127.0.0.1:8000 \
+    --max-steps-per-run 40 --max-runs 114 --out "${PROBE_QWEN}"
+  probe_qwen_rc=$?
+fi
+echo "[hj15] phase probe_qwen rc=${probe_qwen_rc}"
+
+# ---- phase 8: summaries, manifests, and guarded archive ----------------------
+echo "[hj15] ---- phase 8: summaries + manifests + archive ----"
+timeout 900 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${CID_A}" --config "${CFG_A}" --repo "${REPO}" \
+  --manifest "${OUT}/results/${CID_A}/manifest.json" --gate
+summary_a_rc=$?
+echo "[hj15] summary A rc=${summary_a_rc}"
+timeout 900 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/campaign_summarize.py" \
+  --out "${OUT}" --campaign-id "${CID_B}" --config "${CFG_B}" --repo "${REPO}" \
+  --manifest "${OUT}/results/${CID_B}/manifest.json" --gate \
+  --expect-planner --expect-model gpt-5.6-luna
+summary_b_rc=$?
+echo "[hj15] summary B rc=${summary_b_rc}"
+
+archive_rc=0
+timeout 60 mkdir -p "${ARCHIVE}"
+archive_mkdir_rc=$?
+echo "[hj15] archive mkdir rc=${archive_mkdir_rc}"
+if [[ "${archive_mkdir_rc}" -ne 0 ]]; then archive_rc="${archive_mkdir_rc}"; fi
+timeout 1800 cp -a "${OUT}/${CID_A}" "${ARCHIVE}/"
+archive_a_rc=$?
+echo "[hj15] archive A rc=${archive_a_rc}"
+if [[ "${archive_a_rc}" -ne 0 ]]; then archive_rc="${archive_a_rc}"; fi
+timeout 1800 cp -a "${OUT}/${CID_B}" "${ARCHIVE}/"
+archive_b_rc=$?
+echo "[hj15] archive B rc=${archive_b_rc}"
+if [[ "${archive_b_rc}" -ne 0 ]]; then archive_rc="${archive_b_rc}"; fi
+timeout 1800 cp -a "${PROBE_GRANITE}" "${ARCHIVE}/"
+archive_granite_rc=$?
+echo "[hj15] archive granite probe rc=${archive_granite_rc}"
+if [[ "${archive_granite_rc}" -ne 0 ]]; then archive_rc="${archive_granite_rc}"; fi
+timeout 1800 cp -a "${PROBE_QWEN}" "${ARCHIVE}/"
+archive_qwen_rc=$?
+echo "[hj15] archive Qwen probe rc=${archive_qwen_rc}"
+if [[ "${archive_qwen_rc}" -ne 0 ]]; then archive_rc="${archive_qwen_rc}"; fi
+
+summary_archive_rc=0
+if [[ "${arm_a_rc}" -ne 0 || "${arm_b_rc}" -ne 0 || "${summary_a_rc}" -ne 0 || \
+      "${summary_b_rc}" -ne 0 || "${probe_granite_rc}" -ne 0 || \
+      "${probe_qwen_rc}" -ne 0 || "${archive_rc}" -ne 0 ]]; then
+  summary_archive_rc=1
+fi
+echo "[hj15] phase summary_archive rc=${summary_archive_rc} (archive_rc=${archive_rc})"
+finish "${summary_archive_rc}"
