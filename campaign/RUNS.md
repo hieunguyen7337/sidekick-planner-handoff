@@ -355,6 +355,28 @@ executes without error and calls the same `apis.<app>.<api>` set as the teacher'
 | ≥ 40% overall, not collapsing with depth | granite-4.2-8b can act from a correct history; it needs training, not replacing | train SFT(b) on Granite as planned |
 | < 15% on Granite **and** materially better on Qwen3-8B | the executor choice is wrong, and cheaply fixable | switch the executor before J3, not after |
 | between, or degrading sharply with depth | trainable but marginal | proceed on Granite **and** add a third seed to HJ-2B for more teacher data |
+| < 15% on **both** Granite and Qwen3-8B | the teacher's action is not predictable from what the executor can see — an unrealizable expert, not a weak model | do **not** swap executors; it cannot help. Enrich the conditioning (carry more of the planner's reasoning into the packet) and re-probe, before any further SFT spend |
+
+🔺 **The fourth row was added 2026-09-16 21:37 AEST, after job 25401397 was submitted but before any
+probe output existed** (`probe_granite8b.json` / `probe_qwen3_8b.json` absent at the time of
+writing; the job was 3 minutes into an 8-phase run whose probes are phases 5 and 7). It closes a
+genuine gap: the original table said what to do when Granite is weak *and Qwen is better*, but not
+when **both** are weak, which is the one outcome that would invalidate the executor-swap remedy
+rather than trigger it. Pre-registering it now keeps that call out of post-hoc territory.
+
+**Two notes on reading the number, recorded before it exists:**
+
+1. **Agreement is stricter than per-step accuracy.** It scores the same `apis.<app>.<api>` set as
+   the teacher — one particular correct action among several that may all be correct. So agreement
+   *understates* competence, and the 40 % / 15 % thresholds are conservative. A 0.35 reading does
+   not contradict a substantially higher true per-step success rate.
+2. **A near-zero end-to-end TGC is not evidence of a weak model.** At the teacher's mean solved
+   length of 13.52 steps, a per-step accuracy of 0.704 yields TGC 0.0088 — which is exactly HJ-1R
+   arm A's observed 1/114. Compounding, not inability, is sufficient to explain the floor, and the
+   leverage runs the other way too: +13.9 pp of per-step accuracy takes TGC to 0.10, +18.3 pp takes
+   it to 0.20. (Model: TGC ≈ p^13.52, assuming no recovery from a bad step. AppWorld does permit
+   recovery, so true per-step accuracy may sit below 0.704 — treat this as an order-of-magnitude
+   reasoning device, not a measurement.)
 
 `hash_match` (byte-identical `env_state_hash`) is reported but **gates nothing**: `snapshot_hash`
 hashes `environment_io`, which includes the input code, so it can only match when the model emits
