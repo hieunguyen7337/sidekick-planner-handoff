@@ -1062,3 +1062,73 @@ the teacher's next step can still recover from.
 **`probe_granite8b.json` (v2) is superseded for every purpose except the Granite-vs-Qwen
 comparison it was built for**, where both arms carried the identical handicap. It must
 never be compared against a v3 report; `PROBE_SCHEMA_VERSION` enforces that mechanically.
+
+---
+
+## J4 — HJ-2C correction data on the trained policy (job 25401962, 2026-09-17)
+
+`fixed_k` with k=5, run **on `sft_b`** rather than on the untrained executor. Campaign
+`hj4_correction_train_20260917`, config `configs/hj4_correction.yaml`, PBS
+`scripts/pbs/hj4_correction.pbs`, walltime used **01:21:15** of 06:00, `Exit_status: 0`,
+all phases rc=0, archived to `~/sidekick_data/hj4_correction_train_20260917`.
+
+Split **train**, 90 tasks x seeds 1,2 = 180 episodes, 6 workers. Plans came from J2's
+teacher campaign (`packet_source: hj2b_planner_train_20260916`, `packet_system:
+planner_alone`), so the same task+seed gets the identical plan the teacher had; only the
+**reviews** went live to `gpt-5.6-luna`.
+
+| | value | note |
+|---|---|---|
+| episodes | 180 / 180 | none skipped, none missing |
+| solved | 104 | |
+| TGC | **0.577** | 🔺 **train split — not comparable to any dev figure** |
+| mean goal-pass-rate | 0.829 | |
+| interventions | **488** | 2.71 / episode |
+| hosted planner calls | 669 | budget was <= 1,450 |
+| mean steps | 15.6 | |
+| errors | 12 | `crash` 3, `limit` 9 |
+
+Gate passed with `--gate --expect-planner --expect-model gpt-5.6-luna`.
+
+**Read the 0.577 as a data yield, not a result.** This is the *train* split, which no arm
+in this campaign has ever been evaluated on, and the executor is being corrected five
+steps in — it is not an eval arm and must never be quoted beside dev's 0.4298.
+
+Two things in the table do carry meaning. **488 interventions across 180 episodes is 2.71
+per episode**, against the plan's estimate of about 2 and its ceiling of 8 — so the
+correction budget was sized correctly and `sft_b` is finishing short enough episodes that
+the reviewer is not being called on every step. And **669 planner calls against a 1,450
+budget** means J5's dataset was bought for under half the allowance.
+
+`limit` at 9/180 (5.0%) is consistent with J3's dev `sft_plan` (15/114, 13.2%) once the
+easier split is accounted for; it is not a new truncation problem.
+
+### The 3 crashes are defect #19, and they are censoring rather than noise
+
+Three episodes died with a 400 from vLLM: `fixed_k/1/2a163ab_2`, `fixed_k/2/afc0fce_1`
+and `fixed_k/2/22cc237_1` (enumerated by `grep -rl '"error_type": *"crash"'` over the
+campaign root, 2026-09-17, before the recovery job purged them). Cause, traced and
+fixed in commit `03640a0`: a single AppWorld observation of **604,915 characters** — one
+message larger than the entire 32,768-token context — reached
+`fit_messages_to_budget`, which correctly returned `representable=False`, and
+`executor.py:89` destructured that flag into `_` and sent the prompt anyway. The 400
+backstop could not save it either, because it deletes from the *middle* while the
+oversized message was last.
+
+🔺 **These 3 are not a random 1.7% loss.** A crash triggered by large observations removes
+exactly the tasks whose API calls return large result sets, so the surviving 177 are
+biased toward tasks with small result sets, in a predictable direction. The affected
+episodes record `goal_pass_rate: null` and leave the denominator silently.
+
+The size of the bias is small enough not to threaten any J4 conclusion — 488 interventions
+would gain roughly 8 — but the *kind* of data lost is disproportionately valuable to J5:
+these are precisely the states where the right correction is "you dumped an unpaginated
+result set, paginate instead", which is a behaviour SFT(c) should be learning and which
+cannot appear in a dataset that crashes whenever it occurs.
+
+**Recovery: job 25402025**, resubmitting the same PBS script against the same campaign id.
+`hj4_correction.pbs:120` runs `campaign_summarize --purge-broken` before the arm, which
+drops the 3 broken episode directories, and the runner's resume skips the 177 complete
+ones — so only the failures re-run, against the fixed code (the runner imports from
+`${REPO}/src` at run time, so the committed fix applies without a rebuild). The dataset
+build for J5 must wait for this job, not for 25401962.
