@@ -314,7 +314,7 @@ and 4–8 concurrent `codex exec` subprocesses talk to the planner. Nothing need
 
 | stage | data | recipe |
 |---|---|---|
-| S1 SFT(b) plan-conditioned | successful `prompt_only` segments; target = executor action given the packet | TRL SFT, LoRA r=64/α=128, lr 1e-4 cosine, 2 epochs, 32k ctx, loss on executor tokens only |
+| S1 SFT(b) plan-conditioned | ~~successful `prompt_only` segments~~ → **solved `planner_alone` trajectories on train** (see note); target = executor action given the packet | TRL SFT, LoRA r=64/α=128, lr 1e-4 cosine, 2 epochs, 32k ctx, loss on executor tokens only |
 | S1 SFT(c) + correction/ASK | adds post-correction actions as targets with the failing action loss-masked, and ASK decisions | same |
 | S2 verifier | counterfactual continue-branches at each intervention (3 branches × ≤ 10 steps) | Qwen3-1.7B + head, BCE, temperature scaling on dev |
 | S3 DPO | pairs: continue ≻ needless ASK; ASK ≻ risky continue before an irreversible action; plan-aligned ≻ later-corrected | TRL DPO on SFT(c), β = 0.1, 1 epoch, LoRA, 3 λ settings |
@@ -322,6 +322,22 @@ and 4–8 concurrent `codex exec` subprocesses talk to the planner. Nothing need
 
 Every training example's task id goes into the adapter manifest, and a CI test fails if a test-split id
 appears.
+
+🔺 **SFT(b)'s written data source does not exist.** This table said "successful `prompt_only`
+segments". `prompt_only` solved **0 of 114** episodes in HJ-1, so that set is empty. The teacher is
+`planner_alone`, whose solved trajectories do carry state correctly and are already on disk — run
+over the **train** split (90 tasks × 2 seeds) as HJ-2B, campaign `hj2b_planner_train_20260916`. Dev
+stays the tuning split and is never trained on.
+
+🔺 **Correction data (SFT(c)) is collected on the SFT(b) policy, not on the untrained model.** A
+correction handed to a model that cannot act on it is always "log in first"; collected on `sft_b`,
+the corrections land on the states the deployed sidekick will actually reach, and the same run
+yields HJ-4's branch points for free. This deviates from the `fixed_k`-on-untrained wording above,
+deliberately.
+
+🔺 **Training and inference share one prompt renderer** (`protocols/prompts.render_executor_messages`).
+A separate data-side renderer would train the adapter on a prompt distribution that never occurs at
+inference, and no test catches that.
 
 ---
 

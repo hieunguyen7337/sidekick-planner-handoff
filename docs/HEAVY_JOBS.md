@@ -102,6 +102,20 @@ margin on our own scaffold, there is nothing to displace.
 **Purpose.** Build the supervised training set from the train split: planner-alone demonstrations,
 plus prompt-only rollouts that contain real interventions and real escalations.
 
+🔺 **Superseded 2026-09-16 — split into HJ-2B and HJ-2C.** The `prompt_only` half of this job was
+premised on those rollouts containing useful segments; `prompt_only` solved 0/114 in HJ-1, so 8
+rollouts per task would buy 720 episodes of nothing.
+
+- **HJ-2B (running, job 25392080→`hj2b_planner_train_20260916`, submitted as 25397852):**
+  `planner_alone` over train, 90 tasks × 2 seeds = **180 episodes**, CPU only, ~2 h, ≈2,900 luna
+  calls. Expect ≈125 solved trajectories / ≈1,550 steps. This is the SFT(b) teacher data. Caps
+  fixed first: `max_planner_calls` 25 → **81**, token budget non-binding.
+- **HJ-2C (after SFT(b) trains):** `fixed_k` on the **`sft_b` policy**, train 90 × 2 seeds, with
+  plans replayed from HJ-2B so only the reviews are live (≤ 1,450 calls). Yields the correction/ASK
+  targets *and* HJ-4's branch points.
+
+The "raise rollouts per task from 8 to 10" note below is therefore moot.
+
 ⚠ The train split holds **90 tasks, not the documented 105** [measured, gate G2] — a 14% smaller
 supervised pool than planned. Consider raising rollouts per task from 8 to 10 to compensate.
 
@@ -188,6 +202,15 @@ expensive is recovery, was the intervention worth it.
 ## HJ-7 — M6 final evaluation on test_normal
 
 **Purpose.** The only run that produces the headline numbers. Everything is frozen before it starts.
+
+🔺 **Sized 2026-09-16, `scripts/setup/hj7_power.py` → `campaign/results/hj7_power.json`.** The 3
+seeds below are right; the ε = 5 pp margin elsewhere in the plan is **not achievable**.
+`planner_alone` disagrees with itself on **28.07%** of tasks across seeds (16 of 57 pairs). On 168
+tasks, the smallest margin resolvable at ≥ 80% power is **7 pp at N = 3**, and it is *still* 7 pp at
+N = 4 and N = 5 — only the CI half-width shrinks (4.58 → 3.55 pp). At ε = 5 pp, power is 0.591 at
+N = 3 and only 0.809 at N = 5. **Prereg: N = 3, ε = 7 pp.** Extra seeds are wasted quota; the
+binding constraint is the number of *tasks*. A pessimistic alternative model
+(`--correlation-model mixture`) resolves only 10 pp even at N = 5, and is reported alongside.
 
 | field | value |
 |---|---|
