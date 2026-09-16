@@ -2,7 +2,7 @@
 #PBS -N hj3-eval
 #PBS -q gpu_inter
 #PBS -l select=1:ncpus=16:ngpus=1:mem=128gb
-#PBS -l walltime=04:00:00
+#PBS -l walltime=08:00:00
 #PBS -j oe
 #PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj3_eval.out
 #
@@ -71,6 +71,7 @@ CID_EXEC="${CID_EXEC:-hj3_sft_b_exec_20260917}"
 CID_PLAN="${CID_PLAN:-hj3_sft_plan_20260917}"
 PACKET_SOURCE=/scratch/n12194778/sidekick/results/hj1b_planner_20260915
 PROBE_SFT_B=/scratch/n12194778/sidekick/results/probe_sft_b.json
+PROBE_GRANITE8B_SERVING=/scratch/n12194778/sidekick/results/probe_granite8b_serving.json
 # Campaigns are another unit's configs. Do not hold an H100 (or require adapters)
 # until those files exist.
 cfg_missing=0
@@ -131,6 +132,47 @@ kill_vllm () {
 probe_report_status () {
   PYTHONPATH="${REPO}/scripts/setup:${PYTHONPATH:-}" \
     "${SIDEKICK_VENV}/bin/python" -c 'import json,sys; import state_probe; r=json.load(open(sys.argv[1])); assert isinstance(r,dict) and isinstance(r["budget_exhausted"],bool); print("stale" if r.get("schema_version") != state_probe.PROBE_SCHEMA_VERSION else (("complete" if r["budget_exhausted"] is False else "partial") + " " + str(r["n_completed"]) + "/" + str(r["n_planned"])))' "$1" 2>/dev/null
+}
+
+# Shared probe argv. Extra args (post-SFT: --lora-name) are the only allowed
+# difference besides --out. chat_template_kwargs / stop come from
+# configs/hj3_sft_b_exec.yaml executor.{chat_template_kwargs,stop}.
+invoke_state_probe () {
+  local out="$1"
+  shift
+  timeout 7800 "${PY}" "${REPO}/scripts/setup/state_probe.py" \
+    --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+    --model ibm-granite/granite-4.2-8b \
+    --base-url http://127.0.0.1:8000 \
+    --max-steps-per-run 40 --max-runs 114 --max-points 300 \
+    --time-budget-s 7200 --seed 0 \
+    --chat-template-kwargs '{"enable_thinking": false}' \
+    --stop '</py>' --stop '</python>' --stop '</tool_call>' \
+    --out "${out}" \
+    "$@"
+}
+
+run_probe_phase () {
+  local out="$1"
+  shift
+  if [[ -s "${out}" ]]; then
+    local status=""
+    status="$(probe_report_status "${out}")" || status=""
+    if [[ "${status}" == complete\ * ]]; then
+      echo "[hj3] resume: ${out} is complete (${status#* }); probe skipped"
+      return 0
+    elif [[ "${status}" == partial\ * ]]; then
+      echo "[hj3] resume: ${out} is partial (${status#* }); re-running to finish"
+    elif [[ "${status}" == stale ]]; then
+      echo "[hj3] resume: ${out} was produced by an older probe schema; discarding and re-running from scratch"
+    else
+      echo "[hj3] resume: ${out} is malformed or unreadable; re-running"
+    fi
+    invoke_state_probe "${out}" "$@"
+    return $?
+  fi
+  echo "[hj3] resume: ${out} is missing or empty; running probe"
+  invoke_state_probe "${out}" "$@"
 }
 
 # Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
@@ -245,6 +287,7 @@ fi
 # campaign id, purge, then full run + manifest. sft_plan may ASK the planner.
 arm_a_rc=125
 arm_b_rc=125
+probe_base_rc=125
 probe_rc=125
 
 run_arm executor_alone "${CFG_EXEC}" "${CID_EXEC}"
@@ -276,50 +319,28 @@ echo "[hj3] arm B (${CID_PLAN}) rc=${arm_b_rc}"
 #   --gate --expect-planner --expect-model gpt-5.6-luna --repo "${REPO}"
 # ==============================================================================
 
-# ---- post-SFT probe (J3 gate vs J1 pre-SFT baseline). Sampling args must
-# match hj15_state_probe.pbs:269-273 or the before/after comparison is void.
+# ---- paired probes on this server. Sampling args and serving template/stop
+# must be identical; only --lora-name and --out differ. No --lora-name is the
+# base model; --lora-name sft_b is the adapter.
+echo "[hj3] ---- pre-SFT baseline probe ----"
+run_probe_phase "${PROBE_GRANITE8B_SERVING}"
+probe_base_rc=$?
+echo "[hj3] phase probe_granite8b_serving rc=${probe_base_rc}"
+
 echo "[hj3] ---- post-SFT probe ----"
-if [[ -s "${PROBE_SFT_B}" ]]; then
-  sft_probe_status="$(probe_report_status "${PROBE_SFT_B}")" || sft_probe_status=""
-  if [[ "${sft_probe_status}" == complete\ * ]]; then
-    probe_rc=0
-    echo "[hj3] resume: ${PROBE_SFT_B} is complete (${sft_probe_status#* }); probe skipped"
-  else
-    if [[ "${sft_probe_status}" == partial\ * ]]; then
-      echo "[hj3] resume: ${PROBE_SFT_B} is partial (${sft_probe_status#* }); re-running to finish"
-    elif [[ "${sft_probe_status}" == stale ]]; then
-      echo "[hj3] resume: ${PROBE_SFT_B} was produced by an older probe schema; discarding and re-running from scratch"
-    else
-      echo "[hj3] resume: ${PROBE_SFT_B} is malformed or unreadable; re-running"
-    fi
-    timeout 7800 "${PY}" "${REPO}/scripts/setup/state_probe.py" \
-      --campaign-root "${PACKET_SOURCE}" --system planner_alone \
-      --model ibm-granite/granite-4.2-8b --lora-name "${ALIAS_SFT_B}" \
-      --base-url http://127.0.0.1:8000 \
-      --max-steps-per-run 40 --max-runs 114 --max-points 300 \
-      --time-budget-s 7200 --seed 0 \
-      --out /scratch/n12194778/sidekick/results/probe_sft_b.json
-    probe_rc=$?
-  fi
-else
-  echo "[hj3] resume: ${PROBE_SFT_B} is missing or empty; running probe"
-  timeout 7800 "${PY}" "${REPO}/scripts/setup/state_probe.py" \
-    --campaign-root "${PACKET_SOURCE}" --system planner_alone \
-    --model ibm-granite/granite-4.2-8b --lora-name "${ALIAS_SFT_B}" \
-    --base-url http://127.0.0.1:8000 \
-    --max-steps-per-run 40 --max-runs 114 --max-points 300 \
-    --time-budget-s 7200 --seed 0 \
-    --out /scratch/n12194778/sidekick/results/probe_sft_b.json
-  probe_rc=$?
-fi
+run_probe_phase "${PROBE_SFT_B}" --lora-name "${ALIAS_SFT_B}"
+probe_rc=$?
 echo "[hj3] phase probe_sft_b rc=${probe_rc}"
 
 kill_vllm
-echo "[hj3] done=$(date -Iseconds) arm_a_rc=${arm_a_rc} arm_b_rc=${arm_b_rc} probe_rc=${probe_rc}"
+echo "[hj3] done=$(date -Iseconds) arm_a_rc=${arm_a_rc} arm_b_rc=${arm_b_rc} probe_base_rc=${probe_base_rc} probe_rc=${probe_rc}"
 if [[ "${arm_a_rc}" -ne 0 ]]; then
   exit "${arm_a_rc}"
 fi
 if [[ "${arm_b_rc}" -ne 0 ]]; then
   exit "${arm_b_rc}"
+fi
+if [[ "${probe_base_rc}" -ne 0 ]]; then
+  exit "${probe_base_rc}"
 fi
 exit "${probe_rc}"

@@ -51,7 +51,11 @@ DEFAULT_CAMPAIGN = "/scratch/n12194778/sidekick/results/hj1b_planner_20260915"
 # to mix results across the change. 2026-09-17: bumped to 2 -- the probe now
 # runs in AppWorldEnv rather than MockEnv, and `agreement` no longer counts an
 # empty gold API set as a match. Results from version 1 are not comparable.
-PROBE_SCHEMA_VERSION = 2
+# 2026-09-17: bumped to 3 -- the probe now sends the serving chat-template
+# kwargs and stop sequences, so agreement and parse-error rates are not
+# comparable with version 2 results, which were measured with the template
+# defaults.
+PROBE_SCHEMA_VERSION = 3
 
 
 def extract_api_ids(code: str) -> set[str]:
@@ -498,6 +502,8 @@ def _report_from_records(
     model: str,
     lora_name: str | None,
     budget_exhausted: bool,
+    chat_template_kwargs: dict[str, Any] | None = None,
+    stop: list[str] | None = None,
 ) -> dict[str, Any]:
     buckets: dict[str, dict[str, Any]] = defaultdict(empty_counts)
     for rec in records:
@@ -509,6 +515,8 @@ def _report_from_records(
         "schema_version": PROBE_SCHEMA_VERSION,
         "model": model,
         "lora_name": lora_name,
+        "chat_template_kwargs": chat_template_kwargs,
+        "stop": stop,
         "campaign_root": str(campaign_root),
         "system": system,
         "n_trajectories": n_trajectories,
@@ -628,6 +636,8 @@ def run_probe(
         getattr(executor, "model", "unknown"),
         getattr(executor, "lora_name", None),
         budget_exhausted,
+        getattr(executor, "chat_template_kwargs", None),
+        getattr(executor, "stop", None),
     )
     if out_path is not None:
         output_path = Path(out_path)
@@ -636,7 +646,23 @@ def run_probe(
     return report
 
 
-def main(argv: list[str] | None = None) -> int:
+def _parse_chat_template_kwargs(value: str) -> dict[str, Any]:
+    """JSON object for vLLM chat_template_kwargs. Fail loudly on bad JSON."""
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise argparse.ArgumentTypeError(
+            f"--chat-template-kwargs is not valid JSON: {exc}"
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise argparse.ArgumentTypeError(
+            "--chat-template-kwargs must be a JSON object, "
+            f"got {type(parsed).__name__}"
+        )
+    return parsed
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="state_probe")
     parser.add_argument("--campaign-root", default=DEFAULT_CAMPAIGN)
     parser.add_argument("--system", default="planner_alone")
@@ -663,15 +689,40 @@ def main(argv: list[str] | None = None) -> int:
         default=0,
         help="seed for deterministic depth-stratified sampling",
     )
+    parser.add_argument(
+        "--chat-template-kwargs",
+        default=None,
+        type=_parse_chat_template_kwargs,
+        help='JSON object passed through to vLLM, e.g. \'{"enable_thinking": false}\'',
+    )
+    parser.add_argument(
+        "--stop",
+        action="append",
+        default=None,
+        help="stop sequence; repeat the flag once per sequence",
+    )
     parser.add_argument("--out", required=True)
-    args = parser.parse_args(argv)
-    executor = VLLMExecutor(
+    return parser
+
+
+def executor_from_args(
+    args: argparse.Namespace, http_client: Any | None = None
+) -> VLLMExecutor:
+    return VLLMExecutor(
         model=args.model,
         base_url=args.base_url,
         lora_name=args.lora_name,
         temperature=0.0,  # capability measurement, not a sample
         timeout_s=120.0,  # every model call bounded by this HTTP timeout
+        chat_template_kwargs=args.chat_template_kwargs,
+        stop=args.stop,
+        http_client=http_client,
     )
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    executor = executor_from_args(args)
     try:
         report = run_probe(
             args.campaign_root,
