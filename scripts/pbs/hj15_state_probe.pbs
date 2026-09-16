@@ -45,6 +45,8 @@ CFG_B="${REPO}/configs/hj1r_prompt_only.yaml"
 PACKET_SOURCE=/scratch/n12194778/sidekick/results/hj1b_planner_20260915
 PROBE_GRANITE=/scratch/n12194778/sidekick/results/probe_granite8b.json
 PROBE_QWEN=/scratch/n12194778/sidekick/results/probe_qwen3_8b.json
+PROBE_SMOKE_GRANITE=/scratch/n12194778/sidekick/results/probe_smoke_granite8b.json
+PROBE_SMOKE_QWEN=/scratch/n12194778/sidekick/results/probe_smoke_qwen3_8b.json
 VLOG="${LOGDIR}/hj15_vllm_granite8b.log"
 MODEL=ibm-granite/granite-4.2-8b
 cd "${REPO}"
@@ -62,6 +64,30 @@ summary_archive_rc=125
 
 probe_report_status () {
   "${SIDEKICK_VENV}/bin/python" -c 'import json,sys; r=json.load(open(sys.argv[1])); assert isinstance(r,dict) and isinstance(r["budget_exhausted"],bool); print(("complete" if r["budget_exhausted"] is False else "partial") + " " + str(r["n_completed"]) + "/" + str(r["n_planned"]))' "$1" 2>/dev/null
+}
+
+run_probe_smoke () {
+  local model="$1"
+  local smoke_out="$2"
+  rm -f "${smoke_out}" "${smoke_out}.partial.jsonl"
+  echo "[hj15] probe smoke: model=${model} out=${smoke_out}"
+  timeout 7800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+    --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+    --model "${model}" --base-url http://127.0.0.1:8000 \
+    --max-steps-per-run 40 --max-runs 114 --max-points 3 \
+    --time-budget-s 7200 --seed 0 --out "${smoke_out}"
+  local smoke_probe_rc=$?
+  if [[ "${smoke_probe_rc}" -ne 0 || ! -s "${smoke_out}" ]]; then
+    echo "[hj15] FATAL: probe smoke failed for ${model} (rc=${smoke_probe_rc}, report=${smoke_out})"
+    return 1
+  fi
+  rm -f "${smoke_out}" "${smoke_out}.partial.jsonl"
+  if [[ -e "${smoke_out}" || -e "${smoke_out}.partial.jsonl" ]]; then
+    echo "[hj15] FATAL: probe smoke cleanup failed for ${model} (${smoke_out})"
+    return 1
+  fi
+  echo "[hj15] probe smoke passed for ${model}; throwaway output removed"
+  return 0
 }
 
 kill_vllm () {
@@ -220,20 +246,28 @@ if [[ -s "${PROBE_GRANITE}" ]]; then
     else
       echo "[hj15] resume: ${PROBE_GRANITE} is malformed or unreadable; re-running"
     fi
-    timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+    if ! run_probe_smoke "ibm-granite/granite-4.2-8b" "${PROBE_SMOKE_GRANITE}"; then
+      probe_granite_rc=1
+      finish 1
+    fi
+    timeout 7800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
       --campaign-root "${PACKET_SOURCE}" --system planner_alone \
       --model ibm-granite/granite-4.2-8b --base-url http://127.0.0.1:8000 \
       --max-steps-per-run 40 --max-runs 114 --max-points 300 \
-      --time-budget-s 5400 --seed 0 --out "${PROBE_GRANITE}"
+      --time-budget-s 7200 --seed 0 --out "${PROBE_GRANITE}"
     probe_granite_rc=$?
   fi
 else
   echo "[hj15] resume: ${PROBE_GRANITE} is missing or empty; running probe"
-  timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+  if ! run_probe_smoke "ibm-granite/granite-4.2-8b" "${PROBE_SMOKE_GRANITE}"; then
+    probe_granite_rc=1
+    finish 1
+  fi
+  timeout 7800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
     --campaign-root "${PACKET_SOURCE}" --system planner_alone \
     --model ibm-granite/granite-4.2-8b --base-url http://127.0.0.1:8000 \
     --max-steps-per-run 40 --max-runs 114 --max-points 300 \
-    --time-budget-s 5400 --seed 0 --out "${PROBE_GRANITE}"
+    --time-budget-s 7200 --seed 0 --out "${PROBE_GRANITE}"
   probe_granite_rc=$?
 fi
 echo "[hj15] phase probe_granite rc=${probe_granite_rc}"
@@ -345,20 +379,28 @@ if [[ -s "${PROBE_QWEN}" ]]; then
     else
       echo "[hj15] resume: ${PROBE_QWEN} is malformed or unreadable; re-running"
     fi
-    timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+    if ! run_probe_smoke "Qwen/Qwen3-8B" "${PROBE_SMOKE_QWEN}"; then
+      probe_qwen_rc=1
+      finish 1
+    fi
+    timeout 7800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
       --campaign-root "${PACKET_SOURCE}" --system planner_alone \
       --model Qwen/Qwen3-8B --base-url http://127.0.0.1:8000 \
       --max-steps-per-run 40 --max-runs 114 --max-points 300 \
-      --time-budget-s 5400 --seed 0 --out "${PROBE_QWEN}"
+      --time-budget-s 7200 --seed 0 --out "${PROBE_QWEN}"
     probe_qwen_rc=$?
   fi
 else
   echo "[hj15] resume: ${PROBE_QWEN} is missing or empty; running probe"
-  timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+  if ! run_probe_smoke "Qwen/Qwen3-8B" "${PROBE_SMOKE_QWEN}"; then
+    probe_qwen_rc=1
+    finish 1
+  fi
+  timeout 7800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
     --campaign-root "${PACKET_SOURCE}" --system planner_alone \
     --model Qwen/Qwen3-8B --base-url http://127.0.0.1:8000 \
     --max-steps-per-run 40 --max-runs 114 --max-points 300 \
-    --time-budget-s 5400 --seed 0 --out "${PROBE_QWEN}"
+    --time-budget-s 7200 --seed 0 --out "${PROBE_QWEN}"
   probe_qwen_rc=$?
 fi
 echo "[hj15] phase probe_qwen rc=${probe_qwen_rc}"
