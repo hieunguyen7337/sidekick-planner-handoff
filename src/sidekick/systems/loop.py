@@ -161,7 +161,13 @@ def run_episode(
     # teacher-data campaign and the HJ-1 planner baseline.
     exec_turns: list[dict] = []
     steps_taken = 0
-    eval_result: dict[str, Any] = {"success": False, "tgc": None, "sgc": None, "report": {}}
+    eval_result: dict[str, Any] = {
+        "success": False,
+        "tgc": None,
+        "sgc": None,
+        "goal_pass_rate": None,
+        "report": {},
+    }
     timeout_s = limits.per_step_timeout_s
     router = None
     if policy.use_router:
@@ -690,7 +696,13 @@ def run_episode(
         try:
             eval_result = env.evaluate()
         except Exception as exc:
-            eval_result = {"success": False, "tgc": None, "sgc": None, "report": {"error": str(exc)}}
+            eval_result = {
+                "success": False,
+                "tgc": None,
+                "sgc": None,
+                "goal_pass_rate": None,
+                "report": {"error": str(exc)},
+            }
             if error_type is None:
                 error_type = "crash"
         emit(
@@ -722,6 +734,7 @@ def run_episode(
         success=success,
         tgc=eval_result.get("tgc"),
         sgc=eval_result.get("sgc"),
+        goal_pass_rate=eval_result.get("goal_pass_rate"),
         steps=steps_taken,
         n_planner_calls=n_planner_calls,
         n_asks=n_asks,

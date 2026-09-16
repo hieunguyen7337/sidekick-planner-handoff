@@ -83,6 +83,7 @@ class MockEnv(BaseEnv):
             "success": bool(success),
             "tgc": 1.0 if success else 0.0,
             "sgc": None,
+            "goal_pass_rate": None,
             "report": report,
         }
 

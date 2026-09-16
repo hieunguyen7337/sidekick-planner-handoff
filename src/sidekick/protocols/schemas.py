@@ -133,6 +133,7 @@ class RunResult(BaseModel):
     success: bool                      # AppWorld task_goal_completion for this task
     tgc: Optional[float] = None
     sgc: Optional[float] = None
+    goal_pass_rate: Optional[float] = None
     steps: int = 0
     n_planner_calls: int = 0
     n_asks: int = 0

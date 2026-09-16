@@ -118,6 +118,11 @@ def summarise(out_root: Path, campaign_id: str) -> dict:
     errors = Counter(r.get("error_type") or "none" for r in rows)
     planner_calls = sum(int(r.get("n_planner_calls") or 0) for r in rows)
     steps = [int(r.get("steps") or 0) for r in rows]
+    goal_pass_rates = [
+        float(r["goal_pass_rate"])
+        for r in rows
+        if r.get("goal_pass_rate") is not None
+    ]
 
     totals: Counter = Counter()
     for r in rows:
@@ -137,6 +142,8 @@ def summarise(out_root: Path, campaign_id: str) -> dict:
         "planner_calls_total": planner_calls,
         "planner_calls_mean": round(planner_calls / len(rows), 2) if rows else None,
         "steps_mean": round(mean(steps), 2) if steps else None,
+        "mean_goal_pass_rate": round(mean(goal_pass_rates), 4) if goal_pass_rates else None,
+        "n_goal_pass_rate": len(goal_pass_rates),
         "planner_models": dict(_planner_models(root)),
         "ledger_totals": {k: round(v, 6) for k, v in totals.items()},
     }

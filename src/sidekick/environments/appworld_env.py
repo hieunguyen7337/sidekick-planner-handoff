@@ -116,7 +116,13 @@ class AppWorldEnv(BaseEnv):
 
     def evaluate(self) -> dict:
         if self._world is None:
-            return {"success": False, "tgc": 0.0, "sgc": None, "report": {"error": "no world"}}
+            return {
+                "success": False,
+                "tgc": 0.0,
+                "sgc": None,
+                "goal_pass_rate": None,
+                "report": {"error": "no world"},
+            }
         tracker = self._world.evaluate(suppress_errors=True)
         success = bool(getattr(tracker, "success", False))
         report: dict[str, Any]
@@ -129,7 +135,14 @@ class AppWorldEnv(BaseEnv):
         if pass_pct is not None:
             report = dict(report)
             report["pass_percentage"] = pass_pct
-        return {"success": success, "tgc": tgc, "sgc": None, "report": report}
+        goal_pass_rate = float(pass_pct) / 100.0 if pass_pct is not None else None
+        return {
+            "success": success,
+            "tgc": tgc,
+            "sgc": None,
+            "goal_pass_rate": goal_pass_rate,
+            "report": report,
+        }
 
     def snapshot_hash(self) -> str:
         """sha256 of concatenated execute I/O, not a DB dump. Weakens replay (see class docstring)."""
