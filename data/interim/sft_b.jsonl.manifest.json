@@ -1,0 +1,482 @@
+{
+  "dropped": [
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "229360a_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "229360a_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "22cc237_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "29caf6f_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "2a163ab_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "302c169_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "6104387_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "6ea6792_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "6ea6792_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "76f2c72_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "76f2c72_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "afc0fce_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "afc0fce_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "afc0fce_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "b0a8eae_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "ccb4494_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "d0b1f43_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "d0b1f43_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "d0b1f43_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "e3d6c94_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "e3d6c94_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "e3d6c94_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 1,
+      "task_id": "e7a10f8_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "229360a_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "2a163ab_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "302c169_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "60d0b5b_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "692c77d_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "692c77d_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "6ea6792_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "6ea6792_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "6ea6792_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "76f2c72_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "82e2fac_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "aa8502b_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "afc0fce_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "afc0fce_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "afc0fce_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "b0a8eae_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "b0a8eae_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "ccb4494_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "d0b1f43_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "d0b1f43_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "d0b1f43_3"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "e3d6c94_1"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "e3d6c94_2"
+    },
+    {
+      "reason": "unsolved",
+      "seed": 2,
+      "task_id": "e3d6c94_3"
+    }
+  ],
+  "dropped_counts": {
+    "unsolved": 47
+  },
+  "n_dropped": 47,
+  "n_messages_dropped_total": 55,
+  "n_missing_api_docs": 0,
+  "n_trajectories": 133,
+  "n_truncated": 7,
+  "n_turns_total": 1645,
+  "n_unrepresentable": 0,
+  "out_jsonl": "data/interim/sft_b.jsonl",
+  "run_ids": [
+    "hj2b_planner_train_20260916/planner_alone/1/07b42fd_1",
+    "hj2b_planner_train_20260916/planner_alone/1/07b42fd_2",
+    "hj2b_planner_train_20260916/planner_alone/1/07b42fd_3",
+    "hj2b_planner_train_20260916/planner_alone/1/229360a_3",
+    "hj2b_planner_train_20260916/planner_alone/1/22cc237_1",
+    "hj2b_planner_train_20260916/planner_alone/1/22cc237_3",
+    "hj2b_planner_train_20260916/planner_alone/1/27e1026_1",
+    "hj2b_planner_train_20260916/planner_alone/1/27e1026_2",
+    "hj2b_planner_train_20260916/planner_alone/1/27e1026_3",
+    "hj2b_planner_train_20260916/planner_alone/1/287e338_1",
+    "hj2b_planner_train_20260916/planner_alone/1/287e338_2",
+    "hj2b_planner_train_20260916/planner_alone/1/287e338_3",
+    "hj2b_planner_train_20260916/planner_alone/1/29caf6f_2",
+    "hj2b_planner_train_20260916/planner_alone/1/29caf6f_3",
+    "hj2b_planner_train_20260916/planner_alone/1/2a163ab_1",
+    "hj2b_planner_train_20260916/planner_alone/1/2a163ab_2",
+    "hj2b_planner_train_20260916/planner_alone/1/302c169_1",
+    "hj2b_planner_train_20260916/planner_alone/1/302c169_3",
+    "hj2b_planner_train_20260916/planner_alone/1/34d9492_1",
+    "hj2b_planner_train_20260916/planner_alone/1/34d9492_2",
+    "hj2b_planner_train_20260916/planner_alone/1/34d9492_3",
+    "hj2b_planner_train_20260916/planner_alone/1/3c13f5a_1",
+    "hj2b_planner_train_20260916/planner_alone/1/3c13f5a_2",
+    "hj2b_planner_train_20260916/planner_alone/1/3c13f5a_3",
+    "hj2b_planner_train_20260916/planner_alone/1/60d0b5b_1",
+    "hj2b_planner_train_20260916/planner_alone/1/60d0b5b_2",
+    "hj2b_planner_train_20260916/planner_alone/1/60d0b5b_3",
+    "hj2b_planner_train_20260916/planner_alone/1/6104387_1",
+    "hj2b_planner_train_20260916/planner_alone/1/6104387_3",
+    "hj2b_planner_train_20260916/planner_alone/1/692c77d_1",
+    "hj2b_planner_train_20260916/planner_alone/1/692c77d_2",
+    "hj2b_planner_train_20260916/planner_alone/1/692c77d_3",
+    "hj2b_planner_train_20260916/planner_alone/1/6ea6792_3",
+    "hj2b_planner_train_20260916/planner_alone/1/76f2c72_2",
+    "hj2b_planner_train_20260916/planner_alone/1/771d8fc_1",
+    "hj2b_planner_train_20260916/planner_alone/1/771d8fc_2",
+    "hj2b_planner_train_20260916/planner_alone/1/771d8fc_3",
+    "hj2b_planner_train_20260916/planner_alone/1/7d7fbf6_1",
+    "hj2b_planner_train_20260916/planner_alone/1/7d7fbf6_2",
+    "hj2b_planner_train_20260916/planner_alone/1/7d7fbf6_3",
+    "hj2b_planner_train_20260916/planner_alone/1/82e2fac_1",
+    "hj2b_planner_train_20260916/planner_alone/1/82e2fac_2",
+    "hj2b_planner_train_20260916/planner_alone/1/82e2fac_3",
+    "hj2b_planner_train_20260916/planner_alone/1/aa8502b_1",
+    "hj2b_planner_train_20260916/planner_alone/1/aa8502b_2",
+    "hj2b_planner_train_20260916/planner_alone/1/aa8502b_3",
+    "hj2b_planner_train_20260916/planner_alone/1/b0a8eae_2",
+    "hj2b_planner_train_20260916/planner_alone/1/b0a8eae_3",
+    "hj2b_planner_train_20260916/planner_alone/1/b7a9ee9_1",
+    "hj2b_planner_train_20260916/planner_alone/1/b7a9ee9_2",
+    "hj2b_planner_train_20260916/planner_alone/1/b7a9ee9_3",
+    "hj2b_planner_train_20260916/planner_alone/1/c901732_1",
+    "hj2b_planner_train_20260916/planner_alone/1/c901732_2",
+    "hj2b_planner_train_20260916/planner_alone/1/c901732_3",
+    "hj2b_planner_train_20260916/planner_alone/1/ccb4494_1",
+    "hj2b_planner_train_20260916/planner_alone/1/ccb4494_2",
+    "hj2b_planner_train_20260916/planner_alone/1/ce359b5_1",
+    "hj2b_planner_train_20260916/planner_alone/1/ce359b5_2",
+    "hj2b_planner_train_20260916/planner_alone/1/ce359b5_3",
+    "hj2b_planner_train_20260916/planner_alone/1/cf6abd2_1",
+    "hj2b_planner_train_20260916/planner_alone/1/cf6abd2_2",
+    "hj2b_planner_train_20260916/planner_alone/1/cf6abd2_3",
+    "hj2b_planner_train_20260916/planner_alone/1/e7a10f8_2",
+    "hj2b_planner_train_20260916/planner_alone/1/e7a10f8_3",
+    "hj2b_planner_train_20260916/planner_alone/1/e85d92a_1",
+    "hj2b_planner_train_20260916/planner_alone/1/e85d92a_2",
+    "hj2b_planner_train_20260916/planner_alone/1/e85d92a_3",
+    "hj2b_planner_train_20260916/planner_alone/2/07b42fd_1",
+    "hj2b_planner_train_20260916/planner_alone/2/07b42fd_2",
+    "hj2b_planner_train_20260916/planner_alone/2/07b42fd_3",
+    "hj2b_planner_train_20260916/planner_alone/2/229360a_1",
+    "hj2b_planner_train_20260916/planner_alone/2/229360a_2",
+    "hj2b_planner_train_20260916/planner_alone/2/22cc237_1",
+    "hj2b_planner_train_20260916/planner_alone/2/22cc237_2",
+    "hj2b_planner_train_20260916/planner_alone/2/22cc237_3",
+    "hj2b_planner_train_20260916/planner_alone/2/27e1026_1",
+    "hj2b_planner_train_20260916/planner_alone/2/27e1026_2",
+    "hj2b_planner_train_20260916/planner_alone/2/27e1026_3",
+    "hj2b_planner_train_20260916/planner_alone/2/287e338_1",
+    "hj2b_planner_train_20260916/planner_alone/2/287e338_2",
+    "hj2b_planner_train_20260916/planner_alone/2/287e338_3",
+    "hj2b_planner_train_20260916/planner_alone/2/29caf6f_1",
+    "hj2b_planner_train_20260916/planner_alone/2/29caf6f_2",
+    "hj2b_planner_train_20260916/planner_alone/2/29caf6f_3",
+    "hj2b_planner_train_20260916/planner_alone/2/2a163ab_1",
+    "hj2b_planner_train_20260916/planner_alone/2/2a163ab_2",
+    "hj2b_planner_train_20260916/planner_alone/2/302c169_1",
+    "hj2b_planner_train_20260916/planner_alone/2/302c169_3",
+    "hj2b_planner_train_20260916/planner_alone/2/34d9492_1",
+    "hj2b_planner_train_20260916/planner_alone/2/34d9492_2",
+    "hj2b_planner_train_20260916/planner_alone/2/34d9492_3",
+    "hj2b_planner_train_20260916/planner_alone/2/3c13f5a_1",
+    "hj2b_planner_train_20260916/planner_alone/2/3c13f5a_2",
+    "hj2b_planner_train_20260916/planner_alone/2/3c13f5a_3",
+    "hj2b_planner_train_20260916/planner_alone/2/60d0b5b_1",
+    "hj2b_planner_train_20260916/planner_alone/2/60d0b5b_3",
+    "hj2b_planner_train_20260916/planner_alone/2/6104387_1",
+    "hj2b_planner_train_20260916/planner_alone/2/6104387_2",
+    "hj2b_planner_train_20260916/planner_alone/2/6104387_3",
+    "hj2b_planner_train_20260916/planner_alone/2/692c77d_2",
+    "hj2b_planner_train_20260916/planner_alone/2/76f2c72_2",
+    "hj2b_planner_train_20260916/planner_alone/2/76f2c72_3",
+    "hj2b_planner_train_20260916/planner_alone/2/771d8fc_1",
+    "hj2b_planner_train_20260916/planner_alone/2/771d8fc_2",
+    "hj2b_planner_train_20260916/planner_alone/2/771d8fc_3",
+    "hj2b_planner_train_20260916/planner_alone/2/7d7fbf6_1",
+    "hj2b_planner_train_20260916/planner_alone/2/7d7fbf6_2",
+    "hj2b_planner_train_20260916/planner_alone/2/7d7fbf6_3",
+    "hj2b_planner_train_20260916/planner_alone/2/82e2fac_1",
+    "hj2b_planner_train_20260916/planner_alone/2/82e2fac_3",
+    "hj2b_planner_train_20260916/planner_alone/2/aa8502b_2",
+    "hj2b_planner_train_20260916/planner_alone/2/aa8502b_3",
+    "hj2b_planner_train_20260916/planner_alone/2/b0a8eae_3",
+    "hj2b_planner_train_20260916/planner_alone/2/b7a9ee9_1",
+    "hj2b_planner_train_20260916/planner_alone/2/b7a9ee9_2",
+    "hj2b_planner_train_20260916/planner_alone/2/b7a9ee9_3",
+    "hj2b_planner_train_20260916/planner_alone/2/c901732_1",
+    "hj2b_planner_train_20260916/planner_alone/2/c901732_2",
+    "hj2b_planner_train_20260916/planner_alone/2/c901732_3",
+    "hj2b_planner_train_20260916/planner_alone/2/ccb4494_2",
+    "hj2b_planner_train_20260916/planner_alone/2/ccb4494_3",
+    "hj2b_planner_train_20260916/planner_alone/2/ce359b5_1",
+    "hj2b_planner_train_20260916/planner_alone/2/ce359b5_2",
+    "hj2b_planner_train_20260916/planner_alone/2/ce359b5_3",
+    "hj2b_planner_train_20260916/planner_alone/2/cf6abd2_1",
+    "hj2b_planner_train_20260916/planner_alone/2/cf6abd2_2",
+    "hj2b_planner_train_20260916/planner_alone/2/cf6abd2_3",
+    "hj2b_planner_train_20260916/planner_alone/2/e7a10f8_1",
+    "hj2b_planner_train_20260916/planner_alone/2/e7a10f8_2",
+    "hj2b_planner_train_20260916/planner_alone/2/e7a10f8_3",
+    "hj2b_planner_train_20260916/planner_alone/2/e85d92a_1",
+    "hj2b_planner_train_20260916/planner_alone/2/e85d92a_2",
+    "hj2b_planner_train_20260916/planner_alone/2/e85d92a_3"
+  ],
+  "sha256": "6092bd95570c17bd64d36f70d4dc254c7179b0542f151305a782a5e28a0c357e",
+  "solved_only": true,
+  "source_campaign_root": "/scratch/n12194778/sidekick/results/hj2b_planner_train_20260916",
+  "source_commit": "71ca6e332f8e228c84828d09f6cc53a0f07afd09",
+  "system": "planner_alone",
+  "task_ids": [
+    "07b42fd_1",
+    "07b42fd_2",
+    "07b42fd_3",
+    "229360a_1",
+    "229360a_2",
+    "229360a_3",
+    "22cc237_1",
+    "22cc237_2",
+    "22cc237_3",
+    "27e1026_1",
+    "27e1026_2",
+    "27e1026_3",
+    "287e338_1",
+    "287e338_2",
+    "287e338_3",
+    "29caf6f_1",
+    "29caf6f_2",
+    "29caf6f_3",
+    "2a163ab_1",
+    "2a163ab_2",
+    "302c169_1",
+    "302c169_3",
+    "34d9492_1",
+    "34d9492_2",
+    "34d9492_3",
+    "3c13f5a_1",
+    "3c13f5a_2",
+    "3c13f5a_3",
+    "60d0b5b_1",
+    "60d0b5b_2",
+    "60d0b5b_3",
+    "6104387_1",
+    "6104387_2",
+    "6104387_3",
+    "692c77d_1",
+    "692c77d_2",
+    "692c77d_3",
+    "6ea6792_3",
+    "76f2c72_2",
+    "76f2c72_3",
+    "771d8fc_1",
+    "771d8fc_2",
+    "771d8fc_3",
+    "7d7fbf6_1",
+    "7d7fbf6_2",
+    "7d7fbf6_3",
+    "82e2fac_1",
+    "82e2fac_2",
+    "82e2fac_3",
+    "aa8502b_1",
+    "aa8502b_2",
+    "aa8502b_3",
+    "b0a8eae_2",
+    "b0a8eae_3",
+    "b7a9ee9_1",
+    "b7a9ee9_2",
+    "b7a9ee9_3",
+    "c901732_1",
+    "c901732_2",
+    "c901732_3",
+    "ccb4494_1",
+    "ccb4494_2",
+    "ccb4494_3",
+    "ce359b5_1",
+    "ce359b5_2",
+    "ce359b5_3",
+    "cf6abd2_1",
+    "cf6abd2_2",
+    "cf6abd2_3",
+    "e7a10f8_1",
+    "e7a10f8_2",
+    "e7a10f8_3",
+    "e85d92a_1",
+    "e85d92a_2",
+    "e85d92a_3"
+  ],
+  "token_length_percentiles": {
+    "max": 43057,
+    "p50": 18263,
+    "p90": 25740,
+    "tokenizer": "ibm-granite/granite-4.2-8b"
+  },
+  "truncated_run_ids": [
+    "hj2b_planner_train_20260916/planner_alone/1/22cc237_1",
+    "hj2b_planner_train_20260916/planner_alone/1/22cc237_3",
+    "hj2b_planner_train_20260916/planner_alone/1/b0a8eae_2",
+    "hj2b_planner_train_20260916/planner_alone/1/ce359b5_1",
+    "hj2b_planner_train_20260916/planner_alone/2/22cc237_2",
+    "hj2b_planner_train_20260916/planner_alone/2/22cc237_3",
+    "hj2b_planner_train_20260916/planner_alone/2/3c13f5a_1"
+  ]
+}

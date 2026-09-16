@@ -1,0 +1,85 @@
+#!/bin/bash
+#PBS -N train-sft
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=16:ngpus=1:mem=128gb
+#PBS -l walltime=06:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/train_sft.out
+#
+# HJ-3 SFT(b): LoRA on granite-4.2-8b. Dry-run (20 optimiser steps) must pass
+# before the real 2-epoch run. Claude submits this job; do not qsub from a worker.
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u9] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+PY="${SIDEKICK_VENV}/bin/python"
+DATA="${DATA_JSONL:-/scratch/n12194778/sidekick/artifacts/sft/sft_b.jsonl}"
+OUT="${ADAPTER_OUT:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_granite8b}"
+DRY_OUT="${OUT}_dryrun"
+BASE_MODEL="${BASE_MODEL:-ibm-granite/granite-4.2-8b}"
+cd "${REPO}" || exit 1
+mkdir -p "$(dirname "${OUT}")" /scratch/n12194778/sidekick/logs
+
+echo "[sft] host=$(hostname) job=${PBS_JOBID:-none} start=$(date -Iseconds)"
+echo "[sft] data=${DATA} out=${OUT} base=${BASE_MODEL}"
+if [[ ! -s "${DATA}" ]]; then
+  echo "[sft] FATAL: training JSONL missing or empty: ${DATA}" >&2
+  exit 2
+fi
+nvidia-smi || true
+
+echo "[sft] ---- dry-run (20 optimiser steps, abort on failure) ----"
+timeout 600 "${PY}" "${REPO}/scripts/train/sft_lora.py" \
+  --data "${DATA}" \
+  --out "${DRY_OUT}" \
+  --base-model "${BASE_MODEL}" \
+  --epochs 2 \
+  --lr 1e-4 \
+  --rank 64 \
+  --seed 42 \
+  --dry-run
+DRY_RC=$?
+echo "[sft] dry-run exit=${DRY_RC} at $(date -Iseconds)"
+if [[ "${DRY_RC}" -ne 0 ]]; then
+  echo "[sft] FATAL: dry-run failed; not starting the real training run" >&2
+  exit "${DRY_RC}"
+fi
+
+echo "[sft] ---- full training ----"
+timeout 18000 "${PY}" "${REPO}/scripts/train/sft_lora.py" \
+  --data "${DATA}" \
+  --out "${OUT}" \
+  --base-model "${BASE_MODEL}" \
+  --epochs 2 \
+  --lr 1e-4 \
+  --rank 64 \
+  --seed 42
+TRAIN_RC=$?
+echo "[sft] full training exit=${TRAIN_RC} at $(date -Iseconds)"
+echo "[sft] adapter path: ${OUT}"
+if [[ "${TRAIN_RC}" -ne 0 ]]; then
+  exit "${TRAIN_RC}"
+fi
+exit 0

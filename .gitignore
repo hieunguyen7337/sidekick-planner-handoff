@@ -4,3 +4,7 @@ __pycache__/
 .venv/
 *.egg-info/
 campaign/workers/logs/
+
+# Built SFT datasets: 8.9MB and regenerable from the archived events via
+# sidekick.training.sft_data; the manifest (sha256 + task ids) IS committed.
+data/interim/*.jsonl
