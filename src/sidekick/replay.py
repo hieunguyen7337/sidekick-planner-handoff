@@ -60,6 +60,63 @@ def _action_from_payload(payload: dict[str, Any]) -> ExecutorAction | None:
         return None
 
 
+def replay_prefix(
+    events_path: str | Path, k: int, env: BaseEnv | None = None
+) -> tuple[BaseEnv, list[Event]]:
+    """Replay the first ``k`` executed (CODE/COMPLETE) actions of a trajectory.
+
+    Returns ``(world, remaining_events)`` where ``world`` is **still open** —
+    the caller owns closing it — and ``remaining_events`` are the gold events
+    after the last replayed observation (the gold action for step k+1 and what
+    follows), in file order.
+
+    Only events after the LAST ``run_start`` count: a retried run appends to the
+    dead attempt's log, so a file can hold two attempts concatenated with
+    nothing marking the boundary. Events are ordered by file position, never by
+    ``ts`` (frozen by freezegun, identical across events). ``replay()`` does NOT
+    do this — it takes the first ``run_start`` (replay.py:74) and steps every
+    event in the file, so a two-attempt file double-steps; that is a real bug
+    left in place here because ``replay()``'s behaviour must not change.
+
+    ``k`` larger than the number of executed actions is clamped to the
+    trajectory length (documented choice: the probe asks for one more step than
+    exists sometimes and a clamp is the useful behaviour there; ``remaining`` is
+    then empty or holds only trailing non-action events).
+    """
+    events = _events_of_last_attempt(events_path)
+    world = env or MockEnv()
+    start = next(
+        (e for e in reversed(events) if e.event_type == "run_start"), None
+    )
+    task_id = start.task_id if start is not None else ""
+    seed = start.seed if start is not None else 0
+    world.reset(task_id, seed)
+    executed = 0
+    last_obs_idx: int | None = None
+    pending: ExecutorAction | None = None
+    for idx, event in enumerate(events):
+        if event.event_type == "action":
+            pending = _action_from_payload(event.payload)
+            continue
+        if event.event_type == "observation" and pending is not None:
+            if pending.kind in ("CODE", "COMPLETE") and executed < k:
+                world.step(pending)
+                executed += 1
+                last_obs_idx = idx
+            pending = None
+    remaining = events[last_obs_idx + 1 :] if last_obs_idx is not None else []
+    return world, remaining
+
+
+def _events_of_last_attempt(events_path: str | Path) -> list[Event]:
+    """All events after the LAST run_start, in file order (empty if none)."""
+    events = list(EventLog.read(Path(events_path)))
+    for i in range(len(events) - 1, -1, -1):
+        if events[i].event_type == "run_start":
+            return events[i:]
+    return []
+
+
 def replay(events_path: str | Path, env: BaseEnv | None = None) -> ReplayReport:
     """Re-run recorded env-mutating actions on a fresh env; compare hashes.
 
