@@ -381,3 +381,50 @@ silently, which was the point.
 Note the check currently makes `verify_configs.py` exit non-zero on this repo. Nothing
 consumes it in a PBS gate today (grep over `scripts/pbs/` finds no invocation), so nothing
 breaks — but that also means it has never been wired into a job that could enforce it.
+
+## RESOLVED 2026-09-17 — the recorded test counts silently omitted `tests/integration`
+
+Every test count quoted in this campaign's commit messages and ledger entries — the
+progression **191 → 196 → 202 passed, 1 skipped** — came from a selection that **did not
+collect `tests/integration` at all**.
+
+Reconciled in PBS job 25402056 by running each selection separately:
+
+| selection | result |
+|---|---|
+| `tests/unit` | 203 passed |
+| `tests/integration` | **30 passed** |
+| whole `tests/` | **236 passed, 1 skipped** |
+| whole `tests/` minus the new `verify_configs` test | 232 passed, 1 skipped |
+
+Job 25401992 (the run recorded as "202 passed, 1 skipped") collected **203 items**. The
+whole suite at that commit collected **233**. The difference is exactly **30** — the size
+of `tests/integration`.
+
+**Probable cause, and it is worth knowing.** `tests/unit/test_limits_and_policy.py` and
+`tests/integration/test_limits_and_policy.py` share a basename with no `__init__.py`, so
+plain `pytest tests` fails collection outright:
+
+```
+ERROR tests/unit/test_limits_and_policy.py
+  ... not the same as the test file we want to collect ...
+HINT: remove __pycache__ / .pyc files and/or use a unique basename
+!!!! Interrupted: 1 error during collection !!!!
+```
+
+The natural workaround is to narrow the selection — which is what happened, and the
+narrowed run then reported a healthy-looking three-digit pass count with no indication
+that a directory was missing.
+
+**Nothing was hiding**: the full suite passes 236/1 once run with
+`--import-mode=importlib`, so no integration test was failing while unreported. The defect
+is in the *measurement*, not the code.
+
+**Resolution, and the standing rule going forward:** always run
+`pytest tests -q --import-mode=importlib`, and quote **that** number. The importlib import
+mode resolves the basename collision without renaming anything. Renaming one of the two
+files would also work and would let plain `pytest` succeed; that is left as a small
+cleanup, not done here, because it touches a test file mid-campaign.
+
+🔺 Same family as the rest of this document: a number that is real, reproducible, and
+measured on the wrong denominator reads exactly like a correct one.
