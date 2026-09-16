@@ -766,3 +766,40 @@ numbers rather than an obvious failure. See [[silent-zeros-in-eval-harnesses]] �
 of that memory is literally "a new model family needs its output format checked against
 the parser before its arm is trusted", which is what the Qwen arm's 48% parse rate
 surfaced here.
+
+#### The Qwen3-8B arm, for the record (job 25401677, same run)
+
+`probe_qwen3_8b.json`: 300/300 points, `schema_version: 2`, `budget_exhausted: false`,
+78 trajectories, `lora_name: null`.
+
+| | Granite 4.2-8B | Qwen3-8B |
+|---|---|---|
+| scorable points | 250 | 250 |
+| agreements | 56 | 26 |
+| **primary agreement** | **0.224** | **0.104** |
+| parse errors (of 300) | 77 | 139 |
+| state-equivalence | 0.676 | 0.431 |
+| hash match | 0 (metric broken) | 0 (metric broken) |
+
+**The comparison is genuinely paired.** Both arms report the identical point structure —
+250 scorable, 12 gold actions calling no API, 28 gold `COMPLETE`, 262 hash-defined — which
+is what `--seed 0 --max-points 300` against the same campaign root is supposed to
+guarantee, and here demonstrably did. Same points, same replayed prefixes, same metric.
+
+**Granite wins on every axis**: roughly twice the agreement, roughly twice the
+state-equivalence, and a little over half the parse failures. There is no reading of this
+table on which switching the executor to Qwen3-8B is the better move, which retires the
+question rather than merely answering it.
+
+⚠ Both arms carry defect #18 (below/above as filed): neither was sent the serving
+chat-template kwargs or stop sequences. That inflates **both** parse-error counts and
+depresses **both** agreement rates. It does not bias the comparison — the handicap is
+identical and the point sets are the same — but it does mean **neither absolute number is
+the model's serving-time agreement**, and Qwen's 0.104 in particular should not be quoted
+as "Qwen3-8B cannot do this task". Qwen3-8B has its own thinking mode, so a family whose
+template defaults differ from Granite's is exactly where an unconfigured probe is least
+trustworthy — `silent-zeros-in-eval-harnesses` point 5, arriving on schedule.
+
+The honest claim is the relative one, and it is the only claim the decision needed:
+**under identical conditions, Granite is about twice as good at predicting the teacher's
+next action, and Qwen is not a cheap fix for a marginal executor.**
