@@ -705,3 +705,64 @@ the more forgiving regime for a policy that will be corrected during J4.
 **Executor decision: granite-4.2-8b. Settled after five attempts.** Attempts 1–2 were lost
 to harness defects, 3 measured a toy environment, 4 reported 3's numbers from a stale
 artefact, and 5 is the first that measured what it claimed to.
+
+#### ⚠ Defect #18, found 2026-09-17 while reading the Qwen arm: the probe does not use the serving configuration
+
+`scripts/setup/state_probe.py:668` builds its `VLLMExecutor` with **no
+`chat_template_kwargs` and no `stop`**:
+
+```python
+executor = VLLMExecutor(
+    model=args.model, base_url=args.base_url, lora_name=args.lora_name,
+    temperature=0.0, timeout_s=120.0,
+)
+```
+
+`executor.py:74` stores `chat_template_kwargs or None` and `:101` sends the field only
+`if ctk`; `:104` does the same for `stop`. So the probe requests fall through to the
+**template defaults** — for Granite 4.2, `enable_thinking: True` — and carry **no stop
+sequences**. Every eval config sets both deliberately, and says why in comments that
+describe this exact outcome:
+
+- `executor.py:72-73` — "spends the whole budget reasoning without ever emitting an
+  action — measured 2026-09-15: 3072 output tokens of deliberation and no fenced block."
+- `executor.py:76-80` — "Without them Granite writes an action, then invents the output
+  it expects, then reasons over its own invention for the rest of the budget."
+
+The second comment describes, almost verbatim, the raw text cited above as evidence of a
+format failure (*"We have a result: COMPLETE: 79. However, we need to ensure…"*). The
+77 Granite and ~99 Qwen parse errors are therefore substantially **an artefact of the
+probe's own configuration**, not a property of either model at serving time.
+
+**What this does and does not change.**
+
+- ✅ **The executor decision stands, unweakened.** Both models were handicapped
+  identically, so the comparison is apples-to-apples, and Granite wins it decisively:
+  0.224 against Qwen3-8B's ~0.105 at roughly half the parse-failure rate. Moreover both
+  the "≥ 0.40" and the "between" rows of the rule prescribe *train Granite*, so no
+  reading of the corrected number could have selected a different action.
+- ⚠ **0.224 is a floor, not an estimate.** Granite's agreement under its real serving
+  configuration is higher by an unknown margin, plausibly much higher given that a
+  quarter of its points failed to parse at all. **Do not quote 0.224 as "Granite's
+  agreement" without this caveat**; quote it as agreement measured without the serving
+  template or stop sequences.
+- 🔺 **It threatens the J3 gate, which is the live problem.** The gate reads "probe
+  agreement up vs J1". The post-SFT probe in `hj3_eval.pbs` shares this defect, so the
+  paired delta is at least internally consistent — but `sft_b` is trained on
+  conversations rendered *without* thinking blocks and is served with
+  `enable_thinking: false`, so probing it with thinking **on** measures the adapter off
+  its own distribution. A trained adapter could easily look flat or worse for a reason
+  that has nothing to do with training.
+
+**Recommended, and flagged rather than done:** make the probe take the same
+`chat_template_kwargs` and `stop` the arms use, then re-measure the Granite pre-SFT
+baseline before J3's gate is read (~2 h GPU). Fixing the probe *without* re-baselining is
+the worse option, because it would leave the post-SFT number incomparable to the J1
+number it is supposed to be compared against. Leaving both as they are is defensible but
+measures the wrong thing twice.
+
+This is the 18th harness defect on this project and the eighth to return believable
+numbers rather than an obvious failure. See [[silent-zeros-in-eval-harnesses]] — point 5
+of that memory is literally "a new model family needs its output format checked against
+the parser before its arm is trusted", which is what the Qwen arm's 48% parse rate
+surfaced here.
