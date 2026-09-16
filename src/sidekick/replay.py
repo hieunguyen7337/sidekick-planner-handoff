@@ -61,7 +61,7 @@ def _action_from_payload(payload: dict[str, Any]) -> ExecutorAction | None:
 
 
 def replay_prefix(
-    events_path: str | Path, k: int, env: BaseEnv | None = None
+    events_path: str | Path, k: int, env: BaseEnv
 ) -> tuple[BaseEnv, list[Event]]:
     """Replay the first ``k`` executed (CODE/COMPLETE) actions of a trajectory.
 
@@ -84,7 +84,7 @@ def replay_prefix(
     then empty or holds only trailing non-action events).
     """
     events = _events_of_last_attempt(events_path)
-    world = env or MockEnv()
+    world = env
     start = next(
         (e for e in reversed(events) if e.event_type == "run_start"), None
     )

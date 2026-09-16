@@ -503,3 +503,89 @@ cost. Fixed under U-G: append-per-point JSONL, exact `(run_id, step)` resume, an
 
 Qwen3-8B itself is not implicated: it served healthy in 121 s under `HF_HOME=~/.cache/huggingface`.
 **Granite vs Qwen remains undecided**, and no evidence bearing on it has been collected.
+
+---
+
+## HJ-1.5 attempt 3 — the probe ran to completion, and every point of it is void (2026-09-17)
+
+Job `25401566`, 8 h walltime, cancelled by me at 00:41 elapsed after the Granite probe
+finished and before the Qwen phase began. Artifacts preserved at
+`~/sidekick_data/probes/probe_granite8b.json` (+ `.partial.jsonl`).
+
+**The resumability work from U-G did its job.** `n_planned 300, n_completed 300,
+budget_exhausted false` — the first probe attempt of three to produce a complete report,
+within budget, with per-point JSONL flushed throughout. That part is sound and is retained.
+
+**Every one of the 300 points measured the wrong thing.** Reported numbers, all void:
+
+| metric | reported | why it is meaningless |
+|---|---|---|
+| primary agreement | 0.033 (9/272) | measured against the wrong environment, **and all 9 are vacuous**: verified by `jq`, 9 of 9 had an empty gold API set. Under the corrected metric this run scored **0 of 260** — exactly zero, as a model never shown the API surface should |
+| depth 1-5 / 6-10 / 11+ | 0.080 / 0.012 / 0.000 | same |
+| `state_equivalent` | 0.000 (0/262) | metric is **sound**; the zero is a true consequence of the defect |
+| `hash_match` | 0.000 (0/262) | expected near-zero by construction; uninformative either way |
+
+### Defect 1 — the probe ran in `MockEnv`, not AppWorld
+
+- `src/sidekick/replay.py:88` (pre-fix): `world = env or MockEnv()`.
+- `scripts/setup/state_probe.py:509` (pre-fix): `replay_prefix(events_path, k)` — no `env`.
+- Therefore every point replayed real AppWorld gold trajectories into the toy
+  four-function file world, then rendered the prompt from **that** world's
+  `instruction` and `api_docs_prompt` (`state_probe.py:516-517`, the second using
+  `getattr(world, "api_docs_prompt", "")`, whose `""` default would have hidden a missing
+  attribute as well).
+- The model was therefore asked to predict the next AppWorld action while being told its
+  task was "Copy the exact contents of inbox.txt into outbox.txt"
+  (`src/sidekick/environments/mock_env.py:104`) and that its available API was
+  `list_files / read / write / delete_all` (`mock_env.py:17`).
+
+**Evidence, in the artifact.** 51 distinct predicted actions across 300 points, of which
+211 are file-listing variants: `print(list_files())` x95, `files = list_files()` x47,
+`apis.api_docs.list_files()` x18, and three further spellings x17 each. Across 78
+trajectories spanning venmo, supervisor and phone tasks. The model wrote the diagnosis
+itself, in `model_raw` of step 0: it states the task is to copy `inbox.txt` to
+`outbox.txt`, observes that the replayed history calls `apis.phone...`, and calls that
+"unrelated".
+
+**What exposed it was not the headline.** 3.3% was plausible and would have been believed.
+The tell was `state_equivalent` returning **exactly** 0 across 262 independent trials — a
+metric that never fires once is more often broken than true. Auditing it found it sound,
+which relocated the suspicion to the inputs rather than the scorer.
+
+### Defect 2 — the agreement metric counts an empty set as agreement
+
+Independent of defect 1, and it survives the environment fix untouched. `agreement`
+compares the set of `apis.<app>.<api>` ids in gold's code against the model's. When gold's
+action calls **no** API — pure code printing a value already in scope, e.g.
+`print({"credential_count": len(passwords)})` — the sets are both empty and compare equal,
+so any model action that also calls no API scores as agreement. 12 of 272 scorable gold
+actions call no API, so the metric carries a vacuous-pass floor.
+
+All sampled `agreement == true` records were of exactly this shape: gold formatted a local
+variable, the model emitted `print(list_files())`, scored as agreement.
+
+Fixed by excluding gold-no-API points from both numerator and denominator
+(`agreement_defined = False`), with `n_gold_no_api` reported per bucket so the shrinking
+denominator is visible, and `gold_api_ids` / `pred_api_ids` now stored on every step
+record — their absence is what made establishing this take source archaeology rather than
+a `jq` query.
+
+### Effect on the pre-registered decision rule
+
+**The four-row rule at RUNS.md:353 was NOT applied and no evidence bearing on Granite vs
+Qwen3-8B has been collected.** Three GPU attempts, still undecided. The first two lost the
+run; this one lost the *conclusion*, which is the worse failure, and is the only one that
+had to be caught by reading rather than by a non-zero exit code.
+
+The thresholds (>= 40%, < 15%) were pre-registered against the metric as it behaved
+*before* defect 2 was fixed. The correction is strictly stricter — it removes free passes
+and adds none — so a threshold set against the looser metric remains conservative under
+the stricter one, and the rule stands unamended. Recording this because a threshold whose
+metric changed underneath it is exactly the kind of silent amendment a prereg exists to
+prevent.
+
+### What is retained from this attempt
+
+- The resume/budget machinery, validated end to end (300/300, budget not exhausted).
+- The depth-stratified 300-point sample at seed 0, so the rerun probes identical points.
+- Measured per-point cost, which the earlier `timeout 1800` failures lacked.

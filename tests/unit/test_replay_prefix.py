@@ -70,7 +70,7 @@ def gold_log() -> list[Event]:
 class TestReplayPrefix:
     def test_steps_exactly_k_and_world_open(self, tmp_path):
         path = write_log(tmp_path, gold_log())
-        world, remaining = replay_prefix(path, 1)
+        world, remaining = replay_prefix(path, 1, MockEnv())
         try:
             assert world._step == 1  # one executed action stepped
             assert world._files["inbox.txt"] == "hello world"
@@ -91,7 +91,7 @@ class TestReplayPrefix:
             obs_ev(2, "hello world"),
         ]
         path = write_log(tmp_path, events)
-        world, remaining = replay_prefix(path, 1)
+        world, remaining = replay_prefix(path, 1, MockEnv())
         world.close()
         assert world._step == 1  # only the CODE action counted
         assert world._files["inbox.txt"] == "hello world"
@@ -108,7 +108,7 @@ class TestReplayPrefix:
             obs_ev(1, "hello world"),
         ]
         path = write_log(tmp_path, events)
-        world, _ = replay_prefix(path, 1)
+        world, _ = replay_prefix(path, 1, MockEnv())
         world.close()
         assert world._files["inbox.txt"] == "hello world"  # second attempt's action
         assert world._files["outbox.txt"] == ""  # the dead attempt's write never happened
@@ -117,7 +117,7 @@ class TestReplayPrefix:
         # Documented choice: CLAMP, don't raise. gold_log has 4 executed actions
         # (3 CODE + 1 COMPLETE); asking for k=99 steps all of them.
         path = write_log(tmp_path, gold_log())
-        world, remaining = replay_prefix(path, 99)
+        world, remaining = replay_prefix(path, 99, MockEnv())
         world.close()
         assert world._step == 4
         assert remaining == []
@@ -254,6 +254,13 @@ class StubExecutor:
         return self.raws.pop(0), None
 
 
+class ApiStubEnv(MockEnv):
+    """Offline world that accepts API-shaped code and returns a fixed observation."""
+
+    def _execute(self, code: str) -> str:
+        return "ok"
+
+
 def gold_pairs() -> list[tuple[ExecutorAction, Event]]:
     return [
         (ExecutorAction(kind="CODE", code=GOLD_A), obs_ev(1, "hello world")),
@@ -266,9 +273,12 @@ def gold_pairs() -> list[tuple[ExecutorAction, Event]]:
 def test_probe_step_agreement_and_state_equivalent(tmp_path):
     path = write_log(tmp_path, gold_log())
     # k=1: gold step 1 replayed; model must replace step 2 (GOLD_B).
-    # agreement True (no error, same id set), state_equivalent True: the gold
-    # step-3 action (read outbox) then reproduces the gold observation.
-    world, _ = replay_prefix(path, 1)
+    # Gold calls no API, so agreement is undefined at this point; this assertion
+    # was `agreement is True` until 2026-09-17 and was encoding the
+    # empty-set-equals-empty-set defect.
+    # state_equivalent remains True: the gold step-3 action (read outbox) then
+    # reproduces the gold observation.
+    world, _ = replay_prefix(path, 1, MockEnv())
     try:
         rec = sp.probe_step(
             StubExecutor([f"```python\n{GOLD_B}\n```"]), world, gold_pairs(), 1, "x", ""
@@ -276,7 +286,8 @@ def test_probe_step_agreement_and_state_equivalent(tmp_path):
     finally:
         world.close()
     assert rec["error_type"] is None
-    assert rec["agreement"] is True
+    assert rec["agreement_defined"] is False
+    assert rec["agreement"] is False
     assert rec["state_equivalent"] is True
     # history must NOT leak the gold action under test
     assert rec["model_raw"].startswith("```python")
@@ -284,7 +295,7 @@ def test_probe_step_agreement_and_state_equivalent(tmp_path):
 
 def test_probe_step_wrong_action_fails_state_equivalent(tmp_path):
     path = write_log(tmp_path, gold_log())
-    world, _ = replay_prefix(path, 1)
+    world, _ = replay_prefix(path, 1, MockEnv())
     try:
         rec = sp.probe_step(
             StubExecutor(['```python\nwrite("outbox.txt", "WRONG")\n```']),
@@ -302,11 +313,61 @@ def test_probe_step_wrong_action_fails_state_equivalent(tmp_path):
 
 def test_probe_step_parse_error_recorded(tmp_path):
     path = write_log(tmp_path, gold_log())
-    world, _ = replay_prefix(path, 1)
+    world, _ = replay_prefix(path, 1, MockEnv())
     try:
         rec = sp.probe_step(StubExecutor(["I will think about it."]), world, gold_pairs(), 1, "x", "")
     finally:
         world.close()
     assert rec["error_type"] == "parse_error"  # failure is a data point, not dropped
     assert rec["gold_kind"] == "CODE"
+    # Gold calls no API, so agreement is undefined at this point; this assertion
+    # was `agreement_defined is True` until 2026-09-17 and was encoding the
+    # empty-set-equals-empty-set defect.
+    assert rec["agreement_defined"] is False
+
+
+@pytest.mark.parametrize(
+    ("model_code", "expected_pred_api_ids", "expected_agreement"),
+    [
+        (
+            "apis.spotify.show_song_library()",
+            ["spotify.show_song_library"],
+            True,
+        ),
+        (
+            "apis.phone.search_contacts()",
+            ["phone.search_contacts"],
+            False,
+        ),
+    ],
+)
+def test_probe_step_defined_api_agreement(
+    model_code: str, expected_pred_api_ids: list[str], expected_agreement: bool
+):
+    gold_code = "apis.spotify.show_song_library()"
+    pairs = [
+        (ExecutorAction(kind="CODE", code=gold_code), obs_ev(1, "ok")),
+        (ExecutorAction(kind="CODE", code="pass"), obs_ev(2, "ok")),
+    ]
+    world = ApiStubEnv()
+    try:
+        rec = sp.probe_step(
+            StubExecutor([f"```python\n{model_code}\n```"]),
+            world,
+            pairs,
+            0,
+            "x",
+            "",
+        )
+    finally:
+        world.close()
+
+    assert rec["error_type"] is None
     assert rec["agreement_defined"] is True
+    assert rec["gold_api_ids"] == ["spotify.show_song_library"]
+    assert rec["gold_api_ids"] == sorted(rec["gold_api_ids"])
+    assert rec["gold_api_ids"]
+    assert rec["pred_api_ids"] == expected_pred_api_ids
+    assert rec["pred_api_ids"] == sorted(rec["pred_api_ids"])
+    assert rec["pred_api_ids"]
+    assert rec["agreement"] is expected_agreement

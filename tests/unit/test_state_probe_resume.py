@@ -5,12 +5,38 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "setup"))
 
-from sidekick.protocols.schemas import Event  # noqa: E402
+from sidekick.environments.mock_env import MockEnv  # noqa: E402
+from sidekick.protocols.schemas import Event, ExecutorAction  # noqa: E402
+from sidekick.replay import replay_prefix  # noqa: E402
 import state_probe as sp  # noqa: E402
+
+
+class StubProbeEnv(MockEnv):
+    """Offline AppWorld-shaped stub for state-probe lifecycle tests."""
+
+    def __init__(self, experiment_name: str = "", api_docs_prompt: str = "stub_api() -> str"):
+        super().__init__()
+        self.experiment_name = experiment_name
+        self._stub_api_docs_prompt = api_docs_prompt
+
+    @property
+    def instruction(self) -> str:
+        return "Use the available AppWorld API to complete this task."
+
+    @property
+    def api_docs_prompt(self) -> str:
+        return self._stub_api_docs_prompt
+
+
+@pytest.fixture(autouse=True)
+def stub_appworld(monkeypatch):
+    monkeypatch.setattr(sp, "AppWorldEnv", StubProbeEnv)
 
 
 class StubExecutor:
@@ -22,6 +48,60 @@ class StubExecutor:
     def complete(self, messages, **kw):
         self.calls += 1
         return "```python\npass\n```", None
+
+
+def test_replay_prefix_requires_env():
+    with pytest.raises(TypeError):
+        replay_prefix("unused-events.jsonl", 1)
+
+
+def test_probe_rejects_mock_env():
+    with pytest.raises(AssertionError, match="AppWorldEnv.*MockEnv"):
+        sp.assert_probe_environment(MockEnv())
+
+
+def test_probe_rejects_empty_api_docs():
+    with pytest.raises(AssertionError, match="api_docs_prompt"):
+        sp.assert_probe_environment(StubProbeEnv(api_docs_prompt=""))
+
+
+def test_no_api_gold_is_excluded_from_agreement():
+    world = StubProbeEnv()
+    world.reset("task-1", 1)
+    pairs = [
+        (
+            ExecutorAction(
+                kind="CODE", code='print({"credential_count": len(passwords)})'
+            ),
+            _event("run-1", "task-1", 1, "observation", {"text": "ok"}),
+        ),
+        (
+            ExecutorAction(kind="CODE", code="pass"),
+            _event("run-1", "task-1", 2, "observation", {"text": "ok"}),
+        ),
+    ]
+    try:
+        rec = sp.probe_step(
+            StubExecutor(),
+            world,
+            pairs,
+            0,
+            instruction=world.instruction,
+            api_docs=world.api_docs_prompt,
+        )
+    finally:
+        world.close()
+
+    bucket = sp.empty_counts()
+    sp.record(bucket, rec)
+    summary = sp.finalize({"overall": bucket})["overall"]
+    assert rec["gold_api_ids"] == []
+    assert rec["pred_api_ids"] == []
+    assert rec["agreement_defined"] is False
+    assert rec["agreement"] is False
+    assert summary["agreement"] == 0
+    assert summary["n_scorable"] == 0
+    assert summary["n_gold_no_api"] == 1
 
 
 def _event(

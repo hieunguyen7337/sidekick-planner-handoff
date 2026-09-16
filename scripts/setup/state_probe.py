@@ -30,6 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from sidekick.agents.executor import LLMClient, VLLMExecutor  # noqa: E402
+from sidekick.environments.appworld_env import AppWorldEnv  # noqa: E402
 from sidekick.environments.base import BaseEnv  # noqa: E402
 from sidekick.protocols.prompts import (  # noqa: E402
     format_executor_action,
@@ -97,6 +98,7 @@ def empty_counts() -> dict[str, Any]:
     return {
         "n": 0,
         "n_scorable": 0,
+        "n_gold_no_api": 0,
         "n_gold_noncode": 0,
         "gold_noncode_counts": defaultdict(int),
         "agreement": 0,
@@ -119,7 +121,11 @@ def record(bucket: dict[str, Any], step_record: dict[str, Any]) -> None:
     bucket["n"] += 1
     gold_kind = step_record.get("gold_kind", step_record.get("gold_action_kind"))
     if gold_kind == "CODE":
-        bucket["n_scorable"] += 1
+        agreement_defined = step_record.get("agreement_defined", True)
+        if agreement_defined:
+            bucket["n_scorable"] += 1
+        if step_record.get("gold_api_ids") == []:
+            bucket["n_gold_no_api"] += 1
     elif gold_kind is not None:
         bucket["n_gold_noncode"] += 1
         bucket["gold_noncode_counts"][gold_kind] += 1
@@ -128,7 +134,12 @@ def record(bucket: dict[str, Any], step_record: dict[str, Any]) -> None:
     if step_record.get("hash_match_defined", False):
         bucket["n_hash_match"] += 1
     for metric in ("agreement", "state_equivalent", "hash_match"):
-        if step_record.get("error_type") is None and step_record[metric]:
+        defined = (
+            step_record.get("agreement_defined", True)
+            if metric == "agreement"
+            else True
+        )
+        if step_record.get("error_type") is None and defined and step_record[metric]:
             bucket[metric] += 1
     bucket["error_type_counts"][step_record.get("error_type") or "none"] += 1
 
@@ -178,14 +189,21 @@ def probe_step(
         "model_raw": "",
         "model_code": None,
         "gold_code": None,
+        "gold_api_ids": [],
+        "pred_api_ids": [],
     }
     gold_action = pairs[k][0] if k < len(pairs) else None
     gnext = pairs[k + 1] if k + 1 < len(pairs) else None
     gold_obs = gnext[1] if gnext else None
     if gold_action is not None:
         rec["gold_kind"] = gold_action.kind
-        rec["agreement_defined"] = gold_action.kind == "CODE"
         rec["gold_code"] = gold_action.code or gold_action.message
+        rec["gold_api_ids"] = sorted(extract_api_ids(gold_action.code or ""))
+        rec["agreement_defined"] = (
+            gold_action.kind == "CODE"
+            and gold_obs is not None
+            and bool(rec["gold_api_ids"])
+        )
         rec["value_forwarding"] = is_value_forwarding(
             gold_action, [p[1].payload.get("text", "") for p in pairs[:k]]
         )
@@ -214,6 +232,7 @@ def probe_step(
         rec["error_type"] = f"call_error:{type(exc).__name__}"
         return rec
     rec["model_code"] = action.code or action.message
+    rec["pred_api_ids"] = sorted(extract_api_ids(action.code or ""))
     try:
         probe_obs = world.step(action)
     except Exception as exc:
@@ -223,8 +242,9 @@ def probe_step(
         # agreement: executed without error AND same apis.<app>.<api> identifier set
         no_error = not action_errored(probe_obs.text, probe_obs.error_type)
         rec["agreement"] = bool(
-            no_error
-            and extract_api_ids(action.code or "") == extract_api_ids(gold_action.code or "")
+            rec["agreement_defined"]
+            and no_error
+            and rec["pred_api_ids"] == rec["gold_api_ids"]
         )
     # state_equivalent: the GOLD NEXT action (step k+2) executed in the probe's
     # world must still return the gold next observation — "did the model leave
@@ -280,6 +300,27 @@ def executed_pairs(events: list[Event]) -> list[tuple[ExecutorAction, Event]]:
             pairs.append((pending, e))
             pending = None
     return pairs
+
+
+def assert_probe_environment(world: BaseEnv) -> None:
+    """Fail fast unless a probe world exposes a real AppWorld task and API docs."""
+    if not isinstance(world, AppWorldEnv):
+        raise AssertionError(
+            f"state probe requires AppWorldEnv, got {type(world).__name__}"
+        )
+    instruction = world.instruction
+    if not isinstance(instruction, str) or not instruction.strip():
+        raise AssertionError(
+            "state probe requires a non-empty AppWorld instruction"
+        )
+    api_docs = world.api_docs_prompt
+    if not isinstance(api_docs, str) or not api_docs.strip():
+        raise AssertionError("state probe requires non-empty AppWorld api_docs_prompt")
+    # This fingerprint caught the wrong toy environment on 2026-09-16.
+    if "inbox.txt" in instruction:
+        raise AssertionError(
+            "state probe rejected the inbox.txt toy-environment fingerprint"
+        )
 
 
 def find_solved_runs(campaign_root: Path, system: str, max_runs: int) -> list[Path]:
@@ -490,6 +531,7 @@ def run_probe(
     started = time.monotonic()
     budget_exhausted = False
     partial_handle = None
+    preflight_complete = False
     if partial_path is not None:
         partial_path.parent.mkdir(parents=True, exist_ok=True)
         partial_handle = partial_path.open("a", encoding="utf-8")
@@ -506,15 +548,21 @@ def run_probe(
             events_path = point["run_dir"] / "events.jsonl"
             pairs = point["pairs"]
             k = point["step_index"]
-            world, _remaining = replay_prefix(events_path, k)
+            world = AppWorldEnv(
+                experiment_name=f"state_probe/{point['run_id']}/{k}"
+            )
             try:
+                world, _remaining = replay_prefix(events_path, k, world)
+                if not preflight_complete:
+                    assert_probe_environment(world)
+                    preflight_complete = True
                 rec = probe_step(
                     executor,
                     world,
                     pairs,
                     k,
                     instruction=world.instruction,
-                    api_docs=getattr(world, "api_docs_prompt", ""),
+                    api_docs=world.api_docs_prompt,
                 )
             finally:
                 world.close()  # caller owns the world; one AppWorld world per process
