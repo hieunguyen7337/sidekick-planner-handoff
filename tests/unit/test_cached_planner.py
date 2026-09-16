@@ -46,8 +46,15 @@ def _event(run_id: str, event_type: str, payload: dict, usage: dict | None = Non
     }
 
 
-def _write_archive(root: Path, lines: list[dict], seed: int = 1, task_id: str = "copy_hello") -> Path:
-    path = root / "planner_alone" / str(seed) / task_id / "events.jsonl"
+def _write_archive(
+    root: Path,
+    lines: list[dict],
+    seed: int = 1,
+    task_id: str = "copy_hello",
+    *,
+    system: str = "planner_alone",
+) -> Path:
+    path = root / system / str(seed) / task_id / "events.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("".join(json.dumps(line) + "\n" for line in lines), encoding="utf-8")
     return path
@@ -200,6 +207,7 @@ def test_make_planner_without_packet_source_returns_unwrapped_planner():
 
 
 def test_make_planner_with_packet_source_wraps_and_threads_seed_and_system(tmp_path):
+    (tmp_path / "planner_alone").mkdir()
     planner = make_planner(
         {
             "planner": {
@@ -213,4 +221,57 @@ def test_make_planner_with_packet_source_wraps_and_threads_seed_and_system(tmp_p
     )
     assert isinstance(planner, CachedPacketPlanner)
     assert planner.seed == 7
+    assert planner.system == "planner_alone"
+
+
+def test_explicit_packet_system_wins_over_available_subtrees_and_consuming_arm(tmp_path):
+    lines = [_event("r1", "run_start", {}), _plan_line()]
+    _write_archive(tmp_path, lines, system="planner_alone")
+    _write_archive(tmp_path, lines, system="prompt_only")
+    planner = make_planner(
+        {
+            "planner": {
+                "type": "mock",
+                "packet_source": str(tmp_path),
+                "packet_system": "planner_alone",
+            }
+        },
+        seed=1,
+        system_name="prompt_only",
+    )
+    assert planner.system == "planner_alone"
+
+
+def test_single_packet_subdirectory_is_autodetected(tmp_path):
+    _write_archive(tmp_path, [_event("r1", "run_start", {}), _plan_line()])
+    planner = make_planner(
+        {"planner": {"type": "mock", "packet_source": str(tmp_path)}},
+        seed=1,
+        system_name="prompt_only",
+    )
+    assert planner.system == "planner_alone"
+
+
+def test_multiple_packet_subdirectories_without_packet_system_raise_with_available_names(tmp_path):
+    lines = [_event("r1", "run_start", {}), _plan_line()]
+    _write_archive(tmp_path, lines, system="planner_alone")
+    _write_archive(tmp_path, lines, system="planner_other")
+    with pytest.raises(ValueError) as err:
+        make_planner(
+            {"planner": {"type": "mock", "packet_source": str(tmp_path)}},
+            seed=1,
+            system_name="prompt_only",
+        )
+    message = str(err.value)
+    assert "planner_alone" in message
+    assert "planner_other" in message
+
+
+def test_consuming_arm_system_name_does_not_select_cached_subtree(tmp_path):
+    _write_archive(tmp_path, [_event("r1", "run_start", {}), _plan_line()])
+    planner = make_planner(
+        {"planner": {"type": "mock", "packet_source": str(tmp_path)}},
+        seed=1,
+        system_name="sft_plan",
+    )
     assert planner.system == "planner_alone"

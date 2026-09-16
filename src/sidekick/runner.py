@@ -91,10 +91,12 @@ def make_planner(
 ) -> Any:
     """Build the planner, optionally wrapped in a cached-packet replay layer.
 
-    `seed` and `system_name` come from run_single (job["seed"], job["system"]);
-    they only matter when planner.packet_source is set, because the archive is
-    keyed <packet_source>/<system>/<seed>/<task_id>/events.jsonl. Both keyword
-    arguments are optional so every existing call site stays valid.
+    `seed` comes from run_single (job["seed"]) and matters when
+    planner.packet_source is set, because the archive is keyed
+    <packet_source>/<system>/<seed>/<task_id>/events.jsonl. `system_name` is
+    retained for call-site compatibility but must not select the cached
+    producer subtree. Both keyword arguments are optional so every existing
+    call site stays valid.
     """
     planner_cfg = cfg.get("planner") or {}
     kind = str(planner_cfg.get("type") or cfg.get("planner_type") or "mock")
@@ -112,10 +114,31 @@ def make_planner(
         planner = MockPlanner()
     packet_source = planner_cfg.get("packet_source")
     if packet_source:
-        # system_name (the arm) decides which archive subtree to read; a
-        # packet_system override in config wins for arms replaying another
-        # arm's archived packets. Defaults to planner_alone, where HJ-1 ran.
-        system = str(planner_cfg.get("packet_system") or system_name or "planner_alone")
+        packet_source_path = Path(packet_source)
+        available_subtrees = sorted(
+            path.name for path in packet_source_path.iterdir() if path.is_dir()
+        ) if packet_source_path.is_dir() else []
+        configured_system = planner_cfg.get("packet_system")
+        if configured_system:
+            system = str(configured_system)
+        elif len(available_subtrees) == 1:
+            system = available_subtrees[0]
+        else:
+            available = ", ".join(available_subtrees) or "(none)"
+            raise ValueError(
+                f"cannot resolve cached packet system under {packet_source_path}: "
+                f"planner.packet_system is unset and expected exactly one subdirectory; "
+                f"found {len(available_subtrees)} ({available})"
+            )
+        # `system_name` is the consuming arm; it must not select the producer
+        # subtree because cached packets are shared across arms.
+        resolved_subtree = packet_source_path / system
+        if not resolved_subtree.is_dir():
+            available = ", ".join(available_subtrees) or "(none)"
+            raise FileNotFoundError(
+                f"cached packet subtree {resolved_subtree} does not exist under "
+                f"packet_source {packet_source_path}; available subdirectories: {available}"
+            )
         planner = CachedPacketPlanner(
             planner,
             packet_source,

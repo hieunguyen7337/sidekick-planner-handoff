@@ -14,6 +14,7 @@ planner:
   # Replays HJ-1 packets: this arm spends zero hosted planner calls, so every arm sees
   # the identical plan per task and plan-sampling noise is removed from the comparison.
   packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
 executor:
   type: vllm
   model: ibm-granite/granite-4.2-8b
@@ -25,11 +26,11 @@ executor:
   stop: ["</py>", "</python>", "</tool_call>"]
   chat_template_kwargs:
     enable_thinking: false
-  timeout_s: 120
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
 limits:
   max_steps: 40
   max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
-  per_step_timeout_s: 120
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
   # prompt_only calls the planner once per episode (plan_first, planner_drives=False), so
   # this is nowhere near binding here. It IS binding for planner_alone, where the planner
   # takes every step -- see docs/FOLLOWUPS.md.

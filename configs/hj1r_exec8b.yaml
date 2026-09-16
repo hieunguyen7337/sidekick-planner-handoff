@@ -17,10 +17,10 @@ executor:
   chat_template_kwargs:
     enable_thinking: false   # Granite 4.2 template defaults it True and then
     # spends the whole budget reasoning without ever emitting an action
-  timeout_s: 120
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
 limits:
   max_steps: 40
   max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
-  per_step_timeout_s: 120
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
   max_planner_calls: 81
 prices: configs/cost/prices_2026-09.yaml

@@ -79,6 +79,26 @@ for rel, (want_exec_name, want_planner) in BOTH_LIVE.items():
     if getattr(ex, "chat_template_kwargs", None) != {"enable_thinking": False}:
         failures.append(f"{rel}: thinking is not disabled")
 
+# Cached packet configs are resolved at planner construction. Keep an ambiguous
+# or missing producer subtree visible as a config failure instead of letting a
+# later episode discover it after spending executor time.
+for path in sorted(Path("configs").glob("*.yaml")):
+    rel = str(path)
+    cfg = load_config(rel)
+    planner_cfg = cfg.get("planner") or {}
+    if not planner_cfg.get("packet_source"):
+        continue
+    try:
+        pl = make_planner(cfg)
+    except (FileNotFoundError, ValueError) as exc:
+        failures.append(f"{rel}: cached packet system is not resolvable: {exc}")
+        continue
+    print(f"\n{rel}")
+    print(f"  packet subtree -> {getattr(pl, 'system', None)}")
+    closer = getattr(pl, "close", None)
+    if callable(closer):
+        closer()
+
 if failures:
     print("\nFAILURES:")
     for f in failures:

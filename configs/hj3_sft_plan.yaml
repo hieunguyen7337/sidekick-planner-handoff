@@ -14,6 +14,7 @@ planner:
   # Replays HJ-1 packets: this arm spends zero hosted planner calls, so every arm sees
   # the identical plan per task and plan-sampling noise is removed from the comparison.
   packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
 executor:
   type: vllm
   model: ibm-granite/granite-4.2-8b
