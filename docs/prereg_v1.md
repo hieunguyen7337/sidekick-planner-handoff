@@ -77,6 +77,22 @@ The sample size of **$N = 3$ seeds** and the non-inferiority margin of **$\epsil
 2. **Power under Latent-Difficulty Model**: Calibrated against this measured variance, Monte Carlo simulations (2,000 experiment replicates, 200 bootstrap replicates per rep) over 168 tasks show that the smallest non-inferiority margin resolvable at $\ge 80\%$ power when `sidekick` matches `planner_alone` (true rate 0.68) is **7 pp at N = 3** (simulated power = **0.8600** $\pm$ 0.0078 MCSE, mean CI half-width = 4.58 pp) [OBSERVED campaign/results/hj7_power.json:235-260, 502].
 3. **Why Additional Seeds Do Not Help**: Sizing to $N = 4$ or $N = 5$ seeds yields identical resolvable margins of **7 pp** (power = 0.9280 at N = 4, 0.9640 at N = 5) [OBSERVED campaign/results/hj7_power.json:339, 423, 503-504]. While extra seeds narrow the CI half-width (4.58 pp at N=3 $\rightarrow$ 3.98 pp at N=4 $\rightarrow$ 3.55 pp at N=5), they fail to resolve $\epsilon = 5\text{ pp}$ at $\ge 80\%$ power (power at $\epsilon = 5\text{ pp}$ is only **0.5910** at N = 3, **0.6755** at N = 4, and **0.8090** at N = 5) [OBSERVED campaign/results/hj7_power.json:250, 334, 418]. The binding constraint on statistical power is the fixed number of benchmark tasks (168), not the seed count. Budgeting more than 3 seeds would waste cluster quota without changing the resolvable margin.
 4. **Sensitivity under Worst-Case Mixture Model**: Under the pessimistic common-or-independent mixture correlation model (`campaign/results/hj7_power_mixture.json`), statistical power is strictly lower: at N = 3, power at $\epsilon = 7\text{ pp}$ reaches only 0.4590, and the smallest resolvable margin at $\ge 80\%$ power is **10 pp even at N = 5** (power = 0.8320; power at $\epsilon = 7\text{ pp}$ is 0.5300) [OBSERVED campaign/results/hj7_power_mixture.json:255, 423, 499-505]. This sensitivity result will be reported alongside the primary analysis.
+5. **Independent corroboration on the train split, and why the conservative estimate was kept.** The
+   discordance above is measured on dev (57 tasks). HJ-2B gives a second, larger, fully independent
+   estimate of the same quantity from the same frozen planner: on **train, 90 tasks × 2 seeds**,
+   discordance is **18.89%** (17 of 90; 58 concordant successes, 15 concordant failures) with a
+   seed-1/seed-2 marginal gap of only **1.11 pp** (0.7444 vs 0.7333)
+   [OBSERVED campaign/results/hj2b_planner_train_20260916.runs.jsonl, 180 runs].
+   The two estimates are **not significantly different** — 16/57 carries a standard error of ≈5.9 pp
+   and 17/90 one of ≈4.1 pp, so the 9.2 pp difference is ≈1.3 combined standard errors, and the
+   pooled estimate over all 147 task-pairs is **22.4%**. The dev figure is therefore an unlucky-draw
+   high estimate rather than a contradiction, and the striking 7.0 pp dev seed gap that originally
+   motivated this analysis does **not** reproduce on the larger split.
+   ⚠ The design is nevertheless calibrated on the **dev** figure, deliberately. Higher assumed noise
+   means lower assumed power, so ε = 7 pp is the **conservative** choice: if the true discordance is
+   nearer 19%, the realised power at ε = 7 pp exceeds the 0.860 stated above. Re-deriving ε downward
+   from the friendlier train number after seeing it would be exactly the post-hoc margin selection a
+   preregistration exists to prevent.
 
 ---
 

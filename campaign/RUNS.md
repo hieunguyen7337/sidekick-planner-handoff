@@ -362,3 +362,38 @@ byte-identical code to the teacher. Reading a near-zero there as failure would b
 artefact, not a finding.
 
 These probe numbers are the **pre-SFT baseline** the post-SFT probe in J3 is compared against.
+
+---
+
+## HJ-2B teacher demos on train — job 25397852, COMPLETE 180/180
+
+| | |
+|---|---|
+| campaign | `hj2b_planner_train_20260916` |
+| code | `d873781` (`SIDEKICK_START_COMMIT`, pinned at job start) |
+| submitted / ended | 2026-09-16 18:31 / 19:47 AEST |
+| wall / cpu | 1:12:53 / 1:50:35, 8 cpus, no GPU |
+| runs | **180/180, 0 broken**, exit 0 |
+| TGC | **0.744** (seed 1), **0.733** (seed 2) — 90 train tasks |
+| steps / episode | 13.52 mean |
+| planner calls | **2,613** total, 14.5 per episode, all `gpt-5.6-luna` |
+| gate | smoke **PASS**, final **PASS** (`--expect-planner --expect-model gpt-5.6-luna`) |
+| archive | `~/sidekick_data/hj2b_planner_train_20260916/`, 180 `events.jsonl`, 12 MB |
+
+This is the SFT(b) teacher set: **133 solved trajectories** of the 180, replacing `PLAN.md`'s
+"successful `prompt_only` segments", which do not exist because `prompt_only` solved 0 of 114.
+
+**The cap fix worked.** In HJ-1, `max_planner_calls=25` ended 11 of 12 truncated episodes and none
+hit `max_steps`; the arm was silently running at 25 steps while `executor_alone` had 40. With the cap
+at 81 (2·max_steps+1), **exactly one episode of 180 hit any limit at all**. Step counts now sit where
+the episodes actually end — mostly 11–20, one at 26, one at 40 — rather than at the cap.
+
+⚠ **Train is not harder than dev, and the seed noise there is smaller.** TGC 0.739 on train against
+0.684 on dev is the same planner on a comparable distribution, which is what SFT needs. But the
+seed-to-seed discordance is **18.89% on train (17 of 90)** versus **28.07% on dev (16 of 57)**, and
+the marginal seed gap is **1.11 pp** against dev's 7.02 pp. The two discordance estimates are ≈1.3
+combined standard errors apart — compatible, pooling to 22.4% over 147 pairs — so the 7 pp dev seed
+gap that prompted the HJ-7 power analysis looks like an unlucky draw on 57 tasks rather than a
+property of the planner. **ε = 7 pp stays**, calibrated on the pessimistic dev figure: revising a
+margin downward after seeing a friendlier number is the post-hoc selection preregistration exists to
+prevent, and if the truth is nearer 19% the realised power simply exceeds the stated 0.860.
