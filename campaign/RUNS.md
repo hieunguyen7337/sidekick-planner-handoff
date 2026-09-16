@@ -993,3 +993,72 @@ fell 40 → 15.
 **Comparison hygiene**: both arms are n=114 with every episode present and no dropped
 pairs, so the paired statistic uses the full sample. The `prompt_only` arm was verified
 complete this session (114 `events.jsonl`, 114 `result.json`, zero mismatches).
+
+### J3 probes — paired pre/post-SFT, and the gate's second criterion (2026-09-17)
+
+Both probes ran in job `25401780` against the one vLLM server holding
+`granite-4.2-8b` with `--lora-modules sft_b=…sft_b_s123_granite8b`, through the shared
+`invoke_state_probe` helper. **The only differences between the two invocations are
+`--lora-name` and `--out`**; sampling arguments, campaign root, chat template kwargs and
+stop sequences are byte-identical by construction.
+
+| | pre-SFT base (`probe_granite8b_serving.json`) | post-SFT (`probe_sft_b.json`) |
+|---|---|---|
+| `lora_name` | `null` | `sft_b` |
+| points | 300/300 | 300/300 |
+| scorable | 250 | 250 |
+| **agreement** | 64 → **0.256** | 123 → **0.492** |
+| state-equivalence | 0.866 | **0.920** |
+| parse errors | 2 | 2 |
+| depth 1–5 | 0.167 | **0.489** |
+| depth 6–10 | 0.213 | **0.388** |
+| depth 11+ | 0.400 | **0.600** |
+| schema | 3 | 3 |
+
+## ✅ GATE — second criterion PASSED. J3 passes in full.
+
+Pre-registered: *probe agreement up vs the pre-SFT baseline.* **0.256 → 0.492, +23.6 pp,
+improving at every depth stratum** (+32.2, +17.5, +20.0 pp).
+
+Together with the +37.72 pp TGC result above, **both J3 gate criteria are met** and the
+plan's "below the gate: stop and decide" branch is not taken.
+
+**Why the probe result matters more than the TGC result.** Task completion can rise for
+many reasons. Agreement measures something narrower and harder to fake: given a *correct*
+teacher history replayed into a fresh world, does the executor choose the same API call
+the teacher chose? That rose at every depth. The executor did not merely get luckier — it
+got better at the thing the sidekick architecture depends on, which is standing in for the
+planner on the next action.
+
+**Point-sequence identity was verified, not assumed.** At 86 points into the post-SFT run
+the two `.partial.jsonl` files were compared on `run_id|k` and found identical for all 86,
+with `n_defined` 71 in both; the like-for-like figure at that prefix was 25/71 vs 44/71.
+The final reports agree on `n_scorable` (250), `n_gold_no_api` and `n_gold_noncode`, which
+is what `--seed 0 --max-points 300` against one campaign root should guarantee.
+
+### Defect #18 is confirmed by direct measurement
+
+The re-based baseline is the same base model on the same 300 points as
+`probe_granite8b.json`, differing only in that the serving chat template and stop
+sequences are now sent:
+
+| | defect-#18 run (v2) | re-based (v3) |
+|---|---|---|
+| parse errors | 77 / 300 (25.7%) | **2 / 300 (0.7%)** |
+| agreement | 0.224 | **0.256** |
+| state-equivalence | 0.676 | **0.866** |
+
+🔺 **The 25.7% parse-failure rate was entirely the harness.** It was written up earlier
+the same night as a Granite format-discipline weakness, quoting the model's own narration
+as evidence. The model had been asked to think aloud by a probe that omitted
+`enable_thinking: false`. The earlier decomposition survives intact, though: agreement
+among *parsed* points in the defective run was 0.302, and once essentially everything
+parses the overall figure is 0.256 — the same quantity, now measured directly.
+
+The state-equivalence jump (0.676 → 0.866) is the clearest single symptom: when the model
+emits an action instead of narrating, its wrong actions are far more often harmless ones
+the teacher's next step can still recover from.
+
+**`probe_granite8b.json` (v2) is superseded for every purpose except the Granite-vs-Qwen
+comparison it was built for**, where both arms carried the identical handicap. It must
+never be compared against a v3 report; `PROBE_SCHEMA_VERSION` enforces that mechanically.
