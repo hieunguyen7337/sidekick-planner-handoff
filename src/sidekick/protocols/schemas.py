@@ -11,7 +11,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 SCHEMA_VERSION = 1
 
 Role = Literal["planner", "executor", "verifier", "environment", "system"]
-Provider = Literal["codex", "vllm", "mock"]
+# "cache" is NOT a synonym for "mock": the campaign gate treats a zero-token
+# "mock" planner record as a mistyped planner.type silently falling back to
+# MockPlanner. A replayed archived packet is a real plan that bought nothing,
+# and must not trip that check — hence its own provider tag.
+Provider = Literal["codex", "vllm", "mock", "cache"]
 
 
 class Usage(BaseModel):

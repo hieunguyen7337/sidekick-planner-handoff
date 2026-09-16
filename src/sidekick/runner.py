@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from sidekick.agents.executor import MockExecutor, VLLMExecutor
-from sidekick.agents.planner import CodexExecConfig, CodexExecPlanner, MockPlanner
+from sidekick.agents.planner import CachedPacketPlanner, CodexExecConfig, CodexExecPlanner, MockPlanner
 from sidekick.agents.verifier import ConstantVerifier, ScriptedVerifier
 from sidekick.cost.ledger import CostLedger
 from sidekick.cost.prices import PriceSchedule
@@ -84,11 +84,22 @@ def make_limits(cfg: dict[str, Any]) -> RunLimits:
     )
 
 
-def make_planner(cfg: dict[str, Any]) -> Any:
+def make_planner(
+    cfg: dict[str, Any],
+    seed: int | None = None,
+    system_name: str | None = None,
+) -> Any:
+    """Build the planner, optionally wrapped in a cached-packet replay layer.
+
+    `seed` and `system_name` come from run_single (job["seed"], job["system"]);
+    they only matter when planner.packet_source is set, because the archive is
+    keyed <packet_source>/<system>/<seed>/<task_id>/events.jsonl. Both keyword
+    arguments are optional so every existing call site stays valid.
+    """
     planner_cfg = cfg.get("planner") or {}
     kind = str(planner_cfg.get("type") or cfg.get("planner_type") or "mock")
     if kind == "codex":
-        return CodexExecPlanner(
+        planner: Any = CodexExecPlanner(
             CodexExecConfig(
                 binary=str(planner_cfg.get("binary", "codex")),
                 model=str(planner_cfg.get("model", "gpt-5.6-luna")),
@@ -97,7 +108,22 @@ def make_planner(cfg: dict[str, Any]) -> Any:
                 scratch_parent=planner_cfg.get("scratch_parent"),
             )
         )
-    return MockPlanner()
+    else:
+        planner = MockPlanner()
+    packet_source = planner_cfg.get("packet_source")
+    if packet_source:
+        # system_name (the arm) decides which archive subtree to read; a
+        # packet_system override in config wins for arms replaying another
+        # arm's archived packets. Defaults to planner_alone, where HJ-1 ran.
+        system = str(planner_cfg.get("packet_system") or system_name or "planner_alone")
+        planner = CachedPacketPlanner(
+            planner,
+            packet_source,
+            system=system,
+            seed=seed,
+            on_missing=str(planner_cfg.get("on_missing", "fail")),
+        )
+    return planner
 
 
 def make_executor(cfg: dict[str, Any]) -> Any:
@@ -128,7 +154,11 @@ def make_verifier(cfg: dict[str, Any]) -> Any:
 def make_env(kind: str, experiment_name: str, cfg: dict[str, Any]) -> BaseEnv:
     if kind == "appworld":
         extra = dict(cfg.get("appworld") or {})
-        return AppWorldEnv(experiment_name=experiment_name, extra_kwargs=extra)
+        # `root` is an AppWorldEnv parameter, not an AppWorld one. Forwarding it
+        # inside extra_kwargs crashed every episode with
+        # "AppWorld.__init__() got an unexpected keyword argument 'root'".
+        root = extra.pop("root", None)
+        return AppWorldEnv(experiment_name=experiment_name, extra_kwargs=extra, root=root)
     return MockEnv()
 
 
@@ -156,7 +186,7 @@ def run_single(job: dict[str, Any]) -> dict[str, Any]:
     cfg = job["config"]
     prices = PriceSchedule.load(job["prices_path"])
     ledger = CostLedger(prices)
-    planner = make_planner(cfg)
+    planner = make_planner(cfg, seed=job["seed"], system_name=job["system"])
     executor = make_executor(cfg)
     verifier = make_verifier(cfg)
     env = make_env(job["env_kind"], job["experiment_name"], cfg)

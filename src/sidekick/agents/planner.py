@@ -615,3 +615,168 @@ class MockPlanner:
         if self.fail_timeout_once and not self._timed_out:
             self._timed_out = True
             raise TimeoutError("mock planner timeout")
+
+
+class CachedPacketPlanner:
+    """Replays archived planner packets instead of re-calling a live model.
+
+    HJ-1 spent 936 hosted calls to produce 114 plans; every later arm that needs
+    "the same plan for this task" replays the archived `plan` event instead of
+    buying it again. Replay also removes plan-sampling noise: each arm sees a
+    byte-identical plan per (task, seed).
+
+    Replay is NOT a mock: `plan()` does no model I/O but returns the real
+    packet HJ-1 bought, tagged `provider="cache"` with zero tokens and
+    `n_calls=0` because nothing was bought. The campaign gate treats a
+    zero-token "mock" record as a mistyped planner.type falling back to
+    MockPlanner, so a replayed packet must never carry that tag.
+
+    Because a replayed plan creates no codex thread, the inner planner's first
+    live call starts from nothing where the original run resumed a session that
+    already held the task context. We therefore store the `context` argument
+    (the api-docs prompt) passed to `plan()` and prepend it, once, to the first
+    live `correct()`/`act()` prompt. `CodexExecPlanner.correct` already embeds
+    the full packet in its prompt, so the packet itself is not repeated.
+    """
+
+    name = "cached-packet"
+
+    _DIGEST_BANNER = "=== api digest (plan was replayed; no prior session) ==="
+
+    def __init__(
+        self,
+        inner: Any,
+        packet_source: str | Path,
+        system: str = "planner_alone",
+        seed: int | None = None,
+        on_missing: str = "fail",
+    ) -> None:
+        if on_missing not in ("fail", "call"):
+            raise ValueError(f"on_missing must be 'fail' or 'call', got {on_missing!r}")
+        self.inner = inner
+        self.packet_source = Path(packet_source)
+        self.system = system
+        # The planner protocol's plan() carries no seed, but the archive is
+        # keyed <system>/<seed>/<task_id>; the runner knows the seed of the
+        # episode it is about to run, so it is fixed at construction time.
+        self.seed = seed
+        self.on_missing = on_missing
+        self._context: str | None = None
+        self._digest_prepended = False
+
+    def _events_path(self, task_id: str) -> Path:
+        if self.seed is None:
+            # No seed supplied: glob the seed directories and fail loudly rather
+            # than silently replaying an arbitrary attempt's plan.
+            matches = sorted(self.packet_source.glob(f"{self.system}/*/{task_id}/events.jsonl"))
+            if not matches:
+                raise FileNotFoundError(
+                    f"no cached planner packet under {self.packet_source}/{self.system}/*/ for task {task_id}"
+                )
+            if len(matches) > 1:
+                raise ValueError(
+                    f"task {task_id} appears under {len(matches)} seeds without a configured seed: "
+                    + ", ".join(str(m) for m in matches)
+                )
+            return matches[0]
+        return self.packet_source / self.system / str(self.seed) / task_id / "events.jsonl"
+
+    def _load_plan_event(self, task_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Return (plan-event payload, plan-event usage) for this task.
+
+        Reads the file FORWARDS and uses only events after the LAST
+        `run_start`: a retried run appends to the dead attempt's log, so a file
+        can hold two attempts concatenated with nothing marking the boundary
+        (docs/FOLLOWUPS.md). Ordering comes from file order, never from `ts`:
+        AppWorld freezes time with freezegun, so `ts` is identical across
+        events and cannot order them.
+        """
+        path = self._events_path(task_id)
+        if not path.is_file():
+            raise FileNotFoundError(f"no cached planner packet for task {task_id} at {path}")
+        lines = path.read_text(encoding="utf-8").splitlines()
+        last_run_start = -1
+        for i, line in enumerate(lines):
+            if '"run_start"' in line:
+                last_run_start = i
+        plan_payload: dict[str, Any] | None = None
+        plan_usage: dict[str, Any] = {}
+        for line in lines[last_run_start + 1 :]:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue  # a truncated trailing line must not break replay
+            if not isinstance(obj, dict):
+                continue
+            if obj.get("event_type") == "plan" and isinstance(obj.get("payload"), dict):
+                if isinstance(obj["payload"].get("packet"), dict):
+                    plan_payload = obj["payload"]
+                    plan_usage = obj.get("usage") or {}
+        if plan_payload is None:
+            raise FileNotFoundError(f"no archived plan event found for task {task_id} at {path}")
+        return plan_payload, plan_usage
+
+    def plan(self, task_id: str, goal: str, context: str, timeout_s: float | None = None) -> PlannerResponse:
+        # Remember what plan() was handed: on a replayed plan there is no prior
+        # codex session, so the first live call needs the api digest prepended.
+        self._context = context
+        try:
+            payload, event_usage = self._load_plan_event(task_id)
+        except FileNotFoundError:
+            if self.on_missing == "call":
+                return self.inner.plan(task_id, goal, context, timeout_s=timeout_s)
+            raise
+        packet = DelegationPacket.model_validate(payload["packet"])
+        # Provenance must point at the ORIGINAL model even though nothing was
+        # bought here: campaign_summarize._planner_models reads usage.model on
+        # planner-attributed records, and the gate has to report the hosted
+        # model id for a replayed arm too.
+        model = payload.get("model") or (event_usage or {}).get("model") or ""
+        if not model:
+            raise ValueError(f"cached plan event for {task_id} records no model id at {self._events_path(task_id)}")
+        raw: dict[str, Any] = {"cached_from": str(self._events_path(task_id))}
+        thread_id = payload.get("thread_id")
+        if thread_id is not None:
+            raw["cached_thread_id"] = thread_id
+        usage = Usage(
+            model=model,
+            provider="cache",
+            input_tokens=0,
+            cached_input_tokens=0,
+            output_tokens=0,
+            reasoning_output_tokens=0,
+            latency_s=0.0,
+            gpu_seconds=0.0,
+            n_calls=0,
+            raw=raw,
+        )
+        return PlannerResponse(
+            kind="PLAN",
+            packet=packet,
+            raw_output=json.dumps(payload["packet"], sort_keys=True),
+            usage=usage,
+            thread_id=thread_id if isinstance(thread_id, str) else None,
+        )
+
+    def _prepended_context(self) -> str:
+        if self._digest_prepended or self._context is None:
+            return ""
+        self._digest_prepended = True
+        return f"{self._DIGEST_BANNER}\n{self._context}\n"
+
+    def correct(
+        self,
+        packet: DelegationPacket,
+        transcript_delta: str,
+        timeout_s: float | None = None,
+    ) -> PlannerResponse:
+        return self.inner.correct(packet, self._prepended_context() + transcript_delta, timeout_s=timeout_s)
+
+    def act(self, task_id: str, transcript: str, timeout_s: float | None = None) -> PlannerResponse:
+        return self.inner.act(task_id, self._prepended_context() + transcript, timeout_s=timeout_s)
+
+    def close(self) -> None:
+        self.inner.close()
