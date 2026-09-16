@@ -18,8 +18,10 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 import argparse
 import json
+import random
 import re
 import sys
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -250,10 +252,14 @@ def probe_step(
 
 def executed_pairs(events: list[Event]) -> list[tuple[ExecutorAction, Event]]:
     """(CODE/COMPLETE action, its observation) pairs from the LAST attempt,
-    in file order — the caller has already sliced after the last run_start."""
+    in file order."""
+    last_start = next(
+        (i for i in range(len(events) - 1, -1, -1) if events[i].event_type == "run_start"),
+        0,
+    )
     pairs: list[tuple[ExecutorAction, Event]] = []
     pending: ExecutorAction | None = None
-    for e in events:
+    for e in events[last_start:]:
         if e.event_type == "action":
             payload = e.payload
             pending = None
@@ -294,29 +300,212 @@ def find_solved_runs(campaign_root: Path, system: str, max_runs: int) -> list[Pa
     return runs
 
 
+DEPTH_BUCKETS = ("1-5", "6-10", "11+")
+
+
+def _partial_path(out_path: Path) -> Path:
+    return Path(f"{out_path}.partial.jsonl")
+
+
+def _read_partial(path: Path) -> list[dict[str, Any]]:
+    """Read completed probe records, tolerating an unfinished final line."""
+    if not path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record_value = json.loads(line)
+                if not isinstance(record_value, dict):
+                    raise ValueError("record is not an object")
+                if "run_id" not in record_value or "step_index" not in record_value:
+                    raise ValueError("record has no run_id/step_index")
+                record_value["step_index"] = int(record_value["step_index"])
+            except (TypeError, ValueError, json.JSONDecodeError) as exc:
+                print(
+                    f"[state_probe] warning: ignoring invalid partial line "
+                    f"{path}:{line_number} ({exc})",
+                    file=sys.stderr,
+                )
+                continue
+            records.append(record_value)
+    return records
+
+
+def _point_key(run_id: str, step_index: int) -> tuple[str, int]:
+    return (run_id, step_index)
+
+
+def _planned_points(
+    campaign_root: Path,
+    system: str,
+    max_steps_per_run: int,
+    max_runs: int,
+) -> tuple[list[dict[str, Any]], int]:
+    """Return candidate points in stable file/run order and trajectory count."""
+    points: list[dict[str, Any]] = []
+    n_trajectories = 0
+    for run_dir in find_solved_runs(campaign_root, system, max_runs):
+        events_path = run_dir / "events.jsonl"
+        events = list(EventLog.read(events_path))
+        pairs = executed_pairs(events)
+        if not pairs:
+            continue
+        last_start = next(
+            (event for event in reversed(events) if event.event_type == "run_start"),
+            None,
+        )
+        n_trajectories += 1
+        n_exec = len(pairs) if not max_steps_per_run else min(
+            len(pairs), max_steps_per_run
+        )
+        # k counts replayed gold steps; the model replaces step k+1 = pairs[k].
+        for k in range(1, min(n_exec, len(pairs) - 1) + 1):
+            points.append(
+                {
+                    "run_dir": run_dir,
+                    "pairs": pairs,
+                    "run_id": last_start.run_id if last_start is not None else run_dir.name,
+                    "task_id": last_start.task_id if last_start is not None else run_dir.parent.name,
+                    "step_index": k,
+                    "order": len(points),
+                }
+            )
+    return points, n_trajectories
+
+
+def select_sampled_points(
+    points: list[dict[str, Any]], max_points: int, seed: int
+) -> list[dict[str, Any]]:
+    """Select a deterministic, depth-stratified subset of candidate points.
+
+    Initial quotas are as equal as possible. If a bucket is short, its unused
+    quota is redistributed round-robin to buckets that still have candidates.
+    """
+    if max_points <= 0 or max_points >= len(points):
+        return list(points)
+
+    by_bucket: dict[str, list[dict[str, Any]]] = {name: [] for name in DEPTH_BUCKETS}
+    for point in points:
+        by_bucket[bucket_for(point["step_index"])].append(point)
+
+    rng = random.Random(seed)
+    for bucket in DEPTH_BUCKETS:
+        rng.shuffle(by_bucket[bucket])
+
+    base, remainder = divmod(max_points, len(DEPTH_BUCKETS))
+    quotas = [base + (1 if i < remainder else 0) for i in range(len(DEPTH_BUCKETS))]
+    selected: list[dict[str, Any]] = []
+    cursors = [0, 0, 0]
+    for i, bucket in enumerate(DEPTH_BUCKETS):
+        take = min(quotas[i], len(by_bucket[bucket]))
+        selected.extend(by_bucket[bucket][:take])
+        cursors[i] = take
+
+    # Give every unfilled quota slot to the next bucket with capacity. A
+    # round-robin pass keeps the redistribution as even as possible too.
+    remaining = max_points - len(selected)
+    while remaining:
+        added = False
+        for i, bucket in enumerate(DEPTH_BUCKETS):
+            if cursors[i] < len(by_bucket[bucket]):
+                selected.append(by_bucket[bucket][cursors[i]])
+                cursors[i] += 1
+                remaining -= 1
+                added = True
+                if not remaining:
+                    break
+        if not added:
+            break
+
+    return sorted(selected, key=lambda point: point["order"])
+
+
+def _report_from_records(
+    records: list[dict[str, Any]],
+    sampled_points: list[dict[str, Any]],
+    campaign_root: Path,
+    system: str,
+    n_trajectories: int,
+    model: str,
+    lora_name: str | None,
+    budget_exhausted: bool,
+) -> dict[str, Any]:
+    buckets: dict[str, dict[str, Any]] = defaultdict(empty_counts)
+    for rec in records:
+        for name in ("overall", bucket_for(int(rec["step_index"]))):
+            record(buckets[name], rec)
+        if rec.get("value_forwarding"):
+            record(buckets["value_forwarding"], rec)
+    return {
+        "model": model,
+        "lora_name": lora_name,
+        "campaign_root": str(campaign_root),
+        "system": system,
+        "n_trajectories": n_trajectories,
+        "n_steps": len(records),
+        "n_planned": len(sampled_points),
+        "n_completed": len(records),
+        "budget_exhausted": budget_exhausted,
+        "sampled_points": [
+            {"run_id": point["run_id"], "step": point["step_index"]}
+            for point in sampled_points
+        ],
+        "buckets": finalize(buckets),
+        "steps": records,
+    }
+
+
 def run_probe(
     campaign_root: str,
     system: str,
     executor: LLMClient,
     max_steps_per_run: int,
     max_runs: int,
+    out_path: str | Path | None = None,
+    time_budget_s: int = 0,
+    max_points: int = 0,
+    seed: int = 0,
 ) -> dict[str, Any]:
     root = Path(campaign_root)
-    buckets: dict[str, dict[str, Any]] = defaultdict(empty_counts)
-    step_records: list[dict[str, Any]] = []
-    n_traj = 0
-    n_steps = 0
-    for run_dir in find_solved_runs(root, system, max_runs):
-        events_path = run_dir / "events.jsonl"
-        events = list(EventLog.read(events_path))
-        pairs = executed_pairs(events)
-        if not pairs:
-            continue
-        n_traj += 1
-        n_exec = len(pairs) if not max_steps_per_run else min(len(pairs), max_steps_per_run)
-        # k counts replayed gold steps; the model replaces step k+1 = pairs[k],
-        # so k can reach len(pairs)-1 at most.
-        for k in range(1, min(n_exec, len(pairs) - 1) + 1):
+    points, n_trajectories = _planned_points(
+        root, system, max_steps_per_run, max_runs
+    )
+    sampled_points = select_sampled_points(points, max_points, seed)
+    sampled_keys = {
+        _point_key(point["run_id"], point["step_index"])
+        for point in sampled_points
+    }
+
+    partial_path = _partial_path(Path(out_path)) if out_path is not None else None
+    partial_records = _read_partial(partial_path) if partial_path is not None else []
+    completed_keys = {
+        _point_key(str(rec["run_id"]), int(rec["step_index"]))
+        for rec in partial_records
+        if _point_key(str(rec["run_id"]), int(rec["step_index"])) in sampled_keys
+    }
+    new_records: list[dict[str, Any]] = []
+    started = time.monotonic()
+    budget_exhausted = False
+    partial_handle = None
+    if partial_path is not None:
+        partial_path.parent.mkdir(parents=True, exist_ok=True)
+        partial_handle = partial_path.open("a", encoding="utf-8")
+
+    try:
+        for point in sampled_points:
+            point_key = _point_key(point["run_id"], point["step_index"])
+            if point_key in completed_keys:
+                continue
+            if time_budget_s > 0 and time.monotonic() - started >= time_budget_s:
+                budget_exhausted = True
+                break
+
+            events_path = point["run_dir"] / "events.jsonl"
+            pairs = point["pairs"]
+            k = point["step_index"]
             world, _remaining = replay_prefix(events_path, k)
             try:
                 rec = probe_step(
@@ -329,24 +518,48 @@ def run_probe(
                 )
             finally:
                 world.close()  # caller owns the world; one AppWorld world per process
-            rec["run_id"] = run_dir.name
-            rec["task_id"] = run_dir.parent.name
-            for name in ("overall", bucket_for(k)):
-                record(buckets[name], rec)
-            if rec.get("value_forwarding"):
-                record(buckets["value_forwarding"], rec)
-            step_records.append(rec)
-            n_steps += 1
-    return {
-        "model": getattr(executor, "model", "unknown"),
-        "lora_name": getattr(executor, "lora_name", None),
-        "campaign_root": str(root),
-        "system": system,
-        "n_trajectories": n_traj,
-        "n_steps": n_steps,
-        "buckets": finalize(buckets),
-        "steps": step_records,
-    }
+            rec["run_id"] = point["run_id"]
+            rec["task_id"] = point["task_id"]
+            rec["step_index"] = k
+            if partial_handle is not None:
+                partial_handle.write(json.dumps(rec, sort_keys=True) + "\n")
+                partial_handle.flush()
+            else:
+                new_records.append(rec)
+            completed_keys.add(point_key)
+    finally:
+        if partial_handle is not None:
+            partial_handle.close()
+
+    if partial_path is not None:
+        all_partial_records = _read_partial(partial_path)
+        # A report only includes points selected by this invocation. This makes
+        # changing --max-points safe while preserving exact pair-based resume.
+        records: list[dict[str, Any]] = []
+        seen_keys: set[tuple[str, int]] = set()
+        for rec in all_partial_records:
+            key = _point_key(str(rec["run_id"]), int(rec["step_index"]))
+            if key in sampled_keys and key not in seen_keys:
+                records.append(rec)
+                seen_keys.add(key)
+    else:
+        records = new_records
+
+    report = _report_from_records(
+        records,
+        sampled_points,
+        root,
+        system,
+        n_trajectories,
+        getattr(executor, "model", "unknown"),
+        getattr(executor, "lora_name", None),
+        budget_exhausted,
+    )
+    if out_path is not None:
+        output_path = Path(out_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    return report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -358,6 +571,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lora-name", default=None)
     parser.add_argument("--max-steps-per-run", type=int, default=0)
     parser.add_argument("--max-runs", type=int, default=0)
+    parser.add_argument(
+        "--time-budget-s",
+        type=int,
+        default=0,
+        help="stop before a probe point after this many seconds (0 = unlimited)",
+    )
+    parser.add_argument(
+        "--max-points",
+        type=int,
+        default=0,
+        help="maximum points to sample by depth (0 = unlimited)",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="seed for deterministic depth-stratified sampling",
+    )
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
     executor = VLLMExecutor(
@@ -367,17 +598,25 @@ def main(argv: list[str] | None = None) -> int:
         temperature=0.0,  # capability measurement, not a sample
         timeout_s=120.0,  # every model call bounded by this HTTP timeout
     )
-    report = run_probe(
-        args.campaign_root,
-        args.system,
-        executor,
-        args.max_steps_per_run,
-        args.max_runs,
-    )
-    executor.close()
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    try:
+        report = run_probe(
+            args.campaign_root,
+            args.system,
+            executor,
+            args.max_steps_per_run,
+            args.max_runs,
+            out_path=args.out,
+            time_budget_s=args.time_budget_s,
+            max_points=args.max_points,
+            seed=args.seed,
+        )
+    finally:
+        executor.close()
+    if report["budget_exhausted"]:
+        print(
+            f"probe points done={report['n_completed']} "
+            f"planned={report['n_planned']} (time budget exhausted)"
+        )
     print(
         f"{'bucket':<18}{'n':>5}{'scorable':>9}"
         f"{'agree/sc':>10}{'agree/all':>10}{'state':>8}{'hash':>8}"

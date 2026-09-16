@@ -2,7 +2,7 @@
 #PBS -N hj15-state-probe
 #PBS -q gpu_inter
 #PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
-#PBS -l walltime=04:00:00
+#PBS -l walltime=08:00:00
 #PBS -j oe
 #PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj15_state_probe.out
 #
@@ -59,6 +59,10 @@ probe_granite_rc=125
 swap_rc=125
 probe_qwen_rc=125
 summary_archive_rc=125
+
+probe_report_status () {
+  "${SIDEKICK_VENV}/bin/python" -c 'import json,sys; r=json.load(open(sys.argv[1])); assert isinstance(r,dict) and isinstance(r["budget_exhausted"],bool); print(("complete" if r["budget_exhausted"] is False else "partial") + " " + str(r["n_completed"]) + "/" + str(r["n_planned"]))' "$1" 2>/dev/null
+}
 
 kill_vllm () {
   if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
@@ -206,13 +210,30 @@ fi
 # ---- phase 5: granite state probe ---------------------------------------------
 echo "[hj15] ---- phase 5: granite state probe ----"
 if [[ -s "${PROBE_GRANITE}" ]]; then
-  probe_granite_rc=0
-  echo "[hj15] resume: ${PROBE_GRANITE} already exists; probe skipped"
+  granite_probe_status="$(probe_report_status "${PROBE_GRANITE}")" || granite_probe_status=""
+  if [[ "${granite_probe_status}" == complete\ * ]]; then
+    probe_granite_rc=0
+    echo "[hj15] resume: ${PROBE_GRANITE} is complete (${granite_probe_status#* }); probe skipped"
+  else
+    if [[ "${granite_probe_status}" == partial\ * ]]; then
+      echo "[hj15] resume: ${PROBE_GRANITE} is partial (${granite_probe_status#* }); re-running to finish"
+    else
+      echo "[hj15] resume: ${PROBE_GRANITE} is malformed or unreadable; re-running"
+    fi
+    timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+      --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+      --model ibm-granite/granite-4.2-8b --base-url http://127.0.0.1:8000 \
+      --max-steps-per-run 40 --max-runs 114 --max-points 300 \
+      --time-budget-s 5400 --seed 0 --out "${PROBE_GRANITE}"
+    probe_granite_rc=$?
+  fi
 else
-  timeout 1800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+  echo "[hj15] resume: ${PROBE_GRANITE} is missing or empty; running probe"
+  timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
     --campaign-root "${PACKET_SOURCE}" --system planner_alone \
     --model ibm-granite/granite-4.2-8b --base-url http://127.0.0.1:8000 \
-    --max-steps-per-run 40 --max-runs 114 --out "${PROBE_GRANITE}"
+    --max-steps-per-run 40 --max-runs 114 --max-points 300 \
+    --time-budget-s 5400 --seed 0 --out "${PROBE_GRANITE}"
   probe_granite_rc=$?
 fi
 echo "[hj15] phase probe_granite rc=${probe_granite_rc}"
@@ -220,9 +241,55 @@ echo "[hj15] phase probe_granite rc=${probe_granite_rc}"
 # ---- phase 6: swap models -----------------------------------------------------
 echo "[hj15] ---- phase 6: swap to Qwen3-8B ----"
 if [[ -s "${PROBE_QWEN}" ]]; then
-  swap_rc=0
-  echo "[hj15] resume: ${PROBE_QWEN} already exists; Qwen service swap skipped"
+  qwen_probe_status="$(probe_report_status "${PROBE_QWEN}")" || qwen_probe_status=""
+  if [[ "${qwen_probe_status}" == complete\ * ]]; then
+    swap_rc=0
+    echo "[hj15] resume: ${PROBE_QWEN} is complete (${qwen_probe_status#* }); Qwen service swap skipped"
+  else
+    if [[ "${qwen_probe_status}" == partial\ * ]]; then
+      echo "[hj15] resume: ${PROBE_QWEN} is partial (${qwen_probe_status#* }); continuing with Qwen service swap"
+    else
+      echo "[hj15] resume: ${PROBE_QWEN} is malformed or unreadable; continuing with Qwen service swap"
+    fi
+    kill_vllm
+    timeout 60 bash -c 'while curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; do sleep 1; done'
+    port_rc=$?
+    echo "[hj15] port-free wait rc=${port_rc}"
+    if [[ "${port_rc}" -ne 0 ]]; then
+      swap_rc="${port_rc}"
+    else
+      export HF_HOME="${HOME}/.cache/huggingface"
+      MODEL=Qwen/Qwen3-8B
+      VLOG="${LOGDIR}/hj15_vllm_qwen3_8b.log"
+      "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+        --served-model-name "${MODEL}" \
+        --dtype bfloat16 \
+        --max-model-len 32768 \
+        --host 127.0.0.1 --port 8000 \
+        --gpu-memory-utilization 0.85 > "${VLOG}" 2>&1 &
+      VLLM_PID=$!
+      echo "[u9] vllm serve ${MODEL} pid=${VLLM_PID}"
+      t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+      while (( $(date +%s) < deadline )); do
+        if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+          echo "[u9] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"
+          break
+        fi
+        if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+          echo "[u9] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+        fi
+        sleep 5
+      done
+      if [[ "${healthy}" -eq 1 ]]; then
+        swap_rc=0
+      else
+        echo "[u9] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"
+        swap_rc=1
+      fi
+    fi
+  fi
 else
+  echo "[hj15] resume: ${PROBE_QWEN} is missing or empty; continuing with Qwen service swap"
   kill_vllm
   timeout 60 bash -c 'while curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; do sleep 1; done'
   port_rc=$?
@@ -268,13 +335,30 @@ fi
 # ---- phase 7: Qwen state probe -------------------------------------------------
 echo "[hj15] ---- phase 7: Qwen3-8B state probe ----"
 if [[ -s "${PROBE_QWEN}" ]]; then
-  probe_qwen_rc=0
-  echo "[hj15] resume: ${PROBE_QWEN} already exists; probe skipped"
+  qwen_probe_status="$(probe_report_status "${PROBE_QWEN}")" || qwen_probe_status=""
+  if [[ "${qwen_probe_status}" == complete\ * ]]; then
+    probe_qwen_rc=0
+    echo "[hj15] resume: ${PROBE_QWEN} is complete (${qwen_probe_status#* }); probe skipped"
+  else
+    if [[ "${qwen_probe_status}" == partial\ * ]]; then
+      echo "[hj15] resume: ${PROBE_QWEN} is partial (${qwen_probe_status#* }); re-running to finish"
+    else
+      echo "[hj15] resume: ${PROBE_QWEN} is malformed or unreadable; re-running"
+    fi
+    timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+      --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+      --model Qwen/Qwen3-8B --base-url http://127.0.0.1:8000 \
+      --max-steps-per-run 40 --max-runs 114 --max-points 300 \
+      --time-budget-s 5400 --seed 0 --out "${PROBE_QWEN}"
+    probe_qwen_rc=$?
+  fi
 else
-  timeout 1800 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
+  echo "[hj15] resume: ${PROBE_QWEN} is missing or empty; running probe"
+  timeout 6000 "${SIDEKICK_VENV}/bin/python" "${REPO}/scripts/setup/state_probe.py" \
     --campaign-root "${PACKET_SOURCE}" --system planner_alone \
     --model Qwen/Qwen3-8B --base-url http://127.0.0.1:8000 \
-    --max-steps-per-run 40 --max-runs 114 --out "${PROBE_QWEN}"
+    --max-steps-per-run 40 --max-runs 114 --max-points 300 \
+    --time-budget-s 5400 --seed 0 --out "${PROBE_QWEN}"
   probe_qwen_rc=$?
 fi
 echo "[hj15] phase probe_qwen rc=${probe_qwen_rc}"
@@ -306,12 +390,22 @@ timeout 1800 cp -a "${OUT}/${CID_B}" "${ARCHIVE}/"
 archive_b_rc=$?
 echo "[hj15] archive B rc=${archive_b_rc}"
 if [[ "${archive_b_rc}" -ne 0 ]]; then archive_rc="${archive_b_rc}"; fi
-timeout 1800 cp -a "${PROBE_GRANITE}" "${ARCHIVE}/"
-archive_granite_rc=$?
+if [[ -e "${PROBE_GRANITE}" ]]; then
+  timeout 1800 cp -a "${PROBE_GRANITE}" "${ARCHIVE}/"
+  archive_granite_rc=$?
+else
+  archive_granite_rc=0
+  echo "[hj15] WARNING: granite probe ${PROBE_GRANITE} is missing; skipping archive"
+fi
 echo "[hj15] archive granite probe rc=${archive_granite_rc}"
 if [[ "${archive_granite_rc}" -ne 0 ]]; then archive_rc="${archive_granite_rc}"; fi
-timeout 1800 cp -a "${PROBE_QWEN}" "${ARCHIVE}/"
-archive_qwen_rc=$?
+if [[ -e "${PROBE_QWEN}" ]]; then
+  timeout 1800 cp -a "${PROBE_QWEN}" "${ARCHIVE}/"
+  archive_qwen_rc=$?
+else
+  archive_qwen_rc=0
+  echo "[hj15] WARNING: Qwen probe ${PROBE_QWEN} is missing; skipping archive"
+fi
 echo "[hj15] archive Qwen probe rc=${archive_qwen_rc}"
 if [[ "${archive_qwen_rc}" -ne 0 ]]; then archive_rc="${archive_qwen_rc}"; fi
 
