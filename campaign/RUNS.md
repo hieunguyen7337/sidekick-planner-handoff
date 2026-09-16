@@ -589,3 +589,44 @@ prevent.
 - The resume/budget machinery, validated end to end (300/300, budget not exhausted).
 - The depth-stratified 300-point sample at seed 0, so the rerun probes identical points.
 - Measured per-point cost, which the earlier `timeout 1800` failures lacked.
+
+### HJ-1.5 attempt 4 — the fixed probe reported the broken probe's numbers (2026-09-17)
+
+Job `25401656`, submitted after both defects above were fixed and committed
+(`82442ae`). Cancelled at 00:41 elapsed. **No new data.**
+
+It skipped phase 5 entirely and resumed the previous run's report. `probe_granite8b.json`
+was still at the output path from attempt 3, carrying `budget_exhausted: false` and
+`n_completed: 300`, so `probe_report_status` classified it `complete` and the probe was
+not run. Confirmed by `cmp`: the file was byte-identical to the attempt-3 artefact
+preserved at `~/sidekick_data/probes/`, and lacked both fields the fixed code emits
+(`n_gold_no_api`, `gold_api_ids`).
+
+**The resume guard was not wrong.** It was hardened earlier the same evening specifically
+to distinguish a complete report from a budget-exhausted partial, and it did that
+correctly. The artefact was stale, and nothing inside it said so.
+
+⚠ **The near-miss is the finding, not the wasted job.** Only Granite had a stale *full*
+report. Qwen had only a stale `.partial.jsonl` (136 KB, from attempt 3's Qwen phase before
+it was cancelled), so Qwen would have re-run and partially resumed. The job was therefore
+on course to produce a **comparison between a contaminated arm and a mostly-clean one**,
+and feed it to the pre-registered rule at RUNS.md:353 — which reads "< 15% on Granite and
+materially better on Qwen3-8B" as *switch the executor before J3*. An artefact would have
+selected the executor for the rest of the project.
+
+**Asymmetric staleness is more dangerous than total staleness**, because the output still
+looks like a comparison. Total staleness reproduces the old numbers exactly and is
+therefore noticeable; partial staleness produces a novel, plausible, wrong result.
+
+Fixed in `51ce7be`, not by remembering to delete files. `PROBE_SCHEMA_VERSION = 2` is
+stamped into the report and into every `.partial.jsonl` record; resume discards mismatched
+or unversioned records with a visible count; the PBS guard reports `stale` and treats it
+as a missing report. The version is read by importing `state_probe` rather than
+hard-coded twice, because a drifted version check is worse than none — it looks like
+protection.
+
+Both attempt-3 artefacts and the attempt-3 Qwen partial are preserved under
+`~/sidekick_data/probes/` as the evidence for this entry. The live output path was
+emptied before resubmission.
+
+**Granite vs Qwen3-8B: still undecided, now after four attempts.**
