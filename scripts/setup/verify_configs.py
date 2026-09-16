@@ -28,6 +28,8 @@ EXPECTED = {
 BOTH_LIVE = {
     "configs/pilot_prompt_only.yaml": ("vllm-executor", "CodexExecPlanner"),
     "configs/pilot_fixed_k.yaml": ("vllm-executor", "CodexExecPlanner"),
+    # packet_source wraps CodexExecPlanner; make_planner returns the wrapper.
+    "configs/hj4_correction.yaml": ("vllm-executor", "CachedPacketPlanner"),
 }
 
 failures: list[str] = []
