@@ -11,8 +11,11 @@ from sidekick.protocols.prompts import (
     format_executor_action,
     render_executor_messages,
 )
-from sidekick.protocols.schemas import DelegationPacket, ExecutorAction
+from sidekick.protocols.schemas import DelegationPacket, ExecutorAction, parse_executor_action
 from sidekick.training.sft_data import (
+    DROP_BELOW_GOAL_PASS_RATE,
+    DROP_UNSOLVED,
+    _tokenize_messages,
     build_sft_dataset,
     tokenize_and_mask,
 )
@@ -64,6 +67,7 @@ def _write_run(
     events: list[dict],
     commit: str | None = "abc123",
     campaign: str = "camp",
+    goal_pass_rate: float | None = None,
 ) -> Path:
     run_dir = root / "planner_alone" / str(seed) / task_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -75,6 +79,7 @@ def _write_run(
         "success": success,
         "tgc": 1.0 if success else 0.0,
         "sgc": None,
+        "goal_pass_rate": goal_pass_rate,
         "steps": 2,
         "n_planner_calls": 1,
         "n_asks": 0,
@@ -471,3 +476,177 @@ def test_unrepresentable_example_is_not_silently_cut():
     assert out["truncated"] is False
     assert out["n_messages_dropped"] == 0
     assert out["input_ids"] == full_ids
+
+
+# ---------------------------------------------------------------------------
+# U-K: partial-credit inclusion (min_goal_pass_rate)
+# ---------------------------------------------------------------------------
+
+
+def _load_runs(out: Path) -> list[dict]:
+    return [json.loads(ln) for ln in out.read_text(encoding="utf-8").splitlines() if ln.strip()]
+
+
+def _supervised_span(messages: list[dict], assistant_idx: int, tokenizer=None) -> tuple[bool, int]:
+    """Return (has_supervised_labels, span_len) over the token span of messages[assistant_idx].
+
+    Asserts on the real label arrays produced by the same tokenizer/masking used by
+    the builder, not on the message list.
+    """
+    tok_prev = _tokenize_messages(messages[:assistant_idx], CharChatTokenizer())
+    tok_full = _tokenize_messages(messages, CharChatTokenizer())
+    start = len(tok_prev["input_ids"])
+    span_labels = tok_full["labels"][start:]
+    return any(lab != -100 for lab in span_labels), len(span_labels)
+
+
+def test_partial_included_above_threshold(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(root, task_id="copy_hello", seed=1, success=False, events=_live_attempt_events(), goal_pass_rate=0.8)
+    out = tmp_path / "sft.jsonl"
+    summary = build_sft_dataset(root, ["copy_hello"], out, min_goal_pass_rate=0.75)
+    runs = _load_runs(out)
+    assert len(runs) == 1
+    assert runs[0]["meta"]["source"] == "partial"
+    assert runs[0]["meta"]["goal_pass_rate"] == 0.8
+    assert summary["n_partial"] == 1
+    assert summary["n_solved"] == 0
+
+
+def test_partial_excluded_below_threshold(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(root, task_id="copy_hello", seed=1, success=False, events=_live_attempt_events(), goal_pass_rate=0.5)
+    out = tmp_path / "sft.jsonl"
+    summary = build_sft_dataset(root, ["copy_hello"], out, min_goal_pass_rate=0.75)
+    assert _load_runs(out) == []
+    reasons = {d["reason"] for d in summary["dropped"]}
+    assert DROP_BELOW_GOAL_PASS_RATE in reasons
+    assert DROP_UNSOLVED not in reasons
+    assert summary["dropped_counts"][DROP_BELOW_GOAL_PASS_RATE] == 1
+
+
+def test_partial_terminal_action_not_supervised(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(root, task_id="copy_hello", seed=1, success=False, events=_live_attempt_events(), goal_pass_rate=0.8)
+    out = tmp_path / "sft.jsonl"
+    summary = build_sft_dataset(root, ["copy_hello"], out, min_goal_pass_rate=0.75)
+    assert summary["n_terminal_actions_removed"] == 1
+    line = _load_runs(out)[0]
+    messages = line["messages"]
+    assistant_idxs = [i for i, m in enumerate(messages) if m["role"] == "assistant"]
+    # The COMPLETE turn itself must be gone from the conversation.
+    kinds = [parse_executor_action(messages[i]["content"]).kind for i in assistant_idxs]
+    assert "COMPLETE" not in kinds
+    # The turn before it (the last CODE action) must still be supervised.
+    supervised, span = _supervised_span(messages, assistant_idxs[-1])
+    assert supervised and span > 0
+
+
+def test_partial_has_no_consecutive_user_turns(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(
+        root,
+        task_id="partial_task",
+        seed=1,
+        success=False,
+        events=_live_attempt_events(task_id="partial_task"),
+        goal_pass_rate=0.8,
+    )
+    _write_run(
+        root,
+        task_id="solved_task",
+        seed=2,
+        success=True,
+        events=_live_attempt_events(task_id="solved_task"),
+    )
+    out = tmp_path / "sft.jsonl"
+    build_sft_dataset(root, ["partial_task", "solved_task"], out, min_goal_pass_rate=0.75)
+
+    for record in _load_runs(out):
+        roles = [message["role"] for message in record["messages"]]
+        assert all(left != right or left != "user" for left, right in zip(roles, roles[1:]))
+
+
+def test_partial_ends_on_assistant_observation_pair(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(
+        root,
+        task_id="partial_task",
+        seed=1,
+        success=False,
+        events=_live_attempt_events(task_id="partial_task"),
+        goal_pass_rate=0.8,
+    )
+    out = tmp_path / "sft.jsonl"
+    build_sft_dataset(root, ["partial_task"], out, min_goal_pass_rate=0.75)
+    messages = _load_runs(out)[0]["messages"]
+
+    assert messages[-1]["role"] == "user"
+    assert messages[-2]["role"] == "assistant"
+    assert parse_executor_action(messages[-2]["content"]).kind != "COMPLETE"
+
+
+def test_terminal_removal_counts_match(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(
+        root,
+        task_id="partial_task",
+        seed=1,
+        success=False,
+        events=_live_attempt_events(task_id="partial_task"),
+        goal_pass_rate=0.8,
+    )
+    out = tmp_path / "sft.jsonl"
+    build_sft_dataset(root, ["partial_task"], out, min_goal_pass_rate=0.75)
+    manifest = json.loads(Path(str(out) + ".manifest.json").read_text(encoding="utf-8"))
+
+    assert manifest["n_trailing_observations_removed"] in {
+        manifest["n_terminal_actions_removed"],
+        manifest["n_terminal_actions_removed"] - 1,
+    }
+
+
+def test_solved_terminal_action_still_supervised(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(root, task_id="copy_hello", seed=1, success=True, events=_live_attempt_events())
+    out = tmp_path / "sft.jsonl"
+    summary = build_sft_dataset(root, ["copy_hello"], out)
+    assert summary["n_terminal_actions_removed"] == 0
+    line = _load_runs(out)[0]
+    assert line["meta"]["source"] == "solved"
+    messages = line["messages"]
+    assistant_idxs = [i for i, m in enumerate(messages) if m["role"] == "assistant"]
+    # Regression guard: the final assistant turn is still a COMPLETE and, on the
+    # real label arrays, its span carries non-masked supervision. This test fails
+    # if anyone strips terminals unconditionally.
+    assert parse_executor_action(messages[assistant_idxs[-1]]["content"]).kind == "COMPLETE"
+    supervised, span = _supervised_span(messages, assistant_idxs[-1])
+    assert supervised and span > 0
+
+
+def test_goal_pass_rate_none_never_included(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(root, task_id="copy_hello", seed=1, success=False, events=_live_attempt_events(), goal_pass_rate=None)
+    out = tmp_path / "sft.jsonl"
+    summary = build_sft_dataset(root, ["copy_hello"], out, min_goal_pass_rate=0.75)
+    assert _load_runs(out) == []
+    reasons = {d["reason"] for d in summary["dropped"]}
+    assert reasons == {DROP_UNSOLVED}
+    assert summary["goal_pass_rate_histogram_unsolved"]["none"] == 1
+
+
+def test_default_behaviour_unchanged(tmp_path, no_heldout):
+    root = tmp_path / "camp"
+    _write_run(root, task_id="solved_task", seed=1, success=True, events=_live_attempt_events())
+    _write_run(root, task_id="failed_task", seed=1, success=False, events=_live_attempt_events(), goal_pass_rate=0.9)
+    _write_run(root, task_id="failed_task2", seed=2, success=False, events=_live_attempt_events(), goal_pass_rate=None)
+    out = tmp_path / "sft.jsonl"
+    summary = build_sft_dataset(root, ["solved_task", "failed_task", "failed_task2"], out)
+    assert set(summary["run_ids"]) == {"camp/planner_alone/1/solved_task"}
+    assert summary["min_goal_pass_rate"] is None
+    assert summary["n_partial"] == 0
+    assert summary["n_solved"] == 1
+    assert summary["dropped_counts"][DROP_UNSOLVED] == 2
+    # Histogram is unconditional on the threshold.
+    hist = summary["goal_pass_rate_histogram_unsolved"]
+    assert hist["0.9"] == 1 and hist["none"] == 1 and sum(hist.values()) == 2

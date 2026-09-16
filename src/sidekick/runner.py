@@ -163,6 +163,11 @@ def make_executor(cfg: dict[str, Any]) -> Any:
             timeout_s=float(exec_cfg.get("timeout_s", 120)),
             chat_template_kwargs=exec_cfg.get("chat_template_kwargs"),
             stop=exec_cfg.get("stop"),
+            max_prompt_tokens=(
+                int(exec_cfg["max_prompt_tokens"])
+                if exec_cfg.get("max_prompt_tokens") is not None
+                else None
+            ),
         )
     return MockExecutor()
 

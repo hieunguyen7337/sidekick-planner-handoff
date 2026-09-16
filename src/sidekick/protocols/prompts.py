@@ -38,6 +38,42 @@ EXECUTOR_SYSTEM_PROMPT: str = (
 _HISTORY_ROLES = {"assistant", "user"}
 
 
+def fit_messages_to_budget(
+    messages: list[dict],
+    *,
+    max_tokens: int,
+    length_fn,
+) -> tuple[list[dict], int, bool]:
+    """Drop whole messages from the middle, oldest first, until under budget.
+
+    Returns ``(selected, n_messages_dropped, representable)``.
+
+    ``messages[0]`` (system) and ``messages[1]`` (task framing) and the LAST
+    message are always kept; only messages between the framing pair and the
+    last message are eligible, removed oldest-first, never split — half a
+    fenced code block is a syntactically broken prompt. When even the anchor
+    set ``[0], [1], last`` exceeds ``max_tokens``, no valid representation
+    exists: returns the unmodified list with ``representable=False`` so the
+    caller decides, rather than a damaged prompt.
+
+    ``length_fn(messages) -> int`` is injected so training can count with a
+    real tokenizer and serving with its own — one policy, two counters, no
+    train/serve drift in WHICH messages survive.
+    """
+    selected = list(messages)
+    n = len(selected)
+    if n == 0:
+        return selected, 0, True
+    anchors = [selected[0], selected[1], selected[-1]] if n >= 3 else list(selected)
+    if length_fn(anchors) > max_tokens:
+        return list(messages), 0, False
+    dropped = 0
+    while len(selected) > 3 and length_fn(selected) > max_tokens:
+        del selected[2]
+        dropped += 1
+    return selected, dropped, True
+
+
 def format_executor_action(action: ExecutorAction) -> str:
     """Canonical text for an executor action, in the form ``parse_executor_action`` accepts.
 

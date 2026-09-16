@@ -10,8 +10,19 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-from sidekick.protocols.prompts import format_executor_action, render_executor_messages
-from sidekick.protocols.schemas import DelegationPacket, Event, ExecutorAction
+from sidekick.protocols.prompts import (
+    EXECUTOR_SYSTEM_PROMPT,
+    format_executor_action,
+    fit_messages_to_budget,
+    render_executor_messages,
+)
+from sidekick.protocols.schemas import (
+    ActionParseError,
+    DelegationPacket,
+    Event,
+    ExecutorAction,
+    parse_executor_action,
+)
 from sidekick.training import assert_no_leakage
 
 HELDOUT_SPLITS = ("dev", "test_normal", "test_challenge")
@@ -20,6 +31,7 @@ _DEFAULT_TOKENIZER_ID = "ibm-granite/granite-4.2-8b"
 
 # Trajectories dropped for these reasons are counted in the manifest.
 DROP_UNSOLVED = "unsolved"
+DROP_BELOW_GOAL_PASS_RATE = "below_goal_pass_rate"
 DROP_MISSING_RESULT = "missing_result"
 DROP_MISSING_EVENTS = "missing_events"
 DROP_NOT_IN_SPLIT = "not_in_split"
@@ -337,12 +349,15 @@ def tokenize_and_mask(
 
     # Keep the framing messages and the terminal message as indivisible anchors.  The
     # only messages eligible for removal are the oldest messages between the framing
-    # pair and the final message.
-    if len(messages) >= 3:
-        anchor_messages = [messages[0], messages[1], messages[-1]]
-    else:
-        anchor_messages = list(messages)
-    if len(_tokenize_messages(anchor_messages, tokenizer)["input_ids"]) > max_length:
+    # pair and the final message.  The selection policy lives in
+    # prompts.fit_messages_to_budget so serving (VLLMExecutor) drops the SAME messages.
+    def _length_fn(ms: list[dict]) -> int:
+        return len(_tokenize_messages(ms, tokenizer)["input_ids"])
+
+    selected, n_messages_dropped, representable = fit_messages_to_budget(
+        messages, max_tokens=max_length, length_fn=_length_fn
+    )
+    if not representable:
         # No valid under-budget representation exists.  Return the unmodified tokenisation
         # so the caller can drop it explicitly instead of receiving a damaged target.
         return {
@@ -352,13 +367,7 @@ def tokenize_and_mask(
             "representable": False,
         }
 
-    selected = list(messages)
-    if len(messages) >= 3:
-        while len(selected) > 3 and len(_tokenize_messages(selected, tokenizer)["input_ids"]) > max_length:
-            del selected[2]
-
-    n_messages_dropped = len(messages) - len(selected)
-    selected_output = _tokenize_messages(selected, tokenizer)
+    selected_output = _tokenize_messages(selected, tokenizer) if n_messages_dropped else full
     return {
         **selected_output,
         "n_messages_dropped": n_messages_dropped,
@@ -410,8 +419,17 @@ def build_sft_dataset(
     *,
     system="planner_alone",
     solved_only=True,
+    min_goal_pass_rate: float | None = None,
 ) -> dict:
-    """Emit one JSONL line per solved trajectory, rendered with ``render_executor_messages``."""
+    """Emit one JSONL line per solved trajectory, rendered with ``render_executor_messages``.
+
+    ``min_goal_pass_rate`` adds partial-credit trajectories on top of the solved
+    ones: an unsolved trajectory is included when its ``goal_pass_rate`` is not
+    None and >= the threshold. A ``None`` goal_pass_rate is never a pass and is
+    never compared with ``>=``. Included partials have their terminal COMPLETE
+    assistant turn removed before tokenisation, so the model is never trained to
+    declare victory on an unfinished task.
+    """
     campaign_root = Path(campaign_root)
     out_path = Path(out_jsonl)
     train_ids = {str(x) for x in split_ids}
@@ -430,6 +448,13 @@ def build_sft_dataset(
     n_messages_dropped_total = 0
     n_unrepresentable = 0
     truncated_run_ids: list[str] = []
+    n_solved = 0
+    n_partial = 0
+    n_terminal_actions_removed = 0
+    n_trailing_observations_removed = 0
+    partial_goal_pass_rates: list[float] = []
+    goal_pass_rate_histogram_unsolved: dict[str, int] = {f"{i / 10:.1f}": 0 for i in range(10)}
+    goal_pass_rate_histogram_unsolved["none"] = 0
 
     def drop(task_id: str, seed: Any, reason: str, extra: str | None = None) -> None:
         dropped_counts[reason] = dropped_counts.get(reason, 0) + 1
@@ -458,9 +483,29 @@ def build_sft_dataset(
                 if result is None:
                     drop(task_id, seed, DROP_BAD_RESULT)
                     continue
-                if solved_only and not result.get("success"):
-                    drop(task_id, seed, DROP_UNSOLVED)
-                    continue
+                success = bool(result.get("success"))
+                goal_pass_rate = result.get("goal_pass_rate")
+                is_partial = False
+                if not success:
+                    # Histogram counts EVERY in-split unsolved trajectory, whether
+                    # or not the threshold includes it, so the next threshold can
+                    # be chosen empirically. Nulls get their own bucket.
+                    if goal_pass_rate is None:
+                        goal_pass_rate_histogram_unsolved["none"] += 1
+                    else:
+                        bin_key = f"{min(int(goal_pass_rate * 10), 9) / 10:.1f}"
+                        goal_pass_rate_histogram_unsolved[bin_key] += 1
+                    if solved_only:
+                        if min_goal_pass_rate is None:
+                            drop(task_id, seed, DROP_UNSOLVED)
+                            continue
+                        if goal_pass_rate is None:
+                            drop(task_id, seed, DROP_UNSOLVED, "goal_pass_rate null")
+                            continue
+                        if not (goal_pass_rate >= min_goal_pass_rate):
+                            drop(task_id, seed, DROP_BELOW_GOAL_PASS_RATE, f"goal_pass_rate={goal_pass_rate}")
+                            continue
+                        is_partial = True
                 if not events_path.is_file():
                     drop(task_id, seed, DROP_MISSING_EVENTS)
                     continue
@@ -469,7 +514,31 @@ def build_sft_dataset(
                 if not instruction:
                     drop(task_id, seed, DROP_NO_INSTRUCTION)
                     continue
-                n_assistant = sum(1 for m in history if m.get("role") == "assistant")
+                if is_partial:
+                    # Unfinished tasks often end in a terminal COMPLETE for a task
+                    # that was NOT completed. Train on that and you teach early
+                    # victory. Remove the final COMPLETE assistant turn (the turn,
+                    # not a mask) for partials ONLY; solved trajectories keep it.
+                    # Match on the parsed action kind, never on rendered text. The
+                    # last history entry may be the user OBS turn that followed the
+                    # terminal action, so scan backwards for the last assistant turn.
+                    for _i in range(len(history) - 1, -1, -1):
+                        if history[_i].get("role") != "assistant":
+                            continue
+                        try:
+                            last_kind = parse_executor_action(str(history[_i].get("content") or "")).kind
+                        except ActionParseError:
+                            last_kind = None
+                        if last_kind == "COMPLETE":
+                            del history[_i]
+                            n_terminal_actions_removed += 1
+                            if _i < len(history) and history[_i].get("role") == "user":
+                                del history[_i]
+                                n_trailing_observations_removed += 1
+                        break
+                    n_assistant = sum(1 for m in history if m.get("role") == "assistant")
+                else:
+                    n_assistant = sum(1 for m in history if m.get("role") == "assistant")
                 if n_assistant == 0:
                     drop(task_id, seed, DROP_NO_ACTIONS)
                     continue
@@ -490,6 +559,8 @@ def build_sft_dataset(
                     "n_turns": n_assistant,
                     "source_campaign": str(result.get("campaign_id") or campaign_root.name),
                     "SIDEKICK_START_COMMIT": commit,
+                    "source": "partial" if is_partial else "solved",
+                    "goal_pass_rate": goal_pass_rate,
                 }
                 tokenized = tokenize_and_mask(messages, tokenizer)
                 if tokenized["truncated"]:
@@ -500,6 +571,12 @@ def build_sft_dataset(
                     n_unrepresentable += 1
                     drop(task_id, seed, DROP_UNREPRESENTABLE)
                     continue
+                if is_partial:
+                    n_partial += 1
+                    if goal_pass_rate is not None:
+                        partial_goal_pass_rates.append(float(goal_pass_rate))
+                else:
+                    n_solved += 1
                 records.append({"messages": messages, "meta": meta})
                 token_lengths.append(_conversation_token_length(messages, tokenizer))
 
@@ -540,6 +617,17 @@ def build_sft_dataset(
         },
         "system": system,
         "solved_only": solved_only,
+        "min_goal_pass_rate": min_goal_pass_rate,
+        "n_solved": n_solved,
+        "n_partial": n_partial,
+        "n_terminal_actions_removed": n_terminal_actions_removed,
+        "n_trailing_observations_removed": n_trailing_observations_removed,
+        "mean_goal_pass_rate_partial": (
+            sum(partial_goal_pass_rates) / len(partial_goal_pass_rates)
+            if partial_goal_pass_rates
+            else None
+        ),
+        "goal_pass_rate_histogram_unsolved": goal_pass_rate_histogram_unsolved,
     }
     manifest_path = Path(str(out_path) + ".manifest.json")
     manifest_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -554,6 +642,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--split", required=True, help="Train ids: AppWorld split name, file, or comma-separated list")
     parser.add_argument("--system", default="planner_alone")
     parser.add_argument("--no-solved-only", action="store_true")
+    parser.add_argument(
+        "--min-goal-pass-rate",
+        type=float,
+        default=None,
+        help="Also include unsolved trajectories whose goal_pass_rate >= this threshold.",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
     split_ids = load_split_ids(args.split)
     build_sft_dataset(
@@ -562,6 +656,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         args.out,
         system=args.system,
         solved_only=not args.no_solved_only,
+        min_goal_pass_rate=args.min_goal_pass_rate,
     )
     return 0
 

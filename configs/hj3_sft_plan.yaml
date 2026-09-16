@@ -27,11 +27,15 @@ executor:
   stop: ["</py>", "</python>", "</tool_call>"]
   chat_template_kwargs:
     enable_thinking: false
-  timeout_s: 120
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
 limits:
   max_steps: 40
   max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
-  per_step_timeout_s: 120
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
   # prompt_only calls the planner once per episode (plan_first, planner_drives=False), so
   # this is nowhere near binding here. It IS binding for planner_alone, where the planner
   # takes every step -- see docs/FOLLOWUPS.md.

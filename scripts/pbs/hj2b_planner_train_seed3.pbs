@@ -1,0 +1,126 @@
+#!/bin/bash
+#PBS -N hj2b-train-s3
+#PBS -q cpu_inter
+#PBS -l select=1:ncpus=8:mem=32gb
+#PBS -l walltime=03:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj2b_planner_train_seed3.out
+
+# HJ-2B teacher-demo collection: planner_alone on AppWorld train, 90 tasks x seed 3 = 90 episodes.
+# CPU only -- planner_drives=True means the executor is never constructed, so no GPU
+# and no vLLM server. Solved trajectories are the SFT(b) teacher data.
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+# The scratch venv carries appworld/vllm/torch but NOT the sidekick package itself
+# (that is installed only in the repo's own .venv). Put the source tree on the path.
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+# Pin the code version NOW, not when the manifest is written hours from now: the tree
+# moves while a campaign runs, and a manifest naming the wrong commit is worse than one
+# naming none.
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+OUT=/scratch/n12194778/sidekick/results
+CID=hj2b_planner_train_20260916
+SMOKE_CID=hj2b_planner_train_20260916_smoke3
+CFG="${REPO}/configs/train_planner_alone.yaml"
+PY="${SIDEKICK_VENV}/bin/python"
+SUM="${REPO}/scripts/setup/campaign_summarize.py"
+cd "${REPO}" || exit 1
+
+echo "[hj2b] host=$(hostname) job=${PBS_JOBID:-none} start=$(date -Iseconds)"
+echo "[hj2b] nproc=$(nproc) mem=$(free -g | awk '/^Mem:/{print $2"gb"}')"
+
+# ---- preflight -------------------------------------------------------------
+if ! command -v codex >/dev/null 2>&1; then
+  echo "[hj2b] FATAL: codex not on PATH inside the job" >&2
+  exit 2
+fi
+echo "[hj2b] codex=$(command -v codex) version=$(timeout 60 codex --version 2>&1 | head -1)"
+if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+  echo "[hj2b] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate" >&2
+  exit 2
+fi
+echo "[hj2b] auth.json present (contents never printed)"
+if [[ ! -d "${APPWORLD_ROOT}" ]]; then
+  echo "[hj2b] FATAL: APPWORLD_ROOT ${APPWORLD_ROOT} does not exist" >&2
+  exit 2
+fi
+mkdir -p "${OUT}" /scratch/n12194778/sidekick/codex_scratch
+
+# ---- smoke gate: 3 tasks, seed 3, in a separate campaign -------------------
+# This is the first evidence that the AppWorld train split loads from APPWORLD_ROOT;
+# if train data is absent, this smoke slice must make that failure obvious.
+echo "[hj2b] ---- purge broken runs from any earlier attempt ----"
+"${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-broken 2>/dev/null | head -2
+
+rm -rf "${OUT:?}/${SMOKE_CID:?}"
+echo "[hj2b] ---- smoke slice (${SMOKE_CID}: 3 tasks, seed 3) ----"
+timeout 1800 "${PY}" -m sidekick.runner \
+  --system planner_alone --split train --tasks 3 --seeds 3 \
+  --env appworld --workers 3 \
+  --config "${CFG}" --out "${OUT}" --campaign-id "${SMOKE_CID}"
+SMOKE_RC=$?
+echo "[hj2b] smoke runner exit=${SMOKE_RC} at $(date -Iseconds)"
+
+echo "[hj2b] ---- smoke gate ----"
+"${PY}" "${SUM}" --out "${OUT}" --campaign-id "${SMOKE_CID}" \
+  --gate --expect-planner --expect-model gpt-5.6-luna --repo "${REPO}"
+GATE_RC=$?
+if [[ "${GATE_RC}" -ne 0 ]]; then
+  echo "[hj2b] ABORT: smoke gate failed, not spending the full campaign" >&2
+  exit 3
+fi
+echo "[hj2b] smoke gate passed; removing smoke campaign before full run"
+rm -rf "${OUT:?}/${SMOKE_CID:?}"
+
+# ---- full campaign: 90 tasks x seed 3 -------------------------------------
+echo "[hj2b] ---- full campaign (90 tasks, seed 3) ----"
+timeout 16200 "${PY}" -m sidekick.runner \
+  --system planner_alone --split train --tasks 90 --seeds 3 \
+  --env appworld --workers 6 \
+  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
+FULL_RC=$?
+echo "[hj2b] full runner exit=${FULL_RC} at $(date -Iseconds)"
+
+# ---- summary + manifest ----------------------------------------------------
+echo "[hj2b] ---- summary + manifest ----"
+"${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" \
+  --config "${CFG}" --repo "${REPO}" \
+  --manifest "${REPO}/campaign/results/${CID}_s123.manifest.json" \
+  --gate --expect-planner --expect-model gpt-5.6-luna
+FINAL_GATE_RC=$?
+
+cp "${OUT}/results/${CID}/runs.jsonl" "${REPO}/campaign/results/${CID}_s123.runs.jsonl"
+
+echo "[hj2b] codex session transcripts under ~/.codex/sessions modified in this window:"
+find "${HOME}/.codex/sessions" -type f -newermt '-6 hours' 2>/dev/null | wc -l
+
+# ---- archive teacher trajectories ------------------------------------------
+echo "[hj2b] ---- archive event logs ----"
+ARCHIVE_RC=0
+if mkdir -p "${HOME}/sidekick_data/${CID}" && \
+   cp -a "${OUT}/${CID}/." "${HOME}/sidekick_data/${CID}/"; then
+  if [[ -e "${OUT}/results/${CID}" ]]; then
+    cp -a "${OUT}/results/${CID}/." "${HOME}/sidekick_data/${CID}/" || ARCHIVE_RC=$?
+  else
+    echo "[hj2b] manifest directory absent; run tree archived"
+  fi
+else
+  ARCHIVE_RC=$?
+  echo "[hj2b] WARNING: archive failed rc=${ARCHIVE_RC}; campaign status preserved" >&2
+fi
+du -sh "${HOME}/sidekick_data/${CID}"
+
+echo "[hj2b] done rc_smoke=${SMOKE_RC} rc_full=${FULL_RC} rc_final_gate=${FINAL_GATE_RC} rc_archive=${ARCHIVE_RC} end=$(date -Iseconds)"
+if [[ "${FULL_RC}" -ne 0 || "${FINAL_GATE_RC}" -ne 0 ]]; then
+  exit 1
+fi
+exit 0

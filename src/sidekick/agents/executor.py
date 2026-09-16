@@ -1,11 +1,15 @@
 """Executor clients: vLLM OpenAI-compatible HTTP and a scripted mock."""
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol
 
+from sidekick.protocols.prompts import fit_messages_to_budget
 from sidekick.protocols.schemas import Usage
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_READ_SCRIPT = '```python\nprint(read("inbox.txt"))\n```'
 DEFAULT_WRITE_SCRIPT = '```python\nwrite("outbox.txt", "hello world")\n```'
@@ -42,6 +46,7 @@ class VLLMExecutor:
         http_client: Any | None = None,
         chat_template_kwargs: Optional[dict] = None,
         stop: Optional[list[str]] = None,
+        max_prompt_tokens: Optional[int] = None,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -51,6 +56,16 @@ class VLLMExecutor:
         self.gpu_fraction = gpu_fraction
         self.timeout_s = timeout_s
         self._http = http_client
+        # Prompt budget: when set, the conversation is fitted to this many prompt
+        # tokens with the SAME policy SFT training uses (fit_messages_to_budget), so
+        # a conversation the model was trained on never 400s at serve time. Measured
+        # 2026-09-15 (HJ-1R arm B): 6/114 episodes crashed with vLLM 400 Bad Request
+        # on max_model_len=32768 because prompt_only prepends the plan packet and
+        # api digest, making its prompts longer than arm A's.
+        self.max_prompt_tokens = max_prompt_tokens
+        # Lazily loaded; never touched when max_prompt_tokens is None.
+        self._tokenizer: Any = None
+        self._tokenizer_loaded = False
         # Passed straight through to vLLM, which hands them to the model's Jinja
         # chat template. Granite 4.2's template defines `enable_thinking`, default
         # True, and a thinking model will spend its whole budget reasoning without
@@ -68,6 +83,14 @@ class VLLMExecutor:
     def complete(self, messages: list[dict], **kw) -> tuple[str, Usage]:
         client = self._ensure_client()
         model = kw.get("lora_name") or self.lora_name or self.model
+        messages = list(messages)
+        n_messages_dropped = 0
+        if self.max_prompt_tokens is not None:
+            messages, n_messages_dropped, _ = fit_messages_to_budget(
+                messages,
+                max_tokens=self.max_prompt_tokens,
+                length_fn=self._count_prompt_tokens,
+            )
         payload = {
             "model": model,
             "messages": messages,
@@ -81,10 +104,28 @@ class VLLMExecutor:
         if stop:
             payload["stop"] = stop
         url = self._chat_url()
-        t0 = time.perf_counter()
-        response = client.post(url, json=payload)
-        latency_s = time.perf_counter() - t0
-        response.raise_for_status()
+        # 400 backstop: the tokenizer's count can disagree with the server's. Drop
+        # the oldest remaining middle message and retry, at most twice, then give up
+        # and raise as before. Never silently shrink below the anchor set.
+        n_400_retries = 0
+        for attempt in range(3):
+            payload["messages"] = messages
+            t0 = time.perf_counter()
+            response = client.post(url, json=payload)
+            latency_s = time.perf_counter() - t0
+            try:
+                response.raise_for_status()
+            except Exception as exc:
+                if (
+                    response.status_code == 400
+                    and len(messages) > 3
+                    and attempt < 2
+                ):
+                    n_400_retries += 1
+                    del messages[2]
+                    continue
+                raise
+            break
         body = response.json()
         text = ""
         choices = body.get("choices") or []
@@ -119,6 +160,9 @@ class VLLMExecutor:
                 "gpu_seconds_formula": "latency_s * gpu_fraction",
                 "base_url": self.base_url,
                 "lora_name": self.lora_name,
+                "max_prompt_tokens": self.max_prompt_tokens,
+                "n_messages_dropped": n_messages_dropped,
+                "n_400_retries": n_400_retries,
             },
         )
         return text, usage
@@ -126,6 +170,40 @@ class VLLMExecutor:
     def close(self) -> None:
         if self._http is not None and hasattr(self._http, "close"):
             self._http.close()
+
+    def _get_tokenizer(self) -> Any:
+        """Lazily load the model tokenizer; never called when max_prompt_tokens is None."""
+        if self._tokenizer_loaded:
+            return self._tokenizer
+        self._tokenizer_loaded = True
+        try:
+            from transformers import AutoTokenizer
+
+            self._tokenizer = AutoTokenizer.from_pretrained(self.model)
+        except Exception as exc:  # never crash an episode over a tokenizer
+            logger.warning(
+                "could not load tokenizer for %s (%s); falling back to a "
+                "conservative characters//3 length heuristic",
+                self.model,
+                exc,
+            )
+            self._tokenizer = None
+        return self._tokenizer
+
+    def _count_prompt_tokens(self, messages: list[dict]) -> int:
+        tokenizer = self._get_tokenizer()
+        if tokenizer is not None:
+            apply = getattr(tokenizer, "apply_chat_template", None)
+            try:
+                if callable(apply):
+                    text = apply(messages, tokenize=False, add_generation_prompt=True)
+                else:
+                    text = "\n".join(str(m.get("content", "")) for m in messages)
+                return len(tokenizer.encode(text))
+            except Exception:
+                pass
+        text = "\n".join(str(m.get("content", "")) for m in messages)
+        return len(text) // 3
 
     def _chat_url(self) -> str:
         base = self.base_url
