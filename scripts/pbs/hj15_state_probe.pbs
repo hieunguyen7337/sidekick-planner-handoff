@@ -244,6 +244,8 @@ if [[ -s "${PROBE_GRANITE}" ]]; then
   else
     if [[ "${granite_probe_status}" == partial\ * ]]; then
       echo "[hj15] resume: ${PROBE_GRANITE} is partial (${granite_probe_status#* }); re-running to finish"
+    elif [[ "${granite_probe_status}" == stale ]]; then
+      echo "[hj15] resume: ${PROBE_GRANITE} was produced by an older probe schema; discarding and re-running from scratch"
     else
       echo "[hj15] resume: ${PROBE_GRANITE} is malformed or unreadable; re-running"
     fi
@@ -283,6 +285,8 @@ if [[ -s "${PROBE_QWEN}" ]]; then
   else
     if [[ "${qwen_probe_status}" == partial\ * ]]; then
       echo "[hj15] resume: ${PROBE_QWEN} is partial (${qwen_probe_status#* }); continuing with Qwen service swap"
+    elif [[ "${qwen_probe_status}" == stale ]]; then
+      echo "[hj15] resume: ${PROBE_QWEN} was produced by an older probe schema; discarding and re-running from scratch"
     else
       echo "[hj15] resume: ${PROBE_QWEN} is malformed or unreadable; continuing with Qwen service swap"
     fi
@@ -377,6 +381,8 @@ if [[ -s "${PROBE_QWEN}" ]]; then
   else
     if [[ "${qwen_probe_status}" == partial\ * ]]; then
       echo "[hj15] resume: ${PROBE_QWEN} is partial (${qwen_probe_status#* }); re-running to finish"
+    elif [[ "${qwen_probe_status}" == stale ]]; then
+      echo "[hj15] resume: ${PROBE_QWEN} was produced by an older probe schema; discarding and re-running from scratch"
     else
       echo "[hj15] resume: ${PROBE_QWEN} is malformed or unreadable; re-running"
     fi
