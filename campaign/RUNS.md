@@ -1132,3 +1132,123 @@ drops the 3 broken episode directories, and the runner's resume skips the 177 co
 ones — so only the failures re-run, against the fixed code (the runner imports from
 `${REPO}/src` at run time, so the committed fix applies without a rebuild). The dataset
 build for J5 must wait for this job, not for 25401962.
+
+### Recovery job 25402025 — complete, and it did NOT validate the fix
+
+`Exit_status: 0`, walltime **00:06:04**, one H100 on `gpu0n007`. `--purge-broken` dropped
+the 3 broken directories (verified: results went 180 → 177 with 0 crashed), resume skipped
+the 177 survivors, and only the 3 failures re-ran. All three completed with real scores and
+`error_type: null`:
+
+| episode | goal-pass-rate | outcome |
+|---|---|---|
+| `fixed_k/1/2a163ab_2` | 0.667 | not solved |
+| `fixed_k/2/afc0fce_1` | 0.444 | not solved |
+| `fixed_k/2/22cc237_1` | 0.750 | not solved |
+
+**Campaign totals, before → after recovery:**
+
+| | 25401962 | 25402025 | delta |
+|---|---|---|---|
+| episodes | 180 (3 void) | **180** | 3 real |
+| solved / TGC | 104 / 0.577 | 104 / **0.577** | unchanged |
+| mean goal-pass-rate | 0.829 | **0.839** | +0.010 |
+| interventions | 488 | **495** | +7 |
+| hosted planner calls | 669 | **675** | +6 |
+| errors | 12 (3 crash, 9 limit) | **9 (all limit)** | **0 crashes** |
+
+The +0.010 on mean goal-pass-rate is the censoring correction made visible: the crashed
+episodes had been entering that mean as `null`, which the tally coerced to 0.
+
+🔺 **Correction to what was written above, before this job ran.** The entry predicted that
+recovery would capture "precisely the states where the right correction is *you dumped an
+unpaginated result set, paginate instead*". **It did not, and the claim is withdrawn.**
+
+Every step of all three re-runs records `n_chars_elided: 0` and `representable: true`
+(16, 25 and 23 steps respectively) — so the new elision path **never fired**. The largest
+single event line in the three re-runs is 22,647 characters, against the 604,915-character
+observation that caused the original crash. At `temperature: 0.7` the executor simply took
+different actions the second time and never issued the call that returned the huge result
+set.
+
+Two consequences, and they point in opposite directions:
+
+- **The sample bias is genuinely fixed.** All 180 episodes now carry a real
+  `goal_pass_rate`, nothing is silently absent from a denominator, and J5's dataset is
+  built from a complete campaign. That was the point of the recovery and it succeeded.
+- **This run is not evidence that defect #19 is fixed.** The fix's only validation remains
+  the unit tests (6 new, including train/serve elision parity; 202 passed, 1 skipped).
+  The instrumentation is confirmed live — `n_chars_elided` and `representable` are being
+  written into `usage.raw` on every step — but it has never yet been observed firing on
+  real oversized input. The first production exercise of the elision path is still ahead,
+  and whoever sees a non-zero `n_chars_elided` should check the rendered prompt by hand.
+
+Do not describe the elision path as "proven in production" on the strength of this job.
+
+### What a J4 intervention actually is — and why it changes J5
+
+Characterised directly from the recovered campaign, then verified independently on three
+episodes chosen at random from the largest event logs.
+
+**Structure.** Every episode is `run_start`, initial `observation`, `plan`, then
+`action`/`observation` pairs. Interventions land at event positions **12, 23, 34, 45, 56,
+67, 78, 89** — exactly **11 apart** (5 actions + 5 observations + 1 intervention). The
+same layout appears in `fixed_k/1/229360a_3`, `fixed_k/2/6104387_3` and
+`fixed_k/2/b0a8eae_1`.
+
+**The reviewer speaks before the executor acts, and never rejects an action.** The order is
+`… action, observation, INTERVENTION, action …`. The correction is injected at the top of
+step 5, 10, 15 …; the executor then acts with it in context.
+
+**Campaign-wide, verified by direct count:**
+
+| | value |
+|---|---|
+| interventions with `forced: true` | **495 / 495 (100%)** |
+| interventions with `forced: false` or absent | 0 |
+| `ask` events | **0** |
+| interventions per episode | min 0, median 2, max 8 (the ceiling); 2 episodes have none |
+
+Intervention payload keys are `correction` (string), `forced` (bool), `n_interventions`
+(int). **The executor's own prior action is not in the payload** — it is recoverable only
+as the separate `action` event before it.
+
+**The corrections are imperative prose, not executable code.** Verbatim, from three
+episodes: *"Log in to Spotify first and pass the returned access token to every
+`show_artist_following` and `follow_artist` call; paginate all `search_artists(...)`
+results, deduplicate by `artist_id` …"*; *"Paginate all library/liked/downloaded results,
+compare IDs, remove only non-qualifying library items …"*; *"Count a coworker as paid only
+when Venmo shows a received transaction matching their recorded share …"*. So the training
+*target* must be the following `action` event; the correction text belongs in the context
+as the `INTERVENTION:` user turn, which `sft_data.py:167` already renders.
+
+#### 🔺 Two parts of the written J5 spec do not survive this
+
+`PLAN.md` specifies SFT(c) as "post-correction actions as targets (**overridden action
+masked**) and `ASK_PLANNER` as the target **where the review overrode the executor**".
+
+1. **No action is ever overridden**, so there is nothing to mask on that basis. The
+   reviewer speaks before the executor proposes anything. The instruction is a no-op
+   against this data.
+2. **"Where the review overrode the executor" is not identifiable.** All 495 interventions
+   are `forced: true` on a fixed timer; not one was triggered by the executor asking (0
+   asks) or by a reviewer judging an action wrong. Selecting ASK targets at intervention
+   points would train the model to **ask every 5 steps** — a metronome. That is precisely
+   what `fixed_k` already does, and the opposite of the need-based escalation the sidekick
+   exists to learn. It would also corrupt H2: the comparison would measure "does asking on
+   a timer help", not "does escalation help".
+
+**The signal the plan needs is J6's, not J4's.** J6 branches forward from each intervention
+point *without* the planner and labels the intervention needed vs needless. That label is
+exactly what distinguishes a real escalation point from step 5.
+
+**Recommended re-ordering, pending a decision:**
+
+- **`sft_b_plus` is buildable today** from J3's teacher conversations plus J4's
+  post-intervention actions, with **no ASK targets and no oracle labels required**. It is
+  both the H2 control and a useful adapter on its own.
+- **`sft_c`'s ASK channel should wait for J6's labels**, so ASK is trained on points where
+  proceeding unaided actually failed.
+
+This costs nothing in wall-clock — J6 was already on the critical path — and it stops H2
+from being decided by a timer.
