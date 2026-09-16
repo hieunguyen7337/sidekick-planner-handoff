@@ -331,3 +331,53 @@ path, so this costs no wall-clock.
 🔺 **Do not build ASK targets from `forced` interventions** without resolving this. The
 resulting adapter would look like it had learned to escalate while having learned to count
 to five, and nothing in the dev metrics would distinguish the two.
+
+## OPEN 2026-09-17 — seven configs define an executor but no prompt budget
+
+Found by the new `verify_configs.py` placement/presence check the moment it was written,
+and verified independently by grep: every one of these defines an `executor:` block and
+**none** defines `executor.max_prompt_tokens`.
+
+| config | used by |
+|---|---|
+| `pilot_exec_8b.yaml` | HJ-1 `executor_alone` |
+| `pilot_exec_3b.yaml` | HJ-1 3B arm |
+| `pilot_prompt_only.yaml` | HJ-1 `prompt_only` |
+| `pilot_fixed_k.yaml` | HJ-1 `fixed_k` |
+| `pilot_planner_alone.yaml` | HJ-1 `planner_alone` |
+| `hj1r_exec8b.yaml` | HJ-1R re-run |
+| `train_planner_alone.yaml` | **J2 teacher demos** |
+
+Only `hj3_sft_b_exec.yaml` and `hj4_correction.yaml` carry a budget, because it was added
+to them by hand this week after defect #19.
+
+`runner.py:166` reads the budget from `executor.max_prompt_tokens`; absent, the executor
+applies **no budget at all** and an oversized prompt goes straight to vLLM. So every arm in
+the table ran with the same exposure that crashed three J4 episodes. They survived on the
+400 backstop, which deletes middle messages and retries twice — and which structurally
+cannot shrink an oversized *last* message.
+
+🔺 **This is not a cleanup.** Five of the seven produced HJ-1's gated results and one
+produced J2's training data. Adding a budget is a behaviour change: today an over-budget
+prompt takes the backstop path (delete `messages[2]`, retry) and sometimes recovers with a
+different trajectory; with a budget set it would be elided proactively instead. Both paths
+engage *only* on over-budget prompts, so no episode that stayed within budget can change —
+but the ones that did not stay within budget could.
+
+**Decision needed before J10.** Options as I see them:
+
+1. **Add `executor.max_prompt_tokens: 30720` to all seven**, record it as a config change
+   in RUNS.md, and treat any future re-run of those arms as a new prefix. Safest for J10,
+   which is run-once and must not lose episodes to 400s.
+2. **Add it only to the configs J10 will actually use**, leaving the historical pilot
+   configs frozen exactly as they ran. Keeps reproducibility of gated results intact.
+3. Leave all seven and rely on the backstop. **Not recommended** — J4 is the existence
+   proof that the backstop does not always work.
+
+My recommendation is **(2)**: freeze the pilot configs, and require a budget on every
+config J10 or later uses. `verify_configs.py` now makes the gap impossible to reintroduce
+silently, which was the point.
+
+Note the check currently makes `verify_configs.py` exit non-zero on this repo. Nothing
+consumes it in a PBS gate today (grep over `scripts/pbs/` finds no invocation), so nothing
+breaks — but that also means it has never been wired into a job that could enforce it.
