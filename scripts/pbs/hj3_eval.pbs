@@ -332,8 +332,45 @@ run_probe_phase "${PROBE_SFT_B}" --lora-name "${ALIAS_SFT_B}"
 probe_rc=$?
 echo "[hj3] phase probe_sft_b rc=${probe_rc}"
 
+# ---- archive campaigns and probes before releasing the GPU --------------------
+# Merge-safe copies keep a pre-existing archive destination flat. Archive errors
+# are reported but must not turn a successful evaluation into a failed job.
+echo "[hj3] ---- archive J3 artefacts ----"
+archive_rc=0
+archive_campaign () {
+  local cid="$1"
+  if mkdir -p "${HOME}/sidekick_data/${cid}" && \
+     cp -a "${OUT}/${cid}/." "${HOME}/sidekick_data/${cid}/"; then
+    echo "[hj3] archive ok ${HOME}/sidekick_data/${cid}"
+  else
+    local rc=$?
+    if [[ "${archive_rc}" -eq 0 ]]; then archive_rc="${rc}"; fi
+    echo "[hj3] WARNING: archive campaign ${cid} failed rc=${rc}; campaign status preserved" >&2
+  fi
+}
+archive_campaign "${CID_EXEC}"
+archive_campaign "${CID_PLAN}"
+
+archive_file () {
+  local src="$1"
+  if cp -a "${src}" "${HOME}/sidekick_data/"; then
+    echo "[hj3] archive ok ${src}"
+  else
+    local rc=$?
+    if [[ "${archive_rc}" -eq 0 ]]; then archive_rc="${rc}"; fi
+    echo "[hj3] WARNING: archive file ${src} failed rc=${rc}; campaign status preserved" >&2
+  fi
+}
+archive_file "${PROBE_GRANITE8B_SERVING}"
+archive_file "${PROBE_SFT_B}"
+if [[ -e "${OUT}/hj3_gate.json" ]]; then
+  archive_file "${OUT}/hj3_gate.json"
+else
+  echo "[hj3] archive optional gate absent; skipping ${OUT}/hj3_gate.json"
+fi
+
 kill_vllm
-echo "[hj3] done=$(date -Iseconds) arm_a_rc=${arm_a_rc} arm_b_rc=${arm_b_rc} probe_base_rc=${probe_base_rc} probe_rc=${probe_rc}"
+echo "[hj3] done=$(date -Iseconds) arm_a_rc=${arm_a_rc} arm_b_rc=${arm_b_rc} probe_base_rc=${probe_base_rc} probe_rc=${probe_rc} archive_rc=${archive_rc}"
 if [[ "${arm_a_rc}" -ne 0 ]]; then
   exit "${arm_a_rc}"
 fi
