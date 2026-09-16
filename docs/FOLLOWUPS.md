@@ -252,16 +252,25 @@ shared helper changing under both. `n_messages_dropped` is surfaced per request 
 time is counted rather than silent, which was the other half of the ask.
 
 ⚠ **It is config-gated, and that is the live hazard.** `executor.py:88` applies the policy
-only `if self.max_prompt_tokens is not None`. A config that omits `limits.max_prompt_tokens`
+only `if self.max_prompt_tokens is not None`. A config that omits `executor.max_prompt_tokens`
 gets the *old* unprotected behaviour with no warning — the 400-crash-then-purge censoring
 described above returns in full, for that arm only. Discovered 2026-09-17:
 `configs/hj3_sft_b_exec.yaml` omitted the key entirely while `configs/hj3_sft_plan.yaml`
 carried it, so the J3 `executor_alone` arm would have been censored while `sft_plan` was
 protected — an asymmetry between two arms of the same comparison.
 
-**Any new executor config must set `limits.max_prompt_tokens`**, and it must equal
+🔺 **The key lives under `executor:`, not `limits:`** — `runner.py:166` reads
+`exec_cfg["max_prompt_tokens"]`, so a well-meaning `limits.max_prompt_tokens` is a **silent
+no-op** that looks like protection and provides none. That mistake was made and caught on
+2026-09-17: the U-S brief specified `limits.`, and the worker implemented it under `executor:`
+anyway, citing `runner.py:166-169`, and recorded the objection rather than following the brief
+into a no-op.
+
+**Any new executor config must set `executor.max_prompt_tokens`**, and it must equal
 `max_model_len` minus `executor.max_tokens` (32768 − 2048 = 30720 today). Changing
-`executor.max_tokens` without changing this is a silent overflow.
+`executor.max_tokens` without changing this is a silent overflow. `verify_configs.py` should
+grow a check that any config defining an executor also defines this key, since the failure
+mode of omitting it is invisible at runtime.
 
 ## OPEN 2026-09-17 — the probe's `hash_match` metric is broken (reports 0 unconditionally)
 

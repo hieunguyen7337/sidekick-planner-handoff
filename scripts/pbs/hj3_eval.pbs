@@ -54,7 +54,7 @@ VLOG="${LOGDIR}/hj3_eval_vllm.log"
 
 # ---- LoRA aliases: MUST equal executor.lora_name in the eval config ----------
 ALIAS_SFT_B="${ALIAS_SFT_B:-sft_b}"
-ADAPTER_SFT_B="${ADAPTER_SFT_B:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_granite8b}"
+ADAPTER_SFT_B="${ADAPTER_SFT_B:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_s123_granite8b}"
 ALIAS_SFT_C="${ALIAS_SFT_C:-sft_c}"
 ADAPTER_SFT_C="${ADAPTER_SFT_C:-}"
 ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
@@ -65,15 +65,28 @@ ADAPTER_SIDEKICK="${ADAPTER_SIDEKICK:-}"
 cd "${REPO}" || exit 1
 mkdir -p "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
 
-CFG_SFT_B="${CFG_SFT_B:-${REPO}/configs/eval_sft_b.yaml}"
+CFG_EXEC="${CFG_EXEC:-${REPO}/configs/hj3_sft_b_exec.yaml}"
+CFG_PLAN="${CFG_PLAN:-${REPO}/configs/hj3_sft_plan.yaml}"
+CID_EXEC="${CID_EXEC:-hj3_sft_b_exec_20260917}"
+CID_PLAN="${CID_PLAN:-hj3_sft_plan_20260917}"
+PACKET_SOURCE=/scratch/n12194778/sidekick/results/hj1b_planner_20260915
+PROBE_SFT_B=/scratch/n12194778/sidekick/results/probe_sft_b.json
 # Campaigns are another unit's configs. Do not hold an H100 (or require adapters)
 # until those files exist.
-if [[ ! -f "${CFG_SFT_B}" ]]; then
-  echo "[hj3] eval config absent: ${CFG_SFT_B}"
+cfg_missing=0
+if [[ ! -f "${CFG_EXEC}" ]]; then
+  echo "[hj3] eval config absent: ${CFG_EXEC}"
+  cfg_missing=1
+fi
+if [[ ! -f "${CFG_PLAN}" ]]; then
+  echo "[hj3] eval config absent: ${CFG_PLAN}"
+  cfg_missing=1
+fi
+if [[ "${cfg_missing}" -ne 0 ]]; then
   echo "[hj3] not starting vLLM. Static LoRA line that will be used:"
   echo "[hj3] --enable-lora --max-loras 4 --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B}=${ADAPTER_SFT_B}"
   echo "[hj3] alias source: ALIAS_* job variables, which must equal executor.lora_name"
-  exit 0
+  exit 2
 fi
 
 LORA_MODULES=()
@@ -113,6 +126,74 @@ kill_vllm () {
   sleep 5
   echo "[hj3] GPU after shutdown:"
   nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+}
+
+probe_report_status () {
+  PYTHONPATH="${REPO}/scripts/setup:${PYTHONPATH:-}" \
+    "${SIDEKICK_VENV}/bin/python" -c 'import json,sys; import state_probe; r=json.load(open(sys.argv[1])); assert isinstance(r,dict) and isinstance(r["budget_exhausted"],bool); print("stale" if r.get("schema_version") != state_probe.PROBE_SCHEMA_VERSION else (("complete" if r["budget_exhausted"] is False else "partial") + " " + str(r["n_completed"]) + "/" + str(r["n_planned"])))' "$1" 2>/dev/null
+}
+
+# Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
+# executor_alone must not pass --expect-planner (planner is never called; the
+# flag would fail a healthy arm). sft_plan keeps --expect-planner.
+run_arm () {
+  local system="$1"
+  local cfg="$2"
+  local cid="$3"
+  local scid="${cid}_smoke"
+  local smoke_rc=0
+  local gate_rc=0
+  local camp_rc=0
+  local sum_rc=0
+  local gate_cmd=(--gate)
+  if [[ "${system}" != "executor_alone" ]]; then
+    gate_cmd+=(--expect-planner --expect-model gpt-5.6-luna)
+  fi
+
+  echo "[hj3] ---- arm ${cid} system=${system} ----"
+  echo "[hj3] ---- purge broken runs from earlier attempts ----"
+  timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -2
+
+  rm -rf "${OUT:?}/${scid:?}"
+  echo "[hj3] ---- smoke gate (${scid}) ----"
+  timeout 1800 "${PY}" -m sidekick.runner \
+    --system "${system}" --split dev --tasks 3 --seeds 1 \
+    --env appworld --workers 3 \
+    --config "${cfg}" --campaign-id "${scid}" --out "${OUT}"
+  smoke_rc=$?
+  if [[ "${smoke_rc}" -ne 0 ]]; then
+    echo "[hj3] FATAL: smoke runner exited ${smoke_rc} (${cid})"
+    return "${smoke_rc}"
+  fi
+  timeout 180 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${scid}" \
+    --config "${cfg}" --repo "${REPO}" \
+    "${gate_cmd[@]}"
+  gate_rc=$?
+  if [[ "${gate_rc}" -ne 0 ]]; then
+    echo "[hj3] FATAL: smoke gate failed (rc=${gate_rc}) (${cid})"
+    return "${gate_rc}"
+  fi
+  rm -rf "${OUT:?}/${scid:?}"
+
+  echo "[hj3] ---- full campaign (${cid}) ----"
+  timeout 10800 "${PY}" -m sidekick.runner \
+    --system "${system}" --split dev --tasks 57 --seeds 1,2 \
+    --env appworld --workers 6 \
+    --config "${cfg}" --out "${OUT}" --campaign-id "${cid}"
+  camp_rc=$?
+
+  echo "[hj3] ---- summary + manifest (${cid}) ----"
+  timeout 300 "${PY}" "${SUM}" \
+    --out "${OUT}" --campaign-id "${cid}" \
+    --config "${cfg}" \
+    --manifest "${OUT}/results/${cid}/manifest.json" \
+    "${gate_cmd[@]}" --repo "${REPO}"
+  sum_rc=$?
+  echo "[hj3] ${cid} manifest/gate rc=${sum_rc} campaign_rc=${camp_rc}"
+  if [[ "${camp_rc}" -ne 0 ]]; then
+    return "${camp_rc}"
+  fi
+  return "${sum_rc}"
 }
 
 # ---- preflight: the planner must be reachable BEFORE a GPU is held ------------
@@ -159,50 +240,20 @@ if [[ "${healthy}" -ne 1 ]]; then
   echo "[hj3] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
 fi
 
-# ---- smoke gate, in its own campaign, wiped every time ------------------------
+# ---- two dev arms against the one vLLM server ---------------------------------
 # A gate that can pass or fail on cached results is not a gate. Separate _smoke
 # campaign id, purge, then full run + manifest. sft_plan may ASK the planner.
-CID="${CID:-hj3_sft_b_dev_20260916}"
-SCID="${CID}_smoke"
-CFG="${CFG_SFT_B}"
+arm_a_rc=125
+arm_b_rc=125
+probe_rc=125
 
-echo "[hj3] ---- purge broken runs from earlier attempts ----"
-timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-broken 2>/dev/null | head -2
+run_arm executor_alone "${CFG_EXEC}" "${CID_EXEC}"
+arm_a_rc=$?
+echo "[hj3] arm A (${CID_EXEC}) rc=${arm_a_rc}"
 
-rm -rf "${OUT:?}/${SCID:?}"
-echo "[hj3] ---- smoke gate (${SCID}) ----"
-timeout 1800 "${PY}" -m sidekick.runner \
-  --system sft_plan --split dev --tasks 3 --seeds 1 \
-  --env appworld --workers 3 \
-  --config "${CFG}" --campaign-id "${SCID}" --out "${OUT}"
-smoke_rc=$?
-if [[ "${smoke_rc}" -ne 0 ]]; then
-  echo "[hj3] FATAL: smoke runner exited ${smoke_rc}"; kill_vllm; exit 1
-fi
-timeout 180 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${SCID}" \
-  --config "${CFG}" --repo "${REPO}" \
-  --gate --expect-planner --expect-model gpt-5.6-luna
-gate_rc=$?
-if [[ "${gate_rc}" -ne 0 ]]; then
-  echo "[hj3] FATAL: smoke gate failed (rc=${gate_rc})"; kill_vllm; exit 1
-fi
-rm -rf "${OUT:?}/${SCID:?}"
-
-echo "[hj3] ---- full campaign ----"
-timeout 10800 "${PY}" -m sidekick.runner \
-  --system sft_plan --split dev --tasks 57 --seeds 1,2 \
-  --env appworld --workers 6 \
-  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
-camp_rc=$?
-
-echo "[hj3] ---- summary + manifest ----"
-timeout 300 "${PY}" "${SUM}" \
-  --out "${OUT}" --campaign-id "${CID}" \
-  --config "${CFG}" \
-  --manifest "${OUT}/results/${CID}/manifest.json" \
-  --gate --expect-planner --expect-model gpt-5.6-luna --repo "${REPO}"
-sum_rc=$?
-echo "[hj3] manifest/gate rc=${sum_rc} campaign_rc=${camp_rc}"
+run_arm sft_plan "${CFG_PLAN}" "${CID_PLAN}"
+arm_b_rc=$?
+echo "[hj3] arm B (${CID_PLAN}) rc=${arm_b_rc}"
 
 # ==============================================================================
 # ADDITIONAL ARMS — uncomment once those eval configs exist. Same smoke-then-full
@@ -225,6 +276,50 @@ echo "[hj3] manifest/gate rc=${sum_rc} campaign_rc=${camp_rc}"
 #   --gate --expect-planner --expect-model gpt-5.6-luna --repo "${REPO}"
 # ==============================================================================
 
+# ---- post-SFT probe (J3 gate vs J1 pre-SFT baseline). Sampling args must
+# match hj15_state_probe.pbs:269-273 or the before/after comparison is void.
+echo "[hj3] ---- post-SFT probe ----"
+if [[ -s "${PROBE_SFT_B}" ]]; then
+  sft_probe_status="$(probe_report_status "${PROBE_SFT_B}")" || sft_probe_status=""
+  if [[ "${sft_probe_status}" == complete\ * ]]; then
+    probe_rc=0
+    echo "[hj3] resume: ${PROBE_SFT_B} is complete (${sft_probe_status#* }); probe skipped"
+  else
+    if [[ "${sft_probe_status}" == partial\ * ]]; then
+      echo "[hj3] resume: ${PROBE_SFT_B} is partial (${sft_probe_status#* }); re-running to finish"
+    elif [[ "${sft_probe_status}" == stale ]]; then
+      echo "[hj3] resume: ${PROBE_SFT_B} was produced by an older probe schema; discarding and re-running from scratch"
+    else
+      echo "[hj3] resume: ${PROBE_SFT_B} is malformed or unreadable; re-running"
+    fi
+    timeout 7800 "${PY}" "${REPO}/scripts/setup/state_probe.py" \
+      --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+      --model ibm-granite/granite-4.2-8b --lora-name "${ALIAS_SFT_B}" \
+      --base-url http://127.0.0.1:8000 \
+      --max-steps-per-run 40 --max-runs 114 --max-points 300 \
+      --time-budget-s 7200 --seed 0 \
+      --out /scratch/n12194778/sidekick/results/probe_sft_b.json
+    probe_rc=$?
+  fi
+else
+  echo "[hj3] resume: ${PROBE_SFT_B} is missing or empty; running probe"
+  timeout 7800 "${PY}" "${REPO}/scripts/setup/state_probe.py" \
+    --campaign-root "${PACKET_SOURCE}" --system planner_alone \
+    --model ibm-granite/granite-4.2-8b --lora-name "${ALIAS_SFT_B}" \
+    --base-url http://127.0.0.1:8000 \
+    --max-steps-per-run 40 --max-runs 114 --max-points 300 \
+    --time-budget-s 7200 --seed 0 \
+    --out /scratch/n12194778/sidekick/results/probe_sft_b.json
+  probe_rc=$?
+fi
+echo "[hj3] phase probe_sft_b rc=${probe_rc}"
+
 kill_vllm
-echo "[hj3] done=$(date -Iseconds) campaign_rc=${camp_rc}"
-exit "${camp_rc}"
+echo "[hj3] done=$(date -Iseconds) arm_a_rc=${arm_a_rc} arm_b_rc=${arm_b_rc} probe_rc=${probe_rc}"
+if [[ "${arm_a_rc}" -ne 0 ]]; then
+  exit "${arm_a_rc}"
+fi
+if [[ "${arm_b_rc}" -ne 0 ]]; then
+  exit "${arm_b_rc}"
+fi
+exit "${probe_rc}"
