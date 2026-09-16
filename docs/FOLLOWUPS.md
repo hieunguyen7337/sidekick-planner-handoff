@@ -238,3 +238,52 @@ is unaffected only because its prompts are shorter.
 shared helper from both `sft_data` and `render_executor_messages` so they cannot diverge again,
 and surface a per-episode `n_messages_dropped` so truncation at serve time is counted rather
 than silent. Do this before J3, since `sft_plan` is a cached-plan arm.
+
+---
+
+## RESOLVED 2026-09-17 — serve-path truncation asymmetry (§7.4 above)
+
+The fix landed before J3, as that entry required. `fit_messages_to_budget` now lives in
+`src/sidekick/protocols/prompts.py:41` and is the single selection policy called by **both**
+sides: `src/sidekick/agents/executor.py:89` at serve time and
+`src/sidekick/training/sft_data.py:357` at build time. They cannot diverge without the
+shared helper changing under both. `n_messages_dropped` is surfaced per request in
+`usage.raw` (`executor.py:164`) alongside `n_400_retries` (`:165`), so truncation at serve
+time is counted rather than silent, which was the other half of the ask.
+
+⚠ **It is config-gated, and that is the live hazard.** `executor.py:88` applies the policy
+only `if self.max_prompt_tokens is not None`. A config that omits `limits.max_prompt_tokens`
+gets the *old* unprotected behaviour with no warning — the 400-crash-then-purge censoring
+described above returns in full, for that arm only. Discovered 2026-09-17:
+`configs/hj3_sft_b_exec.yaml` omitted the key entirely while `configs/hj3_sft_plan.yaml`
+carried it, so the J3 `executor_alone` arm would have been censored while `sft_plan` was
+protected — an asymmetry between two arms of the same comparison.
+
+**Any new executor config must set `limits.max_prompt_tokens`**, and it must equal
+`max_model_len` minus `executor.max_tokens` (32768 − 2048 = 30720 today). Changing
+`executor.max_tokens` without changing this is a silent overflow.
+
+## OPEN 2026-09-17 — the probe's `hash_match` metric is broken (reports 0 unconditionally)
+
+`probe_granite8b.json` (job `25401677`, 300 points) reports `hash_match: 0` and
+`hash_match_rate: 0.0` in **every** bucket, over 262 points where the metric is defined.
+
+**It is not a true zero.** 18 of those points have `model_code` byte-identical to
+`gold_code`. Identical code executed against an identically replayed prefix must produce an
+identical `env_state_hash`, so those 18 must match and do not. The defect is in the metric,
+not the model.
+
+**Impact: none on any decision so far, which is why it was filed rather than chased.** It is
+the *strict secondary* from `PLAN.md`; the HJ-1.5 decision rule (RUNS.md:353) turns on
+primary agreement, and the J3 gate compares primary agreement before and after SFT.
+`state_equivalent`, the secondary that does carry weight, is healthy (0.676 overall).
+
+**Do not quote a `hash_match` number in any write-up until this is diagnosed.** A uniform
+zero on a metric nobody has validated is the exact shape of the defects catalogued in
+`campaign/RUNS.md`; reporting it as a finding would say something false about the executor.
+
+**Where to start**: `snapshot_hash` hashes `environment_io` *including the input*
+(`appworld_env.py:134-146`), so the probe world's io log and the gold run's io log must be
+compared directly on one of the 18 identical-code points before theorising. Likely
+candidates are an off-by-one in which step's hash is compared, or the probe world carrying
+an extra io record (the replay itself, or the preflight) that the gold run does not have.

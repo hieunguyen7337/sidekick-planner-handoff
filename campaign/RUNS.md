@@ -630,3 +630,78 @@ Both attempt-3 artefacts and the attempt-3 Qwen partial are preserved under
 emptied before resubmission.
 
 **Granite vs Qwen3-8B: still undecided, now after four attempts.**
+
+### HJ-1.5 attempt 5 — the probe worked, and Granite stays (2026-09-17)
+
+Job `25401677`, commit `176fcb1`. **`probe_granite8b.json`: 300/300 points,
+`schema_version: 2`, `budget_exhausted: false`, 78 trajectories, `lora_name: null`
+(untrained base — this is the pre-SFT baseline).** Output path verified empty before
+submission, so nothing was resumed.
+
+**Primary agreement: 56 / 250 scorable = 0.224.**
+
+| bucket | n | scorable | agreement | rate | parse_error | state-equiv |
+|---|---|---|---|---|---|---|
+| k 1–5 | 100 | 90 | 19 | 0.211 | 20 | 0.720 |
+| k 6–10 | 100 | 80 | 10 | 0.125 | 34 | 0.573 |
+| k 11+ | 100 | 80 | 27 | 0.338 | 23 | 0.725 |
+| **overall** | **300** | **250** | **56** | **0.224** | **77** | **0.676** |
+| value-forwarding subset | 204 | 185 | 41 | 0.222 | 56 | 0.670 |
+
+`n_scorable` excludes 12 gold actions calling no API (the agreement-vacuity fix from
+`3a2cf46`) and 28 gold `COMPLETE` actions, which are non-code and therefore unscorable on
+an API-set metric.
+
+**Verdict against the pre-registered table at RUNS.md:353 — row 3, "between".**
+0.224 is above the 0.15 switch threshold and below the 0.40 clean-pass threshold, and it
+does **not** degrade with depth. Consequence, as pre-registered: *proceed on Granite and
+add a third seed to HJ-2B*. That seed is already collected (job `25401588`, 2026-09-17),
+so the remedy the rule prescribes was already in hand when the rule fired.
+
+🔺 **The switch branch was arithmetically closed before the run finished.** Row 2 requires
+< 0.15 on Granite. At 266/300 points there were already 52 agreements against an expected
+~250 scorable, so the final rate could not fall below 0.208 even had every remaining point
+missed. The Qwen3-8B probe still runs — for the record and for row 4 — but it cannot
+change the executor choice.
+
+**Agreement does not collapse with depth; it rises.** That was the stated condition that
+would have flipped the recommendation to Qwen, and it did not happen. Removing points
+where the model emitted nothing parseable:
+
+| bucket | parsed points | agreement | rate |
+|---|---|---|---|
+| k 1–5 | 58 | 14 | 0.241 |
+| k 6–10 | 53 | 11 | 0.207 |
+| k 11+ | 74 | 31 | **0.418** |
+| **overall** | **185** | **56** | **0.302** |
+
+The raw dip at k 6–10 is a **format** dip, not a capability dip: that bucket carries 34 of
+the 77 parse errors. Corrected for it, agreement rises monotonically with depth — Granite
+is most able to predict the teacher exactly where the teacher's remaining moves are most
+constrained.
+
+**77 of 300 points (25.7%) produced no parseable action.** All 77 have `model_code: null`.
+The raw text shows the shape: the model solves the step and then narrates its own
+verification instead of emitting the canonical action — e.g. *"We have a result:
+COMPLETE: 79. However, we need to ensure that the year is 'this year'… we should
+double-check that the pagination worked correctly"*. This is the failure class SFT on
+assistant-masked teacher turns is the direct instrument for, and it is a quarter of the
+gap. Note the honest framing: 0.224 is the pre-registered number and a parse failure *is*
+a failure to predict the teacher, so 0.224 stays the headline; 0.302 is the decomposition,
+not a competing metric.
+
+⚠ **`hash_match` is unusable and no number should be quoted from it.** It is 0 across all
+262 defined points and 0.000 in every bucket — including **all 18 points where the model's
+emitted code is byte-identical to the gold code**. Identical code executed from an
+identical replayed prefix must produce an identical state hash, so the zero is the metric,
+not the model. This is the strict secondary from `PLAN.md`; it gates nothing, and the
+comparison the J3 gate uses is primary agreement. Filed rather than chased mid-run.
+
+`state_equivalent` — the secondary that does carry weight — is healthy at 0.676: when
+Granite picks the wrong API it usually leaves the world in a state from which the
+teacher's next action still succeeds. Recoverable errors, not destructive ones, which is
+the more forgiving regime for a policy that will be corrected during J4.
+
+**Executor decision: granite-4.2-8b. Settled after five attempts.** Attempts 1–2 were lost
+to harness defects, 3 measured a toy environment, 4 reported 3's numbers from a stale
+artefact, and 5 is the first that measured what it claimed to.
