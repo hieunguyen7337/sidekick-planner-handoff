@@ -1642,3 +1642,71 @@ Against CausalFlow: it asks which *agent step* caused failure and what repairs i
 whether *external assistance* was worth its price. Against ProST: the matched
 `sft_b_plus`/`sft_c` pair isolates exactly what ProST conflates — corrected action versus
 ASK → answer → corrected action.
+
+---
+
+## 🔻 GATE A — the verdict (J4b, job 25404924, commit `ff71e4e`, 2026-09-17)
+
+J4b completed clean: **114/114** dev episodes and **90/90** train seed 3, `[gate] PASS` on both
+stages, `Exit_status 0`, wall 2:07:52 of a 4 h walltime, smoke purged, both campaigns archived
+(`hj4b_fixed_k_dev_20260917`, and the train seed carried as `hj4_correction_train_20260917_s123`
+so the frozen seeds-1-2 archive the J4 ledger references was not overwritten — the guard W-2
+added did its job). All 496 planner calls resolved to `gpt-5.6-luna`; **0 api_error, 0 timeout**.
+
+### The paired comparison, on the 114 dev pairs
+
+| arm | TGC | solved | SGC | planner calls | calls/ep | steps/ep | `limit` errors |
+|---|---|---|---|---|---|---|---|
+| `fixed_k(sft_b)` | **0.5000** | 57/114 | 0.2368 (9/38) | 496 | **4.35** | 18.64 | 7 |
+| `sft_plan(sft_b)` | 0.4298 | 49/114 | **0.2895** (11/38) | 114 | 1.00 | 17.68 | 15 |
+
+`fixed_k − sft_plan` = **+7.02 pp**, paired on (task, seed), same cached plans, same adapter.
+
+| resampling unit | 95 % CI (pp) | clusters | mean cluster size |
+|---|---|---|---|
+| **task (default, correct)** | **[−0.88, +15.79]** | 57 | 2.0 |
+| pair (superseded) | [−0.88, +14.91] | 114 | 1.0 |
+
+### 🔺 Verdict: **the CI includes zero.** Training is gated; J6 is not.
+
+The point estimate lands exactly on the +7 pp threshold and the interval misses excluding zero
+by 0.88 pp. Under the amended rule this reads as: *at this sample size and compute budget, fixed
+periodic review did not establish sufficient aggregate benefit to justify training an adaptive
+allocator.* It is **not** a proof that interventions are worthless. Consequences, as
+pre-registered before the number existed:
+
+- **J5a / J5b training does not proceed on this evidence alone.** That decision is deferred to
+  after J6 reports, per the Gate A scope amendment.
+- **J6 runs regardless**, as pre-registered. This is now load-bearing rather than hypothetical.
+
+### Why this outcome makes J6 more informative, not less
+
+Three facts from the same table point the same way:
+
+1. **The timer costs 4.35× the planner calls for a gain that does not clear zero.** 496 calls
+   against 114, for +7.02 pp [−0.88, +15.79]. If the aggregate effect is real but thin, the only
+   way it becomes worth paying for is if it is *concentrated* — which is precisely the
+   needed-fraction *f* that J6 measures. A null average over a mixture of worthless and decisive
+   calls is exactly the signature adaptive allocation exists to exploit.
+2. **The reviewer does prevent stalls**: `limit` errors fall from 15 to 7, so the timer is
+   demonstrably doing *something* mechanical to episodes that would otherwise run out of steps.
+3. 🔺 **But SGC moves the other way**: `fixed_k` 0.2368 vs `sft_plan` 0.2895 — the timer wins on
+   task-level goal completion and **loses on scenario completion** (9 complete scenarios vs 11).
+   TGC and SGC disagreeing in sign is a real tension and must not be smoothed over: the reviewer
+   appears to convert some near-complete scenarios into partial ones. Whether that is the
+   `harmful` tail is directly testable from J6's per-point Δ, and it is now a named thing to look
+   for rather than a surprise waiting in the final run.
+
+### Method notes
+
+- The clustered interval is only 0.88 pp wider than the pair-level one, so **within-task
+  correlation is low in this campaign** — the two seeds of a task behave near-independently. The
+  clustering correction is still the right default (J10's 168 × 3 has more room to bite), but it
+  is not what decided this gate, and no previously published verdict changes because of it.
+- W-8 (the clustered-bootstrap unit) **died at the 60-minute codex MCP ceiling** with the
+  resampler and its tests written but the recheck report and test run not done. The code was
+  reviewed and the gate computed here directly rather than re-dispatching. Its unit tests: 9
+  passed. Full suite at this commit: **286 passed, 1 skipped, 0 failures.**
+- `hj1_gate.py` coerces a missing `tgc` to 0.0 (`float(... or 0.0)`). Pre-existing, not
+  introduced by the clustering change, and harmless here because both arms report 0 broken runs —
+  but it is a silent-zero path and is logged in FOLLOWUPS rather than left implicit.

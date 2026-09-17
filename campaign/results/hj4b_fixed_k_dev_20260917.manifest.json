@@ -1,0 +1,53 @@
+{
+  "campaign_id": "hj4b_fixed_k_dev_20260917",
+  "git_commit": "0faf8949a7878f63d03572ed3cc86c1187b11d5f",
+  "git_commit_source": "job start",
+  "git_branch": "worktree-plan-2026-09-15",
+  "git_dirty": true,
+  "config_path": "/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/configs/hj4b_fixed_k_dev.yaml",
+  "config_sha256": "52a3b7304d7e8b918f30d01c4d11f40ba11490ae4f94f5fd21e893b9b751165a",
+  "appworld_commit": "42b5bcf3cd334fee33f0c37c02070a9f5807add5",
+  "codex_version": "codex-cli 0.153.4",
+  "hostname": "gpu0n005",
+  "pbs_jobid": "25404924.aqua",
+  "python": "3.12.13",
+  "summary": {
+    "campaign_id": "hj4b_fixed_k_dev_20260917",
+    "root": "/scratch/n12194778/sidekick/results/hj4b_fixed_k_dev_20260917",
+    "n_runs": 114,
+    "n_success": 57,
+    "success_rate": 0.5,
+    "by_seed": {
+      "1": {
+        "n": 57,
+        "success": 30,
+        "tgc_mean": 0.5263
+      },
+      "2": {
+        "n": 57,
+        "success": 27,
+        "tgc_mean": 0.4737
+      }
+    },
+    "errors": {
+      "none": 107,
+      "limit": 7
+    },
+    "n_broken": 0,
+    "planner_calls_total": 496,
+    "planner_calls_mean": 4.35,
+    "steps_mean": 18.64,
+    "mean_goal_pass_rate": 0.7655,
+    "n_goal_pass_rate": 114,
+    "planner_models": {
+      "gpt-5.6-luna": 496
+    },
+    "ledger_totals": {
+      "executor_tokens_total": 38869133,
+      "gpu_seconds_total": 0.0,
+      "planner_calls_total": 496,
+      "planner_tokens_total": 22837015,
+      "usd_total": 1.034555
+    }
+  }
+}
