@@ -1329,3 +1329,108 @@ executor is adequate:
 
 Granite is trainable at this data scale. That does not establish it was the *best* choice,
 and the write-up should not imply it does.
+
+---
+
+## The campaign from here: gates A and B, written before the jobs (2026-09-17)
+
+Granite is settled, SFT(b) works, and the plan transfers. What is **not** measured is the
+thing the thesis is about. This section records the reordered campaign and the two decision
+rules, *before* the jobs that test them are submitted. Plan of record:
+`~/.claude/plans/robust-dancing-sonnet.md`.
+
+### Why the order changed
+
+`docs/PLAN.md` put SFT(c) (ASK targets) before the counterfactual branches. That order cannot
+work. J4's 495 interventions are ticks of a 5-step timer — the reviewer speaks before the
+executor acts, never sees a proposed action, never overrides one, and 495/495 are
+`forced: true` with 0 `ask` events. **Nothing in the J4 data says which interventions
+mattered.** The counterfactual branches are the only source of that label, so they move
+ahead of SFT(c). New order: **J4b → J6 (branches) → J5a/J5b (the matched adapters) → J7
+(verifier) → J8 (dev frontier) → J9 (freeze) → J10 (test)**.
+
+Two further decisions, taken 2026-09-17:
+
+- **DPO (PLAN.md M5 / HJ-6) is dropped.** The sidekick's frontier is swept by thresholding
+  the policy's own P(ASK) (the existing `gate_ask_with_verifier` path,
+  `src/sidekick/systems/loop.py:589-593`), which needs one adapter instead of three, gives
+  arbitrarily many operating points, and *is* the H3 calibration measurement. Recorded as a
+  deliberate deviation from the written plan, not an omission.
+- **The prereg's primary endpoint changes from H1 to H2** (see J9, below).
+
+### Gate A — does the timer buy anything on held-out tasks? (J4b)
+
+`fixed_k` on the `sft_b` policy has only ever run on **train** (`hj4_correction_train_20260917`,
+TGC 0.577), the split that adapter was trained on. That number is inflated and is not
+comparable to any dev arm. J4b runs the identical arm on **dev** (57 × seeds 1,2, plans cached
+from `hj1b_planner_20260915`) so it is paired, task-for-task and seed-for-seed, against
+`hj3_sft_plan_20260917` — same adapter, same cached plans, same prompt, TGC **0.4298**.
+
+Statistic: paired bootstrap (10k resamples, `scripts/setup/hj1_gate.py`) of
+`TGC(fixed_k, sft_b, dev) − TGC(sft_plan, sft_b, dev)` over all 114 pairs.
+
+| outcome | reading | action |
+|---|---|---|
+| **≥ +7 pp, CI excludes 0** | the reviewer adds real quality on held-out tasks | proceed to J6 as planned |
+| **CI includes 0** | interventions add nothing a learned policy could capture | **stop before J5–J8 spend.** Record H2 as unsupported at this data scale and decide, with the user, between a richer review format (a reviewer that sees the proposed action) and writing up the SFT + plan-transfer result alone |
+| **between** | the effect is real but small | proceed, and pre-register H2 as a **dominance-on-the-frontier** claim only, never superiority |
+
+Also recorded from the same run, because the sidekick has to beat it on cost, not just
+quality: reviews per episode, planner calls per episode, planner tokens per episode.
+
+🔺 This gate can stop the campaign. That is its purpose. A `fixed_k` arm that does not beat
+`sft_plan` on held-out tasks means the hosted reviewer is not worth its calls here, and no
+amount of training a policy to *request* those calls can create value that the calls do not
+have. Better to learn that from a 1.2 GPU-h evaluation than from the final test run.
+
+### Gate B — does the frontier exist? (J6)
+
+Every intervention point is branched twice (seeds 101, 102) from the state just before the
+reviewer spoke, without the correction, same adapter, temperature 0.7. Label, fixed here and
+not tuned later:
+
+- `needed := mean(branch_gpr) < actual_gpr`
+- `needless := mean(branch_gpr) >= actual_gpr` (the boundary case is needless)
+- `harmful := mean(branch_gpr) > actual_gpr`; `needed_strict :=` both samples below actual
+- either sample missing → `incomplete`, no label, never imputed
+
+Let *f* = the needed fraction. Report it on **dev** (train is inflated for the same reason as
+above), by depth bucket (1–5 / 6–10 / 11+) and by seed.
+
+| outcome | action |
+|---|---|
+| f_train < 0.10 (< ~75 positives) | too few ASK targets to train on — collect a fourth correction seed before J5b |
+| f_dev > 0.85 | the timer is nearly always useful; the sidekick's possible saving is bounded by 1 − f. Record the bound and proceed — choosing *which* ticks still has value |
+| harmful > 0.15 | a reviewer that hurts one time in seven changes the H3 reading; open a FOLLOWUP on the review format |
+
+**f_dev is a paper figure whatever follows** — "*X % of a fixed schedule's hosted calls
+changed the outcome*" is the quantitative case for need-based escalation, and it is the first
+number in this project that measures the premise rather than a system.
+
+### What J9 will freeze, and the endpoint change
+
+The prereg draft (`docs/prereg_v1.md`, N = 3, ε = 7 pp) names **H1** — sidekick non-inferior
+to `planner_alone` — as primary. Dev says that will fail: the best executor arm is 0.430
+against the planner's 0.684, and `PLAN.md:259-262` already anticipated it, naming the
+quality-versus-displacement frontier as the deliverable in that case. Freezing a primary
+endpoint we expect to fail would bury the result the work actually supports.
+
+**Primary becomes H2, conjunctive**, on test_normal over 504 paired (task, seed) pairs,
+one-sided 95 % bootstrap — all three must hold:
+
+1. `sidekick` ≥ `fixed_k(k_matched)` − 7 pp
+2. `sidekick` > `sft_plan(sft_b_plus)`, CI excluding 0
+3. `sidekick` planner calls/episode < `fixed_k(k=5)`'s, CI excluding 0
+
+The conjunction has teeth. A policy that never asks passes (1) trivially only when the timer
+is worthless, and (3) trivially always — but then fails (2), because it *is* `sft_plan`. A
+policy that always asks passes (2) and fails (3). Only a policy that asks selectively passes
+all three. H1 becomes secondary and is reported whatever it shows.
+
+`k_matched` is a **rule, frozen now, not a number**: the k ∈ {3, 5, 10} whose dev calls per
+episode is nearest the sidekick's, interpolating to k = 7 if k = 5 and k = 10 tie. It is
+resolved on dev at J8 and never revisited after J9.
+
+Falsification, stated plainly so it cannot be softened later: if (2) fails, intervention-aware
+training did not beat intervention-agnostic training on this data; if (3) fails, it did not
+save cost. Either is reported as measured. J10 runs once.
