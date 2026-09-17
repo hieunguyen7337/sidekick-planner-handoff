@@ -409,3 +409,35 @@ cleanup, not done here, because it touches a test file mid-campaign.
 
 🔺 Same family as the rest of this document: a number that is real, reproducible, and
 measured on the wrong denominator reads exactly like a correct one.
+
+---
+
+## OPEN — the J6 branch job writes its server log to a path that carries no campaign id
+
+`scripts/pbs/hj6_branches.pbs` sets
+
+```
+VLOG="${LOGDIR}/hj6_branches_vllm.log"
+```
+
+with no `${CID}` and no `${SPLIT}` in the name, and then starts the server with
+`> "${VLOG}" 2>&1`. Every J6 submission therefore targets the same file.
+
+Observed 2026-09-17 with 25410220 (train) and 25412541 (dev) running concurrently on
+different nodes: the dev job's redirect truncated the file to zero while the train job's
+server still held an open descriptor at a large offset, so the two output streams now
+interleave into one sparse file and neither can be read as a record of its own job.
+Execution is unaffected — the descriptor survives the truncation — but the log is no
+longer evidence about either run, which is the whole reason it is kept.
+
+This bit while diagnosing a genuine throughput question (train sustaining 3.2 completed
+branches/min against dev's ~14 for identical per-branch work), and the ambiguity about
+which job's server the tail belonged to cost time that a per-CID path would not have.
+
+Fix: `VLOG="${LOGDIR}/${CID}_vllm.log"`. Not applied mid-run, because editing the script
+while two jobs are executing from it risks the held resume job (25412609) picking up a
+half-edited file. Apply before the next J6 submission after the resume completes.
+
+⚠ Same family as everything else in this document: nothing failed, nothing reported an
+error, and the artifact that would have told you what happened quietly stopped being
+about the run you were looking at.
