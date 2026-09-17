@@ -1372,16 +1372,39 @@ Statistic: paired bootstrap (10k resamples, `scripts/setup/hj1_gate.py`) of
 | outcome | reading | action |
 |---|---|---|
 | **≥ +7 pp, CI excludes 0** | the reviewer adds real quality on held-out tasks | proceed to J6 as planned |
-| **CI includes 0** | interventions add nothing a learned policy could capture | **stop before J5–J8 spend.** Record H2 as unsupported at this data scale and decide, with the user, between a richer review format (a reviewer that sees the proposed action) and writing up the SFT + plan-transfer result alone |
+| **CI includes 0** | fixed periodic review did not establish aggregate benefit at this sample size | **J6 still runs** (see the scope note below); **stop before J5a/J5b training.** Record H2 as unsupported at this data scale and decide, with the user, between a richer review format (a reviewer that sees the proposed action) and writing up the SFT + plan-transfer result alone |
 | **between** | the effect is real but small | proceed, and pre-register H2 as a **dominance-on-the-frontier** claim only, never superiority |
 
 Also recorded from the same run, because the sidekick has to beat it on cost, not just
 quality: reviews per episode, planner calls per episode, planner tokens per episode.
 
-🔺 This gate can stop the campaign. That is its purpose. A `fixed_k` arm that does not beat
-`sft_plan` on held-out tasks means the hosted reviewer is not worth its calls here, and no
-amount of training a policy to *request* those calls can create value that the calls do not
-have. Better to learn that from a 1.2 GPU-h evaluation than from the final test run.
+🔺 **Scope — amended 2026-09-17, before the gate fired.** Gate A gates **training** (J5a, J5b
+and everything downstream, ≈ 25 GPU-h), **not branching** (J6, ≈ 10.7 GPU-h). The original
+rule stopped both, and that was the wrong cut for two reasons.
+
+The first is inferential. Gate A measures the timer's **average** effect; the thesis is about
+the **variance** of intervention value. A null Gate A with high dispersion in Δ — most calls
+worthless, a few decisive — is not evidence against the thesis, it is the exact condition
+adaptive allocation exists to exploit. Stopping there would discard the hypothesis on a
+statistic that cannot test it.
+
+The second is that J6 produces the one measurement in this project that does not depend on the
+sidekick working: the needed-fraction *f*. "*X % of a fixed schedule's expert calls changed
+nothing*" is a fact about periodic supervision in agent pipelines, it is method-independent,
+and it survives every downstream outcome including H2 failing outright. It is a paper either
+way, and it is the cheaper half of the remaining compute.
+
+So a null Gate A is a decision point, not an automatic stop, and it is a decision taken **after
+J6 reports**, when *f* and the shape of the Δ distribution are in hand rather than guessed at.
+What Gate A still protects is the expensive, sidekick-specific half: two training runs and the
+frontier evaluation that follows them. Better to learn that from a 1.2 GPU-h evaluation than
+from the final test run.
+
+⚠ Operational consequence, recorded because it changes the calendar: **J6 no longer waits on
+Gate A being computed**, and therefore no longer waits on the task-clustered bootstrap (W-8)
+landing. J6 is submittable as soon as J4b's episodes are archived and W-1b's branch code is
+reviewed and committed. Gate A is still computed, with the clustered bootstrap, and still
+written here — it just gates the next spend rather than this one.
 
 ### Gate B — does the frontier exist? (J6)
 
@@ -1557,6 +1580,14 @@ Gate A remains a **pre-registered resource-spending rule**, not a proof of absen
 that J6's needed-fraction can be informative even when Gate A is null — a low *f* with a
 high-value tail is the interesting case — so a null Gate A triggers a decision, not an
 automatic stop.
+
+🔺 **Resolved later the same day, with the user's approval: Gate A's scope narrows to
+training.** The paragraph above identified the problem but left the stopping rule pointing at
+both J6 and J5; that is now cut so Gate A gates J5a/J5b onward (≈ 25 GPU-h) and J6 (≈ 10.7
+GPU-h) runs regardless. The reasoning, and the calendar consequence — J6 stops waiting on the
+clustered bootstrap — are written into the Gate A section above, which is the operative text.
+The change costs 10.7 GPU-h in the null case and buys the needed-fraction, which is the only
+result here that survives the sidekick failing.
 
 ### 6. Positioning: what is and is not new
 
