@@ -15,6 +15,18 @@ from sidekick.runner import load_config, make_executor, make_planner
 
 WANT_STOP = ["</py>", "</python>", "</tool_call>"]
 
+# These frozen-pilot configs produced archived results and are not to be edited.
+# This allowlist is closed: adding a name to it is a deliberate act.
+FROZEN_PILOT_ALLOWLIST = {
+    "hj1r_exec8b.yaml",
+    "pilot_exec_3b.yaml",
+    "pilot_exec_8b.yaml",
+    "pilot_fixed_k.yaml",
+    "pilot_planner_alone.yaml",
+    "pilot_prompt_only.yaml",
+    "train_planner_alone.yaml",
+}
+
 # label -> (expected executor .name or None for mock, expected planner class name)
 EXPECTED = {
     "configs/pilot_exec_8b.yaml": ("vllm-executor", {"enable_thinking": False}),
@@ -55,7 +67,8 @@ def validate_prompt_budget(cfg: dict, rel: str) -> list[str]:
 
     if "executor" in cfg:
         if not isinstance(executor, dict) or "max_prompt_tokens" not in executor:
-            errors.append(f"{rel}: missing required key executor.max_prompt_tokens")
+            if Path(rel).name not in FROZEN_PILOT_ALLOWLIST:
+                errors.append(f"{rel}: missing required key executor.max_prompt_tokens")
         elif type(executor["max_prompt_tokens"]) is not int or executor["max_prompt_tokens"] <= 0:
             errors.append(f"{rel}: executor.max_prompt_tokens must be a positive integer")
 

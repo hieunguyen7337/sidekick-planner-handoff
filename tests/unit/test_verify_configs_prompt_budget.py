@@ -36,3 +36,27 @@ def test_prompt_budget_under_limits_is_misplaced(tmp_path):
 
 def test_config_without_executor_passes(tmp_path):
     assert _errors(tmp_path, {"planner": {"type": "mock"}}) == []
+
+
+def test_allowlisted_frozen_pilot_without_prompt_budget_passes(tmp_path):
+    errors = validate_prompt_budget(
+        {"executor": {"type": "vllm"}},
+        "configs/pilot_exec_8b.yaml",
+    )
+    assert errors == []
+
+
+def test_non_allowlisted_config_without_prompt_budget_fails(tmp_path):
+    errors = validate_prompt_budget(
+        {"executor": {"type": "vllm"}},
+        "configs/new_config.yaml",
+    )
+    assert any("missing required key executor.max_prompt_tokens" in error for error in errors)
+
+
+def test_allowlisted_frozen_pilot_with_misplaced_prompt_budget_fails(tmp_path):
+    errors = validate_prompt_budget(
+        {"executor": {"type": "vllm"}, "limits": {"max_prompt_tokens": 30720}},
+        "configs/pilot_exec_8b.yaml",
+    )
+    assert any("misplaced" in error and "limits.max_prompt_tokens" in error for error in errors)
