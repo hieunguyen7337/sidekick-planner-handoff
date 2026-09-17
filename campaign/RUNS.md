@@ -1434,3 +1434,156 @@ resolved on dev at J8 and never revisited after J9.
 Falsification, stated plainly so it cannot be softened later: if (2) fails, intervention-aware
 training did not beat intervention-agnostic training on this data; if (3) fails, it did not
 save cost. Either is reported as measured. J10 runs once.
+
+---
+
+## 🔺 Amendment 2026-09-17 (later): three corrections to the design above, before J6 runs
+
+A methodological review of the campaign plan raised three problems and several statistical
+ones. J4b (job 25404924) was already queued and is unaffected — it runs the timer arm on dev
+and collects a third correction seed, which every version of the design needs. **J6 has not
+run.** The corrections below supersede the branch definition in the Gate B section above.
+
+### 1. 🔺 The branch definition was wrong: it ablated the future, not the intervention
+
+The design above continues each branch with `review_every_k=None` — every later scheduled
+review switched off. That does **not** estimate the effect of intervention *i*. It estimates
+
+> intervention *i* **plus every subsequent scheduled review in that episode**.
+
+Interventions fire every 5 steps and episodes run to 19–40, so most points fold several
+downstream reviews into the contrast. If the step-5 correction is useless and the step-10 one
+is essential, switching both off labels the **step-5** point `needed`. That error would have
+propagated into the ASK targets, the verifier, and the headline needed-fraction — i.e. into
+every artifact J6 exists to produce.
+
+**Corrected estimand.** Hold the review *policy* fixed and vary only intervention *i*:
+
+```
+Δ_i = Q(policy with intervention i present) − Q(policy with intervention i omitted)
+```
+
+Both conditions continue from the same replayed prefix with the reviewer **live on its normal
+5-step schedule** for every later step, calling the planner on the branch's own state rather
+than replaying the original episode's later corrections (which, after divergence, are about a
+state that no longer exists). Branches therefore make live planner calls: ≈ 6,000 hosted
+calls, quota not money.
+
+**Replicates.** The old design compared one factual trajectory against two ablated branches,
+which mixes the intervention effect with sampling variance — a label could flip because the
+factual run was lucky. Now **2 treated and 2 untreated**, all fresh, paired by branch seed
+(common random numbers) so the two conditions share sampling noise. 4 branches per point,
+≈ 4,240 rollouts, ≈ 10.7 GPU-h.
+
+**The factual trajectory becomes a validation check, not an estimator input.** It is itself a
+draw from the treated condition, so it should lie inside the spread of the treated branches.
+If it systematically does not, replay-and-continue is not reproducing the original run and the
+entire artifact is suspect. This check is printed, not buried in a manifest.
+
+**Indifference band.** Binarising a noisy difference at exactly zero manufactures labels out
+of sampling noise. A point is `needed` if Δ > δ, `needless` if Δ < −δ, and `ambiguous`
+otherwise. **δ is a rule, not a number**: the 75th percentile of
+|treated[seed 101] − treated[seed 102]| over train points — the observed noise floor between
+two *identically configured* runs — computed on train only, frozen, then applied to dev. A
+difference that cannot clear the noise between two identical conditions is not evidence.
+ASK targets come from `needed` only; `ambiguous` is excluded from fitting and reported.
+
+A secondary short-horizon label (`delta_local`, scored at the next scheduled review boundary)
+is recorded alongside: strictly focal, lower variance, cheap.
+
+### 2. H2 was not satisfiable as written; it splits in two
+
+"`sidekick` beats `sft_plan` at matched planner cost" cannot hold as stated. `sft_plan` is not
+zero-cost — it carries a plan call and has `allow_executor_ask=True` (`systems/sft_plan.py:17`),
+firing once in 114 HJ-1R episodes — but its planner cost is ≈ 1 call/episode against the
+sidekick's 1 + asks. The two are cost-matched **only** at the threshold where the sidekick
+never asks, which is the degenerate point.
+
+- **H2a — does the ASK channel add capability?**
+  `Q(sidekick_τ) > Q(sft_plan(sft_b_plus))`, paired, **reporting the extra planner cost that
+  bought the gain**. Not a matched-cost claim and must not be written as one.
+- **H2b — does it allocate a fixed budget better?** At matched planner calls (and matched
+  planner tokens, reported separately): `Q(sidekick_τ) > Q(fixed_k(k_matched))` **and**
+  `Q(sidekick_τ) > Q(router_seq(τ*))`.
+
+H2b is the allocation claim and is the paper's core. The J9 primary becomes the conjunction of
+H2a and H2b, replacing the three-clause form above; clause 3 of that form (fewer calls than
+`fixed_k(5)`) is subsumed by H2b's matched-budget construction. `router_seq` was missing from
+the cost-matched comparison entirely and is now in it.
+
+### 3. P(ASK) must be a real probability, not a first-token proxy
+
+Thresholding "first-token mass on the ASK marker" is only valid if `ASK_PLANNER:` is
+unambiguously one token at that position. It is very likely several, and leading whitespace,
+chat-template artifacts and shared prefixes with other action forms all corrupt it. Measuring
+the tokenisation (as the worker brief required) detects the problem but does not fix it.
+
+**Use the conditional sequence probability of the full ASK prefix**, obtained by teacher-forcing
+those tokens and summing log-probabilities — exact, well-defined regardless of tokenisation,
+and requiring no change to the action format. A reserved single control token per action class
+would be cleaner still, but it would invalidate `sft_b` and every number already built on it,
+so it is rejected on cost. First-token mass may be reported as a cheap correlate; it is not the
+gate.
+
+### 4. Statistical corrections that apply throughout
+
+- **Cluster the bootstrap on task.** 114 "pairs" are 57 tasks × 2 seeds, and J10's 504 are
+  168 × 3 — not independent draws. Resample **tasks**, carrying all seeds and both arms of a
+  sampled task together. This applies to Gate A, every dev comparison, and J10. `hj1_gate.py`
+  currently resamples pairs and must be corrected before Gate A is computed.
+- **Intervention points are nested** inside episodes inside tasks. Verifier evaluation uses
+  task-grouped cross-validation; no CI over points treats them as independent.
+- **Policy-induced distribution shift.** J6 labels states visited by `fixed_k` on `sft_b`. The
+  trained sidekick visits a different distribution because its own ASK choices change what it
+  sees. Measure it — how often J8/J10 sidekick states fall outside the J6 feature
+  distribution, and compare intervention depth and error-state profiles. Do not repair it using
+  test trajectories. One DAgger-style aggregation round on **train** only is permissible.
+- **Risk is not the same as intervention value.** Fit and report both `P(fail | s)` and
+  `P(Δ > δ | s)`. A state can be high-risk where the planner cannot help, and ordinary where a
+  short clarification is decisive. The contrast between the two is a result in its own right.
+
+### 5. Gate A's stopping language was too strong
+
+The Gate A table above says a CI including zero means "interventions add nothing a learned
+policy could capture". That overclaims in exactly the place the objection bites: a periodic
+reviewer can have a small *average* effect because most of its calls are useless while a few
+are decisive — which is precisely the condition adaptive allocation exists to exploit. The
+correct reading of a null Gate A is:
+
+> At this sample size and compute budget, fixed periodic review did not establish sufficient
+> aggregate benefit to justify training an adaptive allocator.
+
+Gate A remains a **pre-registered resource-spending rule**, not a proof of absence. Note also
+that J6's needed-fraction can be informative even when Gate A is null — a low *f* with a
+high-value tail is the interesting case — so a null Gate A triggers a decision, not an
+automatic stop.
+
+### 6. Positioning: what is and is not new
+
+Recorded so the contribution is not overstated later. **These references come from the review
+and have not been read or verified in-session** — verify before citing.
+
+| already established | by |
+|---|---|
+| large planner + small executor | prior work |
+| training an executor on planner-generated plans and corrections | ProST |
+| a small model escalating to a stronger one | R2V-Agent; "Bayesian Self-Escalation" |
+| threshold sweeps producing a cost-quality frontier | both of the above |
+| counterfactual rollouts over agent trajectories as supervision | CausalFlow |
+
+What remains defensible:
+
+> Estimating the **causal value of an individual planner intervention** by environment replay,
+> distilling those labels into an executor-internal ASK action, and testing whether that beats
+> a fixed schedule **and** a post-hoc router at matched planner budget.
+
+The sharpest distinction is against R2V-Agent, whose router predicts `P(episode eventually
+fails | s)` — failure *risk*. This project's label estimates `E[Q | intervene] − E[Q | not]` —
+intervention *value*. A state can carry high failure risk while planner help changes nothing;
+that difference is the whole argument for the branching cost, and §4's dual-head requirement
+is what will make it measurable rather than asserted.
+
+Against CausalFlow: it asks which *agent step* caused failure and what repairs it; this asks
+whether *external assistance* was worth its price. Against ProST: the matched
+`sft_b_plus`/`sft_c` pair isolates exactly what ProST conflates — corrected action versus
+ASK → answer → corrected action.
