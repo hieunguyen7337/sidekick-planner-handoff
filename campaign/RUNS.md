@@ -1710,3 +1710,53 @@ Three facts from the same table point the same way:
 - `hj1_gate.py` coerces a missing `tgc` to 0.0 (`float(... or 0.0)`). Pre-existing, not
   introduced by the clustering change, and harmless here because both arms report 0 broken runs —
   but it is a silent-zero path and is logged in FOLLOWUPS rather than left implicit.
+
+---
+
+## 🔻 GATE B (dev) — the verdict and the reliability threat (J6, job 25412541.aqua, commit `dc92a25`, 2026-09-17)
+
+- **Job**: `25412541.aqua`, campaign `hj6_branches_dev_20260917`, split dev, adapter `sft_b`, branch seeds 101/102, commit `dc92a25`.
+- **Coverage**: 1527 of 1528 branches. 382 intervention points; 374 complete; 8 dropped (1 missing every sample, 7 with a null `branch_gpr`).
+- **δ (delta band)** = 0.166, computed by the pre-registered rule — the 75th percentile of |treated[101] − treated[102]| over train points — on train's *partial* data as of 2026-09-17 22:44. ⚠ Flagged clearly as **provisional**: δ is frozen from train and train is still running, so this value can move and every label below moves with it.
+- **Negative control**: with δ unfrozen, all 381 rows return `label_status: incomplete` rather than a fabricated label.
+
+### Labels over the 374 complete dev points
+
+| label | n | fraction | mean Δ |
+|---|---:|---:|---:|
+| needed | 59 | 0.157754 | +0.342686 |
+| needless (= harmful) | 53 | 0.141711 | −0.356472 |
+| ambiguous | 262 | 0.700535 | +0.004672 |
+
+- **Mean Δ per point** = +0.006817.
+- **Headline needed fraction**: f_dev = **0.1578** (59 of 374).
+- **Paper figure**: **1 − f = 0.8422** (84.22 % of scheduled planner reviews produced no measurable benefit).
+- **Validation**: factual outcome outside `[min(treated), max(treated)]` for 81 of 374 = **0.216578**.
+- **Oracle allocation** (fire only at `needed`): +0.0541 per point against +0.0068 always-on, at 84.2 % fewer planner calls. ⚠ Recorded immediately beside it that this is **inflated by regression to the mean** and is not an achievable figure — see the reliability analysis below.
+- **Cross-check**: recomputed from raw columns by a second worker type (luna, W-10) which was instructed not to read `scripts/setup/branch_counterfactual.py`. Agreement to ≥ 4 decimals on every statistic. Report: `campaign/workers/W10_RECOUNT.md`.
+
+### Verdict against pre-registered Gate B thresholds
+
+- **f_dev > 0.85**: f_dev = 0.158 is **not** > 0.85, so the timer is not almost-always-useful.
+- **harmful > 0.15**: `harmful` (= needless) = 0.1417 is **just under** the 0.15 flag threshold — close, but did not fire.
+- **f_train < 0.10**: f_train is not yet final (train job still running) and is not reported here.
+
+---
+
+### The label-reliability threat
+
+This is the important finding and it has no pre-registered home, which is itself the finding.
+
+**Split-half agreement** between branch seeds 101 and 102 over the 374 complete dev points:
+- Pearson **r = 0.163962**
+- Spearman **ρ = 0.222022**
+- **Sign agreement**: **0.7024** over the 84 points where both per-seed deltas are nonzero.
+- **Co-occurrence above band**: 56 points above band on both halves against 35.81 expected under independence (**1.56× chance**).
+  - ⚠ Earlier notes in the campaign quoted this co-occurrence as **2.3× chance** from partial data; the full-dev figure is **1.56×**, and the 2.3× figure is superseded.
+- **Spearman-Brown reliability**: on r = 0.164, Spearman-Brown gives the two-replicate mean that the labels are cut from a reliability of **0.282**; four replicates would give **0.440**.
+
+#### Substantive reading
+
+The heterogeneity is **real** — 70 % sign agreement against a 50 % null is not noise — but **weak**, with roughly 72 % of Δ's variance being sampling error.
+
+**Gate B's three pre-registered thresholds all concern f and none of them would have caught this.** A reliability criterion is proposed for Gate B but has not yet been approved by the user, so it is recorded as a proposal, not as a gate.

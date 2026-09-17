@@ -412,32 +412,60 @@ measured on the wrong denominator reads exactly like a correct one.
 
 ---
 
-## OPEN — the J6 branch job writes its server log to a path that carries no campaign id
+## OPEN — the J6 branch job writes its server log and PBS stdout to paths that carry no campaign id
 
 `scripts/pbs/hj6_branches.pbs` sets
 
-```
+```bash
+#PBS -o campaign/workers/logs/hj6_branches.out
 VLOG="${LOGDIR}/hj6_branches_vllm.log"
 ```
 
-with no `${CID}` and no `${SPLIT}` in the name, and then starts the server with
-`> "${VLOG}" 2>&1`. Every J6 submission therefore targets the same file.
+with no `${CID}` and no `${SPLIT}` in either the PBS `Output_Path` or `VLOG`, and starts the server with
+`> "${VLOG}" 2>&1`. Every J6 submission (both dev and train) therefore targets the same files.
 
 Observed 2026-09-17 with 25410220 (train) and 25412541 (dev) running concurrently on
-different nodes: the dev job's redirect truncated the file to zero while the train job's
-server still held an open descriptor at a large offset, so the two output streams now
-interleave into one sparse file and neither can be read as a record of its own job.
+different nodes:
+- The dev job's redirect truncated the file to zero while the train job's server still held
+  an open descriptor at a large offset, so the two output streams now interleave into one
+  sparse file and neither can be read as a record of its own job.
+- Because both vLLM servers wrote the same log with `>`, they overwrote each other at
+  overlapping offsets, and the dev server's output appears to stop at 19:33 when it had not —
+  **the log was unusable for diagnosing the wedged branch below**, and a reader could easily
+  have concluded the server died.
+- The same defect applies to the job's `Output_Path` (`campaign/workers/logs/hj6_branches.out`),
+  which dev and train both write concurrently.
 Execution is unaffected — the descriptor survives the truncation — but the log is no
 longer evidence about either run, which is the whole reason it is kept.
 
-This bit while diagnosing a genuine throughput question (train sustaining 3.2 completed
-branches/min against dev's ~14 for identical per-branch work), and the ambiguity about
+This bit while diagnosing a genuine throughput question (train sustaining 4.70 completed
+branches/min against dev's 7.80 for identical per-branch work -- 1.7x, measured over a 65-minute steady-state window; an earlier reading of ~4x came from dev's startup burst), and the ambiguity about
 which job's server the tail belonged to cost time that a per-CID path would not have.
 
-Fix: `VLOG="${LOGDIR}/${CID}_vllm.log"`. Not applied mid-run, because editing the script
+Fix: `VLOG="${LOGDIR}/${CID}_vllm.log"` and `#PBS -o campaign/workers/logs/hj6_branches_${CID}.out`
+(or passing `-o` with campaign ID at `qsub` time). Not applied mid-run, because editing the script
 while two jobs are executing from it risks the held resume job (25412609) picking up a
 half-edited file. Apply before the next J6 submission after the resume completes.
 
 ⚠ Same family as everything else in this document: nothing failed, nothing reported an
 error, and the artifact that would have told you what happened quietly stopped being
 about the run you were looking at.
+
+## OPEN — a single wedged branch can idle a whole J6 job
+
+In `hj6_branches_dev_20260917`, branch `fixed_k/2/37a8675_1__b2_untreated_s102` stopped writing
+events at 19:17 at step 34 and never returned. The other nine workers drained the queue by 20:59,
+so the job then held a GPU for hours to accomplish nothing, and `rebuild_derived` — which only
+runs at the end — never wrote `branches.jsonl`. There is no per-branch timeout.
+
+Two consequences:
+1. **Aggregation is all-or-nothing at job end**: because `rebuild_derived` runs only after all
+   workers finish, a single wedged worker prevents `branches.jsonl` from being produced even
+   when 1,527 of 1,528 branches ran cleanly.
+2. **A wedged worker is invisible without manual reconciliation**: detecting a stalled branch
+   requires comparing the line count of `branch_runs.jsonl` against the directory count of
+   completed branches, as the PBS job continues running without error.
+
+Suggested fixes (recorded, not implemented):
+- A per-branch wall-clock timeout that records an error row and moves on.
+- Periodic incremental aggregation so a killed or partial job still yields labels.
