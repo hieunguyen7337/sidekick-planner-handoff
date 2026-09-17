@@ -7,6 +7,7 @@ import json
 import math
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -39,6 +40,12 @@ DROP_NO_INSTRUCTION = "no_instruction"
 DROP_NO_ACTIONS = "no_actions"
 DROP_BAD_RESULT = "bad_result"
 DROP_UNREPRESENTABLE = "unrepresentable"
+DROP_NO_INTERVENTION = "no_intervention"
+DROP_NO_POST_INTERVENTION_ACTION = "no_post_intervention_action"
+DROP_ASK_PLANNER_TARGET = "ask_planner_target"
+DROP_INTERVENTION_LEAK = "intervention_in_context"
+
+INTERVENTION_MARK = "INTERVENTION:"
 
 
 def _heldout_task_ids() -> list[str]:
@@ -289,8 +296,18 @@ def _encode_text(tokenizer: Any | None, text: str) -> list[int]:
     return list(out.input_ids)
 
 
-def _tokenize_messages(messages: list[dict], tokenizer: Any | None) -> dict[str, list[int]]:
-    """Tokenise a complete, already-selected conversation and apply assistant masking."""
+def _tokenize_messages(
+    messages: list[dict],
+    tokenizer: Any | None,
+    *,
+    supervised_indices: set[int] | None = None,
+) -> dict[str, list[int]]:
+    """Tokenise a complete, already-selected conversation and apply assistant masking.
+
+    When ``supervised_indices`` is None, every assistant turn is supervised (teacher
+    SFT). When it is a set, only those message indices receive labels — used for
+    correction examples where loss is restricted to the post-intervention action.
+    """
     input_ids: list[int] = []
     labels: list[int] = []
     prev_ids: list[int] = []
@@ -313,7 +330,10 @@ def _tokenize_messages(messages: list[dict], tokenizer: Any | None) -> dict[str,
                 keep += 1
             labels = labels[:keep]
             new_ids = curr[keep:]
-        if msg.get("role") == "assistant":
+        is_supervised = msg.get("role") == "assistant" and (
+            supervised_indices is None or i in supervised_indices
+        )
+        if is_supervised:
             labels.extend(new_ids)
         else:
             labels.extend([-100] * len(new_ids))
@@ -387,6 +407,34 @@ def tokenize_and_mask(
     }
 
 
+
+def _check_budget(
+    messages: list[dict],
+    tokenizer: Any | None,
+    *,
+    max_length: int | None = 32768,
+) -> dict[str, Any]:
+    """Representable/truncated flags without prefix-walking every in-budget example.
+
+    Under-budget conversations need only one full ``apply_chat_template``; that is
+    the same first branch as ``tokenize_and_mask``. Over-budget examples still go
+    through ``tokenize_and_mask`` / ``fit_messages_to_budget`` unchanged.
+    """
+    n_tokens = _conversation_token_length(messages, tokenizer)
+    if max_length is None or n_tokens <= max_length:
+        return {
+            "representable": True,
+            "truncated": False,
+            "n_messages_dropped": 0,
+            "n_tokens": n_tokens,
+            "labels": [0],
+        }
+    tokenized = tokenize_and_mask(messages, tokenizer, max_length=max_length)
+    tokenized = dict(tokenized)
+    tokenized["n_tokens"] = n_tokens
+    return tokenized
+
+
 def _try_tokenizer() -> Any | None:
     try:
         from transformers import AutoTokenizer
@@ -423,6 +471,15 @@ def _percentile(values: list[int], p: float) -> int:
     return ordered[k - 1]
 
 
+def _emit_jsonl(out_path: Path, records: list[dict[str, Any]]) -> str:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as fh:
+        for row in records:
+            fh.write(json.dumps(row, sort_keys=True))
+            fh.write("\n")
+    return hashlib.sha256(out_path.read_bytes()).hexdigest()
+
+
 def build_sft_dataset(
     campaign_root,
     split_ids,
@@ -431,6 +488,7 @@ def build_sft_dataset(
     system="planner_alone",
     solved_only=True,
     min_goal_pass_rate: float | None = None,
+    quiet: bool = False,
 ) -> dict:
     """Emit one JSONL line per solved trajectory, rendered with ``render_executor_messages``.
 
@@ -573,7 +631,7 @@ def build_sft_dataset(
                     "source": "partial" if is_partial else "solved",
                     "goal_pass_rate": goal_pass_rate,
                 }
-                tokenized = tokenize_and_mask(messages, tokenizer)
+                tokenized = _check_budget(messages, tokenizer)
                 if tokenized["truncated"]:
                     n_truncated += 1
                     n_messages_dropped_total += int(tokenized["n_messages_dropped"])
@@ -594,15 +652,11 @@ def build_sft_dataset(
     emitted_ids = [row["meta"]["task_id"] for row in records]
     assert_no_leakage(emitted_ids, heldout)
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", encoding="utf-8") as fh:
-        for row in records:
-            fh.write(json.dumps(row, sort_keys=True))
-            fh.write("\n")
-    digest = hashlib.sha256(out_path.read_bytes()).hexdigest()
+    digest = _emit_jsonl(out_path, records)
     summary = {
         "out_jsonl": str(out_path),
         "n_trajectories": len(records),
+        "n_sequences": len(records),
         "n_dropped": len(dropped),
         "dropped_counts": dropped_counts,
         "dropped": dropped,
@@ -639,11 +693,465 @@ def build_sft_dataset(
             else None
         ),
         "goal_pass_rate_histogram_unsolved": goal_pass_rate_histogram_unsolved,
+        "_token_lengths": token_lengths,
     }
+    public = {k: v for k, v in summary.items() if not str(k).startswith("_")}
     manifest_path = Path(str(out_path) + ".manifest.json")
-    manifest_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps(summary, indent=2, sort_keys=True))
+    manifest_path.write_text(json.dumps(public, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if not quiet:
+        print(json.dumps(public, indent=2, sort_keys=True))
     return summary
+
+
+def _is_intervention_turn(msg: dict) -> bool:
+    if not isinstance(msg, dict):
+        return False
+    if msg.get("role") != "user":
+        return False
+    return str(msg.get("content") or "").startswith(INTERVENTION_MARK)
+
+
+def _contains_intervention_mark(messages: Iterable[dict]) -> bool:
+    return any(INTERVENTION_MARK in str(m.get("content") or "") for m in messages)
+
+
+def _is_ask_planner_content(content: str) -> bool:
+    text = str(content or "")
+    try:
+        return parse_executor_action(text).kind == "ASK_PLANNER"
+    except ActionParseError:
+        return text.startswith("ASK_PLANNER:")
+
+
+def _iter_correction_histories(
+    history: list[dict],
+    *,
+    strip_interventions: bool = True,
+) -> Iterable[tuple[str, list[dict] | None]]:
+    """Yield ``(status, example_history)`` for each intervention in rendered history.
+
+    Status is ``ok``, ``no_post_intervention_action``, or ``ask_planner_target``.
+    On ``ok``, ``example_history`` is the surrounding turns as ``_history_from_events``
+    rendered them, with ``INTERVENTION:`` turns stripped when requested, ending on
+    the post-intervention assistant action.
+    """
+    for i, msg in enumerate(history):
+        if not _is_intervention_turn(msg):
+            continue
+        target: dict | None = None
+        for later in history[i + 1 :]:
+            if later.get("role") == "assistant":
+                target = later
+                break
+        if target is None:
+            yield DROP_NO_POST_INTERVENTION_ACTION, None
+            continue
+        if _is_ask_planner_content(str(target.get("content") or "")):
+            yield DROP_ASK_PLANNER_TARGET, None
+            continue
+        prefix = list(history[:i])
+        if strip_interventions:
+            prefix = [m for m in prefix if not _is_intervention_turn(m)]
+        yield "ok", prefix + [dict(target)]
+
+
+def remask_to_message_index(
+    messages: list[dict],
+    tokenizer: Any | None,
+    target_index: int,
+    *,
+    max_length: int | None = 32768,
+) -> dict[str, Any]:
+    """Call ``tokenize_and_mask``, then keep labels only on ``messages[target_index]``.
+
+    ``tokenize_and_mask`` itself is unchanged: it still labels every assistant turn.
+    Correction examples remask afterwards so loss sits only on the post-intervention
+    action. If budget-fitting drops that target, the example is marked unrepresentable.
+    """
+    tokenized = tokenize_and_mask(messages, tokenizer, max_length=max_length)
+    if not tokenized["representable"]:
+        return tokenized
+    selected = messages
+    mapped: int | None = target_index
+    if tokenized["truncated"] and max_length is not None:
+        def _length_fn(ms: list[dict]) -> int:
+            return len(_tokenize_messages(ms, tokenizer)["input_ids"])
+
+        fit = fit_messages_to_budget(
+            messages, max_tokens=max_length, length_fn=_length_fn
+        )
+        selected = fit.selected
+        orig = messages[target_index]
+        mapped = next(
+            (k for k, m in enumerate(selected) if m is orig or m == orig),
+            None,
+        )
+        if mapped is None:
+            out = dict(tokenized)
+            out["representable"] = False
+            return out
+    labeled = _tokenize_messages(
+        selected, tokenizer, supervised_indices={mapped}
+    )
+    out = dict(tokenized)
+    out["input_ids"] = labeled["input_ids"]
+    out["labels"] = labeled["labels"]
+    out["attention_mask"] = [1] * len(labeled["input_ids"])
+    return out
+
+
+def _write_manifest(out_path: Path, summary: dict[str, Any], *, quiet: bool) -> None:
+    public = {k: v for k, v in summary.items() if not str(k).startswith("_")}
+    manifest_path = Path(str(out_path) + ".manifest.json")
+    manifest_path.write_text(json.dumps(public, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if not quiet:
+        print(json.dumps(public, indent=2, sort_keys=True))
+
+
+def build_correction_dataset(
+    campaign_root,
+    split_ids,
+    out_jsonl,
+    *,
+    strip_interventions: bool = True,
+    system: str = "fixed_k",
+    quiet: bool = False,
+) -> dict:
+    """Emit one JSONL line per post-intervention action (DAgger / no-reviewer context).
+
+    Loss is restricted to the action immediately following each intervention. The
+    ``INTERVENTION:`` user turn is stripped so the target is predicted from state
+    alone. ASK_PLANNER targets are never created.
+    """
+    campaign_root = Path(campaign_root)
+    out_path = Path(out_jsonl)
+    train_ids = {str(x) for x in split_ids}
+    heldout = _heldout_task_ids()
+    assert_no_leakage(train_ids, heldout)
+
+    dropped: list[dict[str, Any]] = []
+    dropped_counts: dict[str, int] = {}
+    records: list[dict[str, Any]] = []
+    token_lengths: list[int] = []
+    tokenizer = _try_tokenizer()
+    n_missing_api_docs = 0
+    n_truncated = 0
+    n_messages_dropped_total = 0
+    n_unrepresentable = 0
+    truncated_run_ids: list[str] = []
+    n_interventions_seen = 0
+    n_forced_true = 0
+    n_ask_events = 0
+    n_ask_planner_targets = 0
+
+    def drop(task_id: str, seed: Any, reason: str, extra: str | None = None) -> None:
+        dropped_counts[reason] = dropped_counts.get(reason, 0) + 1
+        rec: dict[str, Any] = {"task_id": task_id, "seed": seed, "reason": reason}
+        if extra:
+            rec["detail"] = extra
+        dropped.append(rec)
+
+    system_root = campaign_root / system
+    if system_root.is_dir():
+        for seed_dir in sorted(p for p in system_root.iterdir() if p.is_dir()):
+            try:
+                seed = int(seed_dir.name)
+            except ValueError:
+                seed = seed_dir.name
+            for task_dir in sorted(p for p in seed_dir.iterdir() if p.is_dir()):
+                task_id = task_dir.name
+                if task_id not in train_ids:
+                    drop(task_id, seed, DROP_NOT_IN_SPLIT)
+                    continue
+                result_path = task_dir / "result.json"
+                events_path = task_dir / "events.jsonl"
+                if not result_path.is_file():
+                    drop(task_id, seed, DROP_MISSING_RESULT)
+                    continue
+                result = _read_json(result_path) or {}
+                if not events_path.is_file():
+                    drop(task_id, seed, DROP_MISSING_EVENTS)
+                    continue
+                events = _events_after_last_run_start(events_path)
+                n_ask_events += sum(1 for ev in events if ev.event_type == "ask")
+                n_iv = 0
+                n_forced = 0
+                for ev in events:
+                    if ev.event_type != "intervention":
+                        continue
+                    n_iv += 1
+                    if (ev.payload or {}).get("forced") is True:
+                        n_forced += 1
+                n_interventions_seen += n_iv
+                n_forced_true += n_forced
+                instruction, packet, api_docs, history = _history_from_events(events)
+                if not instruction:
+                    drop(task_id, seed, DROP_NO_INSTRUCTION)
+                    continue
+                pairs = list(
+                    _iter_correction_histories(
+                        history, strip_interventions=strip_interventions
+                    )
+                )
+                if n_iv == 0 and not pairs:
+                    drop(task_id, seed, DROP_NO_INTERVENTION)
+                    continue
+                if not api_docs:
+                    n_missing_api_docs += 1
+                run_id = str(
+                    result.get("run_id")
+                    or f"{campaign_root.name}/{system}/{seed}/{task_id}"
+                )
+                commit = _start_commit(task_dir, campaign_root, result)
+                emitted_from_episode = 0
+                for corr_i, (status, example_history) in enumerate(pairs):
+                    if status != "ok" or example_history is None:
+                        if status == DROP_ASK_PLANNER_TARGET:
+                            n_ask_planner_targets += 1
+                        drop(task_id, seed, status, f"intervention_index={corr_i}")
+                        continue
+                    messages = render_executor_messages(
+                        instruction=instruction,
+                        api_docs=api_docs,
+                        packet=packet,
+                        history=example_history,
+                    )
+                    if strip_interventions and _contains_intervention_mark(messages):
+                        drop(task_id, seed, DROP_INTERVENTION_LEAK, f"intervention_index={corr_i}")
+                        continue
+                    target_index = len(messages) - 1
+                    if messages[target_index].get("role") != "assistant":
+                        drop(
+                            task_id,
+                            seed,
+                            DROP_NO_POST_INTERVENTION_ACTION,
+                            f"intervention_index={corr_i}",
+                        )
+                        continue
+                    if _is_ask_planner_content(str(messages[target_index].get("content") or "")):
+                        n_ask_planner_targets += 1
+                        drop(task_id, seed, DROP_ASK_PLANNER_TARGET, f"intervention_index={corr_i}")
+                        continue
+                    tokenized = _check_budget(messages, tokenizer)
+                    if tokenized["truncated"]:
+                        n_truncated += 1
+                        n_messages_dropped_total += int(tokenized["n_messages_dropped"])
+                        truncated_run_ids.append(f"{run_id}#corr{corr_i}")
+                    if not tokenized["representable"] or not any(
+                        lab != -100 for lab in tokenized["labels"]
+                    ):
+                        n_unrepresentable += 1
+                        drop(task_id, seed, DROP_UNREPRESENTABLE, f"intervention_index={corr_i}")
+                        continue
+                    meta = {
+                        "task_id": task_id,
+                        "seed": seed,
+                        "run_id": run_id,
+                        "n_turns": 1,
+                        "source_campaign": str(result.get("campaign_id") or campaign_root.name),
+                        "SIDEKICK_START_COMMIT": commit,
+                        "source": "correction",
+                        "supervise_last_assistant_only": True,
+                        "supervised_message_index": target_index,
+                        "intervention_index": corr_i,
+                        "example_id": f"{run_id}#corr{corr_i}",
+                    }
+                    records.append({"messages": messages, "meta": meta})
+                    token_lengths.append(_conversation_token_length(messages, tokenizer))
+                    emitted_from_episode += 1
+                if n_iv > 0 and emitted_from_episode == 0 and not any(
+                    d["task_id"] == task_id and d["seed"] == seed for d in dropped
+                ):
+                    drop(task_id, seed, DROP_NO_POST_INTERVENTION_ACTION)
+
+    emitted_ids = [row["meta"]["task_id"] for row in records]
+    assert_no_leakage(emitted_ids, heldout)
+
+    digest = _emit_jsonl(out_path, records)
+    summary = {
+        "out_jsonl": str(out_path),
+        "n_sequences": len(records),
+        "n_dropped": len(dropped),
+        "dropped_counts": dropped_counts,
+        "dropped": dropped,
+        "task_ids": sorted(set(emitted_ids)),
+        "run_ids": [row["meta"]["run_id"] for row in records],
+        "n_turns_total": sum(int(row["meta"]["n_turns"]) for row in records),
+        "n_missing_api_docs": n_missing_api_docs,
+        "n_truncated": n_truncated,
+        "n_messages_dropped_total": n_messages_dropped_total,
+        "n_unrepresentable": n_unrepresentable,
+        "truncated_run_ids": truncated_run_ids,
+        "source_campaign_root": str(campaign_root),
+        "source_commit": next(
+            (row["meta"]["SIDEKICK_START_COMMIT"] for row in records if row["meta"].get("SIDEKICK_START_COMMIT")),
+            None,
+        ),
+        "sha256": digest,
+        "token_length_percentiles": {
+            "p50": _percentile(token_lengths, 50),
+            "p90": _percentile(token_lengths, 90),
+            "max": max(token_lengths) if token_lengths else 0,
+            "tokenizer": _DEFAULT_TOKENIZER_ID if tokenizer is not None else "whitespace_fallback",
+        },
+        "system": system,
+        "strip_interventions": strip_interventions,
+        "n_interventions_seen": n_interventions_seen,
+        "n_forced_true": n_forced_true,
+        "n_ask_events": n_ask_events,
+        "n_ask_planner_targets": n_ask_planner_targets,
+        "_token_lengths": token_lengths,
+    }
+    _write_manifest(out_path, summary, quiet=quiet)
+    return summary
+
+
+def _slim_part_summary(summary: dict[str, Any]) -> dict[str, Any]:
+    skip = {"dropped"}
+    return {k: v for k, v in summary.items() if k not in skip and not str(k).startswith("_")}
+
+
+def build_sft_b_plus(
+    teacher_campaign_root,
+    correction_campaign_root,
+    split_ids,
+    out_jsonl,
+    *,
+    teacher_system: str = "planner_alone",
+    correction_system: str = "fixed_k",
+    strip_interventions: bool = True,
+    solved_only: bool = True,
+    quiet: bool = False,
+) -> dict:
+    """Teacher conversations (solved) plus J4 correction examples, one combined JSONL."""
+    out_path = Path(out_jsonl)
+    tmp_root = Path(os.environ.get("TMPDIR") or "/tmp") / f"sft-b-plus-{os.getpid()}"
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    try:
+        teacher_path = tmp_root / "teacher.jsonl"
+        correction_path = tmp_root / "correction.jsonl"
+        teacher_summary = build_sft_dataset(
+            teacher_campaign_root,
+            split_ids,
+            teacher_path,
+            system=teacher_system,
+            solved_only=solved_only,
+            quiet=True,
+        )
+        correction_summary = build_correction_dataset(
+            correction_campaign_root,
+            split_ids,
+            correction_path,
+            strip_interventions=strip_interventions,
+            system=correction_system,
+            quiet=True,
+        )
+        records: list[dict[str, Any]] = []
+        for path in (teacher_path, correction_path):
+            if not path.is_file():
+                continue
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    records.append(json.loads(line))
+        for row in records:
+            if _contains_intervention_mark(row.get("messages") or []):
+                raise RuntimeError(
+                    "combined sft_b_plus contains an INTERVENTION: turn; refusing to write"
+                )
+            messages = row.get("messages") or []
+            meta = row.get("meta") or {}
+            if meta.get("source") == "correction" and messages:
+                last = messages[-1]
+                if last.get("role") == "assistant" and _is_ask_planner_content(
+                    str(last.get("content") or "")
+                ):
+                    raise RuntimeError(
+                        "combined sft_b_plus contains an ASK_PLANNER correction target"
+                    )
+        heldout = _heldout_task_ids()
+        emitted_ids = [str(row["meta"]["task_id"]) for row in records]
+        assert_no_leakage(emitted_ids, heldout)
+        digest = _emit_jsonl(out_path, records)
+        token_lengths = list(teacher_summary.get("_token_lengths") or []) + list(
+            correction_summary.get("_token_lengths") or []
+        )
+        tokenizer = None
+        if not token_lengths:
+            tokenizer = _try_tokenizer()
+            token_lengths = [
+                _conversation_token_length(row["messages"], tokenizer) for row in records
+            ]
+        n_teacher = int(teacher_summary.get("n_sequences") or teacher_summary.get("n_trajectories") or 0)
+        n_correction = int(correction_summary.get("n_sequences") or 0)
+        dropped_counts: dict[str, int] = {}
+        for prefix, part in (
+            ("teacher", teacher_summary.get("dropped_counts") or {}),
+            ("correction", correction_summary.get("dropped_counts") or {}),
+        ):
+            for key, val in part.items():
+                dropped_counts[f"{prefix}_{key}"] = int(val)
+        summary = {
+            "out_jsonl": str(out_path),
+            "n_sequences": len(records),
+            "n_teacher_sequences": n_teacher,
+            "n_correction_sequences": n_correction,
+            "n_dropped": int(teacher_summary.get("n_dropped") or 0)
+            + int(correction_summary.get("n_dropped") or 0),
+            "dropped_counts": dropped_counts,
+            "dropped": [
+                {**d, "part": "teacher"} for d in (teacher_summary.get("dropped") or [])
+            ]
+            + [
+                {**d, "part": "correction"}
+                for d in (correction_summary.get("dropped") or [])
+            ],
+            "task_ids": sorted(set(emitted_ids)),
+            "run_ids": [row["meta"]["run_id"] for row in records],
+            "n_unrepresentable": int(teacher_summary.get("n_unrepresentable") or 0)
+            + int(correction_summary.get("n_unrepresentable") or 0),
+            "n_truncated": int(teacher_summary.get("n_truncated") or 0)
+            + int(correction_summary.get("n_truncated") or 0),
+            "n_messages_dropped_total": int(teacher_summary.get("n_messages_dropped_total") or 0)
+            + int(correction_summary.get("n_messages_dropped_total") or 0),
+            "source_campaign_root": str(teacher_campaign_root),
+            "correction_campaign_root": str(correction_campaign_root),
+            "source_commit": teacher_summary.get("source_commit")
+            or correction_summary.get("source_commit"),
+            "source_commits": {
+                "teacher": teacher_summary.get("source_commit"),
+                "correction": correction_summary.get("source_commit"),
+            },
+            "sha256": digest,
+            "token_length_percentiles": {
+                "p50": _percentile(token_lengths, 50),
+                "p90": _percentile(token_lengths, 90),
+                "max": max(token_lengths) if token_lengths else 0,
+                "tokenizer": (
+                (teacher_summary.get("token_length_percentiles") or {}).get("tokenizer")
+                or (correction_summary.get("token_length_percentiles") or {}).get("tokenizer")
+                or (_DEFAULT_TOKENIZER_ID if tokenizer is not None else "whitespace_fallback")
+            ),
+            },
+            "n_ask_planner_targets": int(correction_summary.get("n_ask_planner_targets") or 0),
+            "n_interventions_seen": int(correction_summary.get("n_interventions_seen") or 0),
+            "n_forced_true": int(correction_summary.get("n_forced_true") or 0),
+            "n_ask_events": int(correction_summary.get("n_ask_events") or 0),
+            "strip_interventions": strip_interventions,
+            "teacher": _slim_part_summary(teacher_summary),
+            "correction": _slim_part_summary(correction_summary),
+        }
+        _write_manifest(out_path, summary, quiet=quiet)
+        return summary
+    finally:
+        for leftover in tmp_root.glob("*"):
+            try:
+                leftover.unlink()
+            except OSError:
+                pass
+        try:
+            tmp_root.rmdir()
+        except OSError:
+            pass
 
 
 def main(argv: Iterable[str] | None = None) -> int:
@@ -659,8 +1167,45 @@ def main(argv: Iterable[str] | None = None) -> int:
         default=None,
         help="Also include unsolved trajectories whose goal_pass_rate >= this threshold.",
     )
+    parser.add_argument(
+        "--mode",
+        choices=("teacher", "correction", "sft_b_plus"),
+        default="teacher",
+        help="teacher=build_sft_dataset; correction=J4 DAgger examples; sft_b_plus=combine both.",
+    )
+    parser.add_argument("--correction-campaign-root", default=None)
+    parser.add_argument("--correction-system", default="fixed_k")
+    parser.add_argument(
+        "--no-strip-interventions",
+        action="store_true",
+        help="Keep INTERVENTION: turns in correction context (default: strip them).",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
     split_ids = load_split_ids(args.split)
+    strip = not args.no_strip_interventions
+    if args.mode == "sft_b_plus":
+        if not args.correction_campaign_root:
+            parser.error("--mode sft_b_plus requires --correction-campaign-root")
+        build_sft_b_plus(
+            args.campaign_root,
+            args.correction_campaign_root,
+            split_ids,
+            args.out,
+            teacher_system=args.system,
+            correction_system=args.correction_system,
+            strip_interventions=strip,
+            solved_only=not args.no_solved_only,
+        )
+        return 0
+    if args.mode == "correction":
+        build_correction_dataset(
+            args.campaign_root,
+            split_ids,
+            args.out,
+            strip_interventions=strip,
+            system=args.correction_system,
+        )
+        return 0
     build_sft_dataset(
         args.campaign_root,
         split_ids,
