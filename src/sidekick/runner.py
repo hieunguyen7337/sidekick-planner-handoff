@@ -190,11 +190,11 @@ def make_env(kind: str, experiment_name: str, cfg: dict[str, Any]) -> BaseEnv:
     return MockEnv()
 
 
-def system_kwargs(name: str, cfg: dict[str, Any], task_id: str) -> dict[str, Any]:
+def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None = None) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
     if name == "fixed_k":
         kwargs["k"] = int(cfg.get("fixed_k", cfg.get("k", 5)))
-    if name in ("sft_plan", "router_seq", "sidekick"):
+    if name in ("sft_plan", "router_seq", "sidekick", "oracle_escalation"):
         adapter = (cfg.get("executor") or {}).get("lora_name") or cfg.get("adapter_name")
         if adapter:
             kwargs["adapter_name"] = adapter
@@ -203,7 +203,13 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str) -> dict[str, Any
             kwargs["verifier_threshold"] = float(cfg["verifier_threshold"])
     if name == "oracle_escalation":
         labels = cfg.get("oracle_labels") or {}
-        steps = labels.get(task_id, cfg.get("oracle_steps") or [])
+        key = f"{task_id}/{seed}" if seed is not None else None
+        if key is not None and key in labels:
+            steps = labels[key]
+        elif task_id in labels:
+            steps = labels[task_id]
+        else:
+            steps = cfg.get("oracle_steps") or []
         kwargs["oracle_steps"] = [int(s) for s in steps]
     return kwargs
 
@@ -225,7 +231,7 @@ def run_single(job: dict[str, Any]) -> dict[str, Any]:
         executor=executor,
         verifier=verifier,
         limits=limits,
-        **system_kwargs(job["system"], cfg, job["task_id"]),
+        **system_kwargs(job["system"], cfg, job["task_id"], job["seed"]),
     )
     log = EventLog(out, run_id)
     try:

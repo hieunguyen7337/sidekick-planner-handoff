@@ -1,0 +1,160 @@
+#!/bin/bash
+#PBS -N hj6-branches
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=16:ngpus=1:mem=128gb
+#PBS -l walltime=06:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj6_branches.out
+#
+# HJ-6 counterfactual branches. Serves granite-4.2-8b with the sft_b LoRA
+# (static --lora-modules). No planner: branches continue from a replayed
+# prefix with review_every_k=None. Do NOT submit from a worker; the
+# orchestrator submits after reviewing the diff.
+#
+# Job variables (override at qsub time):
+#   SPLIT (train|dev), DATE, CAMPAIGN_ROOT, ADAPTER_SFT_B, ALIAS_SFT_B, CFG
+# A second submission of this script with the same DATE/SPLIT skips completed
+# (point, branch_seed) rows.
+# The --lora-modules alias MUST equal executor.lora_name in the campaign
+# config or requests silently hit the base model.
+
+set -uo pipefail
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u9] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+PY="${SIDEKICK_VENV}/bin/python"
+MODEL=ibm-granite/granite-4.2-8b
+VLOG="${LOGDIR}/hj6_branches_vllm.log"
+
+SPLIT="${SPLIT:-train}"
+DATE="${DATE:-$(date -u +%Y%m%d)}"
+CID="hj6_branches_${SPLIT}_${DATE}"
+CAMPAIGN_ROOT="${CAMPAIGN_ROOT:-/scratch/n12194778/sidekick/results/hj4_correction_train_20260917}"
+CFG="${CFG:-${REPO}/configs/hj4_correction.yaml}"
+OUT_CAMPAIGN="${OUT}/${CID}"
+
+# ---- LoRA aliases: MUST equal executor.lora_name in the campaign config ------
+ALIAS_SFT_B="${ALIAS_SFT_B:-sft_b}"
+ADAPTER_SFT_B="${ADAPTER_SFT_B:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_s123_granite8b}"
+
+cd "${REPO}" || exit 1
+mkdir -p "${LOGDIR}" "${OUT}/results" "${OUT_CAMPAIGN}"
+
+if [[ ! -f "${CFG}" ]]; then
+  echo "[hj6] FATAL: campaign config absent: ${CFG}"
+  echo "[hj6] not starting vLLM. Static LoRA line that will be used:"
+  echo "[hj6] --enable-lora --max-loras 4 --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B}=${ADAPTER_SFT_B}"
+  echo "[hj6] alias source: ALIAS_SFT_B, which must equal executor.lora_name"
+  exit 2
+fi
+if [[ ! -d "${CAMPAIGN_ROOT}" ]]; then
+  echo "[hj6] FATAL: campaign root is not a directory: ${CAMPAIGN_ROOT}" >&2
+  exit 2
+fi
+
+LORA_MODULES=()
+register_lora () {
+  local alias="$1"
+  local path="$2"
+  if [[ -z "${path}" ]]; then
+    return 0
+  fi
+  if [[ ! -d "${path}" ]]; then
+    echo "[hj6] FATAL: adapter path for alias ${alias} is not a directory: ${path}" >&2
+    exit 2
+  fi
+  LORA_MODULES+=("${alias}=${path}")
+  echo "[hj6] lora-module ${alias}=${path}"
+}
+register_lora "${ALIAS_SFT_B}" "${ADAPTER_SFT_B}"
+if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
+  echo "[hj6] FATAL: no LoRA modules registered; set ADAPTER_SFT_B" >&2
+  exit 2
+fi
+
+VLLM_PID=""
+
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
+    kill "${VLLM_PID}" 2>/dev/null || true
+    for _ in $(seq 1 12); do kill -0 "${VLLM_PID}" 2>/dev/null || break; sleep 5; done
+    kill -9 "${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+  pkill -f "vllm serve" 2>/dev/null || true
+  pkill -f "EngineCore" 2>/dev/null || true
+  sleep 5
+  echo "[hj6] GPU after shutdown:"
+  nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+}
+
+# ---- vLLM: LoRA registered statically at launch. No codex preflight. ----------
+kill_vllm
+# The --lora-modules line. Alias comes from ALIAS_SFT_B / executor.lora_name, not the directory name.
+"${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+  --served-model-name "${MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len 32768 \
+  --host 127.0.0.1 --port 8000 \
+  --gpu-memory-utilization 0.85 \
+  --enable-lora \
+  --max-loras 4 \
+  --max-lora-rank 64 \
+  --lora-modules "${LORA_MODULES[@]}" \
+  > "${VLOG}" 2>&1 &
+VLLM_PID=$!
+echo "[hj6] vllm serve ${MODEL} pid=${VLLM_PID} --enable-lora --max-loras 4 --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+while (( $(date +%s) < deadline )); do
+  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+    echo "[hj6] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+  fi
+  if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+    echo "[hj6] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  fi
+  sleep 5
+done
+if [[ "${healthy}" -ne 1 ]]; then
+  echo "[hj6] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
+fi
+
+echo "[hj6] ---- branches split=${SPLIT} out=${OUT_CAMPAIGN} source=${CAMPAIGN_ROOT} ----"
+branch_rc=125
+timeout 19800 "${PY}" "${REPO}/scripts/setup/branch_counterfactual.py" \
+  --campaign-root "${CAMPAIGN_ROOT}" \
+  --split "${SPLIT}" \
+  --out-root "${OUT_CAMPAIGN}" \
+  --branch-seeds 101 102 \
+  --workers 10 \
+  --resume \
+  --env appworld \
+  --config "${CFG}"
+branch_rc=$?
+echo "[hj6] branch_counterfactual rc=${branch_rc}"
+
+kill_vllm
+echo "[hj6] done=$(date -Iseconds) branch_rc=${branch_rc} cid=${CID}"
+exit "${branch_rc}"

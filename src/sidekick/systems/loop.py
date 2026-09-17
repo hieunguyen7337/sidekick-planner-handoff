@@ -22,6 +22,7 @@ from sidekick.protocols.schemas import (
     utc_now_iso,
 )
 from sidekick.trajectories.eventlog import EventLog
+from sidekick.training.sft_data import _history_from_events
 
 try:
     from sidekick.cost.ledger import CostLedger
@@ -60,6 +61,55 @@ class SystemPolicy:
     oracle_steps: frozenset[int] = frozenset()
     adapter_name: str | None = None
     verifier_threshold: float = 0.5
+
+
+@dataclass
+class EpisodePrefix:
+    """Start `run_episode` from a replayed intervention prefix instead of reset.
+
+    Default callers omit this; the scratch-start path is unchanged. ``events`` are
+    the original-episode events up to and including the observation immediately
+    before the dropped intervention (last attempt, file order). ``start_step`` is
+    that intervention's step ``s`` — the first step the branch itself will take.
+    """
+
+    events: list[Event]
+    start_step: int
+
+
+def counters_from_events(events: list[Event]) -> tuple[int, int, int, int]:
+    """Prefix counters: episode_tokens, n_asks, n_interventions, n_planner_calls."""
+    tokens = 0
+    n_asks = 0
+    n_interventions = 0
+    n_planner_calls = 0
+    for ev in events:
+        if ev.usage is not None:
+            tokens += token_count(ev.usage)
+            if ev.actor == "planner":
+                n_planner_calls += max(1, int(ev.usage.n_calls or 1))
+        if ev.event_type == "ask":
+            n_asks += 1
+        elif ev.event_type == "intervention":
+            n_interventions += 1
+    return tokens, n_asks, n_interventions, n_planner_calls
+
+
+def last_observation_from_events(events: list[Event]) -> Observation:
+    """Rebuild the last recorded observation so a prefix start need not reset."""
+    for ev in reversed(events):
+        if ev.event_type != "observation":
+            continue
+        payload = ev.payload or {}
+        return Observation(
+            text=str(payload.get("text") or ""),
+            step=int(ev.step),
+            done=bool(payload.get("done", False)),
+            truncated=bool(payload.get("truncated", False)),
+            env_state_hash=ev.env_state_hash,
+            error_type=ev.error_type,
+        )
+    return Observation(text="", step=0)
 
 
 def token_count(usage: Usage) -> int:
@@ -116,7 +166,15 @@ class ConfigurableSystem:
         overlay = {k: v for k, v in kwargs.items() if hasattr(base, k) and v is not None}
         self.policy = replace(base, **overlay)
 
-    def run(self, env: BaseEnv, task_id: str, seed: int, log: EventLog, ledger: CostLedger) -> RunResult:
+    def run(
+        self,
+        env: BaseEnv,
+        task_id: str,
+        seed: int,
+        log: EventLog,
+        ledger: CostLedger,
+        prefix: EpisodePrefix | None = None,
+    ) -> RunResult:
         return run_episode(
             name=self.name,
             env=env,
@@ -129,6 +187,7 @@ class ConfigurableSystem:
             seed=seed,
             log=log,
             ledger=ledger,
+            prefix=prefix,
         )
 
 
@@ -145,6 +204,7 @@ def run_episode(
     seed: int,
     log: EventLog,
     ledger: CostLedger,
+    prefix: EpisodePrefix | None = None,
 ) -> RunResult:
     n_asks = 0
     n_interventions = 0
@@ -160,7 +220,10 @@ def run_episode(
     # The redundancy is deliberate: changing `transcript` would invalidate a running
     # teacher-data campaign and the HJ-1 planner baseline.
     exec_turns: list[dict] = []
+    exec_instruction = ""
+    exec_api_docs = ""
     steps_taken = 0
+    start_step = 1
     eval_result: dict[str, Any] = {
         "success": False,
         "tgc": None,
@@ -322,8 +385,8 @@ def run_episode(
             emit(step=step, actor="system", event_type="error", payload={"detail": "no executor"}, error="crash")
             return None
         messages = render_executor_messages(
-            instruction=env.instruction,
-            api_docs=env.api_docs_prompt,
+            instruction=exec_instruction,
+            api_docs=exec_api_docs,
             packet=packet,
             history=exec_turns,
         )
@@ -424,29 +487,62 @@ def run_episode(
         }
 
     try:
-        last_obs = env.reset(task_id, seed)
-        transcript.append(f"INSTRUCTION: {env.instruction}")
+        if prefix is not None:
+            start_step = max(1, int(prefix.start_step))
+            hist_instruction, hist_packet, hist_api_docs, hist_turns = _history_from_events(
+                list(prefix.events)
+            )
+            exec_instruction = hist_instruction or env.instruction
+            exec_api_docs = hist_api_docs or env.api_docs_prompt
+            packet = hist_packet
+            exec_turns = list(hist_turns)
+            episode_tokens, n_asks, n_interventions, n_planner_calls = counters_from_events(
+                list(prefix.events)
+            )
+            last_obs = last_observation_from_events(list(prefix.events))
+            transcript.append(f"INSTRUCTION: {exec_instruction}")
+            if packet is not None:
+                transcript.append(f"PLAN: {packet.model_dump_json()}")
+            for turn in exec_turns:
+                content = str(turn.get("content") or "")
+                if turn.get("role") != "user":
+                    continue
+                if content.startswith(("OBS:", "INTERVENTION:", "ANSWER:", "ASK_IGNORED")):
+                    transcript.append(content)
+        else:
+            last_obs = env.reset(task_id, seed)
+            exec_instruction = env.instruction
+            exec_api_docs = env.api_docs_prompt
+            transcript.append(f"INSTRUCTION: {env.instruction}")
+
+        run_start_payload: dict[str, Any] = {
+            "limits": {
+                "max_steps": limits.max_steps,
+                "max_tokens_per_episode": limits.max_tokens_per_episode,
+                "per_step_timeout_s": limits.per_step_timeout_s,
+                "max_planner_calls": limits.max_planner_calls,
+            },
+            "policy": {
+                "plan_first": policy.plan_first,
+                "planner_drives": policy.planner_drives,
+                "allow_executor_ask": policy.allow_executor_ask,
+                "review_every_k": policy.review_every_k,
+                "use_router": policy.use_router,
+                "gate_ask_with_verifier": policy.gate_ask_with_verifier,
+                "adapter_name": policy.adapter_name,
+            },
+        }
+        if prefix is not None:
+            run_start_payload["prefix"] = {
+                "start_step": start_step,
+                "n_events": len(prefix.events),
+                "episode_tokens": episode_tokens,
+            }
         emit(
             step=0,
             actor="system",
             event_type="run_start",
-            payload={
-                "limits": {
-                    "max_steps": limits.max_steps,
-                    "max_tokens_per_episode": limits.max_tokens_per_episode,
-                    "per_step_timeout_s": limits.per_step_timeout_s,
-                    "max_planner_calls": limits.max_planner_calls,
-                },
-                "policy": {
-                    "plan_first": policy.plan_first,
-                    "planner_drives": policy.planner_drives,
-                    "allow_executor_ask": policy.allow_executor_ask,
-                    "review_every_k": policy.review_every_k,
-                    "use_router": policy.use_router,
-                    "gate_ask_with_verifier": policy.gate_ask_with_verifier,
-                    "adapter_name": policy.adapter_name,
-                },
-            },
+            payload=run_start_payload,
             env_state_hash=last_obs.env_state_hash,
         )
         emit(
@@ -457,7 +553,7 @@ def run_episode(
             env_state_hash=last_obs.env_state_hash,
         )
 
-        if policy.plan_first:
+        if prefix is None and policy.plan_first:
             resp = call_planner(
                 "plan",
                 lambda: planner.plan(task_id, env.instruction, env.api_docs_prompt, timeout_s=timeout_s),
@@ -503,7 +599,7 @@ def run_episode(
                 error="limit",
             )
 
-        for step in range(1, limits.max_steps + 1):
+        for step in range(start_step, limits.max_steps + 1):
             if error_type is not None:
                 break
             if over_token_limit():
