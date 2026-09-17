@@ -10,7 +10,7 @@ from typing import Any
 
 from sidekick.agents.executor import MockExecutor, VLLMExecutor
 from sidekick.agents.planner import CachedPacketPlanner, CodexExecConfig, CodexExecPlanner, MockPlanner
-from sidekick.agents.verifier import ConstantVerifier, ScriptedVerifier
+from sidekick.agents.verifier import ConstantVerifier, FeatureVerifier, ScriptedVerifier, SelfVerifier
 from sidekick.cost.ledger import CostLedger
 from sidekick.cost.prices import PriceSchedule
 from sidekick.environments.appworld_env import AppWorldEnv
@@ -152,6 +152,10 @@ def make_planner(
 def make_executor(cfg: dict[str, Any]) -> Any:
     exec_cfg = cfg.get("executor") or {}
     kind = str(exec_cfg.get("type") or cfg.get("executor_type") or "mock")
+    vcfg = cfg.get("verifier") or {}
+    # Existing key: verifier.kind. self_p_ask (and alias "self") is the opt-in
+    # that turns first-token logprobs back on. No new config key.
+    request_logprobs = str(vcfg.get("kind") or "") in ("self_p_ask", "self")
     if kind == "vllm":
         return VLLMExecutor(
             model=str(exec_cfg.get("model", "Qwen/Qwen3-8B")),
@@ -168,6 +172,7 @@ def make_executor(cfg: dict[str, Any]) -> Any:
                 if exec_cfg.get("max_prompt_tokens") is not None
                 else None
             ),
+            logprobs=request_logprobs,
         )
     return MockExecutor()
 
@@ -176,6 +181,17 @@ def make_verifier(cfg: dict[str, Any]) -> Any:
     vcfg = cfg.get("verifier") or {}
     if vcfg.get("scores"):
         return ScriptedVerifier([float(x) for x in vcfg["scores"]])
+    kind = str(vcfg.get("kind") or "")
+    if kind in ("self_p_ask", "self"):
+        return SelfVerifier()
+    if kind == "feature_lr":
+        # cfg: verifier: {kind: feature_lr, path: <abs>, threshold: <tau>}
+        path = vcfg.get("path")
+        if not path:
+            raise ValueError("verifier.kind=feature_lr requires verifier.path")
+        verifier = FeatureVerifier.load(path)
+        threshold = vcfg.get("threshold", cfg.get("verifier_threshold", 0.5))
+        return ThresholdRouter(verifier, threshold=float(threshold))
     return ConstantVerifier(float(vcfg.get("value", 0.5)))
 
 
@@ -201,6 +217,9 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None
     if name in ("router_seq", "sidekick"):
         if "verifier_threshold" in cfg:
             kwargs["verifier_threshold"] = float(cfg["verifier_threshold"])
+        vcfg = cfg.get("verifier") or {}
+        if "threshold" in vcfg:
+            kwargs["verifier_threshold"] = float(vcfg["threshold"])
     if name == "oracle_escalation":
         labels = cfg.get("oracle_labels") or {}
         key = f"{task_id}/{seed}" if seed is not None else None

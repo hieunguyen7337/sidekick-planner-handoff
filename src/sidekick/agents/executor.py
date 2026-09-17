@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol
@@ -14,6 +15,162 @@ logger = logging.getLogger(__name__)
 DEFAULT_READ_SCRIPT = '```python\nprint(read("inbox.txt"))\n```'
 DEFAULT_WRITE_SCRIPT = '```python\nwrite("outbox.txt", "hello world")\n```'
 DEFAULT_EXECUTOR_SCRIPT = [DEFAULT_READ_SCRIPT, DEFAULT_WRITE_SCRIPT, "COMPLETE"]
+
+# The only ASK text the policy emits. P(ASK) is first-token mass on prefixes of
+# the opening "ASK_PLANNER" (and the colon-terminated form), not a single id.
+ASK_TEMPLATE = "ASK_PLANNER: Review my progress so far and tell me the next step."
+ASK_OPENING = "ASK_PLANNER"
+ASK_OPENINGS = (ASK_OPENING, ASK_OPENING + ":")
+DEFAULT_TOP_LOGPROBS = 20
+LOGIT_BIAS_BAN = -100.0
+
+
+def _normalize_token_str(token: str) -> str:
+    if token.startswith("Ġ"):
+        token = token[1:]
+    if token.startswith("▁"):
+        token = token[1:]
+    return token
+
+
+def token_matches_ask_opening(token: str, opening: str = ASK_OPENING) -> bool:
+    """True when ``token`` is a prefix of, or equal to, the ASK opening."""
+    if not token:
+        return False
+    variants = (opening, opening + ":") if opening == ASK_OPENING else (opening,)
+    for candidate in (token, _normalize_token_str(token)):
+        if candidate and any(v.startswith(candidate) for v in variants):
+            return True
+    return False
+
+
+def _first_position_top_logprobs(choice: dict[str, Any]) -> list[tuple[str, float]] | None:
+    """Return (token, logprob) pairs at the first generated position, or None."""
+    logprobs = choice.get("logprobs")
+    if not isinstance(logprobs, dict):
+        return None
+
+    content = logprobs.get("content")
+    if isinstance(content, list) and content:
+        first = content[0] if isinstance(content[0], dict) else {}
+        pairs: list[tuple[str, float]] = []
+        top = first.get("top_logprobs")
+        if isinstance(top, list) and top:
+            for item in top:
+                if not isinstance(item, dict):
+                    continue
+                tok = item.get("token")
+                if tok is None:
+                    tok = item.get("text")
+                lp = item.get("logprob")
+                if tok is None or lp is None:
+                    continue
+                pairs.append((str(tok), float(lp)))
+        elif first.get("token") is not None and first.get("logprob") is not None:
+            pairs.append((str(first["token"]), float(first["logprob"])))
+        else:
+            return None
+        return pairs if pairs else None
+
+    top = logprobs.get("top_logprobs")
+    if isinstance(top, list) and top:
+        first_top = top[0]
+        pairs = []
+        if isinstance(first_top, dict):
+            if "logprob" in first_top or "token" in first_top:
+                tok = first_top.get("token")
+                if tok is None:
+                    tok = first_top.get("text")
+                lp = first_top.get("logprob")
+                if tok is not None and lp is not None:
+                    pairs.append((str(tok), float(lp)))
+            else:
+                for tok, lp in first_top.items():
+                    if lp is None:
+                        continue
+                    pairs.append((str(tok), float(lp)))
+        return pairs if pairs else None
+
+    tokens = logprobs.get("tokens")
+    token_logprobs = logprobs.get("token_logprobs")
+    if (
+        isinstance(tokens, list)
+        and tokens
+        and isinstance(token_logprobs, list)
+        and token_logprobs
+        and token_logprobs[0] is not None
+    ):
+        return [(str(tokens[0]), float(token_logprobs[0]))]
+    return None
+
+
+def p_ask_from_choice(choice: dict[str, Any] | None, opening: str = ASK_OPENING) -> float | None:
+    """Total first-token probability mass on ASK-opening prefixes.
+
+    ``None`` means the response carried no usable logprobs. ``0.0`` means they
+    were present and none of the top-k tokens matched the ASK opening.
+    """
+    if not choice:
+        return None
+    pairs = _first_position_top_logprobs(choice)
+    if pairs is None:
+        return None
+    mass = 0.0
+    seen: set[str] = set()
+    for tok, lp in pairs:
+        if tok in seen:
+            continue
+        seen.add(tok)
+        if token_matches_ask_opening(tok, opening):
+            mass += math.exp(lp)
+    return mass
+
+
+def ask_opening_logit_bias(
+    tokenizer: Any,
+    opening: str = ASK_OPENING,
+    bias: float = LOGIT_BIAS_BAN,
+) -> dict[str, float]:
+    """Map every single-token ASK-opening prefix to a ban bias.
+
+    Iterates prefixes rather than a hardcoded id: the tokeniser may split
+    ``ASK_PLANNER`` more than one way.
+    """
+    if tokenizer is None:
+        return {}
+    ids: set[int] = set()
+    unk = getattr(tokenizer, "unk_token_id", None)
+    convert = getattr(tokenizer, "convert_tokens_to_ids", None)
+    encode = getattr(tokenizer, "encode", None)
+    prefixes = [opening[:i] for i in range(1, len(opening) + 1)]
+    if opening == ASK_OPENING:
+        prefixes.append(ASK_OPENING + ":")
+    for prefix in prefixes:
+        if convert is not None:
+            for cand in (prefix, "Ġ" + prefix, "▁" + prefix):
+                try:
+                    tid = convert(cand)
+                except Exception:
+                    continue
+                if isinstance(tid, int) and tid >= 0 and tid != unk:
+                    ids.add(tid)
+        if encode is None:
+            continue
+        encoded = None
+        try:
+            encoded = encode(prefix, add_special_tokens=False)
+        except TypeError:
+            try:
+                encoded = encode(prefix)
+            except Exception:
+                encoded = None
+        except Exception:
+            encoded = None
+        if encoded is not None and len(encoded) == 1:
+            tid = int(encoded[0])
+            if tid != unk:
+                ids.add(tid)
+    return {str(i): float(bias) for i in sorted(ids)}
 
 
 class LLMClient(Protocol):
@@ -47,6 +204,8 @@ class VLLMExecutor:
         chat_template_kwargs: Optional[dict] = None,
         stop: Optional[list[str]] = None,
         max_prompt_tokens: Optional[int] = None,
+        logprobs: bool = False,
+        top_logprobs: int = DEFAULT_TOP_LOGPROBS,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -79,6 +238,10 @@ class VLLMExecutor:
         # first block, so the rest was pure GPU cost. Do NOT put a bare "```" here: it
         # matches the OPENING fence of a fenced block and truncates to nothing.
         self.stop = list(stop) if stop else None
+        # Opt-in: existing callers must not send logprobs unless they asked.
+        # W-5b: default False. kind: self_p_ask sets this True via make_executor.
+        self.logprobs = bool(logprobs)
+        self.top_logprobs = int(top_logprobs)
 
     def complete(self, messages: list[dict], **kw) -> tuple[str, Usage]:
         client = self._ensure_client()
@@ -103,6 +266,14 @@ class VLLMExecutor:
             "temperature": kw.get("temperature", self.temperature),
             "max_tokens": kw.get("max_tokens", self.max_tokens),
         }
+        if kw.get("logprobs", self.logprobs):
+            payload["logprobs"] = True
+            payload["top_logprobs"] = int(kw.get("top_logprobs", self.top_logprobs))
+        logit_bias = kw.get("logit_bias")
+        if kw.get("ban_ask_prefix") and not logit_bias:
+            logit_bias = ask_opening_logit_bias(self._get_tokenizer())
+        if logit_bias:
+            payload["logit_bias"] = logit_bias
         ctk = kw.get("chat_template_kwargs", self.chat_template_kwargs)
         if ctk:
             payload["chat_template_kwargs"] = ctk
@@ -138,8 +309,10 @@ class VLLMExecutor:
         body = response.json()
         text = ""
         choices = body.get("choices") or []
+        choice: dict[str, Any] = {}
         if choices:
-            message = choices[0].get("message") or {}
+            choice = choices[0] if isinstance(choices[0], dict) else {}
+            message = choice.get("message") or {}
             text = message.get("content") or ""
             if not text:
                 # With a reasoning parser enabled (e.g. granite_thinking_parser) the
@@ -148,6 +321,7 @@ class VLLMExecutor:
                 # logged as parse_error with no hint of why. Observed 2026-09-15:
                 # granite-4.2-8b spent all 1024 max_tokens and returned "".
                 text = message.get("reasoning_content") or ""
+        p_ask = p_ask_from_choice(choice)
         usage_raw = body.get("usage") or {}
         cached = 0
         details = usage_raw.get("prompt_tokens_details") or {}
@@ -164,6 +338,7 @@ class VLLMExecutor:
             latency_s=latency_s,
             gpu_seconds=gpu_seconds,
             n_calls=1,
+            p_ask=p_ask,
             raw={
                 "gpu_fraction": self.gpu_fraction,
                 "gpu_seconds_formula": "latency_s * gpu_fraction",
@@ -245,13 +420,20 @@ class MockExecutor:
     last_lora_name: Optional[str] = None
     last_messages: list[dict] | None = None
     last_seed: Optional[int] = None
+    last_complete_kw: dict[str, Any] | None = None
+    complete_calls: list[dict[str, Any]] = field(default_factory=list)
+    p_ask: Optional[float] = None
+    p_ask_script: list[Optional[float]] = field(default_factory=list)
     _index: int = 0
     _task_index: dict[str, int] = field(default_factory=dict)
+    _p_ask_index: int = 0
 
     def complete(self, messages: list[dict], **kw) -> tuple[str, Usage]:
         self.last_messages = messages
         self.last_lora_name = kw.get("lora_name")
         self.last_seed = kw.get("seed")
+        self.last_complete_kw = dict(kw)
+        self.complete_calls.append(dict(kw))
         task_id = kw.get("task_id")
         raw = self._next_raw(task_id)
         usage = Usage(
@@ -262,9 +444,19 @@ class MockExecutor:
             latency_s=0.01,
             gpu_seconds=0.01,
             n_calls=1,
+            p_ask=self._next_p_ask(),
             raw={"lora_name": self.last_lora_name},
         )
         return raw, usage
+
+    def _next_p_ask(self) -> Optional[float]:
+        if self.p_ask_script:
+            i = self._p_ask_index
+            self._p_ask_index += 1
+            if i >= len(self.p_ask_script):
+                return self.p_ask_script[-1]
+            return self.p_ask_script[i]
+        return self.p_ask
 
     def close(self) -> None:
         return None

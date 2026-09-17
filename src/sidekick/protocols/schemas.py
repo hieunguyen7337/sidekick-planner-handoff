@@ -32,6 +32,9 @@ class Usage(BaseModel):
     latency_s: float = Field(0.0, ge=0.0)
     gpu_seconds: float = Field(0.0, ge=0.0)  # executor/verifier only; 0.0 for hosted planner
     n_calls: int = Field(1, ge=0)
+    # Executor P(ASK) at the first generated token. None means "not measured"
+    # (no logprobs). 0.0 means "measured, mass was zero". Never coerce None to 0.0.
+    p_ask: Optional[float] = None
     raw: dict[str, Any] = Field(default_factory=dict)
 
 

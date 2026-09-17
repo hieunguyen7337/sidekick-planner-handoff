@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Callable, Optional
 
 from sidekick.agents.planner import CodexTimeoutError, PacketParseError, PlannerClient
-from sidekick.agents.verifier import ConstantVerifier, ThresholdRouter, Verifier
+from sidekick.agents.verifier import ConstantVerifier, SelfVerifier, ThresholdRouter, Verifier
 from sidekick.environments.base import BaseEnv
 from sidekick.protocols.prompts import format_executor_action, render_executor_messages
 from sidekick.protocols.schemas import (
@@ -225,6 +225,7 @@ def run_episode(
     packet: Optional[DelegationPacket] = None
     last_obs: Optional[Observation] = None
     last_action: Optional[ExecutorAction] = None
+    last_p_ask: Optional[float] = None
     transcript: list[str] = []
     # `transcript` is a frozen wire format for the planner (INSTRUCTION:/PLAN:/OBS:/...).
     # `exec_turns` is the executor's conversation (assistant actions, user observations).
@@ -389,8 +390,22 @@ def run_episode(
             error_type = "parse_error"
             return None
 
-    def action_from_executor(step: int) -> ExecutorAction | None:
-        nonlocal error_type
+    def measure_p_ask() -> bool:
+        # Self-gate path: only SelfVerifier opted into first-token P(ASK).
+        # ConstantVerifier (J6 default) must not change request or event shape.
+        return isinstance(verifier, SelfVerifier)
+
+    def p_ask_event_fields() -> dict[str, Any]:
+        """Action/ask payload keys. Absent = feature off; null = on but unmeasurable."""
+        if not measure_p_ask():
+            return {}
+        fields: dict[str, Any] = {"p_ask": last_p_ask}
+        if last_p_ask is None:
+            fields["p_ask_fallback"] = True
+        return fields
+
+    def action_from_executor(step: int, *, ban_ask_prefix: bool = False) -> ExecutorAction | None:
+        nonlocal error_type, last_p_ask
         if executor is None:
             error_type = "crash"
             emit(step=step, actor="system", event_type="error", payload={"detail": "no executor"}, error="crash")
@@ -418,6 +433,10 @@ def run_episode(
                 }
                 if sampling_seed is not None:
                     complete_kw["seed"] = sampling_seed
+                if ban_ask_prefix:
+                    complete_kw["ban_ask_prefix"] = True
+                if measure_p_ask():
+                    complete_kw["logprobs"] = True
                 text, usage = call_with_timeout(
                     lambda: executor.complete(messages, **complete_kw),
                     timeout_s,
@@ -429,6 +448,7 @@ def run_episode(
                     n_calls=1,
                     raw={"error_type": "timeout"},
                 )
+                last_p_ask = usage.p_ask
                 charge("executor", usage)
                 emit(
                     step=step,
@@ -440,6 +460,7 @@ def run_episode(
                 )
                 error_type = "timeout"
                 return None
+            last_p_ask = usage.p_ask
             charge("executor", usage)
             try:
                 action = parse_executor_action(text)
@@ -479,11 +500,13 @@ def run_episode(
         if action is None:  # pragma: no cover - the loop above always returns or breaks
             error_type = "parse_error"
             return None
+        payload = action.model_dump()
+        payload.update(p_ask_event_fields())
         emit(
             step=step,
             actor="executor",
             event_type="action",
-            payload=action.model_dump(),
+            payload=payload,
             usage=usage,
             env_state_hash=env.snapshot_hash(),
         )
@@ -497,6 +520,7 @@ def run_episode(
             "last_observation": None if last_obs is None else last_obs.model_dump(),
             "n_asks": n_asks,
             "n_interventions": n_interventions,
+            "p_ask": last_p_ask,
         }
 
     try:
@@ -756,6 +780,7 @@ def run_episode(
             if action.kind == "ASK_PLANNER":
                 allow = policy.allow_executor_ask and packet is not None
                 gated = False
+                self_gated = policy.gate_ask_with_verifier and isinstance(verifier, SelfVerifier)
                 if allow and policy.gate_ask_with_verifier:
                     v = verifier or ConstantVerifier()
                     if not (v.score(trajectory_state(step)) > policy.verifier_threshold):
@@ -771,6 +796,7 @@ def run_episode(
                             "n_asks": n_asks,
                             "ask_reason": action.ask_reason,
                             "gated": False,
+                            **p_ask_event_fields(),
                         },
                         env_state_hash=env.snapshot_hash(),
                     )
@@ -795,17 +821,48 @@ def run_episode(
                     exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
                     exec_turns.append({"role": "user", "content": f"ANSWER: {answer}"})
                     continue
-                emit(
-                    step=step,
-                    actor="executor",
-                    event_type="ask",
-                    payload={"ask_reason": action.ask_reason, "gated": gated, "honoured": False},
-                    env_state_hash=env.snapshot_hash(),
-                )
-                transcript.append(f"ASK_IGNORED: {action.ask_reason}")
-                exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
-                exec_turns.append({"role": "user", "content": "ASK_IGNORED"})
-                continue
+                if gated and self_gated:
+                    emit(
+                        step=step,
+                        actor="executor",
+                        event_type="ask",
+                        payload={
+                            "ask_reason": action.ask_reason,
+                            "gated": True,
+                            "honoured": False,
+                            "redecode": True,
+                            **p_ask_event_fields(),
+                        },
+                        env_state_hash=env.snapshot_hash(),
+                    )
+                    retry = action_from_executor(step, ban_ask_prefix=True)
+                    if retry is None:
+                        break
+                    last_action = retry
+                    if retry.kind != "ASK_PLANNER":
+                        action = retry
+                    else:
+                        transcript.append(f"ASK_IGNORED: {retry.ask_reason}")
+                        exec_turns.append({"role": "assistant", "content": format_executor_action(retry)})
+                        exec_turns.append({"role": "user", "content": "ASK_IGNORED"})
+                        continue
+                else:
+                    emit(
+                        step=step,
+                        actor="executor",
+                        event_type="ask",
+                        payload={
+                            "ask_reason": action.ask_reason,
+                            "gated": gated,
+                            "honoured": False,
+                            **p_ask_event_fields(),
+                        },
+                        env_state_hash=env.snapshot_hash(),
+                    )
+                    transcript.append(f"ASK_IGNORED: {action.ask_reason}")
+                    exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
+                    exec_turns.append({"role": "user", "content": "ASK_IGNORED"})
+                    continue
 
             if action.kind == "REPORT":
                 emit(
