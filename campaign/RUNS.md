@@ -1417,6 +1417,30 @@ not tuned later:
 - `harmful := mean(branch_gpr) > actual_gpr`; `needed_strict :=` both samples below actual
 - either sample missing → `incomplete`, no label, never imputed
 
+🔺 **Superseded by the focal + band definition (amendment §1), and one consequence of that
+change is a naming trap worth stating before any number is quoted.** Under the band rule as
+implemented (`scripts/setup/branch_counterfactual.py:250-259`, committed in `744361f`):
+
+- `needed := Δ > δ` — the correction helped, beyond the noise floor
+- `needless := Δ < −δ` — the correction **actively hurt**, beyond the noise floor
+- `ambiguous := |Δ| ≤ δ` — the correction changed nothing measurable
+- `harmful` is defined **identically to `needless`** and is therefore a redundant column
+
+The trap: under the old zero-threshold rule `needless` meant "did not help", which included
+every call that changed nothing. Under the band rule those calls are `ambiguous`, and
+`needless` has narrowed to "made it worse". So:
+
+> **The headline "X % of a fixed schedule's expert calls changed nothing" is
+> `needless + ambiguous`, i.e. `1 − f` — never the `needless` column alone.**
+
+Likewise Gate B's "`harmful` > 0.15 flags the review format" now reads off a column that is
+the same as `needless`, and the plan's needless-ask rate (asks at states labelled `needless`)
+now scores asks only at states where asking actively hurt — a much narrower set than was
+intended. Both are defensible quantities; they are simply not the quantities the old names
+imply, so the report must print `needed` / `needless` / `ambiguous` as three separate counts
+and never a two-way split. No code change: Δ is stored per point, so any relabelling is free
+and costs no rollouts.
+
 Let *f* = the needed fraction. Report it on **dev** (train is inflated for the same reason as
 above), by depth bucket (1–5 / 6–10 / 11+) and by seed.
 
