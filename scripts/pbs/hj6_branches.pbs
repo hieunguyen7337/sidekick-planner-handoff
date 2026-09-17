@@ -15,6 +15,7 @@
 # Job variables (override at qsub time):
 #   SPLIT (train|dev), DATE, CAMPAIGN_ROOT, ADAPTER_SFT_B, ALIAS_SFT_B, CFG
 #   DELTA_BAND_DELTA, TRAIN_MANIFEST (dev labelling uses the frozen train δ)
+#   BRANCH_SEEDS
 # A second submission of this script with the same DATE/SPLIT skips completed
 # (point, condition, branch_seed) rows.
 # The --lora-modules alias MUST equal executor.lora_name in the campaign
@@ -59,6 +60,7 @@ CFG="${CFG:-${REPO}/configs/hj4_correction.yaml}"
 OUT_CAMPAIGN="${OUT}/${CID}"
 DELTA_BAND_DELTA="${DELTA_BAND_DELTA:-}"
 TRAIN_MANIFEST="${TRAIN_MANIFEST:-${OUT}/hj6_branches_train_${DATE}/manifest.json}"
+BRANCH_SEEDS="${BRANCH_SEEDS:-101 102}"
 
 # ---- LoRA aliases: MUST equal executor.lora_name in the campaign config ------
 ALIAS_SFT_B="${ALIAS_SFT_B:-sft_b}"
@@ -166,11 +168,12 @@ fi
 if [[ -n "${TRAIN_MANIFEST}" && -f "${TRAIN_MANIFEST}" ]]; then
   extra+=(--train-manifest "${TRAIN_MANIFEST}")
 fi
+echo "[hj6] branch seeds=${BRANCH_SEEDS}"
 timeout 35100 "${PY}" "${REPO}/scripts/setup/branch_counterfactual.py" \
   --campaign-root "${CAMPAIGN_ROOT}" \
   --split "${SPLIT}" \
   --out-root "${OUT_CAMPAIGN}" \
-  --branch-seeds 101 102 \
+  --branch-seeds ${BRANCH_SEEDS} \
   --workers 10 \
   --resume \
   --env appworld \
