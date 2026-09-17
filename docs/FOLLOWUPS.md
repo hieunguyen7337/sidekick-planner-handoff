@@ -297,40 +297,21 @@ compared directly on one of the 18 identical-code points before theorising. Like
 candidates are an off-by-one in which step's hash is compared, or the probe world carrying
 an extra io record (the replay itself, or the preflight) that the gold run does not have.
 
-## OPEN 2026-09-17 — J4's interventions are a timer, so J5's ASK targets are not derivable
+## RESOLVED 2026-09-17 — J4's interventions are a timer, so J5's ASK targets are not derivable
 
-**Status: needs a decision before J5 is specified. Blocks nothing else.**
+**Resolution adopted 2026-09-17**: see `campaign/RUNS.md` ("The campaign from here: gates A and B, written before the jobs (2026-09-17)") [OBSERVED campaign/RUNS.md:1342-1360].
 
-Measured on `hj4_correction_train_20260917` (180 episodes, post-recovery), verified
-independently on three episodes after a worker first reported it:
+- **Branches first**: J6 (counterfactual branches) is re-sequenced ahead of SFT(c) (J5b).
+- **ASK targets come from J6 branch labels**: J5b (`sft_c`) trains the `ASK_PLANNER` channel specifically on intervention points where proceeding unaided failed (`needed` label).
+- **`sft_b_plus` is the no-ASK control**: J5a (`sft_b_plus`) is built from J2 teacher demonstrations plus J4 post-correction actions with **no `ASK_PLANNER` targets**, isolating the effect of the escalation channel against an exact data-volume match.
 
-- Interventions land at event positions **12, 23, 34, 45, 56, 67, 78, 89** — exactly 11
-  apart (5 actions + 5 observations + 1 intervention). A deterministic 5-step timer.
-- Order is `action, observation, INTERVENTION, action`: the reviewer speaks **before** the
-  executor acts and **never rejects a proposed action**.
-- **495 / 495** interventions carry `forced: true`. **0** `ask` events campaign-wide.
-- `correction` is imperative prose, not executable code.
+## OPEN 2026-09-17 — verifier trained on timer-tick states only may exhibit calibration bias across arbitrary steps
 
-`PLAN.md` specifies SFT(c) as "post-correction actions as targets (overridden action
-masked) and `ASK_PLANNER` as the target where the review overrode the executor". Against
-this data:
+The J6 counterfactual branch labels exist exclusively at timer-tick states (steps 5, 10, 15, …) where `fixed_k` interventions occurred [OBSERVED campaign/RUNS.md:1205-1215]. However, during live deployment in `sidekick` (and under `router_seq`), the verifier scores executor candidate states at *every* step.
 
-1. **Nothing is overridden**, so the masking instruction is a no-op.
-2. **"Where the review overrode the executor" is not identifiable.** Every intervention is
-   a timer tick. Putting `ASK_PLANNER` at those points trains the model to ask every 5
-   steps — a metronome, which is what `fixed_k` already is. It would also make H2 measure
-   "does asking on a schedule help" rather than "does need-based escalation help", which
-   is the hypothesis the control exists to isolate.
+The verifier is therefore trained on a biased subsample of states (states reached at 5-step intervals under periodic review). Consequently, dev calibration metrics (AUROC, ECE, Brier score) measured on branch labels may not transfer uniformly to arbitrary execution steps.
 
-**Proposed resolution** (not yet approved): build **`sft_b_plus` now** — J3's teacher
-conversations plus J4's post-intervention actions, no ASK targets, no oracle labels needed
-— and defer **`sft_c`'s ASK channel until J6** supplies needed/needless labels by branching
-forward from each intervention point without the planner. J6 was already on the critical
-path, so this costs no wall-clock.
-
-🔺 **Do not build ASK targets from `forced` interventions** without resolving this. The
-resulting adapter would look like it had learned to escalate while having learned to count
-to five, and nothing in the dev metrics would distinguish the two.
+**Impact & investigation**: Evaluate escalation rates and needless-ask rates during the J8 dev frontier sweep; check whether the verifier over-triggers at non-timer steps or exhibits step-depth calibration drift.
 
 ## OPEN 2026-09-17 — seven configs define an executor but no prompt budget
 

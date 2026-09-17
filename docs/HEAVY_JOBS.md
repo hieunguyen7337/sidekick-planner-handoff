@@ -1,263 +1,209 @@
 # Sidekick — heavy jobs, specified in full
 
-Status **2026-09-16 00:45: HJ-1's go/no-go gate is settled — PASS.** Classes A and B both ran
-before the maintenance window. `planner_alone` TGC **0.684** (114/114), `executor_alone`
-(granite-4.2-8b, zero-shot) TGC **0.000** (114/114); paired difference **68.42 pp**, 95 % CI
-**[59.65, 76.32]** against a ≥ 20 pp threshold. The `granite-4.2-3b` arm was refused by its smoke
-gate (the 3B cannot hold the action format) and was not needed: it exists as a fallback for the
-executor being *too strong*, which did not happen.
-
-**Two Class C arms also ran, and produced the night's most important result.** `prompt_only` (one
-plan) and `fixed_k` (review every 5 steps) both completed 114/114 and both scored TGC **0.000** —
-identical to `executor_alone` — so all three differ from `planner_alone` by the same 68.42 pp
-[59.65, 76.32]. **936 planner calls in `fixed_k` bought nothing.** The reviews were correct and
-specific (they named `apis.supervisor.show_account_passwords()`), the executor often complied, and
-it still could not carry the resulting `access_token` across steps. What separates luna from
-granite-4.2-8b here is not information that can be handed over in text. `oracle_escalation` remains
-unrun. **HJ-2 … HJ-8 are unsubmitted.** Full numbers, the diagnosis and per-job provenance:
-`campaign/RUNS.md`; machine-readable report: `campaign/hj1_gate.json`.
-
-⚠ The gate licenses "there is ample headroom", not "the gap is 68 points" — `executor_alone` is
-zero-shot where the literature's frozen-8B numbers are few-shot, and `planner_alone` was truncated
-by a 25-call cap on 10.5 % of episodes, so the figure is an upper bound. See `campaign/RUNS.md`.
-
-All M0 feasibility gates passed on 2026-09-15 (see `feasibility/M0_RESULTS.md`). Every job below
-still needs explicit approval before it runs.
-
-**HJ-1 was split by resource class**, because its six arms barely overlap in what they need and
-`runner.py` already takes one `--system` per invocation, so no code change was required:
-
-| class | arms | needs | runs | job |
-|---|---|---|---|---|
-| A | `executor_alone` (8b, 3b) | GPU only, **zero planner calls** | 228 | `scripts/pbs/hj1a_executor_alone.pbs` |
-| B | `planner_alone` | luna only, **no GPU** | 114 | `scripts/pbs/hj1b_planner_alone.pbs` |
-| C | `prompt_only`, `fixed_k`, `oracle_escalation` | both at once | 268 | after maintenance |
-
-Classes A and B together settle HJ-1's go/no-go gate (`planner_alone − executor_alone ≥ 20 pp`) and
-were run on the evening of 2026-09-15 ahead of the ~08:00 2026-09-16 maintenance shutdown. Class C
-needs a GPU and the planner simultaneously and was deferred.
-
-⚠ Splitting arms across calendar windows is acceptable for a **pilot** hunting a ~20 pp effect, where
-planner drift is far smaller than the effect. It must **not** be done for HJ-7, where all six systems
-must run in one window.
-
-⚠ **Every dollar figure below is luna API list pricing and does not describe spend.** Codex here
-authenticates through a ChatGPT plan, so planner calls are covered by the subscription; read the
-dollar columns as a token-volume proxy. The binding limit is plan quota, which a batch job cannot
-observe. See `FOLLOWUPS.md` §6 for what running HJ-1 actually exposed.
+Status **2026-09-17: Campaign re-sequenced, baselines settled, J3 passed, J4 complete.**
+- **HJ-1 / HJ-1R / HJ-1.5 (J1)**: Settled. Granite-4.2-8B retained over Qwen3-8B based on pre-registered agreement (0.256 under serving configuration, rising with depth) [OBSERVED campaign/RUNS.md:636-660, 1275-1298]. Honest untrained dev baselines established: `executor_alone` TGC 0.0175, `prompt_only` TGC 0.0439 [OBSERVED campaign/RUNS.md:445-446].
+- **HJ-2B (J2)**: Teacher demonstrations on train complete (180/180, 133 solved; extended to 230 trajectories in `sft_b_s123_p075.jsonl`) [OBSERVED campaign/RUNS.md:390-405, 819-829].
+- **HJ-3 (J3)**: SFT(b) adapter complete (job 25401722) and evaluated (job 25401780). Gate PASSED: `sft_plan` TGC 0.4298 (+37.72 pp over untrained prompt-only, CI [28.07, 47.37]); probe agreement rose 0.256 → 0.492 [OBSERVED campaign/RUNS.md:940-970, 1005-1025].
+- **J4 (HJ-2C)**: Fixed-k correction data on `sft_b` on train complete (180/180, TGC 0.577, 495 interventions) [OBSERVED campaign/RUNS.md:1080-1102, 1161-1171]. 495/495 interventions are `forced: true` on a 5-step timer (0 `ask` events), showing that ASK targets cannot be derived from J4 alone.
+- **Reordered Sequence (2026-09-17)**:
+  **J4b (dev fixed_k, Gate A) → J6 (counterfactual branches, Gate B) → J5a `sft_b_plus` / J5b `sft_c` → J7 (verifier) → J8 (dev frontier sweep) → J9 (prereg freeze) → J10 (test_normal, once)** [OBSERVED campaign/RUNS.md:1342-1360].
+- **DPO Dropped (2026-09-17)**: Preference optimization (HJ-6) is dropped; sidekick operating points are swept by thresholding policy $P(\text{ASK})$ at serve time (`gate_ask_with_verifier`), requiring one adapter instead of three, allowing arbitrarily many operating points along the Pareto frontier, and doubling as the H3 calibration measurement [OBSERVED campaign/RUNS.md:1354-1358].
 
 Read with `PLAN.md`. Every job here:
-
-- runs on **one node, one GPU** unless stated, because `gpu_batch_exec` had 189 jobs queued tonight
-  while `gpu_inter_exec` was nearly idle;
-- has walltime ≤ 12 h and is **resumable** — it skips any run whose result file already exists, so a
-  killed job costs only the in-flight runs;
-- writes `STATUS.md`, an append-only event log per run, and a manifest pinning model revisions, the
-  AppWorld commit, the Codex CLI version, the prompt hashes and the seed;
-- pins the planner explicitly with `-m gpt-5.6-luna -c model_reasoning_effort=medium`, because the
-  user's Codex config defaults to a different and much more expensive model.
-
-Cost arithmetic uses the measured overhead of **15,378 input tokens per fresh planner call** plus luna
-list prices (0.20 / 0.02 cached / 1.20 USD per 1M tokens). Threads are resumed rather than restarted, so
-most input is billed at the cached rate.
+- runs on **one node, one GPU** unless stated;
+- has walltime ≤ 12 h and is **resumable**;
+- writes `STATUS.md`, an append-only event log per run, and a manifest pinning model revisions, the AppWorld commit (`42b5bcf`), the Codex CLI version (`0.153.4`), prompt hashes and seed;
+- pins the planner explicitly with `-m gpt-5.6-luna -c model_reasoning_effort=medium`.
 
 ---
 
-## Dependency order
+## Dependency Order
 
 ```
-M0 gates (tonight)
-   └── HJ-1 pilot ──┬── HJ-2 trajectory collection ── HJ-3 SFT ──┬── HJ-4 branches ── HJ-5 verifier
-                    │                                            └── HJ-6 DPO
-                    └── (prereg frozen here)                                   └── HJ-7 final eval
-                                                                                    └── HJ-8 OOD (optional)
+Feasibility gates (2026-09-15)
+   └── J1 (HJ-1/1R/1.5 pilot & probe) ── J2 (HJ-2B teacher demos) ── J3 (HJ-3 SFT(b)) ── J4 (HJ-2C train fixed_k)
+          └── J4b (dev fixed_k, Gate A) ── J6 (counterfactual branches, Gate B)
+                 └── J5a (sft_b_plus) / J5b (sft_c with ASK) ── J7 (verifier) ── J8 (dev frontier sweep)
+                        └── J9 (freeze on dev) ── J10 (HJ-7 test_normal, once)
+                                                        └── J11 (HJ-8 OOD test_challenge, optional)
 ```
 
 ---
 
-## HJ-1 — M3 pilot campaign
+## HJ-1 / J1 — M3 Pilot Campaign & Probes (COMPLETE)
 
-**Purpose.** Measure the capability gap, the delegable-step fraction and the paired variance that sets
-ε. This is the go/no-go for the whole study: if `planner_alone` does not beat `executor_alone` by a wide
-margin on our own scaffold, there is nothing to displace.
-
-| field | value |
-|---|---|
-| Runs | **610 runs** = 5 full arms × 57 dev tasks × 2 seeds (570) + a 20-task `oracle_escalation` probe × 2 seeds (40). Not 684: `oracle_escalation` is a diagnostic probe, not a sixth full arm, so 57 × 6 × 2 overcounts it by 74 |
-| Arms | `planner_alone`, `executor_alone` (granite-4.2-8b), `executor_alone` (granite-4.2-3b), `prompt_only`, `fixed_k` (k=5), plus a 20-task `oracle_escalation` probe |
-| PBS | `select=1:ncpus=32:ngpus=1:mem=128gb`, `-q gpu_batch_exec`, walltime **08:00:00** |
-| Layout | vLLM serves granite-8b and granite-3b (adapters off) on the one H100; 16 AppWorld worker processes; 6 concurrent `codex exec` subprocesses |
-| Duration | ≈ 5–7 h [INFERRED — G3 measured 1,808 tok/s at 16-way concurrency, so this holds] |
-| Planner turns | ≈ 3,500 |
-| Planner cost | **US$8–14** |
-| GPU-hours | ≈ 6 |
-| Outputs | `results/pilot_<date>/runs.jsonl`, 610 event logs, a variance table, the delegable-step histogram |
-| Gate | proceed only if `planner_alone − executor_alone ≥ 20 pp` TGC and ≥ 30% of steps are delegable. If the 8B gap is too small, the 3B arm becomes the executor |
-| Risk | a systematically broken prompt wastes the whole run → the job runs a **10-task smoke slice first** and stops if any arm returns 0 successes |
+**Purpose.** Measure capability gap, delegable-step fraction, baseline prompt behavior, and executor state-tracking probe.
+- HJ-1: Gated PASS on `planner_alone − executor_alone ≥ 20 pp` [OBSERVED campaign/RUNS.md:3-17].
+- HJ-1R: Untrained baselines re-run under corrected multi-turn prompt (`executor_alone` TGC 0.0175, `prompt_only` TGC 0.0439) [OBSERVED campaign/RUNS.md:445-446].
+- HJ-1.5: Serving-config probe validated Granite-4.2-8B (agreement 0.256, rising with depth to 0.400) [OBSERVED campaign/RUNS.md:636-660, 1275-1298].
 
 ---
 
-## HJ-2 — M4 trajectory collection
+## HJ-2B / J2 — M4 Teacher Demonstrations on Train (COMPLETE)
 
-**Purpose.** Build the supervised training set from the train split: planner-alone demonstrations,
-plus prompt-only rollouts that contain real interventions and real escalations.
-
-🔺 **Superseded 2026-09-16 — split into HJ-2B and HJ-2C.** The `prompt_only` half of this job was
-premised on those rollouts containing useful segments; `prompt_only` solved 0/114 in HJ-1, so 8
-rollouts per task would buy 720 episodes of nothing.
-
-- **HJ-2B (running, job 25392080→`hj2b_planner_train_20260916`, submitted as 25397852):**
-  `planner_alone` over train, 90 tasks × 2 seeds = **180 episodes**, CPU only, ~2 h, ≈2,900 luna
-  calls. Expect ≈125 solved trajectories / ≈1,550 steps. This is the SFT(b) teacher data. Caps
-  fixed first: `max_planner_calls` 25 → **81**, token budget non-binding.
-- **HJ-2C (after SFT(b) trains):** `fixed_k` on the **`sft_b` policy**, train 90 × 2 seeds, with
-  plans replayed from HJ-2B so only the reviews are live (≤ 1,450 calls). Yields the correction/ASK
-  targets *and* HJ-4's branch points.
-
-The "raise rollouts per task from 8 to 10" note below is therefore moot.
-
-⚠ The train split holds **90 tasks, not the documented 105** [measured, gate G2] — a 14% smaller
-supervised pool than planned. Consider raising rollouts per task from 8 to 10 to compensate.
-
-| field | value |
-|---|---|
-| Runs | 90 tasks × (2 `planner_alone` + 8 `prompt_only`) = **900 runs** |
-| PBS | same shape, walltime **10:00:00**, resumable |
-| Duration | ≈ 8–10 h, likely split across two jobs |
-| Planner turns | ≈ 7,500 |
-| Planner cost | **US$18–25** |
-| GPU-hours | ≈ 20 |
-| Outputs | `data/raw/appworld/train/<run_id>/events.jsonl`, and a compacted `data/interim/sft_pairs.parquet` |
-| Note | this is the largest single planner spend in the study. Sampling temperature for the executor is the only source of rollout diversity, since luna has no temperature control |
+**Purpose.** Build SFT(b) teacher set from AppWorld train split.
+- Campaign `hj2b_planner_train_20260916`, job 25397852: 90 train tasks × 2 seeds = 180 episodes, TGC 0.739, 2,613 planner calls [OBSERVED campaign/RUNS.md:390-405].
+- Extended with third seed to 230 trajectories (196 solved + 34 partial ≥ 0.75) in `sft_b_s123_p075.jsonl` [OBSERVED campaign/RUNS.md:819-829].
 
 ---
 
-## HJ-3 — M4 supervised fine-tuning
+## HJ-3 / J3 — M4 Supervised Fine-Tuning SFT(b) (COMPLETE)
 
-**Purpose.** Two SFT variants: (b) plan-conditioned, (c) plan-conditioned plus correction-recovery and
-ASK supervision. (c) is the initialisation for DPO; (b) is the intervention-agnostic control that H2 is
-measured against.
+**Purpose.** Train and evaluate plan-conditioned imitation adapter `sft_b`.
+- Training (job 25401722): Granite-4.2-8B LoRA r=64 α=128, 2 epochs, train loss 0.1414, 2059 s wall [OBSERVED campaign/RUNS.md:811-830].
+- Evaluation (job 25401780): Dev 57 × 2 seeds = 114 runs. `sft_plan` TGC **0.4298** (+37.72 pp over untrained `prompt_only`, 95% CI [28.07, 47.37]); probe agreement rose 0.256 → 0.492 [OBSERVED campaign/RUNS.md:940-970, 1005-1025]. **Gate PASSED in full.**
+
+---
+
+## J4 (HJ-2C) — M4 Correction Data on Trained Policy (COMPLETE)
+
+**Purpose.** Run `fixed_k` (k=5) on `sft_b` on train (90 tasks × 2 seeds = 180 episodes) to harvest post-correction demonstrations and branch points.
+- Campaign `hj4_correction_train_20260917`, jobs 25401962 / 25402025: 180/180 episodes, TGC 0.577, 495 interventions (2.71/ep), 675 hosted calls [OBSERVED campaign/RUNS.md:1080-1102, 1161-1171].
+- Finding: 495/495 interventions are `forced: true` on a fixed timer (0 asks). Reviewer speaks before executor acts and never overrides an action. Supervised ASK targets cannot be derived from J4 data alone [OBSERVED campaign/RUNS.md:1211-1256].
+
+---
+
+## J4b — Gate A: Periodic Review Evaluation on Dev (NEW)
+
+**Purpose.** Evaluate `fixed_k` (k=5) on `sft_b` on **dev** (57 tasks × 2 seeds = 114 runs) with cached plans from `hj1b_planner_20260915` to establish whether timer-based review provides value on held-out tasks paired against `sft_plan(sft_b)` (dev TGC 0.4298).
+
+| field | value |
+|---|---|
+| Runs | 57 dev tasks × 2 seeds = **114 runs** |
+| PBS | `select=1:ncpus=32:ngpus=1:mem=128gb`, walltime **04:00:00** |
+| Duration | ≈ 1.5–2 h [INFERRED] |
+| Planner turns | ≈ 450–550 live review calls [INFERRED] |
+| Planner cost | **US$2–4** [INFERRED] |
+| GPU-hours | ≈ 2 [INFERRED] |
+| Gate A Rule | Paired bootstrap $\text{TGC}(\text{fixed\_k}, \text{sft\_b}, \text{dev}) - \text{TGC}(\text{sft\_plan}, \text{sft\_b}, \text{dev})$: <br>• **$\ge +7\text{ pp}$, CI excludes 0**: reviewer adds real quality on held-out tasks $\rightarrow$ proceed to J6.<br>• **CI includes 0**: interventions add nothing a learned policy could capture $\rightarrow$ **stop before J5–J8 spend** [OBSERVED campaign/RUNS.md:1361-1385]. |
+
+---
+
+## J6 (HJ-4) — Gate B: Counterfactual Branch Collection & Label Generation (RE-SEQUENCED)
+
+**Purpose.** Branch forward without corrections from each intervention point in J4 (train) and J4b (dev) to generate `needed`, `needless`, and `harmful` oracle labels.
+
+🔺 **Superseded 2026-09-17 — moved ahead of SFT(c)**: J4 contains only timer ticks without override events; J6 branch labels provide the necessary ground-truth signal to identify outcome-critical escalation points for SFT(c) (J5b) and verifier training (J7) [OBSERVED campaign/RUNS.md:1342-1351].
+
+| field | value |
+|---|---|
+| Branches | Intervention points branched 2× (seeds 101, 102) without correction, temp 0.7, ≤ 10 steps (≈ 1,000–1,200 branch rollouts) [INFERRED] |
+| PBS | 1 GPU, walltime **06:00:00** |
+| Planner turns | **0** (branches are executor-only) |
+| Planner cost | **US$0** |
+| GPU-hours | ≈ 6–8 [INFERRED] |
+| Outputs | `data/interim/branch_labels.parquet` with oracle labels: `needed`, `needless`, `harmful`, `needed_strict` [OBSERVED campaign/RUNS.md:1389-1396] |
+| Gate B Rule | • $f_{\text{train}} < 0.10$ (< ~75 positives): collect 4th correction seed before J5b.<br>• $f_{\text{dev}} > 0.85$: record bound $1-f$ on savings and proceed.<br>• $\text{harmful} > 0.15$: open FOLLOWUP on review format [OBSERVED campaign/RUNS.md:1400-1405]. |
+
+---
+
+## J5a / J5b (HJ-3b) — M4 Supervised Fine-Tuning of Matched Adapters (RE-SEQUENCED)
+
+**Purpose.** Train two matched adapters:
+- **J5a (`sft_b_plus`)**: J2 teacher demonstrations + J4 post-correction actions with **no `ASK_PLANNER` targets** (the H2 data-matched control).
+- **J5b (`sft_c`)**: J2 teacher demonstrations + J4 post-correction actions + **`ASK_PLANNER` targets at J6 `needed` intervention points**.
 
 | field | value |
 |---|---|
 | PBS | `select=1:ncpus=16:ngpus=1:mem=128gb`, walltime **06:00:00** per variant |
-| Recipe | TRL SFT + PEFT LoRA r=64 α=128 on `q,k,v,o,gate,up,down`, lr 1e-4 cosine, 2 epochs, 32k context, gradient checkpointing, loss on executor tokens only |
-| Duration | ≈ 2–4 h per variant on one H100 [INFERRED — G3 smoke: 6.2 s load, 17 s for a tiny run, 20 GB peak] |
-| GPU-hours | ≈ 8 for both, ≈ 16 with the 3B arm and a seed repeat |
-| Planner cost | **US$0** — no planner calls during training |
-| Outputs | `artifacts/adapters/sft_b_granite8b`, `artifacts/adapters/sft_c_granite8b`, plus manifests listing every training task id |
-| Guard | CI test fails if any dev or test task id appears in an adapter manifest |
-| Then | dev evaluation of each adapter: 57 tasks × 2 arms × 2 seeds ≈ 228 runs, ≈ 1 h, ≈ US$2 |
+| Recipe | TRL SFT + PEFT LoRA r=64 α=128 on `q,k,v,o,gate,up,down`, lr 1e-4 cosine, 2 epochs, 32k context, loss on executor tokens only |
+| GPU-hours | ≈ 4–6 per adapter [INFERRED] |
+| Planner cost | **US$0** during training |
+| Outputs | `artifacts/adapters/sft_b_plus_granite8b`, `artifacts/adapters/sft_c_granite8b` |
 
 ---
 
-## HJ-4 — M5 counterfactual branch collection
+## J7 (HJ-5) — M5 Verifier Training and Calibration
 
-**Purpose.** Labels for the verifier. At each intervention point in the M4 logs, branch the executor
-forward without the planner's help and record what happens: does it fail, does it violate the plan, how
-expensive is recovery, was the intervention worth it.
+**Purpose.** Train and calibrate verifier head on J6 counterfactual branch labels.
 
 | field | value |
 |---|---|
-| Branches | ≈ 600 intervention points × 3 branches × ≤ 10 steps = **≈ 1,800 short rollouts** |
-| PBS | one GPU, walltime **06:00:00** |
-| Planner turns | ≈ 0 — branches are executor-only by construction |
-| Planner cost | **≈ US$0** |
-| GPU-hours | ≈ 10 |
-| Outputs | `data/interim/branch_labels.parquet` with the five label fields |
-| Note | this is the cheapest high-value job in the study, because it buys supervision without touching the planner |
+| Model | `Qwen/Qwen3-1.7B` + binary classification head |
+| PBS | 1 GPU, walltime **03:00:00** |
+| GPU-hours | ≈ 2 [INFERRED] |
+| Planner cost | **US$0** |
+| Outputs | `artifacts/verifier/v1`, dev reliability diagram, Brier score, ECE, and AUROC |
 
 ---
 
-## HJ-5 — M5 verifier training and calibration
+## HJ-6 — M5/M6 Preference Optimisation (SUPERSEDED / DROPPED)
+
+🔺 **Superseded 2026-09-17 — DPO is dropped.**  
+The sidekick's operating points on the cost-quality Pareto frontier are obtained by thresholding the policy's own $P(\text{ASK})$ / verifier score at serve time (`gate_ask_with_verifier`), rather than training three separate DPO $\lambda$ models. This requires one adapter instead of three, enables continuous sweep across arbitrarily many operating points, and directly provides the H3 calibration measurement [OBSERVED campaign/RUNS.md:1354-1358].
+
+---
+
+## J8 — M5 Dev Frontier Sweep & Calibration (NEW)
+
+**Purpose.** Sweep operating thresholds $\tau \in [0.1, 0.9]$ on dev (57 tasks × 2 seeds) to construct the empirical quality-versus-displacement Pareto frontier for `sidekick(\tau)` and `router_seq(\tau)`.
+- Evaluates dev AUROC, ECE, needless-ask rate, and identifies $\tau^*$ and $k_{\text{matched}}$.
 
 | field | value |
 |---|---|
-| Model | `Qwen/Qwen3-1.7B` + one head |
-| PBS | one GPU, walltime **03:00:00** |
-| Duration | ≈ 1 h |
-| GPU-hours | ≈ 2 |
-| Outputs | `artifacts/verifier/v1`, reliability diagram, Brier / ECE / AUROC on dev, the chosen threshold |
-| Cost | US$0 |
+| Runs | 57 tasks × 2 seeds × operating points ≈ 342–456 runs [INFERRED] |
+| PBS | 1 GPU, walltime **08:00:00** |
+| GPU-hours | ≈ 6–8 [INFERRED] |
+| Planner turns | ≈ 800–1,200 [INFERRED] |
+| Planner cost | **US$3–6** [INFERRED] |
+| Outputs | Dev quality-versus-displacement Pareto curve, resolved $\tau^*$, resolved $k_{\text{matched}}$ |
 
 ---
 
-## HJ-6 — M5/M6 preference optimisation
+## J9 — M6 Preregistration Freeze
 
-**Purpose.** The method itself: teach the executor when escalating is worth its cost.
-
-| field | value |
-|---|---|
-| Pairs | three types — continue ≻ needless ASK; ASK ≻ risky continue before an irreversible action; plan-aligned ≻ later-corrected |
-| Sweep | 3 λ settings (escalation penalty weight) × 1 seed, initialised from SFT(c) |
-| PBS | one GPU, walltime **04:00:00** per setting |
-| Duration | ≈ 1–2 h each |
-| GPU-hours | ≈ 12 for the sweep, ≈ 20 including dev evaluations |
-| Planner cost | dev evaluation of 3 settings ≈ 360 runs ≈ **US$4** |
-| Outputs | `artifacts/adapters/sidekick_dpo_lambda{1,2,3}`, the dev frontier plot that selects one |
-| Freeze | after this, `docs/prereg_v1.md` is frozen and **no further tuning is allowed** |
+**Purpose.** Freeze all remaining open parameters in `docs/prereg_v1.md` strictly on **dev** prior to running J10 [OBSERVED campaign/RUNS.md:1410-1436]:
+- Pinned: $\tau^*$, router $\tau^*$, $k_{\text{matched}}$ rule (*$k \in \{3, 5, 10\}$ nearest to sidekick dev calls/ep, interpolating to 7 on tie*), ASK prompt template, oracle label rule, and final arm list.
 
 ---
 
-## HJ-7 — M6 final evaluation on test_normal
+## J10 (HJ-7) — M6 Final Evaluation on `test_normal`
 
-**Purpose.** The only run that produces the headline numbers. Everything is frozen before it starts.
-
-🔺 **Sized 2026-09-16, `scripts/setup/hj7_power.py` → `campaign/results/hj7_power.json`.** The 3
-seeds below are right; the ε = 5 pp margin elsewhere in the plan is **not achievable**.
-`planner_alone` disagrees with itself on **28.07%** of tasks across seeds (16 of 57 pairs). On 168
-tasks, the smallest margin resolvable at ≥ 80% power is **7 pp at N = 3**, and it is *still* 7 pp at
-N = 4 and N = 5 — only the CI half-width shrinks (4.58 → 3.55 pp). At ε = 5 pp, power is 0.591 at
-N = 3 and only 0.809 at N = 5. **Prereg: N = 3, ε = 7 pp.** Extra seeds are wasted quota; the
-binding constraint is the number of *tasks*. A pessimistic alternative model
-(`--correlation-model mixture`) resolves only 10 pp even at N = 5, and is reported alongside.
+**Purpose.** The single test evaluation producing the headline numbers. Everything is frozen before it starts.
+- **Primary Endpoint**: H2 conjunctive over 504 paired comparisons (168 tasks × 3 seeds):
+  1. `sidekick` $\ge$ `fixed_k(k_matched)` $- 7\text{ pp}$
+  2. `sidekick` $>$ `sft_plan(sft_b_plus)`, CI excluding 0
+  3. `sidekick` planner calls/episode $<$ `fixed_k(k=5)`'s, CI excluding 0 [OBSERVED campaign/RUNS.md:1418-1424].
+- **Secondary**: H1 non-inferiority vs `planner_alone` at $\epsilon = 7\text{ pp}$ with $FCD_{\text{tokens}} > 0$; H4 `sidekick` vs `router_seq(\tau^*)` at matched calls; H3 dev AUROC/ECE; dev needed-fraction $f$.
 
 | field | value |
 |---|---|
 | Runs | 168 tasks × 6 systems × 3 seeds = **3,024 runs** |
-| Systems | `planner_alone`, `executor_alone`, `prompt_only`, `fixed_k`, `sft_plan`, `sidekick` |
-| PBS | `select=1:ncpus=32:ngpus=1:mem=128gb`, walltime **12:00:00**, expected to need **2–3 jobs** |
-| Duration | ≈ 20–24 h total |
-| Planner turns | ≈ 18,600 |
-| Planner cost | **US$45–60** |
-| GPU-hours | ≈ 30 |
-| Outputs | `results/final_<date>/runs.jsonl`, the paired bootstrap tables, the quality-versus-displacement frontier, all 12 paper figures |
-| Rule | run once. A re-run after seeing the numbers is a protocol violation and would be recorded as one |
+| Systems | `planner_alone`, `executor_alone`, `prompt_only`, `fixed_k(k_matched)`, `sft_plan(sft_b_plus)`, `sidekick(\tau^*)` |
+| PBS | `select=1:ncpus=32:ngpus=1:mem=128gb`, walltime **12:00:00**, expected to need 2–3 jobs |
+| Duration | ≈ 20–24 h total [INFERRED] |
+| Planner turns | ≈ 15,000–18,600 [INFERRED] |
+| Planner cost | **US$40–60** [INFERRED] |
+| GPU-hours | ≈ 25–30 [INFERRED] |
+| Rule | **Run once.** A re-run after inspecting test results is a fatal protocol violation [OBSERVED AGENTS.md:7, campaign/RUNS.md:1436]. |
 
 ---
 
-## HJ-8 — M6 out-of-distribution slice (optional)
+## J11 (HJ-8) — M6 Out-of-Distribution Slice on `test_challenge` (Optional)
 
 | field | value |
 |---|---|
 | Runs | 417 test_challenge tasks × 3 systems × 1 seed = **1,251 runs** |
 | PBS | one GPU, walltime **12:00:00** |
-| Duration | ≈ 10–12 h |
-| Planner turns | ≈ 11,700 |
-| Planner cost | **US$28–35** |
-| GPU-hours | ≈ 8 |
-| Decide | only if HJ-7 produced a publishable contrast |
+| Planner turns | ≈ 11,700 [INFERRED] |
+| Planner cost | **US$28–35** [INFERRED] |
+| GPU-hours | ≈ 8 [INFERRED] |
+| Decide | only if J10 produced a publishable contrast |
 
 ---
 
-## Totals if everything runs
+## Totals Across the Reordered Campaign
 
-| | GPU-hours | planner turns | planner cost |
+| Milestone / Job | GPU-hours | Planner Turns | Planner Cost |
 |---|---|---|---|
-| HJ-1 … HJ-7 | ≈ 110 | ≈ 33,000 | **US$77–105** |
-| plus HJ-8 | ≈ 118 | ≈ 45,000 | **US$105–140** |
+| J1–J4 (HJ-1/1R/1.5, HJ-2B, HJ-3, HJ-4 train fixed_k) [COMPLETED] | ≈ 30 [INFERRED] | ≈ 7,500 [INFERRED] | ≈ US$25 [INFERRED] |
+| J4b (dev fixed_k, Gate A) | ≈ 2 [INFERRED] | ≈ 500 [INFERRED] | ≈ US$3 [INFERRED] |
+| J6 (counterfactual branches, Gate B) | ≈ 8 [INFERRED] | 0 | US$0 |
+| J5a/b (SFT adapters `sft_b_plus` / `sft_c`) | ≈ 10 [INFERRED] | 0 | US$0 |
+| J7 (verifier training) | ≈ 2 [INFERRED] | 0 | US$0 |
+| J8 (dev frontier sweep) | ≈ 8 [INFERRED] | ≈ 1,000 [INFERRED] | ≈ US$5 [INFERRED] |
+| J10 (HJ-7 test_normal final) | ≈ 30 [INFERRED] | ≈ 18,000 [INFERRED] | ≈ US$50 [INFERRED] |
+| **Total (J1 … J10)** | **≈ 90** [INFERRED] | **≈ 27,000** [INFERRED] | **≈ US$83** [INFERRED] |
+| plus J11 (test_challenge) | ≈ 98 [INFERRED] | ≈ 38,700 [INFERRED] | ≈ US$115 [INFERRED] |
 
-Against a proposed cap of **US$250**, which leaves room for reruns after a bug.
-
-## What could make these numbers wrong
-
-1. **The 15.4k-token overhead per fresh call** is measured on an empty prompt. Adding the AppWorld API
-   documentation digest could push input past 30k per call, roughly doubling the fresh-call cost. The
-   harness caches aggressively through thread resume; G2 measures the real digest size and HJ-1 reports
-   actual cost per run, which replaces every estimate here.
-2. **Episode length.** These estimates assume 10–25 interactions per task. The published luna scaffold
-   used 9.3; ReAct-style scaffolds use 17–30. The 40-step cap bounds the worst case.
-3. **Queue contention.** `gpu_batch_exec` had 189 jobs queued tonight. Wall-clock calendar, not
-   GPU-hours, is the binding constraint on this study.
-4. **Plan quota versus API key.** On the ChatGPT plan, a sweep can stall mid-run with no visible signal,
-   because `rate_limits` is absent from batch output. HJ-2 onward should use an API key.
+Budget remains well within the proposed **US$250** cap.

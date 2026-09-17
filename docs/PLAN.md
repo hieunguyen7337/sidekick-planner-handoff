@@ -240,13 +240,15 @@ Eight systems, one loop, one cost path:
 
 Hypotheses, all internal and paired:
 
-- **H1** — `sidekick` is non-inferior to `planner_alone` on task goal completion at ε = 5 pp, while
-  displacing planner tokens (FCD > 0).
-- **H2** — `sidekick` beats `sft_plan` at matched planner cost. This is the intervention-awareness
-  claim, and it is the core of the paper.
-- **H3** — escalation is calibrated: the verifier beats a fixed schedule (`fixed_k`) and approaches
-  `oracle_escalation`, with a low needless-ask rate.
-- **H4** — training the escalation decision into the policy (`sidekick`) beats bolting a router onto a
+- **H2 (Primary Endpoint — Conjunctive)** — `sidekick` achieves superior task performance through intervention-aware training while saving cost over fixed review. All three conditions must hold [OBSERVED campaign/RUNS.md:1418-1424]:
+  1. `sidekick` ≥ `fixed_k(k_matched)` − 7 pp
+  2. `sidekick` > `sft_plan(sft_b_plus)`, CI excluding 0
+  3. `sidekick` planner calls/episode < `fixed_k(k=5)`'s, CI excluding 0
+- **H1 (Secondary)** — `sidekick` is non-inferior to `planner_alone` on task goal completion at ε = 7 pp, while
+  displacing planner tokens (FCD > 0). Reported whatever it shows; the deliverable is the quality-versus-displacement Pareto frontier.
+- **H3 (Secondary)** — escalation is calibrated: the verifier beats a fixed schedule (`fixed_k`) and approaches
+  `oracle_escalation`, with a low needless-ask rate on dev.
+- **H4 (Secondary)** — training the escalation decision into the policy (`sidekick`) beats bolting a router onto a
   frozen executor (`router_seq`).
 
 **What is deliberately not claimed**: any leaderboard position, any statement about frontier models, and
@@ -255,12 +257,12 @@ LoRA on 90 tasks and say so.
 
 **Realistic expectation, stated in advance.** Published numbers put a frozen ~8B model between 1 and 17
 TGC on test_normal, and SFT on a few thousand teacher trajectories around 26–33, while luna is at 85.
+On dev, `sft_plan(sft_b)` achieved 0.4298 vs luna's 0.6842 [OBSERVED campaign/RUNS.md:952-954].
 So `sidekick` will almost certainly **not** reach non-inferiority at a high displacement rate. The
 deliverable is therefore **the quality-versus-displacement frontier**: at what FCD does collaboration
 stay within ε, and does `sidekick` dominate `sft_plan`, `router_seq` and `fixed_k` on that frontier.
-H2 and H3 are the claims that survive a weak executor; H1 is reported as the frontier curve with the
-non-inferiority point marked. This is written down now, before any result, so it cannot be
-retrofitted.
+H2 is the primary claim; H1 is reported as the frontier curve with the non-inferiority point marked.
+This is written down now, before any result, so it cannot be retrofitted.
 
 ---
 
@@ -293,9 +295,9 @@ Approximately **10–12 weeks, ≈ 120 H100-hours, ≈ 33k planner turns, US$80�
 | **M1** foundation (1 wk) | uv project, schemas, event log, cost ledger, mock env, tests, AGENTS.md, registry, trimmed literature matrix | 0 | 0 |
 | **M2** harness (2 wk) | `AppWorldEnv`, planner client, 8 systems, replay, PBS templates, 3-task live dry run | ≈ 2 | ≤ 100 |
 | **M3** pilot (1–2 wk) | dev 57 × {planner_alone, executor_alone 8B/3B, prompt_only, fixed_k} × 2 seeds; capability-gap gate; annotate 50 interventions; **prereg v1 frozen** | ≈ 6 | ≈ 3.5k |
-| **M4** data + SFT (2 wk) | train 90 × (2 planner-alone demos + 8 prompt-only rollouts); SFT(b) plan-conditioned and SFT(c) + correction/ASK; dev eval | ≈ 20 | ≈ 7.5k |
-| **M5** verifier + DPO (2 wk) | counterfactual branches → labels; verifier; DPO 3 pair types × 3 λ; `router_seq`; oracle; dev eval | ≈ 40 | ≈ 3k |
-| **M6** final (1–2 wk) | test_normal 168 × 6 systems × 3 seeds; statistics; optional test_challenge × 1 seed × 3 systems | ≈ 30 (+8) | ≈ 18.6k (+11.7k) |
+| **M4** data + SFT (2 wk) | [Reordered 2026-09-17]: J4b (dev fixed_k, Gate A) → J6 (branches, Gate B) → J5a `sft_b_plus` / J5b `sft_c` | ≈ 20 | ≈ 7.5k |
+| **M5** verifier + calibration (2 wk) | [Changed 2026-09-17]: J7 verifier on J6 labels; J8 dev frontier sweep via serve-time P(ASK) thresholding (DPO dropped); oracle | ≈ 30 | ≈ 3k |
+| **M6** final (1–2 wk) | J9 freeze on dev; J10 test_normal 168 × 6 systems × 3 seeds (504 paired comparisons, one-shot eval); optional J11 test_challenge | ≈ 30 (+8) | ≈ 18.6k (+11.7k) |
 | **M7** write-up (1 wk) | tables, figures, prereg reconciliation, optional perturbation flags | 0 | ≤ 2k |
 
 Planner spend, computed from the measured 15.4k-token overhead and cached-resume pricing: roughly
@@ -314,26 +316,32 @@ and 4–8 concurrent `codex exec` subprocesses talk to the planner. Nothing need
 
 | stage | data | recipe |
 |---|---|---|
-| S1 SFT(b) plan-conditioned | ~~successful `prompt_only` segments~~ → **solved `planner_alone` trajectories on train** (see note); target = executor action given the packet | TRL SFT, LoRA r=64/α=128, lr 1e-4 cosine, 2 epochs, 32k ctx, loss on executor tokens only |
-| S1 SFT(c) + correction/ASK | adds post-correction actions as targets with the failing action loss-masked, and ASK decisions | same |
-| S2 verifier | counterfactual continue-branches at each intervention (3 branches × ≤ 10 steps) | Qwen3-1.7B + head, BCE, temperature scaling on dev |
-| S3 DPO | pairs: continue ≻ needless ASK; ASK ≻ risky continue before an irreversible action; plan-aligned ≻ later-corrected | TRL DPO on SFT(c), β = 0.1, 1 epoch, LoRA, 3 λ settings |
-| S4 calibration | dev only | thresholds and λ chosen on dev; ε and stopping rules frozen in `docs/prereg_v1.md` before any test run |
+| S1 SFT(b) plan-conditioned | ~~successful `prompt_only` segments~~ → **solved `planner_alone` trajectories on train** (HJ-2B / J3, 230 trajectories, complete); target = executor action given the packet | TRL SFT, LoRA r=64/α=128, lr 1e-4 cosine, 2 epochs, 32k ctx, loss on executor tokens only |
+| S1 SFT(c) + correction/ASK | [Changed 2026-09-17]: split into `sft_b_plus` (J5a, no-ASK control from teacher + post-correction actions) and `sft_c` (J5b, ASK channel trained on J6 branch labels) | same |
+| S2 verifier | Counterfactual continue-branches at each intervention point (J6: 2 seeds × ≤ 10 steps) | Qwen3-1.7B + head, BCE, temperature scaling on dev (J7) |
+| S3 DPO | [Superseded 2026-09-17]: **DPO dropped**. Sidekick operating points come from thresholding P(ASK) at serve time (`gate_ask_with_verifier`), yielding arbitrarily many points on one adapter and doubling as H3 calibration | N/A (serve-time thresholding $\tau$) |
+| S4 calibration / freeze | dev only | Operating threshold $\tau^*$, router $\tau^*$, and $k_{\text{matched}}$ rule frozen at J9 on dev; ε = 7 pp frozen in `docs/prereg_v1.md` before J10 |
 
 Every training example's task id goes into the adapter manifest, and a CI test fails if a test-split id
 appears.
 
-🔺 **SFT(b)'s written data source does not exist.** This table said "successful `prompt_only`
+🔺 **SFT(b)'s written data source does not exist.** This table originally said "successful `prompt_only`
 segments". `prompt_only` solved **0 of 114** episodes in HJ-1, so that set is empty. The teacher is
 `planner_alone`, whose solved trajectories do carry state correctly and are already on disk — run
-over the **train** split (90 tasks × 2 seeds) as HJ-2B, campaign `hj2b_planner_train_20260916`. Dev
-stays the tuning split and is never trained on.
+over the **train** split (90 tasks × 2 seeds + third seed repeat, 230 trajectories in `sft_b_s123_p075.jsonl`)
+as HJ-2B, campaign `hj2b_planner_train_20260916`. Dev stays the tuning split and is never trained on.
+
+🔺 **Re-sequencing and dropped DPO (2026-09-17)**: J4's 495 interventions are ticks of a 5-step timer
+(495/495 `forced: true`, 0 `ask` events), so ASK targets cannot be derived from J4 alone. Counterfactual
+branches (J6) must precede SFT(c) (J5b) to supply needed/needless labels. DPO (M5/HJ-6) is dropped:
+operating points are swept by thresholding policy P(ASK) at serve time, requiring one adapter instead
+of three, allowing arbitrarily many operating points, and doubling as the H3 calibration measurement
+[OBSERVED campaign/RUNS.md:1342-1360].
 
 🔺 **Correction data (SFT(c)) is collected on the SFT(b) policy, not on the untrained model.** A
 correction handed to a model that cannot act on it is always "log in first"; collected on `sft_b`,
 the corrections land on the states the deployed sidekick will actually reach, and the same run
-yields HJ-4's branch points for free. This deviates from the `fixed_k`-on-untrained wording above,
-deliberately.
+yields J6's branch points for free.
 
 🔺 **Training and inference share one prompt renderer** (`protocols/prompts.render_executor_messages`).
 A separate data-side renderer would train the adapter on a prompt distribution that never occurs at
@@ -343,16 +351,23 @@ inference, and no test catches that.
 
 ## 9. Evaluation and statistics
 
-Unit of analysis is the task instance, paired by task × seed across systems. Primary outcome is AppWorld
-task goal completion, with scenario goal completion reported alongside. Non-inferiority is a one-sided
-95% CI on the paired difference against `planner_alone` with ε = 5 pp. Efficiency is FCD on planner
-tokens, calls and dollars. Secondary: intervention burden, escalation precision and recall against
-oracle labels, needless-ask rate, unsafe/irreversible action rate, and total system cost including
-executor GPU-seconds. Crashes, timeouts and limit-hits stay in the denominator. Paired bootstrap with
-10k resamples; 3 seeds on the final evaluation.
+Unit of analysis is the task instance, paired by task × seed across systems. Primary outcome is H2
+conjunctive on AppWorld `test_normal` over 168 tasks × 3 seeds = 504 paired comparisons (one-sided
+95% paired bootstrap, 10k resamples):
+1. `sidekick` ≥ `fixed_k(k_matched)` − 7 pp
+2. `sidekick` > `sft_plan(sft_b_plus)`, CI excluding 0
+3. `sidekick` planner calls/episode < `fixed_k(k=5)`'s, CI excluding 0
+[OBSERVED campaign/RUNS.md:1418-1424].
 
-**Falsification, preregistered**: the method fails if `sidekick` does not beat `sft_plan` at matched
-planner cost, or if its escalation is no better calibrated than `fixed_k`.
+Non-inferiority vs `planner_alone` (H1) is secondary, evaluated with ε = 7 pp (calibrated from
+`scripts/setup/hj7_power.py` on dev seed discordance 28.07%). Efficiency is FCD on planner tokens,
+calls and dollars ($FCD_{\text{tokens}} > 0$). Secondary: SGC, intervention burden, escalation precision
+and recall against oracle labels, needless-ask rate, unsafe/irreversible action rate, and total system
+cost. Crashes, timeouts and limit-hits stay in the denominator.
+
+**Falsification, preregistered (verbatim from RUNS.md:1434-1436)**: if (2) fails, intervention-aware
+training did not beat intervention-agnostic training on this data; if (3) fails, it did not save cost.
+Either is reported as measured. J10 runs once.
 
 ---
 
