@@ -14,6 +14,7 @@ from sidekick.training.sft_data import (
     build_correction_dataset,
     build_sft_b_plus,
     remask_to_message_index,
+    remask_to_message_indices,
 )
 
 
@@ -320,6 +321,10 @@ def test_one_intervention_one_post_action_target(tmp_path, no_heldout):
     assert line["messages"][-1]["role"] == "assistant"
     assert line["meta"]["source"] == "correction"
     assert line["meta"]["supervise_last_assistant_only"] is True
+    assert line["meta"]["supervised_message_indices"] == [
+        line["meta"]["supervised_message_index"]
+    ]
+    assert line["meta"]["n_action_targets"] == 1
 
 
 def test_no_emitted_example_contains_intervention_mark(tmp_path, no_heldout):
@@ -332,7 +337,10 @@ def test_no_emitted_example_contains_intervention_mark(tmp_path, no_heldout):
     )
     out = tmp_path / "corr.jsonl"
     summary = build_correction_dataset(root, ["copy_hello"], out)
-    assert summary["n_sequences"] == 2
+    assert summary["n_sequences"] == 1
+    line = _load_runs(out)[0]
+    assert line["meta"]["n_action_targets"] == 2
+    assert len(line["meta"]["supervised_message_indices"]) == 2
     for line in _load_runs(out):
         for msg in line["messages"]:
             assert "INTERVENTION:" not in str(msg.get("content") or "")
@@ -345,17 +353,21 @@ def test_label_mask_covers_only_target_assistant_turn(tmp_path, no_heldout):
     build_correction_dataset(root, ["copy_hello"], out)
     line = _load_runs(out)[0]
     messages = line["messages"]
+    target_indices = [int(x) for x in line["meta"]["supervised_message_indices"]]
     target_i = int(line["meta"]["supervised_message_index"])
+    assert target_indices == [target_i]
     assert messages[target_i]["role"] == "assistant"
     assert CODE_AFTER in messages[target_i]["content"]
     tok = CharChatTokenizer()
-    masked = remask_to_message_index(messages, tok, target_i, max_length=None)
+    masked = remask_to_message_indices(messages, tok, set(target_indices), max_length=None)
+    also = remask_to_message_index(messages, tok, target_i, max_length=None)
+    assert masked["labels"] == also["labels"]
     expected: list[int] = []
     prev: list[int] = []
     for i, msg in enumerate(messages):
         curr = tok.encode(tok.apply_chat_template(messages[: i + 1], tokenize=False))
         span = curr[len(prev) :]
-        if i == target_i:
+        if i in target_indices:
             expected.extend(span)
         else:
             expected.extend([-100] * len(span))
@@ -433,12 +445,19 @@ def test_sft_b_plus_combines_teacher_and_correction(tmp_path, no_heldout):
     correction = tmp_path / "j4"
     _write_teacher_run(teacher)
     _write_fixed_k_run(correction, task_id="copy_hello", seed=1, events=_j4_style_events())
+    teacher_jsonl = tmp_path / "teacher.jsonl"
+    from sidekick.training.sft_data import build_sft_dataset
+
+    build_sft_dataset(teacher, ["copy_hello"], teacher_jsonl)
     out = tmp_path / "sft_b_plus.jsonl"
-    summary = build_sft_b_plus(teacher, correction, ["copy_hello"], out)
+    summary = build_sft_b_plus(
+        correction, ["copy_hello"], out, teacher_jsonl=teacher_jsonl
+    )
     assert summary["n_teacher_sequences"] == 1
     assert summary["n_correction_sequences"] == 1
     assert summary["n_sequences"] == 2
     assert summary["n_ask_planner_targets"] == 0
+    assert summary["n_ask_targets"] == 0
     lines = _load_runs(out)
     assert len(lines) == 2
     sources = [ln["meta"]["source"] for ln in lines]
@@ -449,3 +468,6 @@ def test_sft_b_plus_combines_teacher_and_correction(tmp_path, no_heldout):
             assert "INTERVENTION:" not in str(msg.get("content") or "")
     corr = next(ln for ln in lines if ln["meta"]["source"] == "correction")
     assert parse_executor_action(corr["messages"][-1]["content"]).kind != "ASK_PLANNER"
+    teacher_bytes = teacher_jsonl.read_bytes()
+    combined = out.read_bytes()
+    assert combined.startswith(teacher_bytes if teacher_bytes.endswith(b"\n") else teacher_bytes + b"\n")

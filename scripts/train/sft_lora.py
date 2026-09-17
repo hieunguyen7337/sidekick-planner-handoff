@@ -20,7 +20,7 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("HF_HOME", "/scratch/n12194778/hf")
 
-from sidekick.training.sft_data import tokenize_and_mask
+from sidekick.training.sft_data import tokenize_sft_row
 
 DEFAULT_BASE_MODEL = "ibm-granite/granite-4.2-8b"
 DEFAULT_TARGETS = [
@@ -125,8 +125,7 @@ def train(
 
     tokenized: list[dict[str, Any]] = []
     for row in rows:
-        messages = row["messages"]
-        example = tokenize_and_mask(messages, tokenizer, max_length=MAX_LENGTH)
+        example = tokenize_sft_row(row, tokenizer, max_length=MAX_LENGTH)
         if not any(lab != -100 for lab in example["labels"]):
             continue
         tokenized.append(example)

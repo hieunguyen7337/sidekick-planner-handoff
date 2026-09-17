@@ -46,6 +46,18 @@ DROP_ASK_PLANNER_TARGET = "ask_planner_target"
 DROP_INTERVENTION_LEAK = "intervention_in_context"
 
 INTERVENTION_MARK = "INTERVENTION:"
+ASK_REASON = "Review my progress so far and tell me the next step."
+ASK_TEMPLATE = f"ASK_PLANNER: {ASK_REASON}"
+
+DEFAULT_TEACHER_JSONL = Path(
+    "/scratch/n12194778/sidekick/artifacts/sft/sft_b_s123_p075.jsonl"
+)
+DEFAULT_ADAPTER_MANIFEST = Path(
+    "/scratch/n12194778/sidekick/artifacts/adapters/sft_b_s123_granite8b/manifest.json"
+)
+DEFAULT_CORRECTION_CAMPAIGN = Path(
+    "/scratch/n12194778/sidekick/results/hj4_correction_train_20260917"
+)
 
 
 def _heldout_task_ids() -> list[str]:
@@ -755,6 +767,88 @@ def _iter_correction_histories(
         yield "ok", prefix + [dict(target)]
 
 
+def _map_target_index_after_budget_fit(
+    messages: list[dict], selected: list[dict], target_index: int
+) -> int | None:
+    """Re-find ``messages[target_index]`` inside the budget-fitted ``selected`` list.
+
+    Matching must be by **object identity first**; this executor is documented to
+    repeat the same action verbatim (e.g. a second login call after the first), so
+    value-equality alone maps the target onto the first of several identical
+    turns and silently supervises the wrong one. If identity fails (the caller
+    reconstructed the message), fall back to counting positions among
+    value-equal messages rather than comparing values alone.
+    """
+    if target_index < 0 or target_index >= len(messages):
+        return None
+    orig = messages[target_index]
+    hit = next((k for k, m in enumerate(selected) if m is orig), None)
+    if hit is not None:
+        return hit
+    orig_ids = {id(m): i for i, m in enumerate(messages)}
+    mapping: dict[int, int] = {}
+    taken: set[int] = set()
+    unmatched_sel: list[int] = []
+    for k, m in enumerate(selected):
+        oi = orig_ids.get(id(m))
+        if oi is not None and oi not in taken:
+            mapping[oi] = k
+            taken.add(oi)
+        else:
+            unmatched_sel.append(k)
+    unmatched_orig = [i for i in range(len(messages)) if i not in taken]
+    for k, oi in zip(unmatched_sel, unmatched_orig):
+        mapping[oi] = k
+    return mapping.get(target_index)
+
+
+def remask_to_message_indices(
+    messages: list[dict],
+    tokenizer: Any | None,
+    target_indices: set[int],
+    *,
+    max_length: int | None = 32768,
+) -> dict[str, Any]:
+    """Call ``tokenize_and_mask``, then keep labels only on ``target_indices``.
+
+    ``tokenize_and_mask`` itself is unchanged: it still labels every assistant turn.
+    Correction examples remask afterwards so loss sits only on the supervised
+    turns. If budget-fitting drops any target, the example is marked
+    unrepresentable rather than silently supervising a different turn.
+    """
+    tokenized = tokenize_and_mask(messages, tokenizer, max_length=max_length)
+    if not tokenized["representable"]:
+        return tokenized
+    selected = messages
+    mapped: set[int] = set(target_indices)
+    if tokenized["truncated"] and max_length is not None:
+        def _length_fn(ms: list[dict]) -> int:
+            return len(_tokenize_messages(ms, tokenizer)["input_ids"])
+
+        fit = fit_messages_to_budget(
+            messages, max_tokens=max_length, length_fn=_length_fn
+        )
+        selected = fit.selected
+        remapped: set[int] = set()
+        for idx in sorted(target_indices):
+            k = _map_target_index_after_budget_fit(messages, selected, idx)
+            if k is None:
+                out = dict(tokenized)
+                out["representable"] = False
+                out["labels"] = [-100] * len(out.get("labels") or [])
+                return out
+            remapped.add(k)
+        mapped = remapped
+    labeled = _tokenize_messages(
+        selected, tokenizer, supervised_indices=mapped
+    )
+    out = dict(tokenized)
+    out["input_ids"] = labeled["input_ids"]
+    out["labels"] = labeled["labels"]
+    out["attention_mask"] = [1] * len(labeled["input_ids"])
+    return out
+
+
 def remask_to_message_index(
     messages: list[dict],
     tokenizer: Any | None,
@@ -768,36 +862,51 @@ def remask_to_message_index(
     Correction examples remask afterwards so loss sits only on the post-intervention
     action. If budget-fitting drops that target, the example is marked unrepresentable.
     """
-    tokenized = tokenize_and_mask(messages, tokenizer, max_length=max_length)
-    if not tokenized["representable"]:
-        return tokenized
-    selected = messages
-    mapped: int | None = target_index
-    if tokenized["truncated"] and max_length is not None:
-        def _length_fn(ms: list[dict]) -> int:
-            return len(_tokenize_messages(ms, tokenizer)["input_ids"])
-
-        fit = fit_messages_to_budget(
-            messages, max_tokens=max_length, length_fn=_length_fn
-        )
-        selected = fit.selected
-        orig = messages[target_index]
-        mapped = next(
-            (k for k, m in enumerate(selected) if m is orig or m == orig),
-            None,
-        )
-        if mapped is None:
-            out = dict(tokenized)
-            out["representable"] = False
-            return out
-    labeled = _tokenize_messages(
-        selected, tokenizer, supervised_indices={mapped}
+    return remask_to_message_indices(
+        messages, tokenizer, {target_index}, max_length=max_length
     )
-    out = dict(tokenized)
-    out["input_ids"] = labeled["input_ids"]
-    out["labels"] = labeled["labels"]
-    out["attention_mask"] = [1] * len(labeled["input_ids"])
-    return out
+
+
+def supervised_indices_from_meta(
+    meta: dict[str, Any] | None, messages: list[dict]
+) -> set[int] | None:
+    """Return supervised message indices, or None to label every assistant turn.
+
+    Accepts either spelling of the mask spec. A row carrying neither key (and
+    without ``supervise_last_assistant_only``) returns None so teacher / ``sft_b``
+    rows train exactly as they do today.
+    """
+    if not meta:
+        return None
+    if "supervised_message_indices" in meta:
+        raw = meta.get("supervised_message_indices")
+        if raw is None:
+            return None
+        return {int(x) for x in raw}
+    if "supervised_message_index" in meta and meta.get("supervised_message_index") is not None:
+        return {int(meta["supervised_message_index"])}
+    if meta.get("supervise_last_assistant_only"):
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].get("role") == "assistant":
+                return {i}
+        return set()
+    return None
+
+
+def tokenize_sft_row(
+    row: dict[str, Any],
+    tokenizer: Any | None,
+    *,
+    max_length: int | None = 32768,
+) -> dict[str, Any]:
+    """Tokenise one JSONL SFT record, honouring an explicit mask spec when present."""
+    messages = list(row["messages"])
+    indices = supervised_indices_from_meta(row.get("meta") or {}, messages)
+    if indices is None:
+        return tokenize_and_mask(messages, tokenizer, max_length=max_length)
+    return remask_to_message_indices(
+        messages, tokenizer, indices, max_length=max_length
+    )
 
 
 def _write_manifest(out_path: Path, summary: dict[str, Any], *, quiet: bool) -> None:
@@ -817,13 +926,22 @@ def build_correction_dataset(
     system: str = "fixed_k",
     quiet: bool = False,
 ) -> dict:
-    """Emit one JSONL line per post-intervention action (DAgger / no-reviewer context).
+    """Emit one JSONL line per episode; every post-intervention action is a target.
 
-    Loss is restricted to the action immediately following each intervention. The
-    ``INTERVENTION:`` user turn is stripped so the target is predicted from state
-    alone. ASK_PLANNER targets are never created.
+    ``INTERVENTION:`` user turns are stripped. ASK_PLANNER post-actions are never
+    supervised. Implemented in ``matched_sft`` (per-episode multi-target masks).
     """
-    campaign_root = Path(campaign_root)
+    from sidekick.training.matched_sft import build_correction_dataset as _impl
+
+    return _impl(
+        campaign_root,
+        split_ids,
+        out_jsonl,
+        strip_interventions=strip_interventions,
+        system=system,
+        quiet=quiet,
+    )
+    campaign_root = Path(campaign_root)  # pragma: no cover — unreachable, kept for the old body
     out_path = Path(out_jsonl)
     train_ids = {str(x) for x in split_ids}
     heldout = _heldout_task_ids()
@@ -1012,19 +1130,32 @@ def _slim_part_summary(summary: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_sft_b_plus(
-    teacher_campaign_root,
     correction_campaign_root,
     split_ids,
     out_jsonl,
     *,
+    teacher_jsonl: Path | str = DEFAULT_TEACHER_JSONL,
     teacher_system: str = "planner_alone",
     correction_system: str = "fixed_k",
     strip_interventions: bool = True,
     solved_only: bool = True,
     quiet: bool = False,
+    **kwargs: Any,
 ) -> dict:
-    """Teacher conversations (solved) plus J4 correction examples, one combined JSONL."""
-    out_path = Path(out_jsonl)
+    """Frozen teacher jsonl plus per-episode J4 correction sequences. No ASK targets."""
+    from sidekick.training.matched_sft import build_sft_b_plus as _impl
+
+    _ = (teacher_system, solved_only, kwargs)
+    return _impl(
+        correction_campaign_root,
+        split_ids,
+        out_jsonl,
+        teacher_jsonl=teacher_jsonl,
+        correction_system=correction_system,
+        strip_interventions=strip_interventions,
+        quiet=quiet,
+    )
+    out_path = Path(out_jsonl)  # pragma: no cover — unreachable, kept for the old body
     tmp_root = Path(os.environ.get("TMPDIR") or "/tmp") / f"sft-b-plus-{os.getpid()}"
     tmp_root.mkdir(parents=True, exist_ok=True)
     try:
@@ -1169,9 +1300,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
     parser.add_argument(
         "--mode",
-        choices=("teacher", "correction", "sft_b_plus"),
+        choices=("teacher", "correction", "sft_b_plus", "sft_c"),
         default="teacher",
-        help="teacher=build_sft_dataset; correction=J4 DAgger examples; sft_b_plus=combine both.",
+        help="teacher=build_sft_dataset; correction=J4 DAgger; sft_b_plus/sft_c=matched pair.",
     )
     parser.add_argument("--correction-campaign-root", default=None)
     parser.add_argument("--correction-system", default="fixed_k")
@@ -1184,14 +1315,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     split_ids = load_split_ids(args.split)
     strip = not args.no_strip_interventions
     if args.mode == "sft_b_plus":
-        if not args.correction_campaign_root:
-            parser.error("--mode sft_b_plus requires --correction-campaign-root")
+        corr_root = args.correction_campaign_root or args.campaign_root
         build_sft_b_plus(
-            args.campaign_root,
-            args.correction_campaign_root,
+            corr_root,
             split_ids,
             args.out,
-            teacher_system=args.system,
+            teacher_jsonl=getattr(args, "teacher_jsonl", DEFAULT_TEACHER_JSONL),
             correction_system=args.correction_system,
             strip_interventions=strip,
             solved_only=not args.no_solved_only,
