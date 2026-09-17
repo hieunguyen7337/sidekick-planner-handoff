@@ -2,19 +2,21 @@
 #PBS -N hj6-branches
 #PBS -q gpu_inter
 #PBS -l select=1:ncpus=16:ngpus=1:mem=128gb
-#PBS -l walltime=06:00:00
+#PBS -l walltime=10:00:00
 #PBS -j oe
 #PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj6_branches.out
 #
 # HJ-6 counterfactual branches. Serves granite-4.2-8b with the sft_b LoRA
-# (static --lora-modules). No planner: branches continue from a replayed
-# prefix with review_every_k=None. Do NOT submit from a worker; the
+# (static --lora-modules). Live later-reviews call the planner (codex).
+# Treated/untreated × branch seeds 101/102; resume keys on
+# (point, condition, branch_seed). Do NOT submit from a worker; the
 # orchestrator submits after reviewing the diff.
 #
 # Job variables (override at qsub time):
 #   SPLIT (train|dev), DATE, CAMPAIGN_ROOT, ADAPTER_SFT_B, ALIAS_SFT_B, CFG
+#   DELTA_BAND_DELTA, TRAIN_MANIFEST (dev labelling uses the frozen train δ)
 # A second submission of this script with the same DATE/SPLIT skips completed
-# (point, branch_seed) rows.
+# (point, condition, branch_seed) rows.
 # The --lora-modules alias MUST equal executor.lora_name in the campaign
 # config or requests silently hit the base model.
 
@@ -55,6 +57,8 @@ CID="hj6_branches_${SPLIT}_${DATE}"
 CAMPAIGN_ROOT="${CAMPAIGN_ROOT:-/scratch/n12194778/sidekick/results/hj4_correction_train_20260917}"
 CFG="${CFG:-${REPO}/configs/hj4_correction.yaml}"
 OUT_CAMPAIGN="${OUT}/${CID}"
+DELTA_BAND_DELTA="${DELTA_BAND_DELTA:-}"
+TRAIN_MANIFEST="${TRAIN_MANIFEST:-${OUT}/hj6_branches_train_${DATE}/manifest.json}"
 
 # ---- LoRA aliases: MUST equal executor.lora_name in the campaign config ------
 ALIAS_SFT_B="${ALIAS_SFT_B:-sft_b}"
@@ -111,7 +115,19 @@ kill_vllm () {
   nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
 }
 
-# ---- vLLM: LoRA registered statically at launch. No codex preflight. ----------
+# ---- preflight: the planner must be reachable BEFORE a GPU is held ------------
+echo "[hj6] ---- preflight ----"
+if ! command -v codex >/dev/null 2>&1; then
+  echo "[hj6] FATAL: codex not on PATH"; exit 1
+fi
+if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+  echo "[hj6] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate"
+  exit 1
+fi
+echo "[hj6] codex $(codex --version 2>/dev/null || echo '?')"
+echo "[hj6] auth.json present (contents never printed)"
+
+# ---- vLLM: LoRA registered statically at launch --------------------------------
 kill_vllm
 # The --lora-modules line. Alias comes from ALIAS_SFT_B / executor.lora_name, not the directory name.
 "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
@@ -143,7 +159,14 @@ fi
 
 echo "[hj6] ---- branches split=${SPLIT} out=${OUT_CAMPAIGN} source=${CAMPAIGN_ROOT} ----"
 branch_rc=125
-timeout 19800 "${PY}" "${REPO}/scripts/setup/branch_counterfactual.py" \
+extra=()
+if [[ -n "${DELTA_BAND_DELTA}" ]]; then
+  extra+=(--delta-band-delta "${DELTA_BAND_DELTA}")
+fi
+if [[ -n "${TRAIN_MANIFEST}" && -f "${TRAIN_MANIFEST}" ]]; then
+  extra+=(--train-manifest "${TRAIN_MANIFEST}")
+fi
+timeout 35100 "${PY}" "${REPO}/scripts/setup/branch_counterfactual.py" \
   --campaign-root "${CAMPAIGN_ROOT}" \
   --split "${SPLIT}" \
   --out-root "${OUT_CAMPAIGN}" \
@@ -151,7 +174,8 @@ timeout 19800 "${PY}" "${REPO}/scripts/setup/branch_counterfactual.py" \
   --workers 10 \
   --resume \
   --env appworld \
-  --config "${CFG}"
+  --config "${CFG}" \
+  "${extra[@]}"
 branch_rc=$?
 echo "[hj6] branch_counterfactual rc=${branch_rc}"
 

@@ -109,6 +109,9 @@ class VLLMExecutor:
         stop = kw.get("stop", self.stop)
         if stop:
             payload["stop"] = stop
+        seed = kw.get("seed")
+        if seed is not None:
+            payload["seed"] = int(seed)
         url = self._chat_url()
         # 400 backstop: the tokenizer's count can disagree with the server's. Drop
         # the oldest remaining middle message and retry, at most twice, then give up
@@ -241,12 +244,14 @@ class MockExecutor:
     task_scripts: dict[str, list[str]] = field(default_factory=dict)
     last_lora_name: Optional[str] = None
     last_messages: list[dict] | None = None
+    last_seed: Optional[int] = None
     _index: int = 0
     _task_index: dict[str, int] = field(default_factory=dict)
 
     def complete(self, messages: list[dict], **kw) -> tuple[str, Usage]:
         self.last_messages = messages
         self.last_lora_name = kw.get("lora_name")
+        self.last_seed = kw.get("seed")
         task_id = kw.get("task_id")
         raw = self._next_raw(task_id)
         usage = Usage(

@@ -69,12 +69,22 @@ class EpisodePrefix:
 
     Default callers omit this; the scratch-start path is unchanged. ``events`` are
     the original-episode events up to and including the observation immediately
-    before the dropped intervention (last attempt, file order). ``start_step`` is
+    before the focal intervention (last attempt, file order). ``start_step`` is
     that intervention's step ``s`` — the first step the branch itself will take.
+
+    Counterfactual branches set ``skip_review_at_start=True`` so the scheduled
+    reviewer does not fire at ``s``. The treated arm then injects the recorded
+    correction via ``inject_correction``; the untreated arm leaves it None.
+    Later scheduled ticks still call ``planner.correct()`` on the branch state.
+    ``local_eval_step`` is the next scheduled review step: ``env.evaluate()``
+    runs *before* that review so the short-horizon GPR is uncontaminated.
     """
 
     events: list[Event]
     start_step: int
+    inject_correction: str | None = None
+    skip_review_at_start: bool = False
+    local_eval_step: int | None = None
 
 
 def counters_from_events(events: list[Event]) -> tuple[int, int, int, int]:
@@ -205,6 +215,7 @@ def run_episode(
     log: EventLog,
     ledger: CostLedger,
     prefix: EpisodePrefix | None = None,
+    sampling_seed: int | None = None,
 ) -> RunResult:
     n_asks = 0
     n_interventions = 0
@@ -401,12 +412,14 @@ def run_episode(
         action: ExecutorAction | None = None
         for attempt in range(MAX_PARSE_RETRIES + 1):
             try:
+                complete_kw: dict[str, Any] = {
+                    "lora_name": policy.adapter_name,
+                    "task_id": task_id,
+                }
+                if sampling_seed is not None:
+                    complete_kw["seed"] = sampling_seed
                 text, usage = call_with_timeout(
-                    lambda: executor.complete(
-                        messages,
-                        lora_name=policy.adapter_name,
-                        task_id=task_id,
-                    ),
+                    lambda: executor.complete(messages, **complete_kw),
                     timeout_s,
                 )
             except TimeoutError as exc:
@@ -538,6 +551,8 @@ def run_episode(
                 "n_events": len(prefix.events),
                 "episode_tokens": episode_tokens,
             }
+        if sampling_seed is not None:
+            run_start_payload["sampling_seed"] = int(sampling_seed)
         emit(
             step=0,
             actor="system",
@@ -614,15 +629,66 @@ def run_episode(
                 break
             steps_taken = step
 
+            if (
+                prefix is not None
+                and prefix.local_eval_step is not None
+                and step == prefix.local_eval_step
+            ):
+                try:
+                    local_eval = env.evaluate()
+                except Exception as exc:
+                    local_eval = {
+                        "success": False,
+                        "tgc": None,
+                        "sgc": None,
+                        "goal_pass_rate": None,
+                        "report": {"error": str(exc)},
+                    }
+                emit(
+                    step=step,
+                    actor="environment",
+                    event_type="evaluate",
+                    payload={**dict(local_eval), "horizon": "local"},
+                    env_state_hash=env.snapshot_hash(),
+                )
+
             force_review = False
+            skip_scheduled = bool(
+                prefix is not None and prefix.skip_review_at_start and step == start_step
+            )
             if packet is not None and not policy.planner_drives:
-                if policy.review_every_k and policy.review_every_k > 0 and step % policy.review_every_k == 0:
+                if (
+                    policy.review_every_k
+                    and policy.review_every_k > 0
+                    and step % policy.review_every_k == 0
+                    and not skip_scheduled
+                ):
                     force_review = True
                 if router is not None and router.should_escalate(trajectory_state(step)):
                     force_review = True
                 if step in policy.oracle_steps:
                     force_review = True
-            if force_review and packet is not None:
+            if (
+                prefix is not None
+                and prefix.inject_correction is not None
+                and step == start_step
+            ):
+                n_interventions += 1
+                correction = prefix.inject_correction
+                emit(
+                    step=step,
+                    actor="planner",
+                    event_type="intervention",
+                    payload={
+                        "n_interventions": n_interventions,
+                        "correction": correction,
+                        "forced": True,
+                        "source": "replayed_focal",
+                    },
+                )
+                transcript.append(f"INTERVENTION: {correction}")
+                exec_turns.append({"role": "user", "content": f"INTERVENTION: {correction}"})
+            elif force_review and packet is not None:
                 delta = "\n".join(transcript[-8:])
                 resp = call_planner(
                     "correct",
@@ -633,11 +699,18 @@ def run_episode(
                     break
                 n_interventions += 1
                 correction = resp.correction or resp.raw_output
+                live_payload: dict[str, Any] = {
+                    "n_interventions": n_interventions,
+                    "correction": correction,
+                    "forced": True,
+                }
+                if prefix is not None:
+                    live_payload["source"] = "live_policy"
                 emit(
                     step=step,
                     actor="planner",
                     event_type="intervention",
-                    payload={"n_interventions": n_interventions, "correction": correction, "forced": True},
+                    payload=live_payload,
                     usage=resp.usage,
                 )
                 transcript.append(f"INTERVENTION: {correction}")
