@@ -514,19 +514,53 @@ code `r = −0.044`. The last is the only content signal with a consistent direc
 prescriptive corrections carrying `apis.x.y(...)` harm 22.0 % of the time against 15.2 % for
 prose-only advice — and it is weak.
 
-**Reading.** The flag is real but it does not indict the review *format*. It indicts the
-*schedule*: a fixed timer spends a third of its calls where nothing can be gained, and fires
-often enough that its nudges accumulate. That is the condition adaptive allocation exists for,
-and it is direct support for the campaign's thesis rather than evidence against it.
+**Reading — AMENDED 2026-09-18, see the amendment below before using this.** The flag is
+real, and on the *average* it indicts the *schedule* rather than the format: a fixed timer
+spends a third of its calls where nothing can be gained, and fires often enough that its
+nudges accumulate. That is the condition adaptive allocation exists for, and it is direct
+support for the campaign's thesis rather than evidence against it.
+
+🔺 **AMENDMENT — the original "allocation, not format" verdict was too strong.** It was drawn
+from correlations over all 734 points using crude text features (length, presence of API code,
+mention of `complete_task`), all of which are near-inert. A separate qualitative read of the
+40 most harmful and 40 most helpful corrections (`campaign/workers/W13_CORRECTIONS.md`) shows
+the two mechanisms operate at **different scales**:
+
+- **The mean is allocation.** The ceiling effect below explains the whole negative average.
+- **The tail is format.** Among the 40 worst points, 55 % are corrections that are genuinely
+  wrong — `wrong_for_task` 45 %, `contradicts_history` 10 % — against **5 %** in the 40 most
+  helpful. `redundant` runs the other way: 42.5 % of harmful against 80 % of helpful, so
+  redundant advice is usually benign. Mean correction length is 252.9 vs 251.2 characters
+  between the groups, which independently reproduces the near-zero length correlation and says
+  the difference is in content, not verbosity.
+
+The cleanest evidence is a natural experiment inside the sample rather than a percentage. On
+one task family the reviewer told the executor to *use* `csv.writer` (Δ −0.65); on a sibling
+episode it said `csv.writer` **is unavailable** and to escape fields manually (Δ +0.55). Same
+reviewer, same API, contradictory claims about whether it exists, and the correct one helped
+while the hallucinated one hurt. That is reviewer error, and no amount of better timing fixes
+it.
+
+The mechanism is visible in the design: the reviewer sees only the last 8 transcript lines
+(`loop.py:606-610`), never the action about to be taken, and its correction is injected
+unconditionally — 495/495 `forced: true`. A reviewer with a keyhole view that cannot be
+overridden will sometimes confidently forbid a valid API or order a premature `COMPLETE`, and
+three of the worst cases are exactly that.
+
+**So both need fixing, and they are separable.** Allocation determines *how often* a review is
+wasted; format determines *how badly* the wasted ones go wrong. J7 addresses the first. The
+second needs either a wider review window or a non-forced correction channel, and neither is
+in the current plan.
 
 ⚠ The stratifying variable is the untreated branch's outcome, which is **observed only
 counterfactually**. A live router cannot see it. Predicting "this episode is already on track"
 from state alone is exactly the `FeatureVerifier`'s job (J7), and this analysis sets the target
 it has to hit: identify the 32 % ceiling points and stay silent.
 
-Open questions, not yet answered:
-- whether the reviewer repeats itself across successive ticks (would explain the compounding);
-- whether harmful corrections are *wrong* or merely *unnecessary* — being read separately.
+Open questions:
+- ~~whether the reviewer repeats itself across successive ticks~~ — ANSWERED: it does. 9 of the 40 harmful records share a task with another, including verbatim re-injection of the same abort instruction at steps 15 and 20 of `7d7fbf6_3`. The helpful group also has 9 repeat tasks but shows refinement rather than re-injection, and zero aborts.
+- ~~whether harmful corrections are *wrong* or merely *unnecessary*~~ — ANSWERED in the amendment above: 55 % of the worst are wrong, against 5 % of the best.
+- STILL OPEN: whether a wider review window actually reduces the `wrong_for_task` rate, which is the only way to test the format hypothesis causally rather than observationally.
 
 Numbers from `branch_runs.jsonl` of `hj6_branches_train_20260917` (4188 rows at the time),
 aggregated by the repo's own `rebuild_derived` at band 0.166 frozen on train.
