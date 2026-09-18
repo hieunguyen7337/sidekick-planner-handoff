@@ -1,0 +1,46 @@
+# HJ-8 dev frontier: router_seq at τ=0.5 on held-out dev with sft_b_plus.
+# Frozen executor + feature_lr router. Live escalations wait for the quota reset.
+# The up-front plan is replayed from HJ-1 so this arm shares sft_plan's packet.
+# Dev is the tuning split, so these numbers are for gating J9, not for publication.
+env: appworld
+campaign_id: hj8_router_seq_tau05_20260919
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays HJ-1 packets: the up-front plan costs nothing; only router-triggered
+  # escalations spend hosted calls. Cache miss aborts rather than buying a plan.
+  packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
+  on_missing: fail
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+verifier:
+  kind: feature_lr
+  # FeatureVerifier.load does json.loads(Path(path).read_text(...)); this must
+  # be the JSON file, not the parent directory.
+  path: /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/artifacts/verifiers/feature_lr_20260918/weights.json
+  threshold: 0.5
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 81 = 2·max_steps + 1. The inherited 25 cap ended 11 of 12 `limit` episodes
+  # in HJ-1; max_steps: 40 must be the binding cap.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml
