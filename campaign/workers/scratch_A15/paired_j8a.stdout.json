@@ -1,0 +1,818 @@
+{
+  "note": "Paired contrast sft_plan \u2212 executor_alone. j10_report.py does not emit this contrast: it only contrasts sidekick minus other arms, and it requires the full J10 arm set. Resampling is paired_diff(resample='task'), same as j10_report.",
+  "split": "dev",
+  "seeds": [
+    1,
+    2
+  ],
+  "campaigns": {
+    "executor_alone": "/scratch/n12194778/sidekick/results/hj8_executor_alone_bplus_20260919",
+    "sft_plan": "/scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260919"
+  },
+  "pairing": {
+    "n_tasks_executor_alone": 57,
+    "n_tasks_sft_plan": 57,
+    "n_tasks_shared": 57,
+    "n_tasks_union": 57,
+    "only_in_executor_alone": [],
+    "only_in_sft_plan": []
+  },
+  "j10_inventory_public": {
+    "executor_alone": {
+      "label": "executor_alone",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 83,
+      "n_scored_failure": 31,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "executor_alone"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.131579,
+      "n_success": 15,
+      "planner_calls_mean": 0.0,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 31,
+        "none": 83
+      }
+    },
+    "sft_plan": {
+      "label": "sft_plan",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 93,
+      "n_scored_failure": 21,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "sft_plan"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.403509,
+      "n_success": 46,
+      "planner_calls_mean": 1.0,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 21,
+        "none": 93
+      }
+    }
+  },
+  "files": {
+    "executor_alone": {
+      "n_result_json": 114,
+      "n_events_jsonl": 114,
+      "events_without_result": [],
+      "result_without_events": [],
+      "empty_result_json": []
+    },
+    "sft_plan": {
+      "n_result_json": 114,
+      "n_events_jsonl": 114,
+      "events_without_result": [],
+      "result_without_events": [],
+      "empty_result_json": []
+    }
+  },
+  "raw_arm_stats": {
+    "executor_alone": {
+      "n_rows": 114,
+      "n_success": 15,
+      "errors": {
+        "limit": 31,
+        "none": 83
+      },
+      "n_broken": 0,
+      "broken": [],
+      "n_planner_calls_total": 0,
+      "n_planner_calls_mean": 0.0,
+      "n_planner_calls_missing": 0,
+      "n_planner_calls_nonzero": 0,
+      "n_planner_calls_values": {
+        "0": 114
+      },
+      "steps_mean": 21.938596,
+      "steps_missing": 0,
+      "goal_pass_rate_mean": 0.528886,
+      "goal_pass_rate_missing": 0,
+      "tgc_mean_unpaired": 0.131579,
+      "tgc_missing": 0,
+      "usd_total_sum": 0.0,
+      "planner_tokens_total_sum": 0,
+      "n_max_steps": 32,
+      "max_steps_episodes": [
+        {
+          "task_id": "23cf851_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "37a8675_1",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "37a8675_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "37a8675_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "396c5a2_1",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "4fab96f_1",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "4fab96f_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "530b157_1",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "530b157_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "530b157_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "68ee2c9_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "68ee2c9_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": null,
+          "tgc": 0.0
+        },
+        {
+          "task_id": "6c2c621_1",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "d4e9306_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_1",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "fac291d_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "23cf851_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "37a8675_3",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "383cbac_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "383cbac_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "4fab96f_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "4fab96f_3",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "50e1ac9_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "50e1ac9_3",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "530b157_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "6171bbc_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "68ee2c9_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "6c2c621_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "6c2c621_3",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_3",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        }
+      ],
+      "n_limit": 31,
+      "limit_below_max_steps": [],
+      "unpaired_by_seed": {
+        "1": {
+          "n": 57,
+          "tgc_mean": 0.140351,
+          "goal_pass_rate_mean": 0.523579
+        },
+        "2": {
+          "n": 57,
+          "tgc_mean": 0.122807,
+          "goal_pass_rate_mean": 0.534193
+        }
+      }
+    },
+    "sft_plan": {
+      "n_rows": 114,
+      "n_success": 46,
+      "errors": {
+        "limit": 21,
+        "none": 93
+      },
+      "n_broken": 0,
+      "broken": [],
+      "n_planner_calls_total": 114,
+      "n_planner_calls_mean": 1.0,
+      "n_planner_calls_missing": 0,
+      "n_planner_calls_nonzero": 114,
+      "n_planner_calls_values": {
+        "1": 114
+      },
+      "steps_mean": 19.622807,
+      "steps_missing": 0,
+      "goal_pass_rate_mean": 0.700009,
+      "goal_pass_rate_missing": 0,
+      "tgc_mean_unpaired": 0.403509,
+      "tgc_missing": 0,
+      "usd_total_sum": 0.0,
+      "planner_tokens_total_sum": 0,
+      "n_max_steps": 21,
+      "max_steps_episodes": [
+        {
+          "task_id": "37a8675_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "37a8675_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "383cbac_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "396c5a2_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "3ab5b8b_1",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "4ec8de5_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "4ec8de5_3",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "57c3486_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_2",
+          "seed": 1,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "37a8675_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "37a8675_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "4fab96f_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "50e1ac9_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "57c3486_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "68ee2c9_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "6c2c621_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "d4e9306_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_1",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_2",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "df61dc5_3",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        },
+        {
+          "task_id": "fac291d_3",
+          "seed": 2,
+          "steps": 40,
+          "error_type": "limit",
+          "tgc": 0.0
+        }
+      ],
+      "n_limit": 21,
+      "limit_below_max_steps": [],
+      "unpaired_by_seed": {
+        "1": {
+          "n": 57,
+          "tgc_mean": 0.421053,
+          "goal_pass_rate_mean": 0.715842
+        },
+        "2": {
+          "n": 57,
+          "tgc_mean": 0.385965,
+          "goal_pass_rate_mean": 0.684175
+        }
+      }
+    }
+  },
+  "zero_planner_executor_alone": {
+    "all_result_n_planner_calls_zero": true,
+    "planner_tokens_total_sum": 0,
+    "usd_total_sum": 0.0,
+    "planner_events": {
+      "n_planner_events": 0,
+      "providers": {},
+      "models": {},
+      "hosted_provider_events": 0,
+      "planner_event_token_sum": 0,
+      "n_planner_events_with_nonzero_tokens": 0
+    }
+  },
+  "sft_plan_planner": {
+    "planner_tokens_total_sum": 0,
+    "usd_total_sum": 0.0,
+    "planner_events": {
+      "n_planner_events": 114,
+      "providers": {
+        "cache": 114
+      },
+      "models": {
+        "gpt-5.6-luna": 114
+      },
+      "hosted_provider_events": 0,
+      "planner_event_token_sum": 0,
+      "n_planner_events_with_nonzero_tokens": 0
+    }
+  },
+  "n_broken_independent": {
+    "broken_error_types": [
+      "api_error",
+      "crash",
+      "parse_error",
+      "timeout"
+    ],
+    "executor_alone": 0,
+    "sft_plan": 0
+  },
+  "contrasts_sft_plan_minus_executor_alone": {
+    "tgc": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": 27.19,
+      "ci95_pp": [
+        16.67,
+        37.72
+      ],
+      "bootstrap": 10000,
+      "diff": 0.2719,
+      "ci95": [
+        0.1667,
+        0.3772
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": 27.19,
+        "ci95_pp": [
+          17.54,
+          36.84
+        ],
+        "bootstrap": 10000,
+        "diff": 0.2719,
+        "ci95": [
+          0.1754,
+          0.3684
+        ]
+      },
+      "resample_unit_for_decision": "task",
+      "field": "tgc"
+    },
+    "goal_pass_rate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": 17.11,
+      "ci95_pp": [
+        10.36,
+        23.74
+      ],
+      "bootstrap": 10000,
+      "diff": 0.1711,
+      "ci95": [
+        0.1036,
+        0.2374
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": 17.11,
+        "ci95_pp": [
+          10.41,
+          23.83
+        ],
+        "bootstrap": 10000,
+        "diff": 0.1711,
+        "ci95": [
+          0.1041,
+          0.2383
+        ]
+      },
+      "resample_unit_for_decision": "task",
+      "field": "goal_pass_rate"
+    },
+    "n_planner_calls": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": 100.0,
+      "ci95_pp": [
+        100.0,
+        100.0
+      ],
+      "bootstrap": 10000,
+      "diff": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": 100.0,
+        "ci95_pp": [
+          100.0,
+          100.0
+        ],
+        "bootstrap": 10000,
+        "diff": 1.0,
+        "ci95": [
+          1.0,
+          1.0
+        ]
+      },
+      "resample_unit_for_decision": "task",
+      "field": "n_planner_calls"
+    },
+    "steps": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -231.58,
+      "ci95_pp": [
+        -552.63,
+        83.33
+      ],
+      "bootstrap": 10000,
+      "diff": -2.3158,
+      "ci95": [
+        -5.5263,
+        0.8333
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -231.58,
+        "ci95_pp": [
+          -516.67,
+          52.63
+        ],
+        "bootstrap": 10000,
+        "diff": -2.3158,
+        "ci95": [
+          -5.1667,
+          0.5263
+        ]
+      },
+      "resample_unit_for_decision": "task",
+      "field": "steps"
+    }
+  }
+}

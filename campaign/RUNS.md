@@ -2093,4 +2093,51 @@ hurts on average" without the decomposition beside it.
 - **A12** (commit `0105d9e`): J10 analysis script `scripts/analysis/j10_report.py` created before data collection, supporting task-level bootstrap, preregistered hypothesis evaluations, and null handling for missing metrics [OBSERVED campaign/workers/STATUS_A_12.md:5-24].
 - **A13** (commit `8c64881`): Guard checks added to `scripts/pbs/hj8_frontier.pbs` for adapter weights presence and `SMOKE_ONLY=1` preflight verification [OBSERVED campaign/workers/STATUS_A_13.md:20-22].
 
+### 7. J8a — two baselines on dev (`executor_alone`, `sft_plan`; job 25460140, 2026-09-19)
+
+Campaigns `hj8_executor_alone_bplus_20260919` and `hj8_sft_plan_bplus_20260919`,
+job `25460140.aqua` on `gpu1n009`, commit `79ce6c73`, adapter `sft_b_plus`,
+dev 57 tasks × seeds {1,2} = 114/114 each, `ARMSET=free`. **These are the two
+J8a baselines, not a frontier.** No live-planner arm has run; nothing here
+speaks to adaptive-vs-fixed allocation. Dev has been inspected many times:
+calibrate and bound, not a thesis result. Full write-up:
+`campaign/workers/A15_J8A.md`. Analysis job `25463395.aqua`.
+
+**Zero hosted planner quota.** `executor_alone`: 114/114 `n_planner_calls=0`,
+zero planner events, `planner_tokens_total=0`, `usd_total=0.0`. `sft_plan`: 114
+`provider="cache"` replays of one packet, 0 tokens, 0 hosted `codex` events,
+`usd_total=0.0`. Independent `n_broken=0` on both arms (`BROKEN` =
+api_error/timeout/crash/parse_error; `limit` is a scored outcome).
+
+| | `executor_alone` | `sft_plan` |
+|---|---|---|
+| solved / 114 | 15 | 46 |
+| TGC (unpaired mean) | 0.131579 | 0.403509 |
+| mean goal_pass_rate | 0.528886 | 0.700009 |
+| planner calls / episode | 0.0 | 1.0 (cache) |
+| mean steps | 21.94 | 19.62 |
+| `limit` episodes | 31 | 21 |
+| hit `max_steps=40` | 32 | 21 |
+
+⚠ The job-log per-seed TGC means (executor 0.1404 / 0.1228, sft_plan 0.4211 /
+0.386) are unpaired and are not the result.
+
+**Paired contrast `sft_plan − executor_alone`**, `hj1_gate.paired_diff(resample="task")`,
+10,000 resamples, seed 20260915, 57 tasks / 114 pairs / 0 dropped:
+
+- TGC **+27.19 pp**, task-clustered 95% CI **[16.67, 37.72]**
+- goal-pass-rate **+17.11 pp**, task-clustered 95% CI **[10.36, 23.74]**
+- planner calls **+1.00** per episode (degenerate)
+- steps **−2.32**, task-clustered 95% CI **[−5.53, 0.83]** (includes 0)
+
+The TGC/goal-pass gaps show the **cached plan's contribution** against a bare
+trained executor. They do **not** show that adaptive allocation beats fixed
+allocation.
+
+`j10_report.py` ran **unmodified** on these two archives, inventoried both
+arms as complete, and emitted no contrast: it requires the full J10 arm set
+and only contrasts `sidekick − *`. That is a J10-script limitation, not a
+data problem. Goal-pass CIs were computed by the A15 helper with the same
+`paired_diff` call the script uses for TGC.
+
 
