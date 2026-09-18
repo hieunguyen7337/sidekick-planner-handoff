@@ -55,7 +55,7 @@ class ThresholdRouter:
 # FeatureVerifier — logistic regression over features of trajectory_state.
 #
 # Frozen feature spec (feature_lr_v1). The extractor may use ONLY the keys
-# produced by loop.trajectory_state (loop.py:492-500): step, transcript,
+# produced by loop.trajectory_state (loop.py:541-550): step, transcript,
 # last_action, last_observation, n_asks, n_interventions. Everything else is
 # derived from the transcript string, whose lines are INSTRUCTION:/PLAN:/OBS:/
 # INTERVENTION:/ANSWER:/ASK_IGNORED (and REPORT:/ASK: internal prefixes).

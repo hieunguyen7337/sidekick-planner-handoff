@@ -317,8 +317,9 @@ and 4–8 concurrent `codex exec` subprocesses talk to the planner. Nothing need
 | stage | data | recipe |
 |---|---|---|
 | S1 SFT(b) plan-conditioned | ~~successful `prompt_only` segments~~ → **solved `planner_alone` trajectories on train** (HJ-2B / J3, 230 trajectories, complete); target = executor action given the packet | TRL SFT, LoRA r=64/α=128, lr 1e-4 cosine, 2 epochs, 32k ctx, loss on executor tokens only |
-| S1 SFT(c) + correction/ASK | [Changed 2026-09-17]: split into `sft_b_plus` (J5a, no-ASK control from teacher + post-correction actions) and `sft_c` (J5b, ASK channel trained on J6 branch labels) | same |
-| S2 verifier | Counterfactual continue-branches at each intervention point (J6: 2 seeds × ≤ 10 steps) | Qwen3-1.7B + head, BCE, temperature scaling on dev (J7) |
+| S1 SFT(b+) + correction (no ASK) | `sft_b_plus` (J5a, control from teacher + post-correction actions on train; active executor policy) | same |
+| S1 SFT(c) + ASK | [PAUSED 2026-09-19]: `sft_c` (J5b, ASK channel trained on branch labels). W-24 showed J6 branch labels are indistinguishable from noise (permutation null p = 0.712). Paused pending clean-counterfactual pilot | same |
+| S2 verifier | Feature logistic regression over `feature_lr_v1` (J7); value function $V(\text{state})$ (A7) | Logistic regression, BCE, dev temperature scaling |
 | S3 DPO | [Superseded 2026-09-17]: **DPO dropped**. Sidekick operating points come from thresholding P(ASK) at serve time (`gate_ask_with_verifier`), yielding arbitrarily many points on one adapter and doubling as H3 calibration | N/A (serve-time thresholding $\tau$) |
 | S4 calibration / freeze | dev only | Operating threshold $\tau^*$, router $\tau^*$, and $k_{\text{matched}}$ rule frozen at J9 on dev; ε = 7 pp frozen in `docs/prereg_v1.md` before J10 |
 
@@ -331,14 +332,29 @@ segments". `prompt_only` solved **0 of 114** episodes in HJ-1, so that set is em
 over the **train** split (90 tasks × 2 seeds + third seed repeat, 230 trajectories in `sft_b_s123_p075.jsonl`)
 as HJ-2B, campaign `hj2b_planner_train_20260916`. Dev stays the tuning split and is never trained on.
 
-🔺 **Re-sequencing and dropped DPO (2026-09-17)**: J4's 495 interventions are ticks of a 5-step timer
-(495/495 `forced: true`, 0 `ask` events), so ASK targets cannot be derived from J4 alone. Counterfactual
-branches (J6) must precede SFT(c) (J5b) to supply needed/needless labels. DPO (M5/HJ-6) is dropped:
-operating points are swept by thresholding policy P(ASK) at serve time, requiring one adapter instead
-of three, allowing arbitrarily many operating points, and doubling as the H3 calibration measurement
-[OBSERVED campaign/RUNS.md:1342-1360].
+🔺 **Re-sequencing and unblocking H2/H3 without SFT(c) (2026-09-19)**: The critical path J6 → J5b → J8 → J10
+is revised. J6 exhausted hosted quota and W-24 demonstrated train ASK labels are noise (p = 0.712 vs null mean
+at δ = 0.166) [OBSERVED campaign/workers/W24_PERMNULL.md:54], so `sft_c` cannot be trained on them and **J5b stays paused**.
+The campaign thesis (adaptive allocation of expensive expert calls beats fixed schedules at matched cost)
+does not depend on counterfactual branching: `oracle_escalation` bounds headroom, `router_seq` and P(ASK)
+self-gating test if it is capturable, and `fixed_k` is the cost-matched baseline — none of which require
+ASK labels. Only H4 (ASK trained into policy) requires `sft_c`, making H4 explicitly conditional on the
+clean-counterfactual pilot (`suppress_next`, A8). J6 branch recovery is demoted.
 
-🔺 **Correction data (SFT(c)) is collected on the SFT(b) policy, not on the untrained model.** A
+🔺 **Scope change: value-function escalator dropped from J8 live arms (2026-09-19)**: A7 fitted $V(\text{state}) = P(\text{success} \mid \text{state})$
+over `feature_lr_v1` and achieved dev AUROC 0.6212 [0.5457, 0.6891] [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:59-69],
+landing below the feature-blind step-prior floor of 0.6245 [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:76-77].
+Spending post-reset quota on the value function would evaluate a known-uninformative signal; it is dropped from live J8 arms
+and recorded as a completed negative result.
+
+🔺 **Mechanistic finding on state representations (2026-09-19)**: Two independent estimators fail in the exact same way:
+the value function lands below a step prior (AUROC 0.6212 vs 0.6245 floor) [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:61,77],
+and the J7 verifier fails to beat univariate `transcript_chars` (AUROC 0.5917 vs 0.6095) [OBSERVED campaign/workers/A9_THRESHOLD.md:25,212].
+On both, **the feature representation is what binds, not the head or the labels.** Hand-crafted counters in `feature_lr_v1`
+carry negligible task-state signal beyond progress/length counters. This points directly to the next experimental rung (a richer
+text representation over the transcript, e.g. a small encoder), which belongs to a future run prefix.
+
+🔺 **Correction data (SFT(b+)) is collected on the SFT(b) policy, not on the untrained model.** A
 correction handed to a model that cannot act on it is always "log in first"; collected on `sft_b`,
 the corrections land on the states the deployed sidekick will actually reach, and the same run
 yields J6's branch points for free.

@@ -272,30 +272,22 @@ into a no-op.
 grow a check that any config defining an executor also defines this key, since the failure
 mode of omitting it is invisible at runtime.
 
-## OPEN 2026-09-17 — the probe's `hash_match` metric is broken (reports 0 unconditionally)
+## RESOLVED 2026-09-19 — the probe's `hash_match` metric was broken (off-by-one against growing IO log)
 
-`probe_granite8b.json` (job `25401677`, 300 points) reports `hash_match: 0` and
-`hash_match_rate: 0.0` in **every** bucket, over 262 points where the metric is defined.
+`probe_granite8b.json` (job `25401677`, 300 points) reported `hash_match: 0` and
+`hash_match_rate: 0.0` in **every** bucket, over 262 points where the metric was defined.
 
-**It is not a true zero.** 18 of those points have `model_code` byte-identical to
-`gold_code`. Identical code executed against an identically replayed prefix must produce an
-identical `env_state_hash`, so those 18 must match and do not. The defect is in the metric,
-not the model.
+**Diagnosis (A10, commit `5511775`)**: The defect was an off-by-one in `scripts/setup/state_probe.py`:
+`gold_obs` was evaluated against the observation after the *next* action rather than the focal action.
+Because `snapshot_hash` covers the cumulative `environment_io` log, comparing a step $t$ state against
+a step $t+1$ gold state made a hash match arithmetically impossible.
 
-**Impact: none on any decision so far, which is why it was filed rather than chased.** It is
-the *strict secondary* from `PLAN.md`; the HJ-1.5 decision rule (RUNS.md:353) turns on
-primary agreement, and the J3 gate compares primary agreement before and after SFT.
-`state_equivalent`, the secondary that does carry weight, is healthy (0.676 overall).
-
-**Do not quote a `hash_match` number in any write-up until this is diagnosed.** A uniform
-zero on a metric nobody has validated is the exact shape of the defects catalogued in
-`campaign/RUNS.md`; reporting it as a finding would say something false about the executor.
-
-**Where to start**: `snapshot_hash` hashes `environment_io` *including the input*
-(`appworld_env.py:134-146`), so the probe world's io log and the gold run's io log must be
-compared directly on one of the 18 identical-code points before theorising. Likely
-candidates are an off-by-one in which step's hash is compared, or the probe world carrying
-an extra io record (the replay itself, or the preflight) that the gold run does not have.
+**Resolution**:
+- Fixed in `scripts/setup/state_probe.py` with known-answer validation tests.
+- Probe schema version bumped from 3 to 4.
+- ⚠ **Warning**: Every version-3 `hash_match` value in historical logs is `False` and meaningless.
+  Do not quote version-3 `hash_match` figures in any write-up.
+- **Impact**: Strict secondary metric only. `state_equivalent` (0.676 overall) is unaffected and remains valid.
 
 ## RESOLVED 2026-09-17 — J4's interventions are a timer, so J5's ASK targets are not derivable
 
@@ -355,13 +347,10 @@ but the ones that did not stay within budget could.
 3. Leave all seven and rely on the backstop. **Not recommended** — J4 is the existence
    proof that the backstop does not always work.
 
-My recommendation is **(2)**: freeze the pilot configs, and require a budget on every
-config J10 or later uses. `verify_configs.py` now makes the gap impossible to reintroduce
-silently, which was the point.
+My recommendation was **(2)**: freeze the pilot configs with `FROZEN_PILOT_ALLOWLIST`, and require a budget on every
+config J10 or later uses. `verify_configs.py` now makes the gap impossible to reintroduce silently.
 
-Note the check currently makes `verify_configs.py` exit non-zero on this repo. Nothing
-consumes it in a PBS gate today (grep over `scripts/pbs/` finds no invocation), so nothing
-breaks — but that also means it has never been wired into a job that could enforce it.
+**RESOLVED (2026-09-19, A5b, job 25451871.aqua)**: `verify_configs.py` now exits **0** across all repository configs (all 12 J8 configs set `executor.max_prompt_tokens: 30720`, while historical pilot configs are covered by `FROZEN_PILOT_ALLOWLIST`) [OBSERVED campaign/workers/STATUS_A_5b.md:49-56, 140-143]. It is now wired as an active pre-execution gate in `scripts/pbs/hj8_frontier.pbs` [OBSERVED scripts/pbs/hj8_frontier.pbs:114-120].
 
 ## RESOLVED 2026-09-17 — the recorded test counts silently omitted `tests/integration`
 
@@ -842,12 +831,21 @@ the rolling window (see the root-cause entry above). The remaining campaign need
 That is of the same order as the spend that just drained the window, so these can no longer be
 launched on a first-come basis.
 
-**Priority, to be confirmed by the user before the quota resets (2026-09-19 ~21:13): recovery
-first.** It is the only one of the three that makes data we already paid for usable, it is the
-cheapest per unit of information, and until `branch_counterfactual.py`'s retry path is in place a
-resume recovers nothing at all. J8 and J10 are both downstream of decisions that the recovered
-labels may change.
+**SUPERSEDED (2026-09-19)**: W-24 proved that train branch labels under the original estimand are indistinguishable from noise (permutation null $p = 0.712$) [OBSERVED campaign/workers/W24_PERMNULL.md:54], and W-25 traced this to substitution in the untreated arm [OBSERVED campaign/workers/W25_SUBSTITUTION.md:20-21]. Consequently:
+1. **J6 recovery is demoted**: Spending quota to recover branches on a noisy estimand is paused. Clean-counterfactual pilot (`suppress_next`, A8) replaces mass recovery.
+2. **J5b (`sft_c`) is paused**: Cannot train on noise labels.
+3. **J8 dev frontier is top priority**: Unblocked using `sft_b_plus` (J5a) with self $P(\text{ASK})$ gating and `router_seq` (12 configs ready, verify_configs exit 0) [OBSERVED campaign/workers/STATUS_A_5b.md:22-32].
+4. **Value-function escalator dropped from J8**: A7 showed $V(\text{state})$ dev AUROC 0.6212 lands below the step-prior floor of 0.6245 [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:61,77].
 
 Every J6-family submission from here carries `--max-planner-calls-total`, so a budget overrun
 stops cleanly and resumably rather than running to exhaustion.
+
+## RESOLVED 2026-09-19 — Representation limit binds, not head capacity or label noise
+
+Across two independent estimators fitted over `feature_lr_v1` (the 9 hand-crafted counters):
+1. **Value function $V(\text{state})$ (A7)**: Dev AUROC **0.6212** vs feature-blind step-prior floor **0.6245** [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:61, 77].
+2. **J7 Verifier (A9b)**: Dev AUROC **0.5917** vs univariate `transcript_chars` **0.6095** and `step` **0.6001** [OBSERVED campaign/workers/A9_THRESHOLD.md:25, 210-213].
+
+**Diagnosis**: The binding constraint on task-state discrimination is the **feature representation**, not classifier capacity, temperature calibration, or label noise (label noise ceiling was shown by A9b to be $\approx 0.93–0.96$). Hand-crafted counters carry almost no task-state signal beyond episode length and step progress. A richer text representation (e.g. fine-tuned transcript encoder) is the required next rung for future campaign prefixes.
+
 

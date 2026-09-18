@@ -1,13 +1,15 @@
 # Sidekick — heavy jobs, specified in full
 
-Status **2026-09-17: Campaign re-sequenced, baselines settled, J3 passed, J4 complete.**
+Status **2026-09-19: Re-sequenced per W-24/W-25/A7/A9 findings. J5b paused, J8 unblocked via SFT(b+).**
 - **HJ-1 / HJ-1R / HJ-1.5 (J1)**: Settled. Granite-4.2-8B retained over Qwen3-8B based on pre-registered agreement (0.256 under serving configuration, rising with depth) [OBSERVED campaign/RUNS.md:636-660, 1275-1298]. Honest untrained dev baselines established: `executor_alone` TGC 0.0175, `prompt_only` TGC 0.0439 [OBSERVED campaign/RUNS.md:445-446].
 - **HJ-2B (J2)**: Teacher demonstrations on train complete (180/180, 133 solved; extended to 230 trajectories in `sft_b_s123_p075.jsonl`) [OBSERVED campaign/RUNS.md:390-405, 819-829].
 - **HJ-3 (J3)**: SFT(b) adapter complete (job 25401722) and evaluated (job 25401780). Gate PASSED: `sft_plan` TGC 0.4298 (+37.72 pp over untrained prompt-only, CI [28.07, 47.37]); probe agreement rose 0.256 → 0.492 [OBSERVED campaign/RUNS.md:940-970, 1005-1025].
-- **J4 (HJ-2C)**: Fixed-k correction data on `sft_b` on train complete (180/180, TGC 0.577, 495 interventions) [OBSERVED campaign/RUNS.md:1080-1102, 1161-1171]. 495/495 interventions are `forced: true` on a 5-step timer (0 `ask` events), showing that ASK targets cannot be derived from J4 alone.
-- **Reordered Sequence (2026-09-17)**:
-  **J4b (dev fixed_k, Gate A) → J6 (counterfactual branches, Gate B) → J5a `sft_b_plus` / J5b `sft_c` → J7 (verifier) → J8 (dev frontier sweep) → J9 (prereg freeze) → J10 (test_normal, once)** [OBSERVED campaign/RUNS.md:1342-1360].
-- **DPO Dropped (2026-09-17)**: Preference optimization (HJ-6) is dropped; sidekick operating points are swept by thresholding policy $P(\text{ASK})$ at serve time (`gate_ask_with_verifier`), requiring one adapter instead of three, allowing arbitrarily many operating points along the Pareto frontier, and doubling as the H3 calibration measurement [OBSERVED campaign/RUNS.md:1354-1358].
+- **J4 (HJ-2C)**: Fixed-k correction data on `sft_b` on train complete (180/180, TGC 0.577, 495 interventions) [OBSERVED campaign/RUNS.md:1080-1102, 1161-1171]. 495/495 interventions are `forced: true` on a 5-step timer (0 `ask` events).
+- **J6 (HJ-4 branches)**: Completed on 4 seeds (397 train / 332 dev complete). W-24 showed train `needed` labels are indistinguishable from noise (p = 0.712) [OBSERVED campaign/workers/W24_PERMNULL.md:54]. W-25 showed this was an estimand substitution artefact [OBSERVED campaign/workers/W25_SUBSTITUTION.md:20-21]. J6 recovery is **demoted**.
+- **J5a (`sft_b_plus`)**: Active executor policy (teacher + post-correction actions).
+- **J5b (`sft_c`)**: **PAUSED** because train ASK labels are noise. H2 and H3 do not require `sft_c`; only H4 requires it, which is conditional on the clean-counterfactual pilot.
+- **J7 (HJ-5 verifier)**: Completed. Feature logistic regression dev AUROC 0.5917 against label ceiling ~0.93 (genuine miss of preregistered threshold; reporting rule added) [OBSERVED campaign/workers/A9_THRESHOLD.md:25-35]. Value-function escalator dropped as uninformative (A7, dev AUROC 0.6212 below step prior floor) [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:61,77].
+- **J8 (dev frontier)**: Unblocked with 12 configs using `sft_b_plus`, `router_seq`, `sidekick` (self P(ASK) gating), `fixed_k_{3,5,10}`, `sft_plan_bplus`, `executor_alone_bplus`, and `oracle_escalation` [OBSERVED campaign/workers/STATUS_A_5b.md:22-32].
 
 Read with `PLAN.md`. Every job here:
 - runs on **one node, one GPU** unless stated;
@@ -21,11 +23,11 @@ Read with `PLAN.md`. Every job here:
 
 ```
 Feasibility gates (2026-09-15)
-   └── J1 (HJ-1/1R/1.5 pilot & probe) ── J2 (HJ-2B teacher demos) ── J3 (HJ-3 SFT(b)) ── J4 (HJ-2C train fixed_k)
-          └── J4b (dev fixed_k, Gate A) ── J6 (counterfactual branches, Gate B)
-                 └── J5a (sft_b_plus) / J5b (sft_c with ASK) ── J7 (verifier) ── J8 (dev frontier sweep)
-                        └── J9 (freeze on dev) ── J10 (HJ-7 test_normal, once)
-                                                        └── J11 (HJ-8 OOD test_challenge, optional)
+   └── J1 (pilot & probe) ── J2 (teacher demos) ── J3 (SFT(b)) ── J4 (train fixed_k)
+          └── J4b (dev fixed_k) ── J5a (sft_b_plus) ── J7 (verifier) ── J8 (dev frontier sweep)
+                 │                                                          └── J9 (freeze on dev) ── J10 (test_normal)
+                 ├── J6 (counterfactual branches; DEMOTED)                                                   └── J11 (optional)
+                 └── J5b (sft_c; PAUSED pending clean-counterfactual pilot)
 ```
 
 ---
@@ -79,29 +81,22 @@ Feasibility gates (2026-09-15)
 
 ---
 
-## J6 (HJ-4) — Gate B: Counterfactual Branch Collection & Label Generation (RE-SEQUENCED)
+## J6 (HJ-4) — Gate B: Counterfactual Branch Collection & Label Generation (COMPLETED / RECOVERY DEMOTED)
 
 **Purpose.** Branch forward without corrections from each intervention point in J4 (train) and J4b (dev) to generate `needed`, `needless`, and `harmful` oracle labels.
 
-🔺 **Superseded 2026-09-17 — moved ahead of SFT(c)**: J4 contains only timer ticks without override events; J6 branch labels provide the necessary ground-truth signal to identify outcome-critical escalation points for SFT(c) (J5b) and verifier training (J7) [OBSERVED campaign/RUNS.md:1342-1351].
-
-| field | value |
-|---|---|
-| Branches | Intervention points branched 2× (seeds 101, 102) without correction, temp 0.7, ≤ 10 steps (≈ 1,000–1,200 branch rollouts) [INFERRED] |
-| PBS | 1 GPU, walltime **06:00:00** |
-| Planner turns | **0** (branches are executor-only) |
-| Planner cost | **US$0** |
-| GPU-hours | ≈ 6–8 [INFERRED] |
-| Outputs | `data/interim/branch_labels.parquet` with oracle labels: `needed`, `needless`, `harmful`, `needed_strict` [OBSERVED campaign/RUNS.md:1389-1396] |
-| Gate B Rule | • $f_{\text{train}} < 0.10$ (< ~75 positives): collect 4th correction seed before J5b.<br>• $f_{\text{dev}} > 0.85$: record bound $1-f$ on savings and proceed.<br>• $\text{harmful} > 0.15$: open FOLLOWUP on review format [OBSERVED campaign/RUNS.md:1400-1405]. |
+- Completed across 4 branch seeds (397 train complete, 332 dev complete).
+- W-24 showed train `needed` labels (25/397 at δ=0.166) are indistinguishable from noise (paired sign-flip permutation null p = 0.7124) [OBSERVED campaign/workers/W24_PERMNULL.md:54].
+- W-25 demonstrated this was an estimand substitution artefact (untreated arm received substitute reviews ~5 steps later) [OBSERVED campaign/workers/W25_SUBSTITUTION.md:20-21].
+- J6 branch recovery is **demoted**; clean-counterfactual pilot (`--untreated-mode suppress_next`, A8) licenses testing whether signal recovers without re-running mass branches.
 
 ---
 
-## J5a / J5b (HJ-3b) — M4 Supervised Fine-Tuning of Matched Adapters (RE-SEQUENCED)
+## J5a / J5b (HJ-3b) — M4 Supervised Fine-Tuning of Matched Adapters (J5a ACTIVE / J5b PAUSED)
 
 **Purpose.** Train two matched adapters:
-- **J5a (`sft_b_plus`)**: J2 teacher demonstrations + J4 post-correction actions with **no `ASK_PLANNER` targets** (the H2 data-matched control).
-- **J5b (`sft_c`)**: J2 teacher demonstrations + J4 post-correction actions + **`ASK_PLANNER` targets at J6 `needed` intervention points**.
+- **J5a (`sft_b_plus`)**: J2 teacher demonstrations + J4 post-correction actions with **no `ASK_PLANNER` targets** (the active executor policy for J8).
+- **J5b (`sft_c`)**: J2 teacher demonstrations + J4 post-correction actions + **`ASK_PLANNER` targets at J6 `needed` intervention points**. **PAUSED** because train ASK labels are noise (W-24). H2 and H3 are reachable without `sft_c`; only H4 is conditional on it.
 
 | field | value |
 |---|---|
@@ -109,21 +104,17 @@ Feasibility gates (2026-09-15)
 | Recipe | TRL SFT + PEFT LoRA r=64 α=128 on `q,k,v,o,gate,up,down`, lr 1e-4 cosine, 2 epochs, 32k context, loss on executor tokens only |
 | GPU-hours | ≈ 4–6 per adapter [INFERRED] |
 | Planner cost | **US$0** during training |
-| Outputs | `artifacts/adapters/sft_b_plus_granite8b`, `artifacts/adapters/sft_c_granite8b` |
+| Outputs | `artifacts/adapters/sft_b_plus_granite8b` (trained), `artifacts/adapters/sft_c_granite8b` (paused) |
 
 ---
 
-## J7 (HJ-5) — M5 Verifier Training and Calibration
+## J7 (HJ-5) — M5 Verifier Training and Calibration (COMPLETED)
 
 **Purpose.** Train and calibrate verifier head on J6 counterfactual branch labels.
 
-| field | value |
-|---|---|
-| Model | `Qwen/Qwen3-1.7B` + binary classification head |
-| PBS | 1 GPU, walltime **03:00:00** |
-| GPU-hours | ≈ 2 [INFERRED] |
-| Planner cost | **US$0** |
-| Outputs | `artifacts/verifier/v1`, dev reliability diagram, Brier score, ECE, and AUROC |
+- Feature logistic regression over `feature_lr_v1` (`scripts/setup/fit_feature_verifier.py`, `artifacts/verifiers/feature_lr_20260918/weights.json`).
+- Dev AUROC **0.5917** [0.4677, 0.7111] (A9b, PBS `25454021.aqua`) [OBSERVED campaign/workers/A9_THRESHOLD.md:25-40]. Genuine miss of preregistered threshold; reporting rule added.
+- Value function $V(\text{state}) = P(\text{success} \mid \text{state})$ achieved dev AUROC 0.6212 below feature-blind step-prior floor of 0.6245 (A7, PBS `25451256.aqua`); dropped from live J8 routing [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:61,77].
 
 ---
 
@@ -134,15 +125,17 @@ The sidekick's operating points on the cost-quality Pareto frontier are obtained
 
 ---
 
-## J8 — M5 Dev Frontier Sweep & Calibration (NEW)
+## J8 — M5 Dev Frontier Sweep & Calibration (READY)
 
-**Purpose.** Sweep operating thresholds $\tau \in [0.1, 0.9]$ on dev (57 tasks × 2 seeds) to construct the empirical quality-versus-displacement Pareto frontier for `sidekick(\tau)` and `router_seq(\tau)`.
+**Purpose.** Sweep operating thresholds $\tau \in [0.3, 0.7]$ on dev (57 tasks × 2 seeds) to construct empirical quality-versus-displacement Pareto frontier for `sidekick(\tau)` (self P(ASK) gating on `sft_b_plus`) and `router_seq(\tau)` (sequential FeatureVerifier).
+- 12 configurations created (`configs/hj8_*.yaml`), verified via `scripts/setup/verify_configs.py` (exit 0) [OBSERVED campaign/workers/STATUS_A_5b.md:22-32, 140-143].
+- PBS harness `scripts/pbs/hj8_frontier.pbs` ready with adapter validation and `SMOKE_ONLY` guards (A6, A13) [OBSERVED campaign/workers/STATUS_A_6.md:3-5, STATUS_A_13.md:20-22].
 - Evaluates dev AUROC, ECE, needless-ask rate, and identifies $\tau^*$ and $k_{\text{matched}}$.
 
 | field | value |
 |---|---|
-| Runs | 57 tasks × 2 seeds × operating points ≈ 342–456 runs [INFERRED] |
-| PBS | 1 GPU, walltime **08:00:00** |
+| Runs | 57 tasks × 2 seeds across 12 configurations = 1,368 runs (with cache hits for shared prefixes) [INFERRED] |
+| PBS | 1 GPU, walltime **08:00:00** (`scripts/pbs/hj8_frontier.pbs`) |
 | GPU-hours | ≈ 6–8 [INFERRED] |
 | Planner turns | ≈ 800–1,200 [INFERRED] |
 | Planner cost | **US$3–6** [INFERRED] |

@@ -32,8 +32,8 @@ The thesis of this project is that **a small, locally served executor model spec
 
 All hypotheses are directional, falsifiable predictions evaluated under paired experimental conditions on identical task instances and random seeds:
 
-- **Primary Endpoint — H2 (Intervention-Aware Training Superiority — Conjunctive)**:  
-  Evaluated on AppWorld `test_normal` over 168 tasks $\times N=3$ seeds = 504 paired comparisons, via one-sided 95% paired bootstrap (10,000 resamples). All three conditions must hold [OBSERVED campaign/RUNS.md:1418-1424]:
+- **Primary Endpoint — H2 (Adaptive Escalation Superiority — Conjunctive)**:  
+  Evaluated on AppWorld `test_normal` over 168 tasks $\times N=3$ seeds = 504 paired comparisons, via one-sided 95% paired bootstrap (10,000 resamples). Tested using `sft_b_plus` as the policy with dynamic escalation (self $P(\text{ASK})$ gating / sequential routing), reachable without `sft_c`. All three conditions must hold [OBSERVED campaign/RUNS.md:1418-1424]:
   1. `sidekick` $\ge$ `fixed_k(k_matched)` $- 7\text{ pp}$
   2. `sidekick` $>$ `sft_plan(sft_b_plus)`, CI excluding 0
   3. `sidekick` planner calls/episode $<$ `fixed_k(k=5)`'s, CI excluding 0
@@ -45,10 +45,10 @@ All hypotheses are directional, falsifiable predictions evaluated under paired e
   - **H1 (Task Quality Non-Inferiority vs. `planner_alone`)**:  
     `sidekick` achieves AppWorld Task Goal Completion (TGC) non-inferior to `planner_alone` within $\epsilon = 7\text{ percentage points}$ ($\text{TGC}_{\text{sidekick}} \ge \text{TGC}_{\text{planner\_alone}} - 0.07$, one-sided 95% paired bootstrap CI), with strictly positive frontier-compute displacement on planner tokens ($FCD_{\text{tokens}} > 0$) [OBSERVED campaign/RUNS.md:1412-1428].  
     *Status*: Secondary, reported whatever it shows. Dev measurements (SFT TGC 0.430 vs. planner 0.684) show an 8B executor cannot match the planner alone at high displacement, so the deliverable for H1 is the quality-versus-displacement Pareto frontier.
-  - **H4 (Integrated Policy vs. Bolted-On Router)**:  
-    `sidekick` achieves superior TGC compared to `router_seq(\tau^*)` at matched planner calls ($p < 0.05$, paired bootstrap).
   - **H3 (Escalation Calibration & Dev AUROC / ECE)**:  
-    Dynamic escalation in `sidekick` achieves superior calibration against oracle intervention labels on dev compared to static periodic review (`fixed_k`), exhibiting lower needless-ask rate, high AUROC, and low ECE.
+    Dynamic escalation in `sidekick` (self $P(\text{ASK})$ gating / sequential routing) achieves superior calibration against oracle intervention labels on dev compared to static periodic review (`fixed_k`), exhibiting lower needless-ask rate, high AUROC, and low ECE. Reachable with `sft_b_plus`.
+  - **H4 (Integrated Policy vs. Bolted-On Router — Conditional)**:  
+    `sidekick(sft_c)` achieves superior TGC compared to `router_seq(\tau^*)` on `sft_b_plus` at matched planner calls ($p < 0.05$, paired bootstrap). **Explicitly conditional** on the clean-counterfactual pilot (`suppress_next` mode in A8) demonstrating trainable label signal. If the pilot fails, `sft_c` remains paused and H4 is not evaluated.
   - **Dev Needed-Fraction ($f$)**:  
     The fraction of `fixed_k` timer interventions that were outcome-critical ($f_{\text{dev}}$), evaluated by counterfactual continue-branches at Gate B (J6) [OBSERVED campaign/RUNS.md:1386-1409].
 
@@ -145,6 +145,24 @@ All secondary outcomes are assigned an advance directional expectation:
    *Direction*: Monotonically decreasing with operating threshold $\tau^*$.
 6. **Verifier Calibration and Discrimination (AUROC / ECE / Brier)**:  
    Discrimination AUROC $\ge 0.70$ and Expected Calibration Error (ECE) evaluated against dev counterfactual branch labels.
+
+   > **Amendment 2026-09-19 (post-result, J7) — verifier discrimination, mathematical retraction, and reporting rule.**
+   >
+   > Secondary metric 6 originally specified: “Discrimination AUROC $\ge 0.70$ … evaluated against dev counterfactual branch labels.” Working briefs (e.g. W-16, A9) subsequently used an operational figure of 0.65 that did not appear in this document. Document history confirms **0.70** is the written registered threshold in this preregistration text, while 0.65 was an operational target introduced in working briefs. The fitted verifier misses both as a point estimate.
+   >
+   > The fitted `feature_lr_v1` verifier, scored on the J6 four-replicate needed/needless labels (ambiguous excluded), reached dev AUROC **0.5916711736073553** ($n = 86$; 43/43; 95% point-bootstrap CI [0.4677, 0.7111]; 95% task-bootstrap CI [0.4576, 0.7416]) [OBSERVED artifacts/verifiers/feature_lr_20260918/metrics.json:20, campaign/workers/A9_THRESHOLD.md:25-40]. That point estimate misses both 0.65 and 0.70. This amendment is written with full knowledge of that result.
+   >
+   > **Retraction of earlier attenuation claim:** An earlier working claim held that label reliability $\rho \approx 0.4504$ made 0.65 or 0.70 unmeetable by construction because $\sqrt{0.45} \approx 0.67$. That claim is mathematically incorrect and is **formally retracted**. $\sqrt{\rho}$ bounds a Pearson correlation, not an AUROC rank statistic. Under the same Gaussian true-score model at $\rho = 0.4504$, a perfect predictor of the latent effect scores AUROC **0.9622** against the band-thresholded labels [OBSERVED campaign/workers/A9_THRESHOLD.md:29-32, 156-166], and a 2-vs-2 split-half empirical proxy on J7's own dev evaluation subset reaches mean AUROC **0.9285** (range 0.8391–0.9776) [OBSERVED campaign/workers/A9_THRESHOLD.md:33-35, 266-269]. The threshold was reachable; 0.5917 is a genuine miss.
+   >
+   > **What is not being changed:** The original absolute threshold (0.70) is **not lowered** to a number the fitted verifier would pass. A post-hoc drop from 0.70 (or 0.65) to $\le 0.59$ would make the pre-registration ornamental. The miss is recorded.
+   >
+   > **Reporting rule adopted with disclosure:** Every verifier AUROC reported against J6 labels is to be published with three companions, computed from the same rows without reference to the fitted head's pass/fail:
+   > 1. *Floor* — AUROC of a constant score (0.5000) and of the train per-step-index class prior applied to dev (0.5070) [OBSERVED campaign/workers/A9_THRESHOLD.md:195-197].
+   > 2. *Label-noise ceiling proxy* — mean AUROC over the three 2-vs-2 partitions of branch seeds {101,102,103,104}, evaluated on the complete non-ambiguous dev subset (0.9285, range [0.8391, 0.9776]) [OBSERVED campaign/workers/A9_THRESHOLD.md:266-269].
+   > 3. *Interval* — bootstrap CI for the fitted AUROC ([0.4677, 0.7111] point-level; [0.4576, 0.7416] task-level) [OBSERVED campaign/workers/A9_THRESHOLD.md:292-293].
+   >
+   > Under this reporting rule, J7 reads: AUROC 0.5917 [0.47, 0.71] against floor 0.50 / 0.51 and label-noise ceiling 0.93 [0.84, 0.98] — capturing $\approx 0.21$ of the chance-to-ceiling gap, with a CI covering the floor. The fitted head does not beat univariate `transcript_chars` (0.6095) or `step` (0.6001) [OBSERVED campaign/workers/A9_THRESHOLD.md:210-213].
+
 7. **Dev Needed-Fraction ($f_{\text{dev}}$)**:  
    Fraction of periodic timer interventions classified as `needed` via counterfactual branching at Gate B (J6).
 8. **Unsafe Irreversible Action Violations**:  

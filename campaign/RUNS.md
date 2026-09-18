@@ -1353,7 +1353,7 @@ Two further decisions, taken 2026-09-17:
 
 - **DPO (PLAN.md M5 / HJ-6) is dropped.** The sidekick's frontier is swept by thresholding
   the policy's own P(ASK) (the existing `gate_ask_with_verifier` path,
-  `src/sidekick/systems/loop.py:589-593`), which needs one adapter instead of three, gives
+  `src/sidekick/systems/loop.py:816-820`), which needs one adapter instead of three, gives
   arbitrarily many operating points, and *is* the H3 calibration measurement. Recorded as a
   deliberate deviation from the written plan, not an omission.
 - **The prereg's primary endpoint changes from H1 to H2** (see J9, below).
@@ -2025,4 +2025,72 @@ intervention's value, because a third of the train points score it on a question
 **No amendment is made here either.** The pre-registered estimand is over all points and stays
 that way. This is recorded so that the all-points mean is never quoted as "the intervention
 hurts on average" without the decomposition beside it.
+
+---
+
+## 🔻 Recent Results & Campaign Restructuring (2026-09-19)
+
+### 1. W-24 — Paired sign-flip permutation null: train ASK labels are indistinguishable from noise
+
+- **Report**: `campaign/workers/W24_PERMNULL.md`, commit `41938fa`.
+- **HPC Job**: `25443463.aqua` on `cpu1n040`, exit 0 [OBSERVED campaign/workers/scratch_W24/w24_out.txt:1].
+- **Protocol**: Paired sign-flip permutation null, 10,000 permutations, seed 20260918. For each complete point and branch seed, treated and untreated outcomes are swapped with probability 0.5. Pairing preserved [OBSERVED campaign/workers/W24_PERMNULL.md:18, 54-70].
+- **Train (n = 397 complete points)**:
+  - At frozen δ = 0.166: observed `needed` = 25 vs null mean 26.97 (null 95% [19, 36]), one-sided **p = 0.7124** — *below* the null mean. Observed `needless` = 46 vs null mean 26.95 (null 95% [19, 36]), **p = 0.0000**. Two-sided asymmetry (`needed - needless` = −21), **p = 0.0052** [OBSERVED campaign/workers/W24_PERMNULL.md:54-58, 170].
+  - At train-derived δ = 0.100: observed `needed` = 54 vs null mean 52.26, **p = 0.4121**; `needless` = 67 vs null mean 52.08, p = 0.0050. Widening the band recovers more noise, not more signal [OBSERVED campaign/workers/W24_PERMNULL.md:66-70].
+  - Observed mean Δ = −0.01439 vs null mean 0.000094 (one-sided p = 0.9926, below 95% null interval [−0.01162, 0.01179]) [OBSERVED campaign/workers/W24_PERMNULL.md:56].
+- **Dev (n = 332 complete points)**:
+  - At δ = 0.166: observed `needed` = 43 vs null mean 32.78 (p = 0.0204); observed `needless` = 43 vs null mean 32.88 (p = 0.0225); asymmetry = 0 (two-sided p = 1.0000) [OBSERVED campaign/workers/W24_PERMNULL.md:112-113, 174].
+- **Conclusion**: On train, `needed` does not exceed chance under exchangeability. The labels produce noise, precluding `sft_c` training on this pool [OBSERVED campaign/workers/W24_PERMNULL.md:54-72, 183-193].
+
+### 2. W-25 — Substitution analysis: later reviews confound the untreated arm
+
+- **Report**: `campaign/workers/W25_SUBSTITUTION.md`, commit `113b249`.
+- **HPC Job**: `25447958.aqua` on `cpu1n040`, exit 0 [OBSERVED campaign/workers/scratch_W25/w25_out.txt:1-12].
+- **Mechanism**: In the J6 branch harness, the untreated arm had its focal review at step $s$ omitted, but the 5-step timer remained live. When an untreated run survived past $s$, it received substitute reviews at $s+5, s+10, \dots$ (median `n_later` reviews ranged 0 to 3+). Thus Δ measured *review timing/delay*, not total value of intervention [OBSERVED campaign/workers/W25_SUBSTITUTION.md:20-21, 38-41].
+- **Dose-Response**: On train all-complete (n = 397), Spearman correlation between untreated `n_later` reviews and Δ is **ρ = −0.1634 (p = 0.0007)** [OBSERVED campaign/workers/W25_SUBSTITUTION.md:139].
+- **Clean Counterfactual Subset (`n_later = 0`, train n = 175)**:
+  - At δ = 0.166: observed `needed` = 11 vs null mean 5.18 (one-sided **p = 0.0051**, above 97.5th percentile of 9). Mean help = 0.0284 vs null mean 0.0152 (**p = 0.0007**) [OBSERVED campaign/workers/W25_SUBSTITUTION.md:158-161].
+  - At δ = 0.100: observed `needed` = 20 vs null mean 10.74 (**p = 0.0010**) [OBSERVED campaign/workers/W25_SUBSTITUTION.md:169].
+- **Caveats**:
+  - Dev does not replicate the dose-response: dev Spearman ρ = +0.0949 (p = 0.0838, n.s.) [OBSERVED campaign/workers/W25_SUBSTITUTION.md:140].
+  - Compositional confound: the `n_later = 0` bucket is 54.3% ceiling points on train (where untreated = 1.0) vs 2.1% in `3+` [OBSERVED campaign/workers/W25_SUBSTITUTION.md:214-222].
+  - This analysis is doubly post-hoc. It licenses a clean counterfactual pilot (`suppress_next` mode in A8), not a formal claim [OBSERVED campaign/workers/W25_SUBSTITUTION.md:13, 206-224].
+
+### 3. A7 — Value function V(state) = P(success | state) is no better than a step counter
+
+- **Report**: `campaign/workers/A7_VALUE_FUNCTION.md`, commit `b6af8f4`.
+- **Artifact**: `artifacts/verifiers/value_fn_20260919/` (job `25451256.aqua`).
+- **Data**: 996 historical episodes, 15,618 steps (12,383 train / 3,235 dev) across 6 balanced campaigns [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:44-48].
+- **Performance**:
+  - Dev AUROC: **0.6212** (train 0.6508), dev Brier 0.2396, dev ECE 0.0866. Task-level bootstrap 95% CI: **[0.5457, 0.6891]** [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:59-69].
+  - Feature-blind floor (train step-index prior applied to dev): **0.6245** [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:76-77].
+  - k-NN ceiling proxy (k=5): **0.6356** [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:81-82].
+- **Finding**: Dev AUROC lands *below the feature-blind floor*. The linear head over `feature_lr_v1` extracts zero task-state signal beyond step position. Dropped from live J8 routing [OBSERVED campaign/workers/A7_VALUE_FUNCTION.md:76-90].
+
+### 4. A9 / A9b — J7 verifier threshold respecification: the threshold was meetable; 0.59 is a genuine miss
+
+- **Report**: `campaign/workers/A9_THRESHOLD.md`, commit `0499d01`.
+- **Mathematical Correction & Retraction**: The working assumption that label reliability ρ ≈ 0.45 imposes an AUROC ceiling of √0.45 ≈ 0.67 is **formally retracted**. √ρ is a bound on Pearson correlation, not AUROC. Under a Gaussian true-score model at ρ = 0.4504, a perfect latent-effect predictor achieves **AUROC 0.9622** on band-thresholded labels [OBSERVED campaign/workers/A9_THRESHOLD.md:29-32, 156-166]. A split-half empirical proxy on J7's own dev evaluation subset (n = 86) achieves **mean AUROC 0.9285** (range 0.8391 to 0.9776) [OBSERVED campaign/workers/A9_THRESHOLD.md:33-35, 266-269]. Both 0.65 and 0.70 were mathematically reachable.
+- **Performance on J7 Dev (n = 86)**:
+  - Fitted AUROC = **0.5917** [0.4677, 0.7111] [OBSERVED campaign/workers/A9_THRESHOLD.md:25-40].
+  - Univariate features: `transcript_chars` = **0.6095**, `step` = **0.6001** [OBSERVED campaign/workers/A9_THRESHOLD.md:210-213].
+  - Feature-blind floors: constant = 0.5000, step prior = 0.5070 [OBSERVED campaign/workers/A9_THRESHOLD.md:195-197].
+- **Resolution**: 0.5917 is a genuine miss of the pre-registered threshold. The threshold is not lowered post-hoc. Preregistration is amended with floor/ceiling/interval reporting rules disclosed as written after seeing 0.5917 [OBSERVED campaign/workers/A9_THRESHOLD.md:85-89, 384-443].
+
+### 5. A10 — Probe `hash_match` diagnosis and silent-zero fixes
+
+- **Report**: `campaign/workers/STATUS_A_10.md`, `brief_A10_two_defects.md`, commit `5511775`.
+- **Defect 1 (`hash_match`)**: `state_probe.py` reported 0 unconditionally because `gold_obs` compared against the observation after the *next* action. Because `snapshot_hash` covers the cumulative IO log, equality was impossible. Probe schema bumped v3 → v4. Version-3 `hash_match` values are uninformative/meaningless. `state_equivalent` (0.676) is unaffected [OBSERVED brief_A10_two_defects.md:20-46].
+- **Defect 2 (`hj1_gate.py`)**: Silent coercion of missing dictionary fields (`x or 0.0`) to zero was fixed to differentiate missing data (null) from true recorded zeros [OBSERVED brief_A10_two_defects.md:54-79].
+
+### 6. J8 Frontier Harness & Infrastructure (A4, A5b, A6, A8, A12, A13)
+
+- **A4** (commit `c9e1733`): `make_verifier` in `src/sidekick/runner.py:196` wired to return bare `FeatureVerifier.load(path)` with `.score(state)` [OBSERVED campaign/workers/STATUS_A_4.md:7-8].
+- **A5b** (commit `be4d2d6`): Generated 12 J8 YAML configurations in `configs/`: `hj8_executor_alone_bplus.yaml`, `hj8_sft_plan_bplus.yaml`, `hj8_fixed_k_{3,5,10}.yaml`, `hj8_router_seq_tau{03,05,07}.yaml`, `hj8_sidekick_tau{03,05,07}.yaml`, `hj8_oracle_escalation.yaml`. `scripts/setup/verify_configs.py` exits 0 [OBSERVED campaign/workers/STATUS_A_5b.md:22-32, 140-143].
+- **A6** (commit `da4c115`): PBS job harness `scripts/pbs/hj8_frontier.pbs` written for the 12-arm J8 frontier evaluation [OBSERVED campaign/workers/STATUS_A_6.md:3-5].
+- **A8** (commit `a25d8c9`): Clean-counterfactual branch mode implemented in `scripts/setup/branch_counterfactual.py` with `--untreated-mode suppress_next` and `EpisodePrefix.skip_next_scheduled_review` in `src/sidekick/systems/loop.py:95` [OBSERVED campaign/workers/STATUS_A_8.md:13-28, 66-67].
+- **A12** (commit `0105d9e`): J10 analysis script `scripts/analysis/j10_report.py` created before data collection, supporting task-level bootstrap, preregistered hypothesis evaluations, and null handling for missing metrics [OBSERVED campaign/workers/STATUS_A_12.md:5-24].
+- **A13** (commit `8c64881`): Guard checks added to `scripts/pbs/hj8_frontier.pbs` for adapter weights presence and `SMOKE_ONLY=1` preflight verification [OBSERVED campaign/workers/STATUS_A_13.md:20-22].
+
 
