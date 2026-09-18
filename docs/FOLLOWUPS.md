@@ -530,3 +530,82 @@ Open questions, not yet answered:
 
 Numbers from `branch_runs.jsonl` of `hj6_branches_train_20260917` (4188 rows at the time),
 aggregated by the repo's own `rebuild_derived` at band 0.166 frozen on train.
+
+## OPEN 2026-09-18 — J6 branch crash rate escalates across successive jobs: 0.4 % → 10 % → 40 %
+
+Found while checking why only 397 of 777 train points were complete on four branch
+seeds when all 6,216 branch rows existed. The rows exist; 40 % of them carry a null
+`branch_gpr` and `branch_error_type: "crash"`.
+
+The first reading — "seeds 103/104 are bad" — is wrong, and the way it is wrong is the
+point. A sampling seed cannot cause a crash rate. Splitting the same seeds by **which job
+ran them**, using `result.json` mtime, separates the two explanations:
+
+| era | job | seeds | n | crash rate |
+|---|---|---|---:|---:|
+| 1 | base `25410220` | 101 / 102 | 2,087 | **0.38 % / 0.48 %** |
+| 2 | resume `25412609` | **101 / 102** | 1,021 | **9.02 % / 10.57 %** |
+| 3 | ×4 `25413657` | 103 / 104 | 3,108 | **40.60 % / 39.70 %** |
+
+**The same seeds, on the same points, crash twenty times more often in era 2 than era 1.**
+The seed is irrelevant. Something degrades across successive J6 jobs, monotonically.
+
+**Not established: the cause.** The one configuration change at era 2 is that
+`BRANCH_SEEDS` went from two values to four, so the work list holds 8 branches per point
+instead of 2 and the 10-worker pool can run many branches of the *same task* at once. If
+AppWorld episodes for one task share state, that is an interference mechanism — but it is a
+hypothesis, not a finding. Two things were checked and do **not** explain it:
+
+- **Not the W-5 executor rewrite.** Era 1 ran pre-W-5 code and eras 2–3 ran post-W-5, which
+  fits the timeline suspiciously well. But the only lines *removed* in that change are in
+  the ASK-ignored path and one variable extraction, and J6 runs with
+  `allow_executor_ask=False` and `verifier=None`, so neither executes.
+- **Not file-descriptor exhaustion.** vLLM warns about `ulimit -n 16384` at startup, but the
+  job stdout contains zero occurrences of `Too many open files`.
+
+A crashed branch is not an early failure: its `result.json` shows a full rollout — 15 to 30
+executor calls, 400–600 k tokens, `steps` at the limit — and then `tgc`, `sgc` and
+`goal_pass_rate` all null. The rollout ran; the scoring returned nothing.
+
+### It is data LOSS, not data CORRUPTION — and that was verified, not assumed
+
+Two checks, because a 40 % failure rate that silently biased the survivors would invalidate
+every four-seed number in the campaign.
+
+**1. Selection is unbiased with respect to the effect.** Comparing the *two-seed* Δ (available
+for both groups) between points that survived on four seeds and points that did not:
+train −0.0189 vs −0.0227 (Welch t = +0.27), dev +0.0051 vs +0.0219 (t = −0.55). Neither is
+close to significant. There is a compositional difference in ceiling-point share (train
++16.2 pp, dev −8.2 pp) but the two splits point in **opposite directions**, which is what
+noise looks like.
+
+**2. Surviving era-3 branches are exchangeable with era-1 branches.** Under common random
+numbers with identical configuration, seeds 101–104 must be interchangeable. Paired over
+points complete in all eight cells:
+
+| quantity | train t | dev t |
+|---|---:|---:|
+| treated `branch_gpr` | −0.88 | −1.07 |
+| untreated `branch_gpr` | +0.22 | −0.21 |
+| Δ | −0.82 | −0.68 |
+
+Every |t| < 1.1. Ceiling shares match (train 0.390 vs 0.408; dev 0.265 vs 0.274) and floor
+shares match (0.015 vs 0.015). The branches that survived are sound.
+
+**Consequence.** The four-replicate reliability result (0.4504) and the four-seed labels
+stand. What is lost is coverage, and it is uneven: dev is 332 of 382 points complete on four
+seeds (87 %), train only 397 of 777 (51 %). So for train there is a real trade-off with no
+free answer — 734 points at two-replicate reliability 0.29, or 397 points at four-replicate
+reliability 0.45. J5b's ASK targets come from `needed`, and on the 2-seed set that is 83
+points; the 4-seed set will yield materially fewer.
+
+**Before any further J6 submission**, establish the cause. Running the replicates as separate
+jobs of two seeds each, rather than one job of four, would test the concurrency hypothesis
+directly and is cheap. Re-running the lost train branches is otherwise ~20 GPU-h to recover
+coverage the campaign may not need.
+
+⚠ Same family as the rest of this document, with one improvement worth naming: the machinery
+recorded the failures as `null` and `label_status: incomplete` and dropped them, rather than
+coercing them to 0.0. Nothing was fabricated. But the *selection* those nulls induce is
+invisible in every summary — the manifest reports `n_complete` and looks healthy — and it took
+a deliberate comparison of complete-versus-dropped to show the survivors were usable.
