@@ -14,8 +14,10 @@ from sidekick.agents.verifier import (
     ThresholdRouter,
     feature_spec,
 )
+from sidekick.protocols.schemas import DelegationPacket, Event, ExecutorAction
 
 FIT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "setup" / "fit_feature_verifier.py"
+REAL_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "hj6_branches_dev_sample.jsonl"
 _spec = importlib.util.spec_from_file_location("fit_feature_verifier", FIT_PATH)
 fit = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(fit)
@@ -170,7 +172,7 @@ def test_spec_mismatch_raises():
 # --- fit script: filtering, metrics, threshold router ------------------------
 
 
-def _row(split, step, transcript, needed, status="complete"):
+def _row(split, step, transcript, needed, status="complete", ambiguous=False):
     return {
         "split": split,
         "step": step,
@@ -181,30 +183,34 @@ def _row(split, step, transcript, needed, status="complete"):
         "n_interventions": 0,
         "needed": needed,
         "label_status": status,
+        "ambiguous": ambiguous,
     }
 
 
-def _synthetic_branches(tmp_path: Path) -> Path:
-    path = tmp_path / "branches.jsonl"
-    rows = []
+def _synthetic_branches(tmp_path: Path) -> tuple[Path, Path]:
+    train_rows = []
+    dev_rows = []
     leak = "OBS: Traceback (most recent call last): bad access_token 'AbCdEf12345678'"
     for i in range(20):
-        rows.append(_row("train", 5 * (i % 2 + 1), leak, True))
-        rows.append(_row("train", 5 * (i % 2 + 1) + 1, "OBS: Execution done", False))
-        rows.append(_row("train", 5, "OBS: x", True, status="incomplete"))
-        rows.append(_row("train", 5, "OBS: x", True, status="ambiguous"))
+        train_rows.append(_row("train", 5 * (i % 2 + 1), leak, True))
+        train_rows.append(_row("train", 5 * (i % 2 + 1) + 1, "OBS: Execution done", False))
+        train_rows.append(_row("train", 5, "OBS: x", True, status="incomplete"))
+        train_rows.append(_row("train", 5, "OBS: x", True, ambiguous=True))
     for i in range(10):
-        rows.append(_row("dev", 5, leak, True))
-        rows.append(_row("dev", 6, "OBS: Execution done", False))
-        rows.append(_row("dev", 5, "OBS: x", False, status="ambiguous"))
-    path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
-    return path
+        dev_rows.append(_row("dev", 5, leak, True))
+        dev_rows.append(_row("dev", 6, "OBS: Execution done", False))
+        dev_rows.append(_row("dev", 5, "OBS: x", False, ambiguous=True))
+    train_path = tmp_path / "train_branches.jsonl"
+    dev_path = tmp_path / "dev_branches.jsonl"
+    train_path.write_text("\n".join(json.dumps(r) for r in train_rows), encoding="utf-8")
+    dev_path.write_text("\n".join(json.dumps(r) for r in dev_rows), encoding="utf-8")
+    return train_path, dev_path
 
 
 def test_prepare_dataset_drops_incomplete_excludes_ambiguous(tmp_path):
-    rows = fit.read_rows(_synthetic_branches(tmp_path))
-    train_rows, train_report = fit.prepare_dataset([r for r in rows if r["split"] == "train"])
-    dev_rows, dev_report = fit.prepare_dataset([r for r in rows if r["split"] == "dev"])
+    train_path, dev_path = _synthetic_branches(tmp_path)
+    train_rows, train_report = fit.prepare_dataset(fit.read_rows(train_path))
+    dev_rows, dev_report = fit.prepare_dataset(fit.read_rows(dev_path))
     assert train_report["incomplete_dropped"] == 20
     assert train_report["ambiguous_excluded"] == 20
     assert train_report["n_kept_for_fit"] == 40
@@ -212,10 +218,12 @@ def test_prepare_dataset_drops_incomplete_excludes_ambiguous(tmp_path):
     assert dev_report["ambiguous_excluded"] == 10
     assert dev_report["n_kept_for_fit"] == 20
     assert all(r["label_status"] == "complete" for r in train_rows + dev_rows)
+    assert all(r.get("ambiguous") is not True for r in train_rows + dev_rows)
 
 
 def test_fit_on_separable_data_recovers_auroc_1(tmp_path):
-    result = fit.run_fit(_synthetic_branches(tmp_path), tmp_path / "artifacts", date="20260917")
+    train_path, dev_path = _synthetic_branches(tmp_path)
+    result = fit.run_fit(train_path, dev_path, tmp_path / "artifacts", date="20260917")
     dev = result["report"]["dev"]
     assert dev["auroc_all_states"] == pytest.approx(1.0)
     train = result["report"]["train"]
@@ -290,3 +298,231 @@ def test_tick_state_restriction_reported():
     ticks = [r for r in rows if fit.is_tick_state(r)]
     assert len(ticks) == 10
     assert all(r["step"] % 5 == 0 for r in ticks)
+
+
+# --- W-4b: real branches.jsonl shape, join, boolean ambiguous ---------------
+
+
+def _intervention_steps(i: int, step: int) -> list[int]:
+    steps: list[int] = []
+    for s in [5 * (j + 1) for j in range(int(i))] + [int(step)]:
+        if s not in steps:
+            steps.append(s)
+    return steps
+
+
+def _write_episode(campaign_root: Path, seed: int, task_id: str, intervention_steps: list[int]) -> Path:
+    """Minimal fixed_k events.jsonl with timer-tick interventions at the given steps."""
+    run_id = f"camp/fixed_k/{seed}/{task_id}"
+    ts = "2026-09-17T00:00:00+00:00"
+    packet = DelegationPacket(
+        packet_id="pkt-1", task_id=task_id, goal="do the task", created_at=ts
+    )
+    usage = {"model": "mock", "provider": "mock", "input_tokens": 4, "output_tokens": 2, "n_calls": 1}
+    events: list[Event] = []
+
+    def add(event_type: str, step: int, actor: str, payload: dict, **extra) -> None:
+        body = {
+            "run_id": run_id,
+            "task_id": task_id,
+            "system": "fixed_k",
+            "seed": seed,
+            "step": step,
+            "ts": ts,
+            "actor": actor,
+            "event_type": event_type,
+            "payload": payload,
+        }
+        body.update(extra)
+        events.append(Event.model_validate(body))
+
+    add("run_start", 0, "system", {"policy": {"review_every_k": 5}})
+    add("observation", 0, "environment", {"text": "Do the task using apis.phone.send_message()", "done": False})
+    add("plan", 0, "planner", {"packet": packet.model_dump()}, usage=usage)
+    code = ExecutorAction(
+        kind="CODE",
+        code="apis.phone.send_message(access_token='AbCdEf12345678')",
+        raw_output="code",
+    ).model_dump()
+    n_iv = 0
+    ticks = set(intervention_steps)
+    for step in range(1, max(intervention_steps) + 1):
+        if step in ticks:
+            n_iv += 1
+            add(
+                "intervention",
+                step,
+                "planner",
+                {"correction": f"correction {n_iv}", "forced": True, "n_interventions": n_iv},
+                usage=usage,
+            )
+        add("action", step, "executor", code, usage=usage)
+        add("observation", step, "environment", {"text": f"OBS result at {step}", "done": False})
+    dest = campaign_root / "fixed_k" / str(seed) / task_id
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "events.jsonl").write_text(
+        "\n".join(e.model_dump_json() for e in events) + "\n", encoding="utf-8"
+    )
+    return dest
+
+
+def test_cli_requires_separate_split_files_and_campaigns():
+    with pytest.raises(SystemExit):
+        fit.build_parser().parse_args(["--branches", "x.jsonl", "--out", "o"])
+    args = fit.build_parser().parse_args(
+        [
+            "--train-branches",
+            "t.jsonl",
+            "--dev-branches",
+            "d.jsonl",
+            "--train-campaign",
+            "/camp/train",
+            "--dev-campaign",
+            "/camp/dev",
+        ]
+    )
+    assert args.train_branches == "t.jsonl"
+    assert args.dev_branches == "d.jsonl"
+    assert args.train_campaign == "/camp/train"
+    assert args.dev_campaign == "/camp/dev"
+
+
+def test_real_artifact_rows_lack_split_and_feature_keys():
+    rows = fit.read_rows(REAL_FIXTURE)
+    assert rows
+    for r in rows:
+        for key in (
+            "split",
+            "transcript",
+            "last_action",
+            "last_observation",
+            "n_asks",
+            "n_interventions",
+        ):
+            assert key not in r
+        assert "ambiguous" in r
+        assert r["label_status"] in fit.ALLOWED_LABEL_STATUS
+    with pytest.raises(ValueError, match="transcript"):
+        fit.build_xy(rows[:1])
+
+
+def test_split_is_which_file_and_dev_rows_nonempty(tmp_path):
+    rows = fit.read_rows(REAL_FIXTURE)
+    train_path = tmp_path / "train_branches.jsonl"
+    dev_path = tmp_path / "dev_branches.jsonl"
+    train_path.write_text(json.dumps(rows[0]) + "\n", encoding="utf-8")
+    dev_path.write_text("\n".join(json.dumps(r) for r in rows[1:]) + "\n", encoding="utf-8")
+    train_joined, _ = fit.join_episode_features(fit.read_rows(train_path), None, split="train")
+    dev_joined, _ = fit.join_episode_features(fit.read_rows(dev_path), None, split="dev")
+    assert train_joined, "train partition emptied"
+    assert dev_joined, "dev partition emptied — the original bug defaulted every row to train"
+    assert all(r["split"] == "train" for r in train_joined)
+    assert all(r["split"] == "dev" for r in dev_joined)
+
+
+def test_ambiguous_boolean_excluded_on_real_shape_not_label_status():
+    rows = fit.read_rows(REAL_FIXTURE)
+    labeled = []
+    for r in rows:
+        x = dict(r)
+        x["label_status"] = "complete"
+        x["needed"] = False
+        x["ambiguous"] = True
+        labeled.append(x)
+    kept, report = fit.prepare_dataset(labeled)
+    assert report["ambiguous_excluded"] > 0
+    assert report["ambiguous_excluded"] == len(labeled)
+    assert kept == []
+    with pytest.raises(ValueError, match="label_status"):
+        fit.prepare_dataset(
+            [{**rows[0], "label_status": "ambiguous", "needed": False, "ambiguous": False}]
+        )
+
+
+def test_failed_join_is_dropped_not_fitted(tmp_path):
+    rows = fit.read_rows(REAL_FIXTURE)
+    by_ep: dict[tuple, list] = {}
+    for r in rows:
+        by_ep.setdefault((r["seed"], r["task_id"]), []).append(r)
+    episodes = list(by_ep)
+    assert len(episodes) >= 2
+    joinable, missing = episodes[0], episodes[-1]
+    campaign = tmp_path / "campaign"
+    steps: list[int] = []
+    for r in by_ep[joinable]:
+        for s in _intervention_steps(r["i"], r["step"]):
+            if s not in steps:
+                steps.append(s)
+    _write_episode(campaign, joinable[0], joinable[1], steps)
+
+    joined, report = fit.join_episode_features(rows, campaign, split="dev")
+    assert report["n_join_dropped"] > 0
+    assert report["n_joined"] > 0
+    assert joined, "dev_rows empty after partitioning"
+    assert all(r["split"] == "dev" for r in joined)
+    assert all((r["seed"], r["task_id"]) != missing for r in joined)
+    assert all(r.get("transcript") for r in joined)
+    feats = fit._extractor_features(joined[0])
+    assert feats["transcript_chars"] > 0
+    assert feats["last_action_kind_CODE"] == 1.0
+    for r in by_ep[missing]:
+        with pytest.raises(ValueError, match="transcript"):
+            fit.build_xy([r])
+    X, y = fit.build_xy(joined)
+    assert len(X) == len(joined) == len(y)
+
+
+def test_run_fit_joins_real_ids_and_reports_ambiguous_and_drops(tmp_path):
+    rows = fit.read_rows(REAL_FIXTURE)
+    by_ep: dict[tuple, list] = {}
+    for r in rows:
+        by_ep.setdefault((r["seed"], r["task_id"]), []).append(r)
+    episodes = list(by_ep)
+    campaign = tmp_path / "campaign"
+    for ep in episodes[:-1]:
+        steps: list[int] = []
+        for r in by_ep[ep]:
+            for s in _intervention_steps(r["i"], r["step"]):
+                if s not in steps:
+                    steps.append(s)
+        _write_episode(campaign, ep[0], ep[1], steps)
+
+    joinable_rows = [r for r in rows if (r["seed"], r["task_id"]) != episodes[-1]]
+    missing_row = by_ep[episodes[-1]][0]
+
+    def overlay(src: dict, needed: bool, *, ambiguous: bool = False) -> dict:
+        x = dict(src)
+        x["label_status"] = "complete"
+        x["needed"] = needed
+        x["ambiguous"] = ambiguous
+        return x
+
+    train_rows = [
+        overlay(joinable_rows[0], True),
+        overlay(joinable_rows[0], False),
+        overlay(joinable_rows[0], False, ambiguous=True),
+        dict(missing_row),
+    ]
+    dev_rows = [
+        overlay(joinable_rows[0], True),
+        overlay(joinable_rows[0], False),
+        overlay(joinable_rows[0], False, ambiguous=True),
+    ]
+    train_path = tmp_path / "train_branches.jsonl"
+    dev_path = tmp_path / "dev_branches.jsonl"
+    train_path.write_text("\n".join(json.dumps(r) for r in train_rows) + "\n", encoding="utf-8")
+    dev_path.write_text("\n".join(json.dumps(r) for r in dev_rows) + "\n", encoding="utf-8")
+    result = fit.run_fit(
+        train_path,
+        dev_path,
+        tmp_path / "artifacts",
+        train_campaign=campaign,
+        dev_campaign=campaign,
+        date="20260917",
+    )
+    report = result["report"]
+    assert report["dev_join"]["n_joined"] > 0
+    assert report["dev_filter"]["ambiguous_excluded"] > 0
+    assert report["train_join"]["n_join_dropped"] >= 1
+    assert report["train"]["n"] >= 2
+    assert report["dev"]["n"] >= 2

@@ -5,14 +5,16 @@ fit_feature_verifier.py ...`), never on the login node. No numpy/sklearn
 dependency: pure-stdlib logistic regression via batch gradient descent with
 early stopping, and dev-set temperature scaling by 1-D Newton steps.
 
-Input: J6 branches.jsonl — one row per intervention point, label column
-`needed` (bool/int). Rows with `label_status == "incomplete"` are dropped,
-never imputed. Rows with `label_status == "ambiguous"` are excluded from the
-fit and reported separately. Fit on the train split; temperature-scale on dev;
-never fit on dev.
+Input: two J6 ``branches.jsonl`` files (train and dev are separate explicit
+inputs — real rows have no ``split`` key) plus the two campaign roots whose
+``events.jsonl`` files reconstruct ``trajectory_state``. Label column ``needed``
+(bool/int). Rows with ``label_status == "incomplete"`` are dropped, never
+imputed. Rows with boolean ``ambiguous`` true are excluded from the fit and
+reported separately. Fit on the train split; temperature-scale on dev; never
+fit on dev.
 
-CAUTION: real branches.jsonl does not exist yet (J6 running). Test against
-synthetic rows only; do not point this at live J6 output.
+Do not point this at live J6 train output until that job has finished writing
+``branches.jsonl``.
 """
 from __future__ import annotations
 
@@ -25,12 +27,33 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "setup"))
 
+import branch_counterfactual as _bc  # noqa: E402
 from sidekick.agents.verifier import (  # noqa: E402
     FEATURE_SPEC_VERSION,
     FeatureVerifier,
     _extractor_features,
     feature_spec,
+)
+from sidekick.replay import _events_of_last_attempt  # noqa: E402
+from sidekick.systems.loop import (  # noqa: E402
+    counters_from_events,
+    last_observation_from_events,
+)
+from sidekick.training.sft_data import (  # noqa: E402
+    _action_from_payload,
+    _history_from_events,
+)
+
+ALLOWED_LABEL_STATUS = frozenset({"complete", "incomplete"})
+TRAJECTORY_STATE_KEYS = (
+    "step",
+    "transcript",
+    "last_action",
+    "last_observation",
+    "n_asks",
+    "n_interventions",
 )
 
 
@@ -58,12 +81,129 @@ def _as_bool(value: object) -> bool | None:
     return None
 
 
+def episode_events_path(campaign_root: str | Path, seed: int, task_id: str) -> Path:
+    """``{campaign}/{SYSTEM_NAME}/{seed}/{task_id}/events.jsonl`` as J6 uses."""
+    return Path(campaign_root) / _bc.SYSTEM_NAME / str(seed) / str(task_id) / "events.jsonl"
+
+
+def trajectory_state_from_prefix(events: list, i: int, expected_step: int) -> dict | None:
+    """Rebuild loop.trajectory_state at intervention ``i`` from the prefix.
+
+    Uses J6's ``prefix_events_before_intervention`` / ``_history_from_events``
+    and the same transcript assembly the loop uses when hydrating a prefix
+    (loop.py:540-548), plus the live counters and last observation helpers.
+    A step mismatch or out-of-range ``i`` is a failed join, not a default state.
+    """
+    try:
+        points = _bc.enumerate_intervention_points(events)
+        if i < 0 or i >= len(points):
+            return None
+        if int(points[i]["step"]) != int(expected_step):
+            return None
+        prefix = _bc.prefix_events_before_intervention(events, i)
+    except (IndexError, TypeError, ValueError):
+        return None
+    instruction, packet, _api_docs, history = _history_from_events(prefix)
+    lines = [f"INSTRUCTION: {instruction}"]
+    if packet is not None:
+        lines.append(f"PLAN: {packet.model_dump_json()}")
+    for turn in history:
+        content = str(turn.get("content") or "")
+        if turn.get("role") != "user":
+            continue
+        if content.startswith(("OBS:", "INTERVENTION:", "ANSWER:", "ASK_IGNORED")):
+            lines.append(content)
+    _tokens, n_asks, n_interventions, _n_planner = counters_from_events(prefix)
+    last_obs = last_observation_from_events(prefix)
+    last_action = None
+    for ev in reversed(prefix):
+        if ev.event_type == "action":
+            parsed = _action_from_payload(ev.payload or {})
+            last_action = None if parsed is None else parsed.model_dump()
+            break
+    return {
+        "step": int(expected_step),
+        "transcript": "\n".join(lines),
+        "last_action": last_action,
+        "last_observation": last_obs.model_dump(),
+        "n_asks": n_asks,
+        "n_interventions": n_interventions,
+    }
+
+
+def join_episode_features(
+    rows: list[dict],
+    campaign_root: str | Path | None,
+    *,
+    split: str | None = None,
+) -> tuple[list[dict], dict]:
+    """Attach trajectory_state from campaign events. Failed joins are dropped.
+
+    ``split`` is attached from which file the rows came from, never read off
+    a field that real J6 rows do not have. When ``campaign_root`` is None
+    (synthetic tests that already carry trajectory_state), no join is attempted.
+    """
+    joined: list[dict] = []
+    n_dropped = 0
+    cache: dict[tuple[int, str], list | None] = {}
+    root = None if campaign_root is None else Path(campaign_root)
+    for row in rows:
+        out = dict(row)
+        if split is not None:
+            out["split"] = split
+        if root is None:
+            joined.append(out)
+            continue
+        try:
+            seed = int(row["seed"])
+            task_id = str(row["task_id"])
+            i = int(row["i"])
+            step = int(row["step"])
+        except (KeyError, TypeError, ValueError):
+            n_dropped += 1
+            continue
+        key = (seed, task_id)
+        if key not in cache:
+            path = episode_events_path(root, seed, task_id)
+            if not path.is_file():
+                cache[key] = None
+            else:
+                events = _events_of_last_attempt(path)
+                cache[key] = events or None
+        events = cache[key]
+        if events is None:
+            n_dropped += 1
+            continue
+        state = trajectory_state_from_prefix(events, i, step)
+        if state is None:
+            n_dropped += 1
+            continue
+        out.update(state)
+        joined.append(out)
+    report = {
+        "n_rows_read": len(rows),
+        "n_join_dropped": n_dropped,
+        "n_joined": len(joined),
+    }
+    return joined, report
+
+
 def build_xy(rows: list[dict]) -> tuple[list[list[float]], list[int]]:
-    """Feature matrix in frozen spec order and integer labels."""
+    """Feature matrix in frozen spec order and integer labels.
+
+    Requires a reconstructed ``transcript``. Fitting default features for a
+    row that never joined to an episode is the defect this guards against.
+    """
     columns = feature_spec()["columns"]
     X: list[list[float]] = []
     y: list[int] = []
     for row in rows:
+        if "transcript" not in row:
+            raise ValueError(
+                "label row has no transcript; reconstruct trajectory_state from "
+                "campaign events before build_xy (never fit default features "
+                "for a failed join)"
+            )
         feats = _extractor_features(row)
         X.append([float(feats[c]) for c in columns])
         y.append(1 if row["needed"] else 0)
@@ -71,16 +211,26 @@ def build_xy(rows: list[dict]) -> tuple[list[list[float]], list[int]]:
 
 
 def prepare_dataset(rows: list[dict]) -> tuple[list[dict], dict]:
-    """Split rows by label_status; incomplete is dropped, never imputed."""
+    """Filter by label_status and the boolean ambiguous column.
+
+    ``label_status`` is only ever ``complete`` or ``incomplete`` on real rows;
+    ``ambiguous`` is a separate boolean. Incomplete is dropped, never imputed.
+    Unexpected status values raise rather than falling through.
+    """
     kept: list[dict] = []
     counts = {"incomplete_dropped": 0, "ambiguous_excluded": 0, "missing_label_dropped": 0}
     for row in rows:
         status = str(row.get("label_status") or "").strip().lower()
+        if status not in ALLOWED_LABEL_STATUS:
+            raise ValueError(
+                f"unexpected label_status={row.get('label_status')!r}; "
+                f"expected one of {sorted(ALLOWED_LABEL_STATUS)}"
+            )
         needed = _as_bool(row.get("needed"))
         if status == "incomplete" or needed is None:
             counts["incomplete_dropped" if status == "incomplete" else "missing_label_dropped"] += 1
             continue
-        if status == "ambiguous":
+        if _as_bool(row.get("ambiguous")) is True:
             counts["ambiguous_excluded"] += 1
             continue
         kept.append(row)
@@ -92,6 +242,7 @@ def prepare_dataset(rows: list[dict]) -> tuple[list[dict], dict]:
         "n_negative_kept": sum(1 for r in kept if not _as_bool(r.get("needed"))),
     }
     return kept, report
+
 
 def standardize_fit(X: list[list[float]]) -> tuple[list[float], list[float]]:
     n = len(X)
@@ -108,6 +259,7 @@ def apply_standardize(
     X: list[list[float]], means: list[float], stds: list[float]
 ) -> list[list[float]]:
     return [[(row[j] - means[j]) / stds[j] for j in range(len(means))] for row in X]
+
 
 def fit_logistic(
     X: list[list[float]],
@@ -178,6 +330,7 @@ def fit_temperature(probs: list[float], y: list[int], iterations: int = 100) -> 
         if done:
             break
     return float(T)
+
 
 def auroc(y_true: list[int], scores: list[float]) -> float:
     """Tie-aware rank-statistic AUROC; 0.5 when only one class is present."""
@@ -311,22 +464,40 @@ def fit_all(
 
 
 def run_fit(
-    branches_path: str | Path,
+    train_branches: str | Path,
+    dev_branches: str | Path,
     out_dir: str | Path,
     *,
+    train_campaign: str | Path | None = None,
+    dev_campaign: str | Path | None = None,
     l2: float = 1.0,
     date: str | None = None,
 ) -> dict:
-    rows = read_rows(branches_path)
-    train_rows, train_report = prepare_dataset(
-        [r for r in rows if str(r.get("split") or "train") == "train"]
+    """Fit from two label files. Split is which file a row came from."""
+    train_raw = read_rows(train_branches)
+    dev_raw = read_rows(dev_branches)
+    train_joined, train_join = join_episode_features(
+        train_raw, train_campaign, split="train"
     )
-    dev_rows, dev_report = prepare_dataset(
-        [r for r in rows if str(r.get("split") or "train") == "dev"]
-    )
+    dev_joined, dev_join = join_episode_features(dev_raw, dev_campaign, split="dev")
+    if not dev_joined:
+        raise ValueError(
+            "dev split is empty after partitioning; refusing to temperature-scale "
+            "on an empty set (real branches.jsonl rows have no split key)"
+        )
+    train_rows, train_report = prepare_dataset(train_joined)
+    dev_rows, dev_report = prepare_dataset(dev_joined)
+    if not train_rows:
+        raise ValueError("train split is empty after filtering")
+    if not dev_rows:
+        raise ValueError(
+            "dev split is empty after filtering; refusing silent temperature scaling"
+        )
     verifier, report = fit_all(train_rows, dev_rows, l2=l2)
     report["train_filter"] = train_report
     report["dev_filter"] = dev_report
+    report["train_join"] = train_join
+    report["dev_join"] = dev_join
     stamp = date or datetime.now(timezone.utc).strftime("%Y%m%d")
     dest = Path(out_dir) / f"feature_lr_{stamp}"
     dest.mkdir(parents=True, exist_ok=True)
@@ -345,7 +516,26 @@ def build_parser() -> argparse.ArgumentParser:
         prog="python scripts/setup/fit_feature_verifier.py",
         description="Fit + temperature-scale the feature_lr verifier (CPU-only).",
     )
-    parser.add_argument("--branches", required=True, help="J6 branches.jsonl path")
+    parser.add_argument(
+        "--train-branches",
+        required=True,
+        help="J6 train branches.jsonl (split is this file, not a row field)",
+    )
+    parser.add_argument(
+        "--dev-branches",
+        required=True,
+        help="J6 dev branches.jsonl (split is this file, not a row field)",
+    )
+    parser.add_argument(
+        "--train-campaign",
+        required=True,
+        help="Campaign root with fixed_k/{seed}/{task_id}/events.jsonl for train",
+    )
+    parser.add_argument(
+        "--dev-campaign",
+        required=True,
+        help="Campaign root with fixed_k/{seed}/{task_id}/events.jsonl for dev",
+    )
     parser.add_argument("--out", default=str(REPO_ROOT / "artifacts" / "verifiers"))
     parser.add_argument("--l2", type=float, default=1.0)
     parser.add_argument("--date", default=None, help="artifact dir stamp (YYYYMMDD)")
@@ -354,7 +544,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    result = run_fit(args.branches, args.out, l2=args.l2, date=args.date)
+    result = run_fit(
+        args.train_branches,
+        args.dev_branches,
+        args.out,
+        train_campaign=args.train_campaign,
+        dev_campaign=args.dev_campaign,
+        l2=args.l2,
+        date=args.date,
+    )
     print(json.dumps(result["report"], indent=2))
     print(f"artifact: {result['artifact_dir']}")
     return 0
