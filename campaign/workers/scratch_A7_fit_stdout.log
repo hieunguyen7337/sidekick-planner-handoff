@@ -1,0 +1,156 @@
+{
+  "artifact": "value_fn (FeatureVerifier head over feature_lr_v1 spec)",
+  "discovery": {
+    "fit_campaigns": {
+      "hj1b_planner_20260915": {
+        "episodes_found": 114,
+        "labelled": 114
+      },
+      "hj2b_planner_train_20260916": {
+        "episodes_found": 270,
+        "labelled": 270
+      },
+      "hj3_sft_b_exec_20260917": {
+        "episodes_found": 114,
+        "labelled": 114
+      },
+      "hj3_sft_plan_20260917": {
+        "episodes_found": 114,
+        "labelled": 114
+      },
+      "hj4_correction_train_20260917": {
+        "episodes_found": 270,
+        "labelled": 270
+      },
+      "hj4b_fixed_k_dev_20260917": {
+        "episodes_found": 114,
+        "labelled": 114
+      }
+    },
+    "multi_run_start_files": 114,
+    "multi_run_start_by_campaign": {
+      "hj1a_exec3b_20260915": 0,
+      "hj1a_exec8b_20260915": 114,
+      "hj1c_fixed_k_20260916": 0,
+      "hj1c_prompt_only_20260916": 0
+    },
+    "excluded_zero_success_campaigns": {
+      "hj1a_exec3b_20260915": {
+        "episodes": 0,
+        "successes": 0,
+        "multi_run_start_files": 0,
+        "excluded_reason": "zero successes across all episodes; all-negative labels carry no within-campaign signal for a P(success) head"
+      },
+      "hj1a_exec8b_20260915": {
+        "episodes": 114,
+        "successes": 0,
+        "multi_run_start_files": 114,
+        "excluded_reason": "zero successes across all episodes; all-negative labels carry no within-campaign signal for a P(success) head"
+      },
+      "hj1c_fixed_k_20260916": {
+        "episodes": 114,
+        "successes": 0,
+        "multi_run_start_files": 0,
+        "excluded_reason": "zero successes across all episodes; all-negative labels carry no within-campaign signal for a P(success) head"
+      },
+      "hj1c_prompt_only_20260916": {
+        "episodes": 114,
+        "successes": 0,
+        "multi_run_start_files": 0,
+        "excluded_reason": "zero successes across all episodes; all-negative labels carry no within-campaign signal for a P(success) head"
+      }
+    },
+    "excluded_by_rule": {
+      "hj6_branches_*": "counterfactual branches, not episodes (brief)"
+    }
+  },
+  "split": {
+    "tasks_total": 147,
+    "tasks_train": 118,
+    "tasks_dev": 29,
+    "rule": "by task_id, sorted then deterministically shuffled with random.Random(20260919); last 20% to dev"
+  },
+  "step_counts": {
+    "episodes_read": 996,
+    "episodes_missing_result": 0,
+    "episodes_empty_after_last_run_start": 0,
+    "episodes_load_error": 0,
+    "steps_dropped_reconstruction": 0,
+    "episodes_no_steps": 0,
+    "n_p_ask_measured": 0,
+    "per_campaign": {
+      "hj1b_planner_20260915": {
+        "episodes": 114,
+        "steps": 1399,
+        "positives": 948
+      },
+      "hj2b_planner_train_20260916": {
+        "episodes": 270,
+        "steps": 3472,
+        "positives": 2428
+      },
+      "hj3_sft_b_exec_20260917": {
+        "episodes": 114,
+        "steps": 2185,
+        "positives": 338
+      },
+      "hj3_sft_plan_20260917": {
+        "episodes": 114,
+        "steps": 2016,
+        "positives": 660
+      },
+      "hj4_correction_train_20260917": {
+        "episodes": 270,
+        "steps": 4421,
+        "positives": 2060
+      },
+      "hj4b_fixed_k_dev_20260917": {
+        "episodes": 114,
+        "steps": 2125,
+        "positives": 913
+      }
+    },
+    "n_train_steps": 12383,
+    "n_dev_steps": 3235,
+    "n_train_positive": 5734,
+    "n_dev_positive": 1613
+  },
+  "outcome_field": "result.json success (bool); goal_pass_rate fallback applies only if success is absent; runs.jsonl never used (older campaigns lack goal_pass_rate there)",
+  "l2": 1.0,
+  "train": {
+    "n": 12383,
+    "positive_rate": 0.4630541871921182,
+    "brier": 0.23615847435683504,
+    "ece": 0.051284642505024694,
+    "nll": 0.6647058412813449,
+    "auroc": 0.6508180669006561
+  },
+  "dev": {
+    "n": 3235,
+    "positive_rate": 0.49860896445131375,
+    "brier": 0.23956189140673878,
+    "ece": 0.08664669296384872,
+    "nll": 0.6703916626247027,
+    "auroc": 0.6211538035214804,
+    "auroc_before_temperature": 0.6211538035214804
+  },
+  "dev_nll_before": 0.674490580804932,
+  "dev_nll_after": 0.6703916626247027,
+  "temperature": 0.5654242481918834,
+  "feature_spec_version": "feature_lr_v1",
+  "attenuation_note": "labels are episode outcomes back-propagated to steps; early steps are only weakly determined by the outcome, so AUROC is judged against ceiling proxies (attenuation_ceiling_knn_proxy) and a feature-blind step-prior floor (attenuation_floor_step_prior_auroc), not 0.50 alone",
+  "auroc_bootstrap_task_level": {
+    "auroc": 0.6211538035214804,
+    "ci_low": 0.5456547569834052,
+    "ci_high": 0.6891367088575924,
+    "n_boot": 10000
+  },
+  "attenuation_ceiling_knn_proxy": 0.6355683208945812,
+  "attenuation_floor_step_prior_auroc": 0.624507221305316,
+  "fit_invariants": {
+    "nll_never_increased": true,
+    "auroc_bit_identical": true,
+    "nlls_written_to_artifact": true
+  }
+}
+artifact: /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/artifacts/verifiers/value_fn_20260919

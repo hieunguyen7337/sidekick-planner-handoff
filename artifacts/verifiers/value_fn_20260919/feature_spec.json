@@ -1,0 +1,99 @@
+{
+  "version": "feature_lr_v1",
+  "features": [
+    {
+      "name": "step",
+      "transform": "passthrough",
+      "columns": [
+        "step"
+      ]
+    },
+    {
+      "name": "n_interventions",
+      "transform": "passthrough",
+      "columns": [
+        "n_interventions"
+      ]
+    },
+    {
+      "name": "n_asks",
+      "transform": "passthrough",
+      "columns": [
+        "n_asks"
+      ]
+    },
+    {
+      "name": "last_obs_is_error",
+      "transform": "binary",
+      "columns": [
+        "last_obs_is_error"
+      ]
+    },
+    {
+      "name": "consecutive_error_run",
+      "transform": "count",
+      "columns": [
+        "consecutive_error_run"
+      ]
+    },
+    {
+      "name": "last_action_repeat",
+      "transform": "binary",
+      "columns": [
+        "last_action_repeat"
+      ]
+    },
+    {
+      "name": "distinct_apis",
+      "transform": "count",
+      "columns": [
+        "distinct_apis"
+      ]
+    },
+    {
+      "name": "token_leak",
+      "transform": "binary",
+      "columns": [
+        "token_leak"
+      ]
+    },
+    {
+      "name": "transcript_chars",
+      "transform": "count",
+      "columns": [
+        "transcript_chars"
+      ]
+    },
+    {
+      "name": "last_action_kind",
+      "transform": "onehot",
+      "categories": [
+        "CODE",
+        "REPORT",
+        "ASK_PLANNER",
+        "COMPLETE"
+      ],
+      "columns": [
+        "last_action_kind_CODE",
+        "last_action_kind_REPORT",
+        "last_action_kind_ASK_PLANNER",
+        "last_action_kind_COMPLETE"
+      ]
+    }
+  ],
+  "columns": [
+    "step",
+    "n_interventions",
+    "n_asks",
+    "last_obs_is_error",
+    "consecutive_error_run",
+    "last_action_repeat",
+    "distinct_apis",
+    "token_leak",
+    "transcript_chars",
+    "last_action_kind_CODE",
+    "last_action_kind_REPORT",
+    "last_action_kind_ASK_PLANNER",
+    "last_action_kind_COMPLETE"
+  ]
+}
