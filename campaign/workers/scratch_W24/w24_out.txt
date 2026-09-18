@@ -1,0 +1,220 @@
+[hpc] host=cpu1n040 job=25443463.aqua cwd=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+[hpc] ---- command output below ----
+=== W-24 PAIRED SIGN-FLIP PERMUTATION NULL ===
+python=3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]
+numpy=2.3.5
+PERM_SEED=20260918
+N_PERM=10000
+SEEDS=[101, 102, 103, 104]  # W-20 completeness definition
+DELTAS=[0.166, 0.1]
+percentile_method=numpy.percentile default (linear) at (2.5, 97.5)
+null=for each point, independently for each branch seed s,
+     swap treated[s] with untreated[s] with probability 0.5
+contestable_mask=FIXED from observed W-20 definition (post-hoc subset)
+p_one_sided=fraction of perms with statistic >= observed
+p_two_sided_asymmetry=fraction of perms with |stat| >= |observed|
+
+==============================================================================
+DATASET: TRAIN
+File: /scratch/n12194778/sidekick/results/hj6_branches_train_20260917/branch_runs.jsonl
+==============================================================================
+[REPLICATE SEEDS ACTUALLY PRESENT IN FILE]
+  n_rows=6216 n_null_gpr=1357
+  condition='treated' unique_branch_seeds=[101, 102, 103, 104] count=4
+  condition='untreated' unique_branch_seeds=[101, 102, 103, 104] count=4
+[W-20 POPULATION]
+  load() n_rows=6216 n_null=1357 total_points=777
+  complete() n=397 using SEEDS=[101, 102, 103, 104]
+  incomplete_points=380
+[CRN PAIRING]
+  Pearson r(treated, untreated) over (point, seed) pairs on complete points = 0.6552847123
+  n_pairs = 1588
+[OBSERVED SUBSET COUNTS — W-20 DEFINITIONS, FIXED MASKS]
+  all_complete n=397
+  ceiling (mean_u >= 1.0) n=131
+  floor (mean_u <= 0 and mean_t <= 0) n=3
+  contestable (non-ceiling & non-floor; POST-HOC subset) n=263
+[IDENTITY all-complete observed]
+  mean(treated) + mean(harm) = 0.8121977329974813
+  mean(untreated) + mean(help) = 0.8121977329974810
+  abs_diff = 3.331e-16
+  holds (abs_diff < 1e-12) = True
+[PERMUTATIONS]
+  N_PERM=10000 PERM_SEED=20260918 (Generator consumed from shared rng)
+  sign array shape=(10000, 397, 4) perm_delta shape=(10000, 397)
+  wall_s=0.201
+  method=paired_sign_flip_per_(point,seed); NOT pooled reshuffle
+
+--- SUBSET all_complete n=397 post_hoc=no ---
+  δ=0.166 observed: needed=25/397 f=0.0629722922 needless=46/397 ambiguous=326/397 asymmetry(needed-needless)=-21 mean_Δ=-0.0143929471 mean_help=0.0341007557 mean_harm=0.0484937028
+    identity: mean(t)+mean(harm)=0.8121977329974813 mean(u)+mean(help)=0.8121977329974810 abs_diff=3.331e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=25  null_mean=26.9653  null_2.5=19  null_97.5=36  p=0.712400 (7124/10000); inside_null_95pct=True
+    f=needed/n              obs=0.06297229219  null_mean=0.06792267003  null_2.5=0.04785894207  null_97.5=0.09068010076  p=0.712400 (7124/10000); inside_null_95pct=True
+    needless                obs=46  null_mean=26.947  null_2.5=19  null_97.5=36  p=0.000000 (0/10000); inside_null_95pct=False
+    mean_Δ                  obs=-0.0143929471  null_mean=9.444937028e-05  null_2.5=-0.01162361461  null_97.5=0.01179480479  p=0.992600 (9926/10000); inside_null_95pct=False
+    mean_help               obs=0.03410075567  null_mean=0.03317165951  null_2.5=0.02676120907  null_97.5=0.0398476228  p=0.384600 (3846/10000); inside_null_95pct=True
+    mean_harm               obs=0.04849370277  null_mean=0.03307721014  null_2.5=0.02661437343  null_97.5=0.03986911209  p=0.000000 (0/10000); inside_null_95pct=False
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=-21  null_mean=0.0183  null_2.5=-14  null_97.5=14  p=0.005200 (52/10000); inside_null_95pct=False
+  δ=0.100 observed: needed=54/397 f=0.1360201511 needless=67/397 ambiguous=276/397 asymmetry(needed-needless)=-13 mean_Δ=-0.0143929471 mean_help=0.0341007557 mean_harm=0.0484937028
+    identity: mean(t)+mean(harm)=0.8121977329974813 mean(u)+mean(help)=0.8121977329974810 abs_diff=3.331e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=54  null_mean=52.2613  null_2.5=41  null_97.5=64  p=0.412100 (4121/10000); inside_null_95pct=True
+    f=needed/n              obs=0.1360201511  null_mean=0.1316405542  null_2.5=0.1032745592  null_97.5=0.161209068  p=0.412100 (4121/10000); inside_null_95pct=True
+    needless                obs=67  null_mean=52.0826  null_2.5=41  null_97.5=63  p=0.005000 (50/10000); inside_null_95pct=False
+    mean_Δ                  obs=-0.0143929471  null_mean=9.444937028e-05  null_2.5=-0.01162361461  null_97.5=0.01179480479  p=0.992600 (9926/10000); inside_null_95pct=False
+    mean_help               obs=0.03410075567  null_mean=0.03317165951  null_2.5=0.02676120907  null_97.5=0.0398476228  p=0.384600 (3846/10000); inside_null_95pct=True
+    mean_harm               obs=0.04849370277  null_mean=0.03307721014  null_2.5=0.02661437343  null_97.5=0.03986911209  p=0.000000 (0/10000); inside_null_95pct=False
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=-13  null_mean=0.1787  null_2.5=-20  null_97.5=20  p=0.219800 (2198/10000); inside_null_95pct=True
+
+--- SUBSET contestable n=263 post_hoc=yes ---
+  δ=0.166 observed: needed=25/263 f=0.0950570342 needless=31/263 ambiguous=207/263 asymmetry(needed-needless)=-6 mean_Δ=+0.0027661597 mean_help=0.0514752852 mean_harm=0.0487091255
+    identity: mean(t)+mean(harm)=0.7279182509505704 mean(u)+mean(help)=0.7279182509505703 abs_diff=1.110e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=25  null_mean=22.3542  null_2.5=15  null_97.5=31  p=0.287600 (2876/10000); inside_null_95pct=True
+    f=needed/n              obs=0.09505703422  null_mean=0.08499695817  null_2.5=0.05703422053  null_97.5=0.1178707224  p=0.287600 (2876/10000); inside_null_95pct=True
+    needless                obs=31  null_mean=22.3228  null_2.5=15  null_97.5=30  p=0.022000 (220/10000); inside_null_95pct=False
+    mean_Δ                  obs=0.002766159696  null_mean=0.0001267460076  null_2.5=-0.01628940114  null_97.5=0.01625665399  p=0.374700 (3747/10000); inside_null_95pct=True
+    mean_help               obs=0.05147528517  null_mean=0.04244342747  null_2.5=0.03350377852  null_97.5=0.05177250475  p=0.028200 (282/10000); inside_null_95pct=True
+    mean_harm               obs=0.04870912548  null_mean=0.04231668146  null_2.5=0.03341423479  null_97.5=0.05161321293  p=0.091000 (910/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=-6  null_mean=0.0314  null_2.5=-13  null_97.5=13  p=0.414100 (4141/10000); inside_null_95pct=True
+  δ=0.100 observed: needed=54/263 f=0.2053231939 needless=45/263 ambiguous=164/263 asymmetry(needed-needless)=9 mean_Δ=+0.0027661597 mean_help=0.0514752852 mean_harm=0.0487091255
+    identity: mean(t)+mean(harm)=0.7279182509505704 mean(u)+mean(help)=0.7279182509505703 abs_diff=1.110e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=54  null_mean=44.4936  null_2.5=34  null_97.5=55  p=0.044300 (443/10000); inside_null_95pct=True
+    f=needed/n              obs=0.2053231939  null_mean=0.1691771863  null_2.5=0.1292775665  null_97.5=0.2091254753  p=0.044300 (443/10000); inside_null_95pct=True
+    needless                obs=45  null_mean=44.3605  null_2.5=34  null_97.5=55  p=0.481500 (4815/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.002766159696  null_mean=0.0001267460076  null_2.5=-0.01628940114  null_97.5=0.01625665399  p=0.374700 (3747/10000); inside_null_95pct=True
+    mean_help               obs=0.05147528517  null_mean=0.04244342747  null_2.5=0.03350377852  null_97.5=0.05177250475  p=0.028200 (282/10000); inside_null_95pct=True
+    mean_harm               obs=0.04870912548  null_mean=0.04231668146  null_2.5=0.03341423479  null_97.5=0.05161321293  p=0.091000 (910/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=9  null_mean=0.1331  null_2.5=-18  null_97.5=19  p=0.368900 (3689/10000); inside_null_95pct=True
+
+==============================================================================
+DATASET: DEV
+File: /scratch/n12194778/sidekick/results/hj6_branches_dev_20260917/branch_runs.jsonl
+==============================================================================
+[REPLICATE SEEDS ACTUALLY PRESENT IN FILE]
+  n_rows=3056 n_null_gpr=141
+  condition='treated' unique_branch_seeds=[101, 102, 103, 104] count=4
+  condition='untreated' unique_branch_seeds=[101, 102, 103, 104] count=4
+[W-20 POPULATION]
+  load() n_rows=3056 n_null=141 total_points=382
+  complete() n=332 using SEEDS=[101, 102, 103, 104]
+  incomplete_points=50
+[CRN PAIRING]
+  Pearson r(treated, untreated) over (point, seed) pairs on complete points = 0.5881005416
+  n_pairs = 1328
+[OBSERVED SUBSET COUNTS — W-20 DEFINITIONS, FIXED MASKS]
+  all_complete n=332
+  ceiling (mean_u >= 1.0) n=68
+  floor (mean_u <= 0 and mean_t <= 0) n=0
+  contestable (non-ceiling & non-floor; POST-HOC subset) n=264
+[IDENTITY all-complete observed]
+  mean(treated) + mean(harm) = 0.7277018072289156
+  mean(untreated) + mean(help) = 0.7277018072289158
+  abs_diff = 1.110e-16
+  holds (abs_diff < 1e-12) = True
+[PERMUTATIONS]
+  N_PERM=10000 PERM_SEED=20260918 (Generator consumed from shared rng)
+  sign array shape=(10000, 332, 4) perm_delta shape=(10000, 332)
+  wall_s=0.167
+  method=paired_sign_flip_per_(point,seed); NOT pooled reshuffle
+
+--- SUBSET all_complete n=332 post_hoc=no ---
+  δ=0.166 observed: needed=43/332 f=0.1295180723 needless=43/332 ambiguous=246/332 asymmetry(needed-needless)=0 mean_Δ=+0.0097018072 mean_help=0.0589322289 mean_harm=0.0492304217
+    identity: mean(t)+mean(harm)=0.7277018072289156 mean(u)+mean(help)=0.7277018072289158 abs_diff=1.110e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=43  null_mean=32.7821  null_2.5=24  null_97.5=42  p=0.020400 (204/10000); inside_null_95pct=False
+    f=needed/n              obs=0.1295180723  null_mean=0.09874126506  null_2.5=0.07228915663  null_97.5=0.1265060241  p=0.020400 (204/10000); inside_null_95pct=False
+    needless                obs=43  null_mean=32.8766  null_2.5=24  null_97.5=42  p=0.022500 (225/10000); inside_null_95pct=False
+    mean_Δ                  obs=0.009701807229  null_mean=-8.20373494e-05  null_2.5=-0.01554371235  null_97.5=0.01521287651  p=0.106200 (1062/10000); inside_null_95pct=True
+    mean_help               obs=0.05893222892  null_mean=0.04291150444  null_2.5=0.03441912651  null_97.5=0.05158682229  p=0.000300 (3/10000); inside_null_95pct=False
+    mean_harm               obs=0.04923042169  null_mean=0.04299354179  null_2.5=0.03451568148  null_97.5=0.0519877259  p=0.079600 (796/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=0  null_mean=-0.0945  null_2.5=-16  null_97.5=16  p=1.000000 (10000/10000); inside_null_95pct=True
+  δ=0.100 observed: needed=72/332 f=0.2168674699 needless=61/332 ambiguous=199/332 asymmetry(needed-needless)=11 mean_Δ=+0.0097018072 mean_help=0.0589322289 mean_harm=0.0492304217
+    identity: mean(t)+mean(harm)=0.7277018072289156 mean(u)+mean(help)=0.7277018072289158 abs_diff=1.110e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=72  null_mean=58.4331  null_2.5=47  null_97.5=70  p=0.015200 (152/10000); inside_null_95pct=False
+    f=needed/n              obs=0.2168674699  null_mean=0.1760033133  null_2.5=0.1415662651  null_97.5=0.2108433735  p=0.015200 (152/10000); inside_null_95pct=False
+    needless                obs=61  null_mean=58.5672  null_2.5=47  null_97.5=70  p=0.368500 (3685/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.009701807229  null_mean=-8.20373494e-05  null_2.5=-0.01554371235  null_97.5=0.01521287651  p=0.106200 (1062/10000); inside_null_95pct=True
+    mean_help               obs=0.05893222892  null_mean=0.04291150444  null_2.5=0.03441912651  null_97.5=0.05158682229  p=0.000300 (3/10000); inside_null_95pct=False
+    mean_harm               obs=0.04923042169  null_mean=0.04299354179  null_2.5=0.03451568148  null_97.5=0.0519877259  p=0.079600 (796/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=11  null_mean=-0.1341  null_2.5=-22  null_97.5=21  p=0.337500 (3375/10000); inside_null_95pct=True
+
+--- SUBSET contestable n=264 post_hoc=yes ---
+  δ=0.166 observed: needed=43/264 f=0.1628787879 needless=36/264 ambiguous=185/264 asymmetry(needed-needless)=7 mean_Δ=+0.0236856061 mean_help=0.0741117424 mean_harm=0.0504261364
+    identity: mean(t)+mean(harm)=0.6575643939393938 mean(u)+mean(help)=0.6575643939393939 abs_diff=1.110e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=43  null_mean=30.4008  null_2.5=22  null_97.5=39  p=0.004600 (46/10000); inside_null_95pct=False
+    f=needed/n              obs=0.1628787879  null_mean=0.1151545455  null_2.5=0.08333333333  null_97.5=0.1477272727  p=0.004600 (46/10000); inside_null_95pct=False
+    needless                obs=36  null_mean=30.5026  null_2.5=22  null_97.5=40  p=0.136300 (1363/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.02368560606  null_mean=-9.121098485e-05  null_2.5=-0.01864962121  null_97.5=0.01816860795  p=0.006000 (60/10000); inside_null_95pct=False
+    mean_help               obs=0.07411174242  null_mean=0.04991639063  null_2.5=0.03960213068  null_97.5=0.06043001894  p=0.000000 (0/10000); inside_null_95pct=False
+    mean_harm               obs=0.05042613636  null_mean=0.05000760161  null_2.5=0.03986815814  null_97.5=0.06078153409  p=0.461900 (4619/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=7  null_mean=-0.1018  null_2.5=-16  null_97.5=15  p=0.414400 (4144/10000); inside_null_95pct=True
+  δ=0.100 observed: needed=72/264 f=0.2727272727 needless=50/264 ambiguous=142/264 asymmetry(needed-needless)=22 mean_Δ=+0.0236856061 mean_help=0.0741117424 mean_harm=0.0504261364
+    identity: mean(t)+mean(harm)=0.6575643939393938 mean(u)+mean(help)=0.6575643939393939 abs_diff=1.110e-16 holds=True
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=72  null_mean=54.1853  null_2.5=43  null_97.5=65  p=0.001900 (19/10000); inside_null_95pct=False
+    f=needed/n              obs=0.2727272727  null_mean=0.2052473485  null_2.5=0.1628787879  null_97.5=0.2462121212  p=0.001900 (19/10000); inside_null_95pct=False
+    needless                obs=50  null_mean=54.3154  null_2.5=43  null_97.5=66  p=0.797300 (7973/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.02368560606  null_mean=-9.121098485e-05  null_2.5=-0.01864962121  null_97.5=0.01816860795  p=0.006000 (60/10000); inside_null_95pct=False
+    mean_help               obs=0.07411174242  null_mean=0.04991639063  null_2.5=0.03960213068  null_97.5=0.06043001894  p=0.000000 (0/10000); inside_null_95pct=False
+    mean_harm               obs=0.05042613636  null_mean=0.05000760161  null_2.5=0.03986815814  null_97.5=0.06078153409  p=0.461900 (4619/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=22  null_mean=-0.1301  null_2.5=-21  null_97.5=20  p=0.040100 (401/10000); inside_null_95pct=False
+
+==============================================================================
+DONE
+PERM_SEED=20260918 N_PERM=10000
+train_complete=397 train_contestable=263 train_r=0.655285
+dev_complete=332 dev_contestable=264 dev_r=0.588101
+==============================================================================
+[hpc] ---- exit 0 ----
+
+PBS Job 25443463.aqua
+CPU time         : 00:00:02
+Wall time        : 00:00:05
+Mem usage        : 319632kb
+
+--- Job Runtime Information at 2026-09-18T21:21:17.556748---
+id               : 25443463.aqua
+Job_Name         : hpc-20260918-211959-2290430
+Job_Owner        : n12194778@aquarius01.ib0.hpc.qut.edu.au
+resources_used   : cput=00:00:02,mem=319632kb,walltime=00:00:05,ncpus=4,cpupercent=33,vmem=469396kb,cpus="34,42,44,52",ngpus=0
+job_state        : 5
+queue            : cpu_batch_exec
+server           : aqua
+Checkpoint       : u
+Error_Path       : aquarius01.ib0.hpc.qut.edu.au:/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/hpc-20260918-211959-2290430.e25443463
+exec_host2       : cpu1n040.ib0.hpc.qut.edu.au:15002/13*4
+exec_vnode       : (cpu1n040[0]:ncpus=4:mem=16gb:ngpus=0:nfpgas=0)
+Join_Path        : oe
+Keep_Files       : n
+mtime            : 2026-09-18T21:21:13
+Output_Path      : aquarius01.ib0.hpc.qut.edu.au:/home/n12194778/.hpc-spool/20260918-211959-2290430.out
+Resource_List    : mem=16gb,walltime=00:20:00,ncpus=4,place=free
+schedselect      : 1:ncpus=4:mem=16gb:ngpus=0:nfpgas=0:cpu_id=any:qlist=cpu_batch_exec
+stime            : 2026-09-18T21:21:12
+session_id       : 1998413
+substate         : 50
+Variable_List    : PBS_O_HOME=/home/n12194778,PBS_O_LANG=en_US.UTF-8,PBS_O_LOGNAME=n12194778,PBS_O_PATH=/home/n12194778/.local/bin:/opt/clmgr/sbin:/opt/clmgr/bin:/opt/sgi/sbin:/opt/sgi/bin:/mnt/hpccs01/home/n12194778/.local/share/cursor-agent/versions/2026.09.15-d2fe57e:/home/n12194778/.local/bin:/home/n12194778/.nvm/versions/node/v22.23.2/bin:/home/n12194778/.local/bin:/home/n12194778/.local/bin:/home/n12194778/bin:/opt/clmgr/sbin:/opt/clmgr/bin:/opt/sgi/sbin:/opt/sgi/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/c3/bin:/opt/pbs/bin:/sbin:/bin:/home/n12194778/bin:/opt/pbs/bin:/sbin:/bin,PBS_O_MAIL=/var/spool/mail/n12194778,PBS_O_SHELL=/usr/bin/zsh,PBS_O_INTERACTIVE_AUTH_METHOD=resvport,PBS_O_HOST=aquarius01.ib0.hpc.qut.edu.au,PBS_O_WORKDIR=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15,PBS_O_SYSTEM=Linux,ERES_RPID_NOTICE=UFJPSkVDVF9BQ0NPVU5USU5HOgpBIHZhbGlkIHByb2plY3QgUlBJRCBpcyByZXF1aXJlZCBmb3IgYWxsIGpvYnMuIFN1cHBseSBhIHZhbGlkIHByb2plY3QgUlBJRCB3aXRoIGAtUCA8UlBJRD5gICg2IHVwcGVyY2FzZSBsZXR0ZXJzIGZvbGxvd2VkIGJ5IDQgZGlnaXRzLCBlLmcuIC1QIEFCQ0RFRjEyMzQpLiBGaW5kIHlvdXIgUlBJRHMgaW4gdGhlIFFVVCBETVAgKGh0dHBzOi8vZGF0YS1tZ210LXBsYW4ucXV0LmVkdS5hdSksIG9yIGNvbnRhY3QgZVJlc2VhcmNoLiBZb3VyIGpvYiBoYXMgYmVlbiByZWNvcmRlZCBhZ2FpbnN0ICdFUlItTk9SUElEJyBhbmQgYWxsb3dlZCB0byBydW4gZHVyaW5nIHRoZSB0cmFuc2l0aW9uIHBlcmlvZC4KQ2Fubm90IHZlcmlmeSBwcm9qZWN0IGF1dGhvcmlzYXRpb246IG5vIHZhbGlkIFJQSUQgaXMgc2V0IG9uIHRoZSBqb2IuIFlvdXIgam9iIGhhcyBiZWVuIGFsbG93ZWQgdG8gcnVuIGR1cmluZyB0aGUgdHJhbnNpdGlvbiBwZXJpb2Qu,PBS_O_QUEUE=cpu_batch
+euser            : n12194778
+egroup           : default
+hashname         : 25443463.aqua
+run_count        : 1
+job_kill_delay   : 10
+Exit_status      : 0
+project          : ERR-NORPID
+run_version      : 1
+Submit_Host      : aquarius01.ib0.hpc.qut.edu.au
+Submit_arguments : /home/n12194778/.hpc-spool/20260918-211959-2290430.pbs 
+ctime            : 2026-09-18T21:19:59
