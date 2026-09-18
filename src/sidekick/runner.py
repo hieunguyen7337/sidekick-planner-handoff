@@ -186,12 +186,14 @@ def make_verifier(cfg: dict[str, Any]) -> Any:
         return SelfVerifier()
     if kind == "feature_lr":
         # cfg: verifier: {kind: feature_lr, path: <abs>, threshold: <tau>}
+        # Return the bare FeatureVerifier (Verifier protocol: .score). The loop
+        # wraps it in ThresholdRouter when use_router is set; the sidekick ASK
+        # gate calls .score itself. Threshold reaches the policy via
+        # system_kwargs["verifier_threshold"] from verifier.threshold.
         path = vcfg.get("path")
         if not path:
             raise ValueError("verifier.kind=feature_lr requires verifier.path")
-        verifier = FeatureVerifier.load(path)
-        threshold = vcfg.get("threshold", cfg.get("verifier_threshold", 0.5))
-        return ThresholdRouter(verifier, threshold=float(threshold))
+        return FeatureVerifier.load(path)
     return ConstantVerifier(float(vcfg.get("value", 0.5)))
 
 
