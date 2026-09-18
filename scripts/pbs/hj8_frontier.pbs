@@ -1,0 +1,478 @@
+#!/bin/bash
+#PBS -N hj8-frontier
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
+#PBS -l walltime=08:00:00
+#PBS -j oe
+# Output_Path is evaluated at qsub time and cannot interpolate ARMSET/DATE/CID
+# (those are computed below). A path with no filename makes PBS write
+# <job ID>.OU in this directory — unique per submission, so free/live/resume
+# cannot share a file. The script also execs a live JOB_CID+jobid copy so a job
+# that dies after startup still leaves a campaign-id log. Do not override -o
+# with a shared filename. Optional: pass -o at qsub with a unique path:
+#   ARMSET=free DATE=20260919
+#   qsub -v ARMSET=${ARMSET},DATE=${DATE} scripts/pbs/hj8_frontier.pbs
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#
+# HJ-8 dev frontier: serve granite-4.2-8b with the sft_b_plus LoRA (static
+# --lora-modules) and run 12 arms. ARMSET=free|live|all (default free).
+# free = zero hosted planner calls (run before the quota reset).
+# live = waits for the reset. Do NOT submit from a worker; the orchestrator
+# submits after reviewing the diff. The --lora-modules alias MUST equal
+# executor.lora_name in each campaign config or requests silently hit the
+# base model.
+#
+# Queue sizing (do not copy ncpus=16:mem=128gb unexamined):
+#   A non-interactive `qsub -q gpu_inter` is remapped to gpu_batch_exec
+#   regardless of -q [OBSERVED docs/FOLLOWUPS.md:35-38,
+#   docs/feasibility/m0_gates.md:30-35]. Tonight's train-sft submission
+#   `qsub -q gpu_inter -l select=1:ncpus=12:ngpus=1:mem=64gb` landed on
+#   gpu_batch_exec [OBSERVED qstat -fx 25449628.aqua Submit_arguments / queue].
+#   Do NOT add qlist=gpu_inter_exec to select — that Can Never Run against
+#   the hook's Resource_List.qlist=gpu_batch_exec
+#   [OBSERVED docs/feasibility/m0_gates.md:35].
+#   Closest finished analog (granite-4.2-8b + LoRA + smoke + 57×2 workers-6):
+#     hj3-eval 25401780  RSS 12352792kb  cpupercent 130  requested 16/128gb
+#     hj4b-dev 25404924  RSS 12477120kb  cpupercent 175  requested 16/128gb
+#     [OBSERVED qstat -fx resources_used.mem / Resource_List.select]
+#   Peak RSS ≈ 12 GB, so 64gb is ~5× headroom; 12 ncpus matches the working
+#   granite eval/serve size (hj1a/hj15/G3) and tonight's train-sft request.
+#   Walltime 08:00:00 matches docs/HEAVY_JOBS.md J8; 12 arms will not finish
+#   in one job — completed arms are skipped on resume.
+#
+# Job variables (override at qsub time):
+#   ARMSET (free|live|all), DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS
+# Do NOT add reasoning-parser flags (G3); they parked generations in
+# reasoning_content and looked like parse_error.
+
+set -uo pipefail
+# JOB_CID is not available at qsub. Compute it first and exec a live CID-named
+# log so an early death still leaves a findable file. PBS's own Output_Path is
+# the unique <job ID>.OU under campaign/workers/logs/ (see #PBS -o above).
+ARMSET="${ARMSET:-free}"
+DATE="${DATE:-$(date -u +%Y%m%d)}"
+JOB_CID="hj8_frontier_${ARMSET}_${DATE}"
+JOBTAG="${PBS_JOBID:-nopbs}"
+PBS_LOGDIR="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs"
+CID_OUT="${PBS_LOGDIR}/${JOB_CID}.${JOBTAG}.out"
+mkdir -p "${PBS_LOGDIR}"
+exec >> "${CID_OUT}" 2>&1
+echo "[hj8] job_cid=${JOB_CID} armset=${ARMSET} date=${DATE} job=${JOBTAG} cid_out=${CID_OUT}"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u9] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+PY="${SIDEKICK_VENV}/bin/python"
+SUM="${REPO}/scripts/setup/campaign_summarize.py"
+MODEL=ibm-granite/granite-4.2-8b
+VLOG="${LOGDIR}/${JOB_CID}.${JOBTAG}_vllm.log"
+echo "[hj8] vlog=${VLOG}"
+
+# ---- LoRA aliases: MUST equal executor.lora_name in each eval config ---------
+# Default path is the HEAVY_JOBS J5a output name. Override if the trainer
+# wrote a dated directory. register_lora hard-fails if it is not a directory.
+ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
+ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_granite8b}"
+MAX_LORAS=4
+
+N_SMOKE_TASKS=3
+N_FULL_TASKS=57
+N_FULL_SEEDS=2
+N_PLANNED=$((N_FULL_TASKS * N_FULL_SEEDS))
+
+cd "${REPO}" || exit 1
+mkdir -p "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
+
+# ---- config gate. Named in the failure line so a reader knows why we stopped.
+# Another unit owns verify_configs.py; it may still exit non-zero. Wire it anyway.
+echo "[hj8] ---- scripts/setup/verify_configs.py ----"
+timeout 300 "${PY}" "${REPO}/scripts/setup/verify_configs.py"
+VERIFY_RC=$?
+if [[ "${VERIFY_RC}" -ne 0 ]]; then
+  echo "[hj8] FATAL: scripts/setup/verify_configs.py exited ${VERIFY_RC}; not starting vLLM"
+  exit "${VERIFY_RC}"
+fi
+
+# system|config|cid_stem   — cid is ${cid_stem}_${DATE}. Each (arm, τ) is its own cid.
+FREE_ARMS=(
+  "executor_alone|${REPO}/configs/hj8_executor_alone_bplus.yaml|hj8_executor_alone_bplus"
+  "sft_plan|${REPO}/configs/hj8_sft_plan_bplus.yaml|hj8_sft_plan_bplus"
+)
+LIVE_ARMS=(
+  "fixed_k|${REPO}/configs/hj8_fixed_k_3.yaml|hj8_fixed_k_3"
+  "fixed_k|${REPO}/configs/hj8_fixed_k_5.yaml|hj8_fixed_k_5"
+  "fixed_k|${REPO}/configs/hj8_fixed_k_10.yaml|hj8_fixed_k_10"
+  "router_seq|${REPO}/configs/hj8_router_seq_tau03.yaml|hj8_router_seq_tau03"
+  "router_seq|${REPO}/configs/hj8_router_seq_tau05.yaml|hj8_router_seq_tau05"
+  "router_seq|${REPO}/configs/hj8_router_seq_tau07.yaml|hj8_router_seq_tau07"
+  "sidekick|${REPO}/configs/hj8_sidekick_tau03.yaml|hj8_sidekick_tau03"
+  "sidekick|${REPO}/configs/hj8_sidekick_tau05.yaml|hj8_sidekick_tau05"
+  "sidekick|${REPO}/configs/hj8_sidekick_tau07.yaml|hj8_sidekick_tau07"
+  "oracle_escalation|${REPO}/configs/hj8_oracle_escalation.yaml|hj8_oracle_escalation"
+)
+
+SELECTED_ARMS=()
+case "${ARMSET}" in
+  free) SELECTED_ARMS=("${FREE_ARMS[@]}");;
+  live) SELECTED_ARMS=("${LIVE_ARMS[@]}");;
+  all)  SELECTED_ARMS=("${FREE_ARMS[@]}" "${LIVE_ARMS[@]}");;
+  *)
+    echo "[hj8] FATAL: ARMSET must be free|live|all, got ${ARMSET}"
+    exit 2
+    ;;
+esac
+
+cfg_missing=0
+for spec in "${SELECTED_ARMS[@]}"; do
+  IFS='|' read -r _system cfg _stem <<<"${spec}"
+  if [[ ! -f "${cfg}" ]]; then
+    echo "[hj8] eval config absent: ${cfg}"
+    cfg_missing=1
+  fi
+done
+if [[ "${cfg_missing}" -ne 0 ]]; then
+  echo "[hj8] not starting vLLM. Static LoRA line that will be used:"
+  echo "[hj8] --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}"
+  echo "[hj8] alias source: ALIAS_SFT_B_PLUS, which must equal executor.lora_name"
+  exit 2
+fi
+
+# Second, independent quota guard for the free set. Does not import sidekick;
+# reads the YAML itself. make_planner treats type=="codex" as CodexExecPlanner
+# and anything else as MockPlanner [OBSERVED src/sidekick/runner.py:102-114].
+# A live planner with no packet_source can spend hosted quota. Cached packets
+# with on_missing fail (config-side) still need this script-side check.
+assert_free_configs_cannot_spend () {
+  local configs=()
+  local spec cfg
+  for spec in "${FREE_ARMS[@]}"; do
+    IFS='|' read -r _system cfg _stem <<<"${spec}"
+    configs+=("${cfg}")
+  done
+  echo "[hj8] ---- free-set live-planner guard (${#configs[@]} configs) ----"
+  timeout 120 "${PY}" - "${configs[@]}" <<'PY'
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("[hj8] FATAL: PyYAML missing; cannot inspect planner keys independently")
+    sys.exit(2)
+
+failed = 0
+for raw in sys.argv[1:]:
+    path = Path(raw)
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        print(f"[hj8] FATAL: {path} is not a mapping")
+        failed = 1
+        continue
+    planner = data.get("planner") or {}
+    if not isinstance(planner, dict):
+        planner = {}
+    kind = str(planner.get("type") or data.get("planner_type") or "mock")
+    packet_source = planner.get("packet_source")
+    if isinstance(packet_source, str):
+        packet_source = packet_source.strip() or None
+    print(f"[hj8] guard {path.name}: planner.type={kind!r} packet_source={'set' if packet_source else 'absent'}")
+    if kind == "codex" and not packet_source:
+        print(
+            f"[hj8] FATAL: {path} names a live planner (type={kind!r}) without "
+            "planner.packet_source — the free set must be incapable of spending quota"
+        )
+        failed = 1
+sys.exit(failed)
+PY
+}
+
+if [[ "${ARMSET}" == "free" || "${ARMSET}" == "all" ]]; then
+  assert_free_configs_cannot_spend || exit $?
+fi
+
+# n_runs / n_broken over <OUT>/<cid>/**/result.json. BROKEN matches
+# campaign_summarize.BROKEN [OBSERVED scripts/setup/campaign_summarize.py:33].
+campaign_stats () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+broken = {"api_error", "timeout", "crash", "parse_error"}
+n = 0
+nb = 0
+if root.is_dir():
+    for path in root.rglob("result.json"):
+        n += 1
+        try:
+            data = json.loads(path.read_text(encoding="utf-8") or "{}")
+        except (OSError, json.JSONDecodeError):
+            nb += 1
+            continue
+        if (data.get("error_type") or "") in broken:
+            nb += 1
+print(f"{n} {nb}")
+PY
+}
+
+arm_is_complete () {
+  local cid="$1"
+  local n_runs n_broken stats
+  if [[ ! -f "${OUT}/results/${cid}/manifest.json" ]]; then
+    return 1
+  fi
+  stats="$(campaign_stats "${cid}" || true)"
+  read -r n_runs n_broken <<<"${stats:-0 0}"
+  n_runs="${n_runs:-0}"
+  n_broken="${n_broken:-0}"
+  [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_broken}" -eq 0 ]]
+}
+
+LORA_MODULES=()
+register_lora () {
+  local alias="$1"
+  local path="$2"
+  if [[ -z "${path}" ]]; then
+    return 0
+  fi
+  if [[ ! -d "${path}" ]]; then
+    echo "[hj8] FATAL: adapter path for alias ${alias} is not a directory: ${path}" >&2
+    exit 2
+  fi
+  LORA_MODULES+=("${alias}=${path}")
+  echo "[hj8] lora-module ${alias}=${path}"
+}
+
+VLLM_PID=""
+
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
+    kill "${VLLM_PID}" 2>/dev/null || true
+    for _ in $(seq 1 12); do kill -0 "${VLLM_PID}" 2>/dev/null || break; sleep 5; done
+    kill -9 "${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+  pkill -f "vllm serve" 2>/dev/null || true
+  pkill -f "EngineCore" 2>/dev/null || true
+  sleep 5
+  echo "[hj8] GPU after shutdown:"
+  nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+}
+
+# Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
+# executor_alone must not pass --expect-planner (planner is never called; the
+# flag would fail a healthy arm). Cached sft_plan keeps --expect-planner (hj3).
+run_arm () {
+  local system="$1"
+  local cfg="$2"
+  local cid="$3"
+  local scid="${cid}_smoke"
+  local smoke_rc=0
+  local gate_rc=0
+  local camp_rc=0
+  local sum_rc=0
+  local n_runs=0
+  local n_broken=0
+  local stats=""
+  local gate_cmd=(--gate)
+  if [[ "${system}" != "executor_alone" ]]; then
+    gate_cmd+=(--expect-planner --expect-model gpt-5.6-luna)
+  fi
+
+  echo "[hj8] ---- arm ${cid} system=${system} ----"
+  if arm_is_complete "${cid}"; then
+    echo "[hj8] resume: ${cid} already complete (${N_PLANNED} result.json, 0 broken, manifest present); skipped"
+    return 0
+  fi
+
+  echo "[hj8] ---- purge broken runs from earlier attempts ----"
+  timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -2
+
+  stats="$(campaign_stats "${cid}" || true)"
+  read -r n_runs n_broken <<<"${stats:-0 0}"
+  n_runs="${n_runs:-0}"
+  n_broken="${n_broken:-0}"
+  echo "[hj8] resume: ${cid} n_runs=${n_runs} n_broken=${n_broken} n_planned=${N_PLANNED}"
+  if [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_broken}" -eq 0 ]]; then
+    echo "[hj8] resume: ${cid} has a full clean tree; writing missing manifest"
+    timeout 300 "${PY}" "${SUM}" \
+      --out "${OUT}" --campaign-id "${cid}" \
+      --config "${cfg}" \
+      --manifest "${OUT}/results/${cid}/manifest.json" \
+      "${gate_cmd[@]}" --repo "${REPO}"
+    return $?
+  fi
+
+  if [[ "${n_runs}" -eq 0 ]]; then
+    rm -rf "${OUT:?}/${scid:?}"
+    echo "[hj8] ---- smoke gate (${scid}) ----"
+    timeout 1800 "${PY}" -m sidekick.runner \
+      --system "${system}" --split dev --tasks "${N_SMOKE_TASKS}" --seeds 1 \
+      --env appworld --workers 3 \
+      --config "${cfg}" --campaign-id "${scid}" --out "${OUT}"
+    smoke_rc=$?
+    if [[ "${smoke_rc}" -ne 0 ]]; then
+      echo "[hj8] FATAL: smoke runner exited ${smoke_rc} (${cid})"
+      return "${smoke_rc}"
+    fi
+    timeout 180 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${scid}" \
+      --config "${cfg}" --repo "${REPO}" \
+      "${gate_cmd[@]}"
+    gate_rc=$?
+    if [[ "${gate_rc}" -ne 0 ]]; then
+      echo "[hj8] FATAL: smoke gate failed (rc=${gate_rc}) (${cid})"
+      return "${gate_rc}"
+    fi
+    rm -rf "${OUT:?}/${scid:?}"
+  else
+    echo "[hj8] resume: ${cid} already has ${n_runs} result.json; smoke skipped"
+  fi
+
+  echo "[hj8] ---- full campaign (${cid}) ----"
+  timeout 10800 "${PY}" -m sidekick.runner \
+    --system "${system}" --split dev --tasks "${N_FULL_TASKS}" --seeds 1,2 \
+    --env appworld --workers 6 \
+    --config "${cfg}" --out "${OUT}" --campaign-id "${cid}"
+  camp_rc=$?
+
+  echo "[hj8] ---- summary + manifest (${cid}) ----"
+  timeout 300 "${PY}" "${SUM}" \
+    --out "${OUT}" --campaign-id "${cid}" \
+    --config "${cfg}" \
+    --manifest "${OUT}/results/${cid}/manifest.json" \
+    "${gate_cmd[@]}" --repo "${REPO}"
+  sum_rc=$?
+  echo "[hj8] ${cid} manifest/gate rc=${sum_rc} campaign_rc=${camp_rc}"
+  if [[ "${camp_rc}" -ne 0 ]]; then
+    return "${camp_rc}"
+  fi
+  return "${sum_rc}"
+}
+
+PENDING_ARMS=()
+PENDING_LIVE=0
+echo "[hj8] ---- resume scan ----"
+for spec in "${SELECTED_ARMS[@]}"; do
+  IFS='|' read -r system cfg stem <<<"${spec}"
+  cid="${stem}_${DATE}"
+  if arm_is_complete "${cid}"; then
+    echo "[hj8] resume: ${cid} complete; will not occupy the GPU for this arm"
+    continue
+  fi
+  PENDING_ARMS+=("${spec}")
+  case "${system}" in
+    executor_alone|sft_plan) ;;
+    *) PENDING_LIVE=1 ;;
+  esac
+done
+if [[ "${ARMSET}" == "live" ]]; then
+  PENDING_LIVE=1
+fi
+if [[ "${#PENDING_ARMS[@]}" -eq 0 ]]; then
+  echo "[hj8] all ${ARMSET} arms already complete for DATE=${DATE}; not starting vLLM"
+  echo "[hj8] done=$(date -Iseconds) pending=0"
+  exit 0
+fi
+echo "[hj8] pending_arms=${#PENDING_ARMS[@]} pending_live=${PENDING_LIVE}"
+
+register_lora "${ALIAS_SFT_B_PLUS}" "${ADAPTER_SFT_B_PLUS}"
+if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
+  echo "[hj8] FATAL: no LoRA modules registered; set ADAPTER_SFT_B_PLUS" >&2
+  exit 2
+fi
+if [[ "${#LORA_MODULES[@]}" -gt "${MAX_LORAS}" ]]; then
+  echo "[hj8] FATAL: ${#LORA_MODULES[@]} LoRA modules exceeds --max-loras ${MAX_LORAS}: ${LORA_MODULES[*]}" >&2
+  exit 2
+fi
+echo "[hj8] lora count ${#LORA_MODULES[@]} <= max-loras ${MAX_LORAS}"
+
+# ---- preflight: live planner before a GPU is held. Skipped for ARMSET=free
+# (and for all/live when the only remaining work is already complete, above).
+if [[ "${PENDING_LIVE}" -eq 1 ]]; then
+  echo "[hj8] ---- preflight (live planner) ----"
+  if ! command -v codex >/dev/null 2>&1; then
+    echo "[hj8] FATAL: codex not on PATH"; exit 1
+  fi
+  if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+    echo "[hj8] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate"
+    exit 1
+  fi
+  echo "[hj8] codex $(codex --version 2>/dev/null || echo '?')"
+  echo "[hj8] auth.json present (contents never printed)"
+else
+  echo "[hj8] ---- preflight skipped (no pending live arm; free set must not call the planner) ----"
+fi
+
+# ---- vLLM: LoRA registered statically at launch --------------------------------
+kill_vllm
+# The --lora-modules line. Alias comes from ALIAS_SFT_B_PLUS / executor.lora_name, not the directory name.
+"${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+  --served-model-name "${MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len 32768 \
+  --host 127.0.0.1 --port 8000 \
+  --gpu-memory-utilization 0.85 \
+  --enable-lora \
+  --max-loras "${MAX_LORAS}" \
+  --max-lora-rank 64 \
+  --lora-modules "${LORA_MODULES[@]}" \
+  > "${VLOG}" 2>&1 &
+VLLM_PID=$!
+echo "[hj8] vllm serve ${MODEL} pid=${VLLM_PID} --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+while (( $(date +%s) < deadline )); do
+  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+    echo "[hj8] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+  fi
+  if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+    echo "[hj8] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  fi
+  sleep 5
+done
+if [[ "${healthy}" -ne 1 ]]; then
+  echo "[hj8] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
+fi
+
+# A gate that can pass or fail on cached results is not a gate. Separate _smoke
+# campaign id, purge, then full run + manifest. Continue after an arm failure so
+# a later arm still gets walltime; the first non-zero rc is the job exit.
+job_rc=0
+for spec in "${PENDING_ARMS[@]}"; do
+  IFS='|' read -r system cfg stem <<<"${spec}"
+  cid="${stem}_${DATE}"
+  arm_rc=125
+  run_arm "${system}" "${cfg}" "${cid}"
+  arm_rc=$?
+  echo "[hj8] arm (${cid}) rc=${arm_rc}"
+  if [[ "${arm_rc}" -ne 0 && "${job_rc}" -eq 0 ]]; then
+    job_rc="${arm_rc}"
+  fi
+done
+
+kill_vllm
+echo "[hj8] done=$(date -Iseconds) job_rc=${job_rc} job_cid=${JOB_CID} pending_was=${#PENDING_ARMS[@]}"
+exit "${job_rc}"
