@@ -643,3 +643,128 @@ recorded the failures as `null` and `label_status: incomplete` and dropped them,
 coercing them to 0.0. Nothing was fabricated. But the *selection* those nulls induce is
 invisible in every summary — the manifest reports `n_complete` and looks healthy — and it took
 a deliberate comparison of complete-versus-dropped to show the survivors were usable.
+
+## RESOLVED 2026-09-18 — the J6 crash cause: a planner-cost blowout, plus an argv limit
+
+Supersedes the "crash rate escalates across successive jobs" entry above, which had the
+pattern right and the cause wrong. The concurrency hypothesis recorded there is **dead** —
+it was never tested and is not needed. Both real causes are established below.
+
+Every crashed branch carries an `error` event naming the exception. Sweeping all 9,272
+branch `events.jsonl` files gives 1,499 error events and exactly two exception types:
+
+| exception | detail | train | dev | share |
+|---|---|---:|---:|---:|
+| `CodexExecError` | `codex exec exited 1` | 1,332 | 128 | **97.4 %** |
+| `OSError` | `[Errno 7] Argument list too long: 'codex'` | 25 | 13 | **2.5 %** |
+
+Neither is AppWorld, the executor, vLLM, concurrency, or the branch seeds. **Both are the
+hosted planner.**
+
+### Cause 1 — the Codex quota was exhausted, because J6 spent a budget of zero
+
+`codex exec exited 1` is a failed hosted-planner call. The crashes are not spread evenly;
+they arrive in bursts, by the hour the branch finished:
+
+```
+09-17 18:00 – 09-18 01:00   ~0 CodexExecError   (only the OSErrors below)
+09-18 02:00                 221                 (train 93, dev 128)
+09-18 04:00 – 09-18 09:00   ~2                  (recovered)
+09-18 10:00                 329
+09-18 11:00                 652
+09-18 12:00                 256
+```
+
+Exhaust, reset, exhaust again — the signature of a rolling-window rate limit, not a code
+fault. Independently corroborated: an unrelated interactive `codex` call from the
+orchestrator at ~10:40 on 09-18 returned *"You've hit your usage limit … try again at
+Sep 19th, 2026 9:13 PM"*, inside the sustained-failure window.
+
+**Why the quota ran out is the actual finding.** J6 consumed:
+
+| | branches | planner calls | planner tokens |
+|---|---:|---:|---:|
+| train | 6,216 | 23,769 | 276,122,937 |
+| dev | 3,056 | 13,599 | 202,526,868 |
+| **total** | **9,272** | **37,368** | **478,649,805** |
+
+**The plan's cost table budgets J6 at 0 luna calls.** For scale it budgets J8 at ~3,200 and
+J10 at ~11,500 — so J6 alone spent roughly three times the entire remaining campaign's
+planner allowance. (The reported $23.99 is notional; luna here is quota, not money. The
+quota is the binding constraint, and it was spent.)
+
+The zero was once correct. The original branch definition ablated intervention *i* **and
+every later review**, so a branch made no planner calls. The definition was amended on
+2026-09-17 — correctly, because the original confounded the estimand by letting a useless
+correction followed by an essential one score as `needed` — to *"in both, the reviewer stays
+live on its normal 5-step schedule afterwards, calling the planner on the branch's own
+state."* That amendment turned every branch into ~4 planner calls. **The cost table was never
+updated to match**, so nothing downstream ever re-checked the planner budget, and the
+campaign sized J6 purely in GPU-hours.
+
+⚠ Naming the decision honestly: the ×4 replicate jobs were the orchestrator's
+recommendation, submitted to raise label reliability from 0.29 to 0.45. They doubled the
+branch count and therefore added roughly 18,700 planner calls. They were sized in GPU-hours
+against a table that said the planner cost was zero, and the planner cost was never
+re-derived from the amended definition. The reliability gain was real and measured, but it
+was bought with a resource nobody was counting.
+
+### Cause 2 — the prompt is passed in argv, and Linux caps a single argument at 128 KiB
+
+`src/sidekick/agents/planner.py:131` (and the non-resume branch below it) builds the codex
+invocation as:
+
+```python
+cmd.extend([thread_id, prompt])
+```
+
+The prompt is one `argv` entry. Linux's `MAX_ARG_STRLEN` is 32 pages = **128 KiB for a single
+argument**, regardless of the much larger total `ARG_MAX`. A `fixed_k` prompt is the rendered
+transcript plus the API digest; on train these run to ~19k tokens and cross the limit on long
+episodes. `execve` then fails with `E2BIG`, surfacing as
+`OSError: [Errno 7] Argument list too long: 'codex'`.
+
+This is independent of the quota and was present from the start — it accounts for all the
+era-1 crashes (seeds 101/102 show 5 and 11 OSErrors while showing almost no
+`CodexExecError`).
+
+🔺 **It is small but non-random, and it biases in a direction that matters.** It fires
+precisely on the longest transcripts, so the episodes it silently removes are the long,
+struggling ones. Any statistic conditioned on episode length — and the measured
+`n_later_reviews` effect is exactly that — inherits a mild selection against long episodes.
+38 of 9,272 branches is too few to move the headline numbers, but it should be fixed before
+the effect is quoted.
+
+**The fix is direct.** `codex exec --help` states: *"[PROMPT] … instructions are read from
+stdin. If stdin is piped and a prompt is also provided, stdin is appended as a `<stdin>`
+block."* So the prompt should be piped to the child's stdin rather than placed in argv. Note
+the second sentence — passing **both** appends rather than replaces, so the prompt argument
+must be dropped when piping, not duplicated.
+
+### What this changes
+
+- **J8 and J10 are at risk, and not for GPU reasons.** Their planner budgets (~3,200 and
+  ~11,500 calls) were computed against the same table that said J6 was free. They are
+  probably right in themselves, but the quota they draw on has just been drained and resets
+  on a rolling window. Any future job that makes live planner calls needs its call count
+  derived from the *current* system definition, not the table.
+- **Re-running the ~1,460 lost branches is a planner-quota decision, not a GPU decision.** At
+  ~4 calls per branch it is ~5,800 further calls — comparable to the entire J8 budget.
+- **The concurrency hypothesis in the entry above should be disregarded.** Running replicates
+  as separate two-seed jobs would not have helped; it would merely have spread the same
+  planner calls over more wall-clock and hit the same rolling limit.
+- Verified earlier and still true: the crashes are **data loss, not data corruption**.
+  Surviving branches are exchangeable across eras (all |t| < 1.1) and selection is unbiased
+  with respect to Δ (|t| < 0.6), so the four-replicate reliability figure and the labels
+  stand.
+
+### The general lesson, which is the one worth keeping
+
+An amendment was made to fix a real scientific defect in the estimand. It was reviewed,
+approved and recorded. Nobody re-derived the cost of the thing it amended, because the cost
+lived in a different table in a different section, and that table still said zero. The
+campaign then spent three times its remaining planner budget without a single gate firing,
+and the first symptom was a crash rate that looked like a concurrency bug.
+
+**When a definition changes, re-derive every quantity computed from it, not just the ones the
+change was about.**

@@ -1818,3 +1818,56 @@ Every disagreement is a borderline point crossing the band, never a sign reversa
 
 **Consequence for the headline**: The two-replicate *f* was inflated by noise pushing borderline points over the band. At four replicates, f_dev falls to **0.130** and **1 − f rises from 0.843 to 0.870**. The fixed schedule is *more* wasteful than the earlier figure suggested, not less.
 
+
+---
+
+## 🔻 GATE B (train), FOUR replicates — `f_train < 0.10` FIRES (2026-09-18)
+
+The train ×4 job completed (6,216 branch rows) and its own final aggregation wrote the
+four-seed labels at 12:18. These supersede the two-seed numbers in the block above for every
+purpose except sample size.
+
+| | n | needed | f | needless | ambiguous | mean Δ |
+|---|---:|---:|---:|---:|---:|---:|
+| all points, 2-seed rule | 734 | 83 | 0.1131 | 120 | 531 | −0.0206 |
+| **same 397 points, 2-seed rule** | 397 | 46 | 0.1159 | 67 | 284 | −0.0189 |
+| **same 397 points, 4-seed rule** | 397 | **25** | **0.0630** | 46 | 326 | −0.0144 |
+| the 337 dropped points, 2-seed rule | 337 | 37 | 0.1098 | 53 | 247 | −0.0227 |
+
+**The drop is caused by the extra replicates, not by the smaller point set.** On an identical
+397 points the needed count falls 46 → 25 purely from averaging four seeds instead of two, and
+the 337 points lost to the crash defect have f = 0.1098 against the kept points' 0.1159 —
+indistinguishable, which is the same conclusion the selection-bias test reached independently.
+Label agreement between the two rules is 0.8388 with only 2 needed↔needless flips, so this is
+borderline points settling toward the band, not labels changing sign.
+
+**Roughly half of the `needed` labels at two replicates were noise.** That is the direct,
+measured version of what the reliability analysis predicted: two-replicate reliability is 0.29,
+so a band-threshold rule applied to it manufactures positives.
+
+### Verdict
+
+- **`f_train < 0.10` → 🔺 FIRES.** f_train = 0.0630. Extrapolating the four-seed rate to all
+  777 points gives ≈ 49 needed, still well under the pre-registered 75-positive threshold.
+  The pre-registered consequence is to **add a fourth teacher/correction seed before J5b**.
+- `harmful > 0.15` → does **not** fire on the four-seed labels: needless is 46/397 = 0.1159,
+  against 0.1635 on the two-seed labels. The flag that fired yesterday was itself partly a
+  noise artifact, which is consistent with everything else here.
+- Dev moves the same way: f_dev 0.158 (2-seed) → 0.130 (4-seed).
+
+### What it means for the campaign
+
+The headline gets **stronger**: on train, 1 − f rises from 0.887 to **0.937**. Over nine in ten
+of a fixed schedule's expert calls change nothing measurable.
+
+The training signal gets **weaker**, and this is the binding problem. J5b's ASK targets come
+from `needed`, and there are 25 of them at four replicates — 49 if the lost branches were
+recovered. An ASK policy cannot be learned from that. The pre-registered response (a fourth
+teacher seed) costs a further `fixed_k` campaign plus its branches, and per the root-cause
+entry in FOLLOWUPS that is now a **planner-quota** decision rather than a GPU one: branching a
+fourth seed is roughly 4 planner calls × the new branches.
+
+⚠ Both readings come from the same fact and neither should be quoted without the other. The
+interventions are rarely needed *because* they are rarely needed — which is the paper result —
+and that same scarcity is what leaves too few positives to train the policy the campaign was
+built to test.
