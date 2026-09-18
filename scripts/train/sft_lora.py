@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import os
+import sys
 from importlib.metadata import PackageNotFoundError, version as pkg_version
 from pathlib import Path
 from typing import Any
@@ -61,6 +62,141 @@ def _load_rows(path: Path) -> list[dict[str, Any]]:
     if not rows:
         raise ValueError(f"no SFT records in {path}")
     return rows
+
+
+def _row_run_id(row: dict[str, Any]) -> str | None:
+    meta = row.get("meta")
+    if not isinstance(meta, dict):
+        return None
+    rid = meta.get("run_id")
+    if isinstance(rid, str) and rid:
+        return rid
+    return None
+
+
+def _has_supervised_labels(example: dict[str, Any]) -> bool:
+    labels = example.get("labels") or []
+    return any(lab != -100 for lab in labels)
+
+
+def _drop_reason(
+    row: dict[str, Any],
+    example: dict[str, Any],
+    tokenizer: Any,
+    max_length: int | None,
+) -> str:
+    """Classify a fully-masked row without changing the kept example.
+
+    A second tokenisation with ``max_length=None`` is used only on the drop
+    path so "never had labels" can be separated from "truncation removed them".
+    """
+    if not example.get("truncated") or max_length is None:
+        return "fully_masked_before_truncation"
+    untrunc = tokenize_sft_row(row, tokenizer, max_length=None)
+    if _has_supervised_labels(untrunc):
+        return "truncated_past_labels"
+    return "fully_masked_before_truncation"
+
+
+def _emit_drop_warning(stats: dict[str, Any], *, n_sequences: int) -> None:
+    n_drop = int(stats["n_dropped_no_supervised_tokens"])
+    n_trunc_kept = int(stats["n_truncated_kept"])
+    n_in = int(stats["n_rows_in"])
+    if n_drop:
+        ids = stats.get("dropped_run_ids") or []
+        id_note = f" dropped_run_ids={ids}" if ids else ""
+        print(
+            f"WARNING: dropped {n_drop}/{n_in} SFT rows with no supervised tokens "
+            f"(truncated_past_labels={stats['n_dropped_truncated_past_labels']}, "
+            f"fully_masked_before_truncation="
+            f"{stats['n_dropped_fully_masked_before_truncation']}). "
+            f"n_sequences={n_sequences} (rows trained on). "
+            f"n_truncated_kept={n_trunc_kept}.{id_note}",
+            file=sys.stderr,
+        )
+    elif n_trunc_kept:
+        print(
+            f"WARNING: kept {n_trunc_kept}/{n_in} SFT rows that were truncated "
+            f"but still had supervised tokens. n_sequences={n_sequences}.",
+            file=sys.stderr,
+        )
+
+
+def collect_tokenized_sft_rows(
+    rows: list[dict[str, Any]],
+    tokenizer: Any,
+    *,
+    max_length: int | None = MAX_LENGTH,
+    retain_examples: bool = True,
+    progress_every: int = 0,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Tokenise rows; skip fully-masked examples; record what was dropped.
+
+    Drop behaviour matches the previous silent ``continue``: a row with no
+    supervised tokens is not trained on. This function only counts, classifies,
+    and warns. ``retain_examples=False`` still counts kept rows but does not
+    hold the token arrays (for tokenizer-only audits).
+    """
+    tokenized: list[dict[str, Any]] = []
+    dropped_run_ids: list[str] = []
+    dropped_truncated_past_labels_run_ids: list[str] = []
+    dropped_fully_masked_before_truncation_run_ids: list[str] = []
+    truncated_kept_run_ids: list[str] = []
+    n_kept = 0
+    n_dropped = 0
+    n_dropped_truncated_past_labels = 0
+    n_dropped_fully_masked_before_truncation = 0
+    n_truncated_kept = 0
+    n_dropped_missing_run_id = 0
+
+    for i, row in enumerate(rows, start=1):
+        example = tokenize_sft_row(row, tokenizer, max_length=max_length)
+        run_id = _row_run_id(row)
+        if not _has_supervised_labels(example):
+            n_dropped += 1
+            reason = _drop_reason(row, example, tokenizer, max_length)
+            if run_id is None:
+                n_dropped_missing_run_id += 1
+            else:
+                dropped_run_ids.append(run_id)
+            if reason == "truncated_past_labels":
+                n_dropped_truncated_past_labels += 1
+                if run_id is not None:
+                    dropped_truncated_past_labels_run_ids.append(run_id)
+            else:
+                n_dropped_fully_masked_before_truncation += 1
+                if run_id is not None:
+                    dropped_fully_masked_before_truncation_run_ids.append(run_id)
+        else:
+            n_kept += 1
+            if example.get("truncated"):
+                n_truncated_kept += 1
+                if run_id is not None:
+                    truncated_kept_run_ids.append(run_id)
+            if retain_examples:
+                tokenized.append(example)
+        if progress_every and i % progress_every == 0:
+            print(
+                f"tokenised {i}/{len(rows)} kept={n_kept} dropped={n_dropped} "
+                f"truncated_kept={n_truncated_kept}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    stats = {
+        "n_rows_in": len(rows),
+        "n_dropped_no_supervised_tokens": n_dropped,
+        "n_dropped_truncated_past_labels": n_dropped_truncated_past_labels,
+        "n_dropped_fully_masked_before_truncation": n_dropped_fully_masked_before_truncation,
+        "n_dropped_missing_run_id": n_dropped_missing_run_id,
+        "n_truncated_kept": n_truncated_kept,
+        "dropped_run_ids": dropped_run_ids,
+        "dropped_truncated_past_labels_run_ids": dropped_truncated_past_labels_run_ids,
+        "dropped_fully_masked_before_truncation_run_ids": dropped_fully_masked_before_truncation_run_ids,
+        "truncated_kept_run_ids": truncated_kept_run_ids,
+    }
+    _emit_drop_warning(stats, n_sequences=n_kept)
+    return tokenized, stats
 
 
 class JsonlLossCallback:
@@ -123,12 +259,9 @@ def train(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    tokenized: list[dict[str, Any]] = []
-    for row in rows:
-        example = tokenize_sft_row(row, tokenizer, max_length=MAX_LENGTH)
-        if not any(lab != -100 for lab in example["labels"]):
-            continue
-        tokenized.append(example)
+    tokenized, drop_stats = collect_tokenized_sft_rows(
+        rows, tokenizer, max_length=MAX_LENGTH
+    )
     if not tokenized:
         raise ValueError("every example was fully masked or empty after tokenisation")
 
@@ -243,6 +376,7 @@ def train(
         },
         "train_task_ids": sorted(set(train_ids)),
         "n_sequences": len(tokenized),
+        **drop_stats,
         "metrics": {k: (float(v) if isinstance(v, (int, float)) else v) for k, v in metrics.items()},
         "package_versions": {
             "trl": _pkg("trl"),
@@ -254,7 +388,19 @@ def train(
         },
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"adapter": str(out), "dry_run": dry_run, "n_sequences": len(tokenized)}, indent=2))
+    print(
+        json.dumps(
+            {
+                "adapter": str(out),
+                "dry_run": dry_run,
+                "n_sequences": len(tokenized),
+                "n_rows_in": drop_stats["n_rows_in"],
+                "n_dropped_no_supervised_tokens": drop_stats["n_dropped_no_supervised_tokens"],
+                "n_truncated_kept": drop_stats["n_truncated_kept"],
+            },
+            indent=2,
+        )
+    )
     return manifest
 
 
