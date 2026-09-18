@@ -55,7 +55,13 @@ DEFAULT_CAMPAIGN = "/scratch/n12194778/sidekick/results/hj1b_planner_20260915"
 # kwargs and stop sequences, so agreement and parse-error rates are not
 # comparable with version 2 results, which were measured with the template
 # defaults.
-PROBE_SCHEMA_VERSION = 3
+# 2026-09-19: bumped to 4 -- hash_match fixed: it compared the probe world's
+# hash after the model's step against the GOLD observation of the NEXT step
+# (pairs[k+1][1]) instead of the observation of the step just executed
+# (pairs[k][1]), so a true match was impossible and every recorded hash_match
+# was False. hash_match values from version 3 are all False and meaningless;
+# do not quote them.
+PROBE_SCHEMA_VERSION = 4
 
 
 def extract_api_ids(code: str) -> set[str]:
@@ -205,7 +211,14 @@ def probe_step(
     }
     gold_action = pairs[k][0] if k < len(pairs) else None
     gnext = pairs[k + 1] if k + 1 < len(pairs) else None
-    gold_obs = gnext[1] if gnext else None
+    # gold_obs is the observation of the step the model is asked to produce
+    # (pairs[k][1]): the hash recorded in the gold log right after gold
+    # action k+1 executed. The pre-2026-09-19 code used gnext[1] here -- the
+    # observation AFTER the NEXT action -- which made hash_match impossible:
+    # snapshot_hash covers the growing io log, so the hash after step k+1 can
+    # never equal the hash after step k+2. That off-by-one is why every
+    # recorded hash_match was False (A10, defect 1).
+    gold_obs = pairs[k][1] if k < len(pairs) else None
     if gold_action is not None:
         rec["gold_kind"] = gold_action.kind
         rec["gold_code"] = gold_action.code or gold_action.message
@@ -220,7 +233,9 @@ def probe_step(
         )
     else:
         rec["value_forwarding"] = False
-    rec["state_equivalent_defined"] = gold_action is not None and gold_obs is not None
+    # state_equivalent needs a NEXT gold step to replay into the probe world;
+    # it is defined exactly when that next step exists.
+    rec["state_equivalent_defined"] = gold_action is not None and gnext is not None
     rec["hash_match_defined"] = (
         gold_action is not None and gold_obs is not None and bool(gold_obs.env_state_hash)
     )
@@ -272,10 +287,12 @@ def probe_step(
             )
         except Exception:
             rec["state_equivalent"] = False
-    # strict hash_match. EXPECTED NEAR-ZERO AND NOT A FAILURE SIGNAL:
-    # snapshot_hash hashes environment_io, which INCLUDES the input code
-    # (src/sidekick/environments/appworld_env.py:134-146), so it can only match
-    # when the model emits byte-identical code to the teacher. Reported, not gated.
+    # strict hash_match. snapshot_hash hashes environment_io, which INCLUDES
+    # the input code (src/sidekick/environments/appworld_env.py:147-158), so it
+    # can only match when the model emits byte-identical code to the teacher.
+    # Reported, not gated. Since 2026-09-19 the comparison is against
+    # gold_obs == pairs[k][1] (the observation of the step just executed);
+    # before that fix it compared against pairs[k+1][1] and could never match.
     if gold_obs is not None and gold_obs.env_state_hash:
         rec["hash_match"] = probe_obs.env_state_hash == gold_obs.env_state_hash
     return rec

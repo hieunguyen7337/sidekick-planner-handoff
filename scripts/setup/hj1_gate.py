@@ -100,23 +100,49 @@ def _draw_task_clusters(
     ]
 
 
+def _collected(runs, key: str, cast) -> tuple[list[Any], int]:
+    """Collect a per-run field WITHOUT coercing missing values to numbers.
+
+    A recorded 0 is a measurement and is kept; an absent key or a `null` is
+    NOT a measurement and must not become one (the project convention:
+    `p_ask: Optional[float] = None` -- "Never coerce None to 0.0",
+    src/sidekick/protocols/schemas.py:35-37). The caller must report the
+    missing count: an invisible drop is the same defect in a different hat.
+    """
+    values: list[Any] = []
+    missing = 0
+    for r in runs.values():
+        v = r.get(key)
+        if v is None:
+            missing += 1
+        else:
+            values.append(cast(v))
+    return values, missing
+
+
 def describe(runs: dict[tuple[str, int], dict[str, Any]]) -> dict[str, Any]:
     if not runs:
         return {"n": 0}
-    tgc = [float(r.get("tgc") or 0.0) for r in runs.values()]
-    steps = [int(r.get("steps") or 0) for r in runs.values()]
-    calls = [int(r.get("n_planner_calls") or 0) for r in runs.values()]
+    tgc, tgc_missing = _collected(runs, "tgc", float)
+    steps, steps_missing = _collected(runs, "steps", int)
+    calls, calls_missing = _collected(runs, "n_planner_calls", int)
     errors = Counter(str(r.get("error_type") or "none") for r in runs.values())
     # Never coerce a missing metric to 0.0. `sgc` is None on every run by construction,
     # and averaging that as zero reported "sgc_mean: 0.0" next to 41 solved tasks -- a
     # plausible-looking number for a metric that had simply never been computed.
+    # tgc / steps / n_planner_calls follow the same rule: recorded values are
+    # aggregated, missing values are dropped from that statistic and COUNTED in the
+    # output (`*_missing`), so a mean over a shrunken denominator cannot hide.
     return {
         "n": len(runs),
         "solved": sum(1 for r in runs.values() if r.get("success")),
-        "tgc_mean": round(statistics.fmean(tgc), 4),
+        "tgc_mean": round(statistics.fmean(tgc), 4) if tgc else None,
+        "tgc_missing": tgc_missing,
         "sgc": scenario_goal_completion(runs),
-        "steps_mean": round(statistics.fmean(steps), 2),
-        "planner_calls_total": sum(calls),
+        "steps_mean": round(statistics.fmean(steps), 2) if steps else None,
+        "steps_missing": steps_missing,
+        "planner_calls_total": sum(calls) if calls else None,
+        "planner_calls_missing": calls_missing,
         "errors": dict(sorted(errors.items())),
     }
 
@@ -150,9 +176,31 @@ def paired_diff(
             "dropped_unmatched_keys": dropped,
             "note": "no overlapping (task_id, seed) -- nothing to compare",
         }
-    diffs = [
-        float(base[k].get(field) or 0.0) - float(other[k].get(field) or 0.0) for k in keys
-    ]
+    diffs: list[float] = []
+    missing_field = 0
+    for k in keys:
+        b, o = base[k].get(field), other[k].get(field)
+        # A missing value is not a measurement: a recorded 0 is a score, a
+        # missing `tgc` is not, and `or 0.0` mapped both to the same number.
+        # Drop the pair from THIS statistic and report the drop below.
+        if b is None or o is None:
+            missing_field += 1
+            continue
+        diffs.append(float(b) - float(o))
+    if not diffs:
+        return {
+            "n_pairs": 0,
+            "n_tasks": 0,
+            "n_clusters": 0,
+            "mean_cluster_size": None,
+            "resample": resample,
+            "resample_unit": resample,
+            "dropped_from_base": dropped_from_base,
+            "dropped_from_other": dropped_from_other,
+            "dropped_unmatched_keys": dropped,
+            "pairs_dropped_missing_field": missing_field,
+            "note": "no pairs with a recorded %s value" % field,
+        }
     point = statistics.fmean(diffs)
     by_task: dict[str, list[float]] = {}
     for key, diff in zip(keys, diffs):
@@ -186,6 +234,7 @@ def paired_diff(
         "dropped_from_base": dropped_from_base,
         "dropped_from_other": dropped_from_other,
         "dropped_unmatched_keys": dropped,
+        "pairs_dropped_missing_field": missing_field,
         "diff_pp": round(point * 100, 2),
         "ci95_pp": [round(lo * 100, 2), round(hi * 100, 2)],
         "bootstrap": BOOTSTRAP,

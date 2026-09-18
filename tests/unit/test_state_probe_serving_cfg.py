@@ -170,7 +170,7 @@ def test_omitting_kwargs_and_stop_leaves_executor_none():
     assert "stop" not in client.payload
 
 
-def test_report_schema_version_is_3(tmp_path):
+def test_report_schema_version_is_4(tmp_path):
     campaign = _write_campaign(tmp_path)
     out = tmp_path / "probe.json"
     report = sp.run_probe(
@@ -183,12 +183,12 @@ def test_report_schema_version_is_3(tmp_path):
         max_points=1,
         seed=0,
     )
-    assert report["schema_version"] == 3
-    assert sp.PROBE_SCHEMA_VERSION == 3
+    assert report["schema_version"] == 4
+    assert sp.PROBE_SCHEMA_VERSION == 4
     assert report["chat_template_kwargs"] == {"enable_thinking": False}
     assert report["stop"] == ["</py>", "</python>"]
     on_disk = json.loads(out.read_text())
-    assert on_disk["schema_version"] == 3
+    assert on_disk["schema_version"] == 4
     assert on_disk["chat_template_kwargs"] == {"enable_thinking": False}
     assert on_disk["stop"] == ["</py>", "</python>"]
 
