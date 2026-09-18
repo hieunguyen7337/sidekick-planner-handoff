@@ -1,0 +1,471 @@
+hpc: 25447958.aqua queued (cpu_inter, 4 cpu, 16gb, walltime 00:30:00)
+hpc: waiting. Ctrl-C detaches; the job keeps running (qdel 25447958 to stop it).
+hpc: queued...
+hpc: running on a compute node
+hpc: finished after 70s
+---
+hpc: full job log (with the site epilogue) at /home/n12194778/.hpc-spool/20260918-233022-309781.out
+=== W-25 SUBSTITUTION TEST ===
+python=3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]
+numpy=2.3.5
+PBS_JOBID=25447958.aqua
+hostname=cpu1n040
+PERM_SEED=20260918 N_PERM=10000
+SPEARMAN_PERM_SEED=20260919 SPEARMAN_N_PERM=10000
+SEEDS=[101, 102, 103, 104]
+DELTAS=[0.166, 0.1]
+n_later_event=count of event_type==intervention with step > branch step s
+  on each untreated complete-point replicate; point n_later = median of 4
+proxy=floor((branch_steps-s)/5); event log is ground truth
+completeness=W-24/W-20: seeds 101-104, non-null branch_gpr, both conditions
+null=paired sign-flip per (point, seed) with p=0.5; 10000 perms
+f=needed/n  (never the needless fraction)
+contestable=POST-HOC W-20 mask on observed means
+
+==============================================================================
+DATASET: TRAIN
+File: /scratch/n12194778/sidekick/results/hj6_branches_train_20260917/branch_runs.jsonl
+==============================================================================
+[REPLICATE SEEDS ACTUALLY PRESENT IN FILE]
+  n_rows=6216 n_null_gpr=1357
+  condition='treated' unique_branch_seeds=[101, 102, 103, 104] count=4
+  condition='untreated' unique_branch_seeds=[101, 102, 103, 104] count=4
+[W-24 POPULATION CHECK]
+  w24.load n_rows=6216 n_null=1357 total_points=777
+  w24.complete n=397 using SEEDS=[101, 102, 103, 104]
+  load_rows n_rows=6216 n_null=1357 total_points=777
+  complete_rows n=397
+  complete_keys_equal=True
+  incomplete_points=380
+[OBSERVED SUBSET COUNTS — W-20 DEFINITIONS]
+  all_complete n=397
+  ceiling (mean_u >= 1.0) n=131
+  floor (mean_u <= 0 and mean_t <= 0) n=3
+  contestable (non-ceiling & non-floor; POST-HOC) n=263
+[EVENT LOG SCAN TRAIN]
+  results_root=/mnt/weka/scratch/n12194778/sidekick/results/hj6_branches_train_20260917
+  untreated_complete_expected=1588  # n_complete * 4
+  opened_readable=1588
+  missing=0
+  unreadable=0
+  wall_s=1.311
+[POINT COVERAGE FOR n_later]
+  complete_points=397
+  points_with_all_four_untreated_logs=397
+  points_missing_any_untreated_log=0
+  these missing-any points are EXCLUDED from n_later tables (not silently dropped; counted here)
+[REPLICATE DISAGREEMENT on event-log n_later]
+  n_points_all_four_logs=397
+  n_points_four_replicates_not_all_equal=227
+  disagreement_rate=227/397=0.5717884131
+  n_points_median_eq_0_but_max_gt_0=34
+  median_n_later histogram (exact, including half-integers):
+    median=0  n=175
+    median=0.5  n=19
+    median=1  n=70
+    median=1.5  n=29
+    median=2  n=31
+    median=2.5  n=26
+    median=3  n=17
+    median=3.5  n=12
+    median=4  n=9
+    median=4.5  n=6
+    median=5  n=2
+    median=7  n=1
+[EVENT-LOG vs PROXY floor((branch_steps-s)/5)]
+  n_pairs_with_proxy=1588 n_proxy_undef=0
+  n_disagree=0
+  agreement_rate=1588/1588=1.0000000000
+  disagreement_rate=0/1588=0.0000000000
+  Pearson r(event n_later, proxy)=1.0000000000 n=1588
+  Spearman rho(event n_later, proxy)=1.0000000000 n=1588
+  n_proxy_negative=0
+  ground_truth=event_log n_later (intervention events with step > branch step s)
+  event_after_s vs stored n_later_reviews disagree=0 / 1588
+  event_after_s vs all live_policy (no step filter) disagree=0 / 1588
+  event_after_s vs live_policy AND step>s disagree=0 / 1588
+
+******************************************************************************
+[TRAIN n_later=0 SUBSET SIZE] n=175 / complete=397 / with_logs=397
+******************************************************************************
+[SPEARMAN n_later vs Δ] TRAIN n=397
+  rho_average_ranks=-0.1633780546
+  perm_two_sided p=n(|rho_perm|>=|obs|)/10000 seed=20260919 p=0.000700 (7/10000)
+  scipy not used (scipy_unavailable:ModuleNotFoundError)
+[BUCKETS PRESENT] ['0', '0.5', '1', '1.5', '2', '2.5', '3+']
+[DOSE-RESPONSE TRAIN ALL-COMPLETE δ=0.166]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=175  mean_Δ=+0.0039228571  mean_help=0.0283728571  mean_harm=0.0244500000  needed=11/175  needless=8/175  f=11/175=0.0628571429  asymmetry=3
+  0.5     n=19  mean_Δ=+0.0193026316  mean_help=0.0537368421  mean_harm=0.0344342105  needed=2/19  needless=1/19  f=2/19=0.1052631579  asymmetry=1
+  1       n=70  mean_Δ=-0.0353214286  mean_help=0.0324678571  mean_harm=0.0677892857  needed=3/70  needless=11/70  f=3/70=0.0428571429  asymmetry=-8
+  1.5     n=29  mean_Δ=-0.0115517241  mean_help=0.0359827586  mean_harm=0.0475344828  needed=2/29  needless=4/29  f=2/29=0.0689655172  asymmetry=-2
+  2       n=31  mean_Δ=-0.0006370968  mean_help=0.0500241935  mean_harm=0.0506612903  needed=3/31  needless=3/31  f=3/31=0.0967741935  asymmetry=0
+  2.5     n=26  mean_Δ=-0.0571346154  mean_help=0.0394230769  mean_harm=0.0965576923  needed=2/26  needless=7/26  f=2/26=0.0769230769  asymmetry=-5
+  3+      n=47  mean_Δ=-0.0522234043  mean_help=0.0353138298  mean_harm=0.0875372340  needed=2/47  needless=12/47  f=2/47=0.0425531915  asymmetry=-10
+[DOSE-RESPONSE TRAIN ALL-COMPLETE δ=0.100]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=175  mean_Δ=+0.0039228571  mean_help=0.0283728571  mean_harm=0.0244500000  needed=20/175  needless=13/175  f=20/175=0.1142857143  asymmetry=7
+  0.5     n=19  mean_Δ=+0.0193026316  mean_help=0.0537368421  mean_harm=0.0344342105  needed=5/19  needless=2/19  f=5/19=0.2631578947  asymmetry=3
+  1       n=70  mean_Δ=-0.0353214286  mean_help=0.0324678571  mean_harm=0.0677892857  needed=8/70  needless=21/70  f=8/70=0.1142857143  asymmetry=-13
+  1.5     n=29  mean_Δ=-0.0115517241  mean_help=0.0359827586  mean_harm=0.0475344828  needed=6/29  needless=6/29  f=6/29=0.2068965517  asymmetry=0
+  2       n=31  mean_Δ=-0.0006370968  mean_help=0.0500241935  mean_harm=0.0506612903  needed=5/31  needless=3/31  f=5/31=0.1612903226  asymmetry=2
+  2.5     n=26  mean_Δ=-0.0571346154  mean_help=0.0394230769  mean_harm=0.0965576923  needed=5/26  needless=9/26  f=5/26=0.1923076923  asymmetry=-4
+  3+      n=47  mean_Δ=-0.0522234043  mean_help=0.0353138298  mean_harm=0.0875372340  needed=5/47  needless=13/47  f=5/47=0.1063829787  asymmetry=-8
+[CONFOUND TRAIN ALL-COMPLETE] per n_later bucket
+  bucket  n  mean_step  mean_untreated  ceiling_frac (mean_u=1.000 i.e. mean_u>=1)  floor_frac (mean_u<=0 and mean_t<=0)
+  0       n=175  mean_step=14.9714285714  mean_untreated=0.8500100000  ceiling=95/175=0.5428571429  floor=2/175=0.0114285714
+  0.5     n=19  mean_step=10.5263157895  mean_untreated=0.8616447368  ceiling=3/19=0.1578947368  floor=0/19=0.0000000000
+  1       n=70  mean_step=10.6428571429  mean_untreated=0.7896714286  ceiling=21/70=0.3000000000  floor=1/70=0.0142857143
+  1.5     n=29  mean_step=8.7931034483  mean_untreated=0.7688879310  ceiling=7/29=0.2413793103  floor=0/29=0.0000000000
+  2       n=31  mean_step=13.8709677419  mean_untreated=0.6295725806  ceiling=2/31=0.0645161290  floor=0/31=0.0000000000
+  2.5     n=26  mean_step=11.7307692308  mean_untreated=0.7330384615  ceiling=2/26=0.0769230769  floor=0/26=0.0000000000
+  3+      n=47  mean_step=12.6595744681  mean_untreated=0.5878936170  ceiling=1/47=0.0212765957  floor=0/47=0.0000000000
+[CONTESTABLE DOSE-RESPONSE IS POST-HOC — W-20 non-ceiling non-floor on observed means]
+[DOSE-RESPONSE TRAIN CONTESTABLE POST-HOC δ=0.166]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=78  mean_Δ=+0.0504102564  mean_help=0.0636570513  mean_harm=0.0132467949  needed=11/78  needless=2/78  f=11/78=0.1410256410  asymmetry=9
+  0.5     n=16  mean_Δ=+0.0255312500  mean_help=0.0638125000  mean_harm=0.0382812500  needed=2/16  needless=1/16  f=2/16=0.1250000000  asymmetry=1
+  1       n=48  mean_Δ=-0.0093229167  mean_help=0.0473489583  mean_harm=0.0566718750  needed=3/48  needless=6/48  f=3/48=0.0625000000  asymmetry=-3
+  1.5     n=22  mean_Δ=+0.0245454545  mean_help=0.0474318182  mean_harm=0.0228863636  needed=2/22  needless=0/22  f=2/22=0.0909090909  asymmetry=2
+  2       n=29  mean_Δ=+0.0029137931  mean_help=0.0534741379  mean_harm=0.0505603448  needed=3/29  needless=3/29  f=3/29=0.1034482759  asymmetry=0
+  2.5     n=24  mean_Δ=-0.0556458333  mean_help=0.0427083333  mean_harm=0.0983541667  needed=2/24  needless=7/24  f=2/24=0.0833333333  asymmetry=-5
+  3+      n=46  mean_Δ=-0.0533586957  mean_help=0.0360815217  mean_harm=0.0894402174  needed=2/46  needless=12/46  f=2/46=0.0434782609  asymmetry=-10
+[DOSE-RESPONSE TRAIN CONTESTABLE POST-HOC δ=0.100]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=78  mean_Δ=+0.0504102564  mean_help=0.0636570513  mean_harm=0.0132467949  needed=20/78  needless=4/78  f=20/78=0.2564102564  asymmetry=16
+  0.5     n=16  mean_Δ=+0.0255312500  mean_help=0.0638125000  mean_harm=0.0382812500  needed=5/16  needless=2/16  f=5/16=0.3125000000  asymmetry=3
+  1       n=48  mean_Δ=-0.0093229167  mean_help=0.0473489583  mean_harm=0.0566718750  needed=8/48  needless=13/48  f=8/48=0.1666666667  asymmetry=-5
+  1.5     n=22  mean_Δ=+0.0245454545  mean_help=0.0474318182  mean_harm=0.0228863636  needed=6/22  needless=2/22  f=6/22=0.2727272727  asymmetry=4
+  2       n=29  mean_Δ=+0.0029137931  mean_help=0.0534741379  mean_harm=0.0505603448  needed=5/29  needless=3/29  f=5/29=0.1724137931  asymmetry=2
+  2.5     n=24  mean_Δ=-0.0556458333  mean_help=0.0427083333  mean_harm=0.0983541667  needed=5/24  needless=8/24  f=5/24=0.2083333333  asymmetry=-3
+  3+      n=46  mean_Δ=-0.0533586957  mean_help=0.0360815217  mean_harm=0.0894402174  needed=5/46  needless=13/46  f=5/46=0.1086956522  asymmetry=-8
+[CONFOUND TRAIN CONTESTABLE POST-HOC] per n_later bucket
+  bucket  n  mean_step  mean_untreated  ceiling_frac (mean_u=1.000 i.e. mean_u>=1)  floor_frac (mean_u<=0 and mean_t<=0)
+  0       n=78  mean_step=18.0128205128  mean_untreated=0.6891250000  ceiling=0/78=0.0000000000  floor=0/78=0.0000000000
+  0.5     n=16  mean_step=10.6250000000  mean_untreated=0.8357031250  ceiling=0/16=0.0000000000  floor=0/16=0.0000000000
+  1       n=48  mean_step=11.5625000000  mean_untreated=0.7141041667  ceiling=0/48=0.0000000000  floor=0/48=0.0000000000
+  1.5     n=22  mean_step=9.5454545455  mean_untreated=0.6953522727  ceiling=0/22=0.0000000000  floor=0/22=0.0000000000
+  2       n=29  mean_step=14.1379310345  mean_untreated=0.6040258621  ceiling=0/29=0.0000000000  floor=0/29=0.0000000000
+  2.5     n=24  mean_step=11.8750000000  mean_untreated=0.7107916667  ceiling=0/24=0.0000000000  floor=0/24=0.0000000000
+  3+      n=46  mean_step=12.8260869565  mean_untreated=0.5789347826  ceiling=0/46=0.0000000000  floor=0/46=0.0000000000
+
+--- PERM TRAIN n_later=0 ALL-COMPLETE n=175 PERM_SEED=20260918 N_PERM=10000 ---
+  method=paired_sign_flip_per_(point,seed); NOT pooled reshuffle
+  sign array shape=(10000, 175, 4) perm_delta shape=(10000, 175)
+  wall_s=0.092
+[POWER / PRECISION of this n_later=0 subset]
+  SUBSET_SIZE n=175
+  under this sign-flip null, mean_Δ 2.5th=-0.0119057143 97.5th=+0.0121602143 interval_width=0.0240659286
+  a |mean_Δ| smaller than this interval's edge cannot fall outside the null interval at this n; that is the resolution of the test, not evidence of absence
+  δ=0.166 observed: needed=11/175 f=0.0628571429 needless=8/175 ambiguous=156/175 asymmetry(needed-needless)=3 mean_Δ=+0.0039228571 mean_help=0.0283728571 mean_harm=0.0244500000
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=11  null_mean=5.1816  null_2.5=2  null_97.5=9  p=0.005100 (51/10000); inside_null_95pct=False
+    f=needed/n              obs=0.06285714286  null_mean=0.02960914286  null_2.5=0.01142857143  null_97.5=0.05142857143  p=0.005100 (51/10000); inside_null_95pct=False
+    needless                obs=8  null_mean=5.1937  null_2.5=2  null_97.5=9  p=0.118000 (1180/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.003922857143  null_mean=-4.777428571e-06  null_2.5=-0.01190571429  null_97.5=0.01216021429  p=0.254400 (2544/10000); inside_null_95pct=True
+    mean_help               obs=0.02837285714  null_mean=0.015225946  null_2.5=0.0088385  null_97.5=0.02257292857  p=0.000700 (7/10000); inside_null_95pct=False
+    mean_harm               obs=0.02445  null_mean=0.01523072343  null_2.5=0.008569678571  null_97.5=0.022393  p=0.006900 (69/10000); inside_null_95pct=False
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=3  null_mean=-0.0121  null_2.5=-6  null_97.5=6  p=0.439800 (4398/10000); inside_null_95pct=True
+    INTERVAL needed: observed 11 is OUTSIDE null [2, 9] (one-sided >= p=0.005100 51/10000)
+    INTERVAL f: observed 0.06285714286 is OUTSIDE null [0.01142857143, 0.05142857143] (one-sided >= p=0.005100 51/10000)
+    INTERVAL needless: observed 8 is INSIDE null [2, 9] (one-sided >= p=0.118000 1180/10000)
+    INTERVAL mean_delta: observed 0.003922857143 is INSIDE null [-0.01190571429, 0.01216021429] (one-sided >= p=0.254400 2544/10000)
+    INTERVAL mean_help: observed 0.02837285714 is OUTSIDE null [0.0088385, 0.02257292857] (one-sided >= p=0.000700 7/10000)
+    INTERVAL mean_harm: observed 0.02445 is OUTSIDE null [0.008569678571, 0.022393] (one-sided >= p=0.006900 69/10000)
+    INTERVAL asymmetry: observed 3 is INSIDE null [-6, 6] (two-sided | | p=0.439800 4398/10000)
+    PRECISION needed@δ=0.166: null 97.5th=9; observed needed would have to exceed this to sit above the interval
+  δ=0.100 observed: needed=20/175 f=0.1142857143 needless=13/175 ambiguous=142/175 asymmetry(needed-needless)=7 mean_Δ=+0.0039228571 mean_help=0.0283728571 mean_harm=0.0244500000
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=20  null_mean=10.7431  null_2.5=6  null_97.5=16  p=0.001000 (10/10000); inside_null_95pct=False
+    f=needed/n              obs=0.1142857143  null_mean=0.06138914286  null_2.5=0.03428571429  null_97.5=0.09142857143  p=0.001000 (10/10000); inside_null_95pct=False
+    needless                obs=13  null_mean=10.728  null_2.5=6  null_97.5=16  p=0.247100 (2471/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.003922857143  null_mean=-4.777428571e-06  null_2.5=-0.01190571429  null_97.5=0.01216021429  p=0.254400 (2544/10000); inside_null_95pct=True
+    mean_help               obs=0.02837285714  null_mean=0.015225946  null_2.5=0.0088385  null_97.5=0.02257292857  p=0.000700 (7/10000); inside_null_95pct=False
+    mean_harm               obs=0.02445  null_mean=0.01523072343  null_2.5=0.008569678571  null_97.5=0.022393  p=0.006900 (69/10000); inside_null_95pct=False
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=7  null_mean=0.0151  null_2.5=-9  null_97.5=9  p=0.162700 (1627/10000); inside_null_95pct=True
+    INTERVAL needed: observed 20 is OUTSIDE null [6, 16] (one-sided >= p=0.001000 10/10000)
+    INTERVAL f: observed 0.1142857143 is OUTSIDE null [0.03428571429, 0.09142857143] (one-sided >= p=0.001000 10/10000)
+    INTERVAL needless: observed 13 is INSIDE null [6, 16] (one-sided >= p=0.247100 2471/10000)
+    INTERVAL mean_delta: observed 0.003922857143 is INSIDE null [-0.01190571429, 0.01216021429] (one-sided >= p=0.254400 2544/10000)
+    INTERVAL mean_help: observed 0.02837285714 is OUTSIDE null [0.0088385, 0.02257292857] (one-sided >= p=0.000700 7/10000)
+    INTERVAL mean_harm: observed 0.02445 is OUTSIDE null [0.008569678571, 0.022393] (one-sided >= p=0.006900 69/10000)
+    INTERVAL asymmetry: observed 7 is INSIDE null [-9, 9] (two-sided | | p=0.162700 1627/10000)
+    PRECISION needed@δ=0.100: null 97.5th=16; observed needed would have to exceed this to sit above the interval
+[TRAIN n_later=0 CONTESTABLE SUBSET SIZE] n=78 (post-hoc)
+
+--- PERM TRAIN n_later=0 CONTESTABLE POST-HOC n=78 PERM_SEED=20260918 N_PERM=10000 ---
+  method=paired_sign_flip_per_(point,seed); NOT pooled reshuffle
+  sign array shape=(10000, 78, 4) perm_delta shape=(10000, 78)
+  wall_s=0.040
+[POWER / PRECISION of this n_later=0 subset]
+  SUBSET_SIZE n=78
+  under this sign-flip null, mean_Δ 2.5th=-0.0210964744 97.5th=+0.0213782051 interval_width=0.0424746795
+  a |mean_Δ| smaller than this interval's edge cannot fall outside the null interval at this n; that is the resolution of the test, not evidence of absence
+  δ=0.166 observed: needed=11/78 f=0.1410256410 needless=2/78 ambiguous=65/78 asymmetry(needed-needless)=9 mean_Δ=+0.0504102564 mean_help=0.0636570513 mean_harm=0.0132467949
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=11  null_mean=3.6264  null_2.5=1  null_97.5=7  p=0.000000 (0/10000); inside_null_95pct=False
+    f=needed/n              obs=0.141025641  null_mean=0.04649230769  null_2.5=0.01282051282  null_97.5=0.08974358974  p=0.000000 (0/10000); inside_null_95pct=False
+    needless                obs=2  null_mean=3.6035  null_2.5=1  null_97.5=7  p=0.913600 (9136/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.05041025641  null_mean=0.0001129923077  null_2.5=-0.02109647436  null_97.5=0.02137820513  p=0.000000 (0/10000); inside_null_95pct=False
+    mean_help               obs=0.06365705128  null_mean=0.02468474263  null_2.5=0.01320416667  null_97.5=0.03762852564  p=0.000000 (0/10000); inside_null_95pct=False
+    mean_harm               obs=0.01324679487  null_mean=0.02457175032  null_2.5=0.01317532051  null_97.5=0.03759647436  p=0.974200 (9742/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=9  null_mean=0.0229  null_2.5=-5  null_97.5=5  p=0.000900 (9/10000); inside_null_95pct=False
+    INTERVAL needed: observed 11 is OUTSIDE null [1, 7] (one-sided >= p=0.000000 0/10000)
+    INTERVAL f: observed 0.141025641 is OUTSIDE null [0.01282051282, 0.08974358974] (one-sided >= p=0.000000 0/10000)
+    INTERVAL needless: observed 2 is INSIDE null [1, 7] (one-sided >= p=0.913600 9136/10000)
+    INTERVAL mean_delta: observed 0.05041025641 is OUTSIDE null [-0.02109647436, 0.02137820513] (one-sided >= p=0.000000 0/10000)
+    INTERVAL mean_help: observed 0.06365705128 is OUTSIDE null [0.01320416667, 0.03762852564] (one-sided >= p=0.000000 0/10000)
+    INTERVAL mean_harm: observed 0.01324679487 is INSIDE null [0.01317532051, 0.03759647436] (one-sided >= p=0.974200 9742/10000)
+    INTERVAL asymmetry: observed 9 is OUTSIDE null [-5, 5] (two-sided | | p=0.000900 9/10000)
+    PRECISION needed@δ=0.166: null 97.5th=7; observed needed would have to exceed this to sit above the interval
+  δ=0.100 observed: needed=20/78 f=0.2564102564 needless=4/78 ambiguous=54/78 asymmetry(needed-needless)=16 mean_Δ=+0.0504102564 mean_help=0.0636570513 mean_harm=0.0132467949
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=20  null_mean=8.0823  null_2.5=4  null_97.5=13  p=0.000000 (0/10000); inside_null_95pct=False
+    f=needed/n              obs=0.2564102564  null_mean=0.1036192308  null_2.5=0.05128205128  null_97.5=0.1666666667  p=0.000000 (0/10000); inside_null_95pct=False
+    needless                obs=4  null_mean=8.0391  null_2.5=4  null_97.5=12  p=0.984900 (9849/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.05041025641  null_mean=0.0001129923077  null_2.5=-0.02109647436  null_97.5=0.02137820513  p=0.000000 (0/10000); inside_null_95pct=False
+    mean_help               obs=0.06365705128  null_mean=0.02468474263  null_2.5=0.01320416667  null_97.5=0.03762852564  p=0.000000 (0/10000); inside_null_95pct=False
+    mean_harm               obs=0.01324679487  null_mean=0.02457175032  null_2.5=0.01317532051  null_97.5=0.03759647436  p=0.974200 (9742/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=16  null_mean=0.0432  null_2.5=-8  null_97.5=8  p=0.000000 (0/10000); inside_null_95pct=False
+    INTERVAL needed: observed 20 is OUTSIDE null [4, 13] (one-sided >= p=0.000000 0/10000)
+    INTERVAL f: observed 0.2564102564 is OUTSIDE null [0.05128205128, 0.1666666667] (one-sided >= p=0.000000 0/10000)
+    INTERVAL needless: observed 4 is INSIDE null [4, 12] (one-sided >= p=0.984900 9849/10000)
+    INTERVAL mean_delta: observed 0.05041025641 is OUTSIDE null [-0.02109647436, 0.02137820513] (one-sided >= p=0.000000 0/10000)
+    INTERVAL mean_help: observed 0.06365705128 is OUTSIDE null [0.01320416667, 0.03762852564] (one-sided >= p=0.000000 0/10000)
+    INTERVAL mean_harm: observed 0.01324679487 is INSIDE null [0.01317532051, 0.03759647436] (one-sided >= p=0.974200 9742/10000)
+    INTERVAL asymmetry: observed 16 is OUTSIDE null [-8, 8] (two-sided | | p=0.000000 0/10000)
+    PRECISION needed@δ=0.100: null 97.5th=13; observed needed would have to exceed this to sit above the interval
+
+==============================================================================
+DATASET: DEV
+File: /scratch/n12194778/sidekick/results/hj6_branches_dev_20260917/branch_runs.jsonl
+==============================================================================
+[REPLICATE SEEDS ACTUALLY PRESENT IN FILE]
+  n_rows=3056 n_null_gpr=141
+  condition='treated' unique_branch_seeds=[101, 102, 103, 104] count=4
+  condition='untreated' unique_branch_seeds=[101, 102, 103, 104] count=4
+[W-24 POPULATION CHECK]
+  w24.load n_rows=3056 n_null=141 total_points=382
+  w24.complete n=332 using SEEDS=[101, 102, 103, 104]
+  load_rows n_rows=3056 n_null=141 total_points=382
+  complete_rows n=332
+  complete_keys_equal=True
+  incomplete_points=50
+[OBSERVED SUBSET COUNTS — W-20 DEFINITIONS]
+  all_complete n=332
+  ceiling (mean_u >= 1.0) n=68
+  floor (mean_u <= 0 and mean_t <= 0) n=0
+  contestable (non-ceiling & non-floor; POST-HOC) n=264
+[EVENT LOG SCAN DEV]
+  results_root=/mnt/weka/scratch/n12194778/sidekick/results/hj6_branches_dev_20260917
+  untreated_complete_expected=1328  # n_complete * 4
+  opened_readable=1328
+  missing=0
+  unreadable=0
+  wall_s=1.201
+[POINT COVERAGE FOR n_later]
+  complete_points=332
+  points_with_all_four_untreated_logs=332
+  points_missing_any_untreated_log=0
+  these missing-any points are EXCLUDED from n_later tables (not silently dropped; counted here)
+[REPLICATE DISAGREEMENT on event-log n_later]
+  n_points_all_four_logs=332
+  n_points_four_replicates_not_all_equal=218
+  disagreement_rate=218/332=0.6566265060
+  n_points_median_eq_0_but_max_gt_0=19
+  median_n_later histogram (exact, including half-integers):
+    median=0  n=91
+    median=0.5  n=22
+    median=1  n=77
+    median=1.5  n=26
+    median=2  n=36
+    median=2.5  n=20
+    median=3  n=20
+    median=3.5  n=8
+    median=4  n=13
+    median=4.5  n=4
+    median=5  n=7
+    median=5.5  n=1
+    median=6  n=4
+    median=6.5  n=1
+    median=7  n=2
+[EVENT-LOG vs PROXY floor((branch_steps-s)/5)]
+  n_pairs_with_proxy=1328 n_proxy_undef=0
+  n_disagree=1
+  agreement_rate=1327/1328=0.9992469880
+  disagreement_rate=1/1328=0.0007530120
+  Pearson r(event n_later, proxy)=0.9988170413 n=1328
+  Spearman rho(event n_later, proxy)=0.9999834107 n=1328
+  n_proxy_negative=0
+  ground_truth=event_log n_later (intervention events with step > branch step s)
+  event_after_s vs stored n_later_reviews disagree=0 / 1328
+  event_after_s vs all live_policy (no step filter) disagree=0 / 1328
+  event_after_s vs live_policy AND step>s disagree=0 / 1328
+
+******************************************************************************
+[DEV n_later=0 SUBSET SIZE] n=91 / complete=332 / with_logs=332
+******************************************************************************
+[SPEARMAN n_later vs Δ] DEV n=332
+  rho_average_ranks=0.0948570700
+  perm_two_sided p=n(|rho_perm|>=|obs|)/10000 seed=20260919 p=0.083800 (838/10000)
+  scipy not used (scipy_unavailable:ModuleNotFoundError)
+[BUCKETS PRESENT] ['0', '0.5', '1', '1.5', '2', '2.5', '3+']
+[DOSE-RESPONSE DEV ALL-COMPLETE δ=0.166]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=91  mean_Δ=+0.0121840659  mean_help=0.0326620879  mean_harm=0.0204780220  needed=7/91  needless=5/91  f=7/91=0.0769230769  asymmetry=2
+  0.5     n=22  mean_Δ=-0.0211363636  mean_help=0.0359886364  mean_harm=0.0571250000  needed=2/22  needless=3/22  f=2/22=0.0909090909  asymmetry=-1
+  1       n=77  mean_Δ=+0.0089870130  mean_help=0.0565519481  mean_harm=0.0475649351  needed=8/77  needless=9/77  f=8/77=0.1038961039  asymmetry=-1
+  1.5     n=26  mean_Δ=-0.0252307692  mean_help=0.0664423077  mean_harm=0.0916730769  needed=4/26  needless=8/26  f=4/26=0.1538461538  asymmetry=-4
+  2       n=36  mean_Δ=-0.0074791667  mean_help=0.0877152778  mean_harm=0.0951944444  needed=7/36  needless=7/36  f=7/36=0.1944444444  asymmetry=0
+  2.5     n=20  mean_Δ=-0.0396875000  mean_help=0.0470875000  mean_harm=0.0867750000  needed=1/20  needless=4/20  f=1/20=0.0500000000  asymmetry=-3
+  3+      n=60  mean_Δ=+0.0600708333  mean_help=0.0936666667  mean_harm=0.0335958333  needed=14/60  needless=7/60  f=14/60=0.2333333333  asymmetry=7
+[DOSE-RESPONSE DEV ALL-COMPLETE δ=0.100]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=91  mean_Δ=+0.0121840659  mean_help=0.0326620879  mean_harm=0.0204780220  needed=9/91  needless=7/91  f=9/91=0.0989010989  asymmetry=2
+  0.5     n=22  mean_Δ=-0.0211363636  mean_help=0.0359886364  mean_harm=0.0571250000  needed=4/22  needless=5/22  f=4/22=0.1818181818  asymmetry=-1
+  1       n=77  mean_Δ=+0.0089870130  mean_help=0.0565519481  mean_harm=0.0475649351  needed=17/77  needless=12/77  f=17/77=0.2207792208  asymmetry=5
+  1.5     n=26  mean_Δ=-0.0252307692  mean_help=0.0664423077  mean_harm=0.0916730769  needed=8/26  needless=10/26  f=8/26=0.3076923077  asymmetry=-2
+  2       n=36  mean_Δ=-0.0074791667  mean_help=0.0877152778  mean_harm=0.0951944444  needed=12/36  needless=11/36  f=12/36=0.3333333333  asymmetry=1
+  2.5     n=20  mean_Δ=-0.0396875000  mean_help=0.0470875000  mean_harm=0.0867750000  needed=6/20  needless=7/20  f=6/20=0.3000000000  asymmetry=-1
+  3+      n=60  mean_Δ=+0.0600708333  mean_help=0.0936666667  mean_harm=0.0335958333  needed=16/60  needless=9/60  f=16/60=0.2666666667  asymmetry=7
+[CONFOUND DEV ALL-COMPLETE] per n_later bucket
+  bucket  n  mean_step  mean_untreated  ceiling_frac (mean_u=1.000 i.e. mean_u>=1)  floor_frac (mean_u<=0 and mean_t<=0)
+  0       n=91  mean_step=17.3626373626  mean_untreated=0.7885027473  ceiling=38/91=0.4175824176  floor=0/91=0.0000000000
+  0.5     n=22  mean_step=14.3181818182  mean_untreated=0.7464886364  ceiling=2/22=0.0909090909  floor=0/22=0.0000000000
+  1       n=77  mean_step=11.9480519481  mean_untreated=0.7232564935  ceiling=18/77=0.2337662338  floor=0/77=0.0000000000
+  1.5     n=26  mean_step=13.2692307692  mean_untreated=0.6514615385  ceiling=4/26=0.1538461538  floor=0/26=0.0000000000
+  2       n=36  mean_step=14.3055555556  mean_untreated=0.5864027778  ceiling=4/36=0.1111111111  floor=0/36=0.0000000000
+  2.5     n=20  mean_step=12.0000000000  mean_untreated=0.7071375000  ceiling=1/20=0.0500000000  floor=0/20=0.0000000000
+  3+      n=60  mean_step=13.2500000000  mean_untreated=0.4328833333  ceiling=1/60=0.0166666667  floor=0/60=0.0000000000
+[CONTESTABLE DOSE-RESPONSE IS POST-HOC — W-20 non-ceiling non-floor on observed means]
+[DOSE-RESPONSE DEV CONTESTABLE POST-HOC δ=0.166]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=53  mean_Δ=+0.0236132075  mean_help=0.0560801887  mean_harm=0.0324669811  needed=7/53  needless=5/53  f=7/53=0.1320754717  asymmetry=2
+  0.5     n=20  mean_Δ=-0.0128375000  mean_help=0.0395875000  mean_harm=0.0524250000  needed=2/20  needless=2/20  f=2/20=0.1000000000  asymmetry=0
+  1       n=59  mean_Δ=+0.0422330508  mean_help=0.0738050847  mean_harm=0.0315720339  needed=8/59  needless=5/59  f=8/59=0.1355932203  asymmetry=3
+  1.5     n=22  mean_Δ=-0.0136250000  mean_help=0.0785227273  mean_harm=0.0921477273  needed=4/22  needless=7/22  f=4/22=0.1818181818  asymmetry=-3
+  2       n=32  mean_Δ=+0.0079921875  mean_help=0.0986796875  mean_harm=0.0906875000  needed=7/32  needless=6/32  f=7/32=0.2187500000  asymmetry=1
+  2.5     n=19  mean_Δ=-0.0417763158  mean_help=0.0495657895  mean_harm=0.0913421053  needed=1/19  needless=4/19  f=1/19=0.0526315789  asymmetry=-3
+  3+      n=59  mean_Δ=+0.0610889831  mean_help=0.0952542373  mean_harm=0.0341652542  needed=14/59  needless=7/59  f=14/59=0.2372881356  asymmetry=7
+[DOSE-RESPONSE DEV CONTESTABLE POST-HOC δ=0.100]  f = needed / n_bucket
+  bucket  n_points  mean_Δ  mean_help  mean_harm  needed  needless  f=needed/n  asymmetry=needed-needless
+  0       n=53  mean_Δ=+0.0236132075  mean_help=0.0560801887  mean_harm=0.0324669811  needed=9/53  needless=6/53  f=9/53=0.1698113208  asymmetry=3
+  0.5     n=20  mean_Δ=-0.0128375000  mean_help=0.0395875000  mean_harm=0.0524250000  needed=4/20  needless=4/20  f=4/20=0.2000000000  asymmetry=0
+  1       n=59  mean_Δ=+0.0422330508  mean_help=0.0738050847  mean_harm=0.0315720339  needed=17/59  needless=7/59  f=17/59=0.2881355932  asymmetry=10
+  1.5     n=22  mean_Δ=-0.0136250000  mean_help=0.0785227273  mean_harm=0.0921477273  needed=8/22  needless=8/22  f=8/22=0.3636363636  asymmetry=0
+  2       n=32  mean_Δ=+0.0079921875  mean_help=0.0986796875  mean_harm=0.0906875000  needed=12/32  needless=9/32  f=12/32=0.3750000000  asymmetry=3
+  2.5     n=19  mean_Δ=-0.0417763158  mean_help=0.0495657895  mean_harm=0.0913421053  needed=6/19  needless=7/19  f=6/19=0.3157894737  asymmetry=-1
+  3+      n=59  mean_Δ=+0.0610889831  mean_help=0.0952542373  mean_harm=0.0341652542  needed=16/59  needless=9/59  f=16/59=0.2711864407  asymmetry=7
+[CONFOUND DEV CONTESTABLE POST-HOC] per n_later bucket
+  bucket  n  mean_step  mean_untreated  ceiling_frac (mean_u=1.000 i.e. mean_u>=1)  floor_frac (mean_u<=0 and mean_t<=0)
+  0       n=53  mean_step=20.1886792453  mean_untreated=0.6368632075  ceiling=0/53=0.0000000000  floor=0/53=0.0000000000
+  0.5     n=20  mean_step=14.7500000000  mean_untreated=0.7211375000  ceiling=0/20=0.0000000000  floor=0/20=0.0000000000
+  1       n=59  mean_step=12.8813559322  mean_untreated=0.6388262712  ceiling=0/59=0.0000000000  floor=0/59=0.0000000000
+  1.5     n=22  mean_step=13.6363636364  mean_untreated=0.5880909091  ceiling=0/22=0.0000000000  floor=0/22=0.0000000000
+  2       n=32  mean_step=15.4687500000  mean_untreated=0.5347031250  ceiling=0/32=0.0000000000  floor=0/32=0.0000000000
+  2.5     n=19  mean_step=12.3684210526  mean_untreated=0.6917236842  ceiling=0/19=0.0000000000  floor=0/19=0.0000000000
+  3+      n=59  mean_step=13.3898305085  mean_untreated=0.4232711864  ceiling=0/59=0.0000000000  floor=0/59=0.0000000000
+
+--- PERM DEV n_later=0 ALL-COMPLETE n=91 PERM_SEED=20260918 N_PERM=10000 ---
+  method=paired_sign_flip_per_(point,seed); NOT pooled reshuffle
+  sign array shape=(10000, 91, 4) perm_delta shape=(10000, 91)
+  wall_s=0.051
+[POWER / PRECISION of this n_later=0 subset]
+  SUBSET_SIZE n=91
+  under this sign-flip null, mean_Δ 2.5th=-0.0178765110 97.5th=+0.0179593407 interval_width=0.0358358516
+  a |mean_Δ| smaller than this interval's edge cannot fall outside the null interval at this n; that is the resolution of the test, not evidence of absence
+  δ=0.166 observed: needed=7/91 f=0.0769230769 needless=5/91 ambiguous=79/91 asymmetry(needed-needless)=2 mean_Δ=+0.0121840659 mean_help=0.0326620879 mean_harm=0.0204780220
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=7  null_mean=3.2866  null_2.5=1  null_97.5=7  p=0.026000 (260/10000); inside_null_95pct=True
+    f=needed/n              obs=0.07692307692  null_mean=0.03611648352  null_2.5=0.01098901099  null_97.5=0.07692307692  p=0.026000 (260/10000); inside_null_95pct=True
+    needless                obs=5  null_mean=3.2527  null_2.5=1  null_97.5=7  p=0.207400 (2074/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.01218406593  null_mean=0.0001394692308  null_2.5=-0.01787651099  null_97.5=0.01795934066  p=0.091900 (919/10000); inside_null_95pct=True
+    mean_help               obs=0.03266208791  null_mean=0.01847662527  null_2.5=0.009052129121  null_97.5=0.02941222527  p=0.006100 (61/10000); inside_null_95pct=False
+    mean_harm               obs=0.02047802198  null_mean=0.01833715604  null_2.5=0.009156456044  null_97.5=0.02933839286  p=0.321600 (3216/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=2  null_mean=0.0339  null_2.5=-5  null_97.5=5  p=0.560600 (5606/10000); inside_null_95pct=True
+    INTERVAL needed: observed 7 is INSIDE null [1, 7] (one-sided >= p=0.026000 260/10000)
+    INTERVAL f: observed 0.07692307692 is INSIDE null [0.01098901099, 0.07692307692] (one-sided >= p=0.026000 260/10000)
+    INTERVAL needless: observed 5 is INSIDE null [1, 7] (one-sided >= p=0.207400 2074/10000)
+    INTERVAL mean_delta: observed 0.01218406593 is INSIDE null [-0.01787651099, 0.01795934066] (one-sided >= p=0.091900 919/10000)
+    INTERVAL mean_help: observed 0.03266208791 is OUTSIDE null [0.009052129121, 0.02941222527] (one-sided >= p=0.006100 61/10000)
+    INTERVAL mean_harm: observed 0.02047802198 is INSIDE null [0.009156456044, 0.02933839286] (one-sided >= p=0.321600 3216/10000)
+    INTERVAL asymmetry: observed 2 is INSIDE null [-5, 5] (two-sided | | p=0.560600 5606/10000)
+    PRECISION needed@δ=0.166: null 97.5th=7; observed needed would have to exceed this to sit above the interval
+  δ=0.100 observed: needed=9/91 f=0.0989010989 needless=7/91 ambiguous=75/91 asymmetry(needed-needless)=2 mean_Δ=+0.0121840659 mean_help=0.0326620879 mean_harm=0.0204780220
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=9  null_mean=6.8313  null_2.5=3  null_97.5=11  p=0.198100 (1981/10000); inside_null_95pct=True
+    f=needed/n              obs=0.0989010989  null_mean=0.07506923077  null_2.5=0.03296703297  null_97.5=0.1208791209  p=0.198100 (1981/10000); inside_null_95pct=True
+    needless                obs=7  null_mean=6.7986  null_2.5=3  null_97.5=11  p=0.554200 (5542/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.01218406593  null_mean=0.0001394692308  null_2.5=-0.01787651099  null_97.5=0.01795934066  p=0.091900 (919/10000); inside_null_95pct=True
+    mean_help               obs=0.03266208791  null_mean=0.01847662527  null_2.5=0.009052129121  null_97.5=0.02941222527  p=0.006100 (61/10000); inside_null_95pct=False
+    mean_harm               obs=0.02047802198  null_mean=0.01833715604  null_2.5=0.009156456044  null_97.5=0.02933839286  p=0.321600 (3216/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=2  null_mean=0.0327  null_2.5=-7  null_97.5=7  p=0.691200 (6912/10000); inside_null_95pct=True
+    INTERVAL needed: observed 9 is INSIDE null [3, 11] (one-sided >= p=0.198100 1981/10000)
+    INTERVAL f: observed 0.0989010989 is INSIDE null [0.03296703297, 0.1208791209] (one-sided >= p=0.198100 1981/10000)
+    INTERVAL needless: observed 7 is INSIDE null [3, 11] (one-sided >= p=0.554200 5542/10000)
+    INTERVAL mean_delta: observed 0.01218406593 is INSIDE null [-0.01787651099, 0.01795934066] (one-sided >= p=0.091900 919/10000)
+    INTERVAL mean_help: observed 0.03266208791 is OUTSIDE null [0.009052129121, 0.02941222527] (one-sided >= p=0.006100 61/10000)
+    INTERVAL mean_harm: observed 0.02047802198 is INSIDE null [0.009156456044, 0.02933839286] (one-sided >= p=0.321600 3216/10000)
+    INTERVAL asymmetry: observed 2 is INSIDE null [-7, 7] (two-sided | | p=0.691200 6912/10000)
+    PRECISION needed@δ=0.100: null 97.5th=11; observed needed would have to exceed this to sit above the interval
+[DEV n_later=0 CONTESTABLE SUBSET SIZE] n=53 (post-hoc)
+
+--- PERM DEV n_later=0 CONTESTABLE POST-HOC n=53 PERM_SEED=20260918 N_PERM=10000 ---
+  method=paired_sign_flip_per_(point,seed); NOT pooled reshuffle
+  sign array shape=(10000, 53, 4) perm_delta shape=(10000, 53)
+  wall_s=0.028
+[POWER / PRECISION of this n_later=0 subset]
+  SUBSET_SIZE n=53
+  under this sign-flip null, mean_Δ 2.5th=-0.0306804245 97.5th=+0.0301893868 interval_width=0.0608698113
+  a |mean_Δ| smaller than this interval's edge cannot fall outside the null interval at this n; that is the resolution of the test, not evidence of absence
+  δ=0.166 observed: needed=7/53 f=0.1320754717 needless=5/53 ambiguous=41/53 asymmetry(needed-needless)=2 mean_Δ=+0.0236132075 mean_help=0.0560801887 mean_harm=0.0324669811
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=7  null_mean=3.2454  null_2.5=1  null_97.5=6  p=0.023200 (232/10000); inside_null_95pct=False
+    f=needed/n              obs=0.1320754717  null_mean=0.06123396226  null_2.5=0.01886792453  null_97.5=0.1132075472  p=0.023200 (232/10000); inside_null_95pct=False
+    needless                obs=5  null_mean=3.2604  null_2.5=1  null_97.5=7  p=0.205000 (2050/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.02361320755  null_mean=-8.981981132e-05  null_2.5=-0.03068042453  null_97.5=0.03018938679  p=0.063000 (630/10000); inside_null_95pct=True
+    mean_help               obs=0.05608018868  null_mean=0.03009981038  null_2.5=0.01456521226  null_97.5=0.04829268868  p=0.004000 (40/10000); inside_null_95pct=False
+    mean_harm               obs=0.03246698113  null_mean=0.03018963019  null_2.5=0.01448584906  null_97.5=0.04882582547  p=0.381600 (3816/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=2  null_mean=-0.015  null_2.5=-5  null_97.5=5  p=0.555400 (5554/10000); inside_null_95pct=True
+    INTERVAL needed: observed 7 is OUTSIDE null [1, 6] (one-sided >= p=0.023200 232/10000)
+    INTERVAL f: observed 0.1320754717 is OUTSIDE null [0.01886792453, 0.1132075472] (one-sided >= p=0.023200 232/10000)
+    INTERVAL needless: observed 5 is INSIDE null [1, 7] (one-sided >= p=0.205000 2050/10000)
+    INTERVAL mean_delta: observed 0.02361320755 is INSIDE null [-0.03068042453, 0.03018938679] (one-sided >= p=0.063000 630/10000)
+    INTERVAL mean_help: observed 0.05608018868 is OUTSIDE null [0.01456521226, 0.04829268868] (one-sided >= p=0.004000 40/10000)
+    INTERVAL mean_harm: observed 0.03246698113 is INSIDE null [0.01448584906, 0.04882582547] (one-sided >= p=0.381600 3816/10000)
+    INTERVAL asymmetry: observed 2 is INSIDE null [-5, 5] (two-sided | | p=0.555400 5554/10000)
+    PRECISION needed@δ=0.166: null 97.5th=6; observed needed would have to exceed this to sit above the interval
+  δ=0.100 observed: needed=9/53 f=0.1698113208 needless=6/53 ambiguous=38/53 asymmetry(needed-needless)=3 mean_Δ=+0.0236132075 mean_help=0.0560801887 mean_harm=0.0324669811
+    one-sided p = n(perm >= obs) / N_PERM
+    needed                  obs=9  null_mean=6.2937  null_2.5=3  null_97.5=10  p=0.126900 (1269/10000); inside_null_95pct=True
+    f=needed/n              obs=0.1698113208  null_mean=0.1187490566  null_2.5=0.05660377358  null_97.5=0.1886792453  p=0.126900 (1269/10000); inside_null_95pct=True
+    needless                obs=6  null_mean=6.3284  null_2.5=3  null_97.5=10  p=0.659200 (6592/10000); inside_null_95pct=True
+    mean_Δ                  obs=0.02361320755  null_mean=-8.981981132e-05  null_2.5=-0.03068042453  null_97.5=0.03018938679  p=0.063000 (630/10000); inside_null_95pct=True
+    mean_help               obs=0.05608018868  null_mean=0.03009981038  null_2.5=0.01456521226  null_97.5=0.04829268868  p=0.004000 (40/10000); inside_null_95pct=False
+    mean_harm               obs=0.03246698113  null_mean=0.03018963019  null_2.5=0.01448584906  null_97.5=0.04882582547  p=0.381600 (3816/10000); inside_null_95pct=True
+    two-sided p for asymmetry = n(|perm| >= |obs|) / N_PERM
+    needed-needless         obs=3  null_mean=-0.0347  null_2.5=-7  null_97.5=7  p=0.482300 (4823/10000); inside_null_95pct=True
+    INTERVAL needed: observed 9 is INSIDE null [3, 10] (one-sided >= p=0.126900 1269/10000)
+    INTERVAL f: observed 0.1698113208 is INSIDE null [0.05660377358, 0.1886792453] (one-sided >= p=0.126900 1269/10000)
+    INTERVAL needless: observed 6 is INSIDE null [3, 10] (one-sided >= p=0.659200 6592/10000)
+    INTERVAL mean_delta: observed 0.02361320755 is INSIDE null [-0.03068042453, 0.03018938679] (one-sided >= p=0.063000 630/10000)
+    INTERVAL mean_help: observed 0.05608018868 is OUTSIDE null [0.01456521226, 0.04829268868] (one-sided >= p=0.004000 40/10000)
+    INTERVAL mean_harm: observed 0.03246698113 is INSIDE null [0.01448584906, 0.04882582547] (one-sided >= p=0.381600 3816/10000)
+    INTERVAL asymmetry: observed 3 is INSIDE null [-7, 7] (two-sided | | p=0.482300 4823/10000)
+    PRECISION needed@δ=0.100: null 97.5th=10; observed needed would have to exceed this to sit above the interval
+
+==============================================================================
+DONE
+PERM_SEED=20260918 N_PERM=10000
+train_complete=397 train_full_logs=397 train_n_later0=175 train_n_later0_contestable=78
+dev_complete=332 dev_full_logs=332 dev_n_later0=91 dev_n_later0_contestable=53
+train_logs opened=1588 missing=0 unreadable=0 expected=1588
+dev_logs opened=1328 missing=0 unreadable=0 expected=1328
+==============================================================================
