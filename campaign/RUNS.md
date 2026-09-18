@@ -1717,7 +1717,7 @@ Three facts from the same table point the same way:
 
 - **Job**: `25412541.aqua`, campaign `hj6_branches_dev_20260917`, split dev, adapter `sft_b`, branch seeds 101/102, commit `dc92a25`.
 - **Coverage**: 1527 of 1528 branches. 382 intervention points; 374 complete; 8 dropped (1 missing every sample, 7 with a null `branch_gpr`).
-- **δ (delta band)** = 0.166, computed by the pre-registered rule — the 75th percentile of |treated[101] − treated[102]| over train points — on train's *partial* data as of 2026-09-17 22:44. ⚠ Flagged clearly as **provisional**: δ is frozen from train and train is still running, so this value can move and every label below moves with it.
+- **δ (delta band)** = 0.166, computed by the pre-registered rule — the 75th percentile of |treated[101] − treated[102]| over train points. ⚠ Originally computed on partial train data as provisional; **confirmed identical (0.166) on the final 734 complete train points**, so no dev number computed against it moves.
 - **Negative control**: with δ unfrozen, all 381 rows return `label_status: incomplete` rather than a fabricated label.
 
 ### Labels over the 374 complete dev points
@@ -1739,7 +1739,7 @@ Three facts from the same table point the same way:
 
 - **f_dev > 0.85**: f_dev = 0.158 is **not** > 0.85, so the timer is not almost-always-useful.
 - **harmful > 0.15**: `harmful` (= needless) = 0.1417 is **just under** the 0.15 flag threshold — close, but did not fire.
-- **f_train < 0.10**: f_train is not yet final (train job still running) and is not reported here.
+- **f_train < 0.10**: f_train is recorded in the Gate B (train) block below (0.1131, does not fire).
 
 ---
 
@@ -1760,3 +1760,61 @@ This is the important finding and it has no pre-registered home, which is itself
 The heterogeneity is **real** — 70 % sign agreement against a 50 % null is not noise — but **weak**, with roughly 72 % of Δ's variance being sampling error.
 
 **Gate B's three pre-registered thresholds all concern f and none of them would have caught this.** A reliability criterion is proposed for Gate B but has not yet been approved by the user, so it is recorded as a proposal, not as a gate.
+
+---
+
+## 🔻 GATE B (train) — verdict, fired harmful flag, and frozen delta band (J6, `hj6_branches_train_20260917`, 2026-09-18)
+
+- **Source**: `branch_runs.jsonl` of `hj6_branches_train_20260917`, 4,188 rows at time of aggregation, re-aggregated on CPU with branch seeds 101/102.
+- **Coverage**: 777 intervention points seen; **734 complete** on seeds 101/102; 43 incomplete. (261 points were already complete on all four seeds at that moment; the ×4 job is still running.)
+- **δ is now FROZEN on train**: `delta_band_delta = 0.166`, by the pre-registered rule, over the 734 complete points. ⚠ This is **identical to the provisional value** used for the dev block, so no dev number computed against it moves.
+- **Mean Δ per point** = **−0.0206**. Stated plainly: on train, the fixed review schedule's average effect on outcome is **negative**.
+- 🔺 **This negative mean is explained, and largely explained away, by an allocation artifact.** A third of review calls fire where the untreated branch already scores 1.0, so Δ there is bounded above by zero and the review cannot help. Excluding those points the timer is break-even and helps slightly more often than it hurts (0.164 vs 0.140). Full stratification, plus the independent compounding effect of later reviews, is in `docs/FOLLOWUPS.md` under "the `harmful` flag fired, and the cause is allocation, not format" (2026-09-18).
+- **Validation**: factual outside `[min(treated), max(treated)]` for 0.16869 of 741 compared; mean signed difference +0.03529.
+
+### Labels over the 734 complete train points (band 0.166)
+
+| label | n | fraction |
+|---|---:|---:|
+| needed | 83 | 0.1131 |
+| needless (= harmful) | 120 | 0.1635 |
+| ambiguous | 531 | 0.7234 |
+
+
+### Verdict against all three pre-registered Gate B thresholds
+
+- **`f_train < 0.10`** → **does not fire** (0.1131). 83 needed points clears the "< 75 positives" concern, so **no fourth teacher/correction seed is required before J5b**.
+- **`f_dev > 0.85`** → **does not fire** (0.158 at two replicates, 0.130 at four).
+- **`harmful > 0.15`** → **🔺 FIRES** at **0.1635** (120 of 734). The pre-registered consequence is to flag the review format in `docs/FOLLOWUPS.md` (see FOLLOWUPS entry). It changes the H3 reading, per the plan's own wording: *a reviewer that hurts one time in seven changes the H3 reading*.
+
+---
+
+## 🔻 The ×4 replicate result (dev) — direct measurement of reliability and label movement (2026-09-18)
+
+The dev ×4 job completed: 3,056 branch runs, 332 points complete on all four seeds × both conditions. This was run specifically to test whether replicates lift label reliability, and it is the direct measurement that the earlier two-seed analysis could only predict.
+
+### Reliability scaling
+
+| quantity | predicted from 2 seeds | measured at 4 seeds |
+|---|---:|---:|
+| mean single-replicate Pearson r | 0.164 | **0.1697** |
+| reliability of the 2-replicate mean | 0.282 | **0.2902** |
+| reliability of the 4-replicate mean | 0.440 | **0.4504** |
+
+
+The 4-replicate figure is measured directly: three distinct 2-vs-2 splits of the four seeds, each half-mean correlated with the other and Spearman-Brown corrected. The three splits give 0.5026, 0.3074 and 0.5412; the mean is 0.4504. ⚠ Record that spread — it is estimation noise in r at n = 332 and it means 0.45 is a central estimate, not a tight one.
+
+Mean single-replicate Spearman ρ = 0.1951.
+
+### Label movement over the same 332 points (band 0.166)
+
+- **2-seed mean**: needed 50, needless 48, ambiguous 234
+- **4-seed mean**: needed 43, needless 43, ambiguous 246
+- **Agreement**: 276/332 = **0.8313**; outright needed ↔ needless flips = **0**
+
+### Substantive reading and consequence for the headline
+
+Every disagreement is a borderline point crossing the band, never a sign reversal, which is what noise reduction looks like rather than labels breaking.
+
+**Consequence for the headline**: The two-replicate *f* was inflated by noise pushing borderline points over the band. At four replicates, f_dev falls to **0.130** and **1 − f rises from 0.843 to 0.870**. The fixed schedule is *more* wasteful than the earlier figure suggested, not less.
+

@@ -466,6 +466,67 @@ Two consequences:
    requires comparing the line count of `branch_runs.jsonl` against the directory count of
    completed branches, as the PBS job continues running without error.
 
+**Startup rebuild hazard on `--resume`:**
+`rebuild_derived` is **also called at startup** when `--resume` is set (`scripts/setup/branch_counterfactual.py:1099-1100`), not only at the end. Observed 2026-09-18: the train ×4 job started at 04:58:37 and at 05:00:30 its startup rebuild — which requires all four branch seeds per point — found no point complete and wrote an **empty** `branches.jsonl`, `oracle_labels.json` and manifest over the 2-seed aggregation the previous resume job had produced minutes earlier.
+
+Nothing was lost, because `branch_runs.jsonl` is append-only and the 2-seed view rebuilds on CPU in about 70 s. But record the trap: **the derived files are not a safe place to keep a result while a job with a different `--branch-seeds` may start against the same tree**, and an empty `branches.jsonl` beside a healthy `branch_runs.jsonl` is expected mid-campaign rather than a sign of failure.
+
 Suggested fixes (recorded, not implemented):
 - A per-branch wall-clock timeout that records an error row and moves on.
 - Periodic incremental aggregation so a killed or partial job still yields labels.
+
+## OPEN 2026-09-18 — the `harmful` flag fired, and the cause is allocation, not format
+
+Gate B's pre-registered `harmful > 0.15` flag fired on train: `harmful` (= `needless`) is
+**0.1635** over 734 complete points, and the mean Δ per point is **−0.0206**. On dev the same
+quantities are 0.1417 and +0.0068. Taken at face value this says a fixed five-step expert
+review changes the outcome *for the worse* about one call in six.
+
+The face value is misleading, and the follow-up analysis is the entry worth reading.
+
+**A third of all review calls fire where the episode was already going to succeed.**
+Stratifying the 734 train points by the outcome of the *untreated* branch — the counterfactual
+in which the review never happened:
+
+| stratum | n | mean Δ | harm | help |
+|---|---:|---:|---:|---:|
+| untreated already 1.0 | 232 (32 %) | −0.0884 | 0.220 | **0.000** |
+| untreated in between | 493 | **+0.0098** | 0.140 | **0.164** |
+| untreated already 0.0 | 9 | +0.0612 | 0.000 | 0.222 |
+
+At the 232 ceiling points a review **cannot** help: goal-pass rate is already 1.0, so Δ is
+bounded above by zero. `help = 0.000` there is a definitional consequence, not a measurement
+of the reviewer. Those points alone contribute −0.0279 of the −0.0206 overall mean — i.e. the
+entire negative mean and then some. **On the 493 points where there was headroom, the timer is
+roughly break-even and helps slightly more often than it hurts (0.164 vs 0.140).**
+
+**Second, independent effect: reviews compound.** Harm rises with the number of reviews still
+to come — 12.9 % at none, 14.6 % at one, **25.9 % at two or more**, while help stays flat near
+10 %. `r(Δ, n_later) = −0.147`, the largest of any predictor by a factor of three. It survives
+stratification by position (step ≤5: −0.014 → −0.081; step 6–10: +0.015 → −0.058; step 11+:
+−0.020 → −0.058) and by baseline outcome, so it is not merely a proxy for a struggling episode.
+
+**What does *not* predict harm.** Timing is inert: `r(Δ, step) = +0.029`, and `step`, `replay_k`
+and `i` are collinear by construction (`review_every_k = 5`, so step = 5(i+1)) — they return
+byte-identical correlations and are one variable, not three. Content is nearly inert too:
+correction length `r = −0.009`, mentions `complete_task` `r = +0.006`, contains concrete API
+code `r = −0.044`. The last is the only content signal with a consistent direction —
+prescriptive corrections carrying `apis.x.y(...)` harm 22.0 % of the time against 15.2 % for
+prose-only advice — and it is weak.
+
+**Reading.** The flag is real but it does not indict the review *format*. It indicts the
+*schedule*: a fixed timer spends a third of its calls where nothing can be gained, and fires
+often enough that its nudges accumulate. That is the condition adaptive allocation exists for,
+and it is direct support for the campaign's thesis rather than evidence against it.
+
+⚠ The stratifying variable is the untreated branch's outcome, which is **observed only
+counterfactually**. A live router cannot see it. Predicting "this episode is already on track"
+from state alone is exactly the `FeatureVerifier`'s job (J7), and this analysis sets the target
+it has to hit: identify the 32 % ceiling points and stay silent.
+
+Open questions, not yet answered:
+- whether the reviewer repeats itself across successive ticks (would explain the compounding);
+- whether harmful corrections are *wrong* or merely *unnecessary* — being read separately.
+
+Numbers from `branch_runs.jsonl` of `hj6_branches_train_20260917` (4188 rows at the time),
+aggregated by the repo's own `rebuild_derived` at band 0.166 frozen on train.
