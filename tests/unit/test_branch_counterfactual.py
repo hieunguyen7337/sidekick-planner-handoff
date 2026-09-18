@@ -772,3 +772,359 @@ def test_default_run_episode_still_starts_at_step_one(tmp_path):
     action_steps = [e.step for e in events if e.event_type == "action"]
     assert action_steps[0] == 1
     assert result.error_type is None
+
+
+# ---------------------------------------------------------------------------
+# W-15: crashed-branch recovery, planner-cost visibility, campaign budget
+# ---------------------------------------------------------------------------
+
+
+def _base_row(**over) -> dict:
+    row = {
+        "campaign": "camp",
+        "seed": 1,
+        "task_id": "copy_hello",
+        "i": 0,
+        "step": 5,
+        "condition": "treated",
+        "branch_seed": 101,
+        "branch_gpr": 0.9,
+        "branch_error_type": None,
+        "branch_planner_calls": 4,
+        "branch_planner_tokens": 6200,
+        "run_id": "camp/fixed_k/1/copy_hello/b_treated_101_i0",
+    }
+    row.update(over)
+    return row
+
+
+def test_aggregation_last_row_wins_over_crashed_row():
+    crashed = _base_row(branch_gpr=None, branch_error_type="crash", branch_steps=None, run_id="crash_run")
+    ok = _base_row()
+    _, samples = bc.group_branch_samples([crashed, ok])
+    sample = samples["camp/1/copy_hello/0"][("treated", 101)]
+    assert sample["branch_gpr"] == 0.9
+    assert sample["branch_error_type"] is None
+    # reversed order: the crash is the last row, so it wins (append-only semantics)
+    _, samples2 = bc.group_branch_samples([ok, crashed])
+    assert samples2["camp/1/copy_hello/0"][("treated", 101)]["branch_gpr"] is None
+    assert bc.is_done_row(ok) is True
+    assert bc.is_done_row(crashed) is False
+
+
+def test_resume_retries_crashed_branch_unless_no_retry_errors(tmp_path):
+    campaign = tmp_path / "hj15_retry"
+    write_episode(campaign, goal_pass_rate=1.0)
+    out1 = tmp_path / "branches_retry"
+    first = bc.run_branches(
+        campaign_root=campaign,
+        out_root=out1,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=1,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+    )
+    assert first["n_finished"] == 1
+    good_row = bc.load_jsonl(out1 / "branch_runs.jsonl")[0]
+    bc.append_jsonl(
+        out1 / "branch_runs.jsonl",
+        dict(
+            good_row,
+            branch_gpr=None,
+            branch_error_type="crash",
+            run_id=good_row["run_id"] + "_crash",
+        ),
+    )
+
+    # default: the crashed branch is re-dispatched and superseded
+    retried = bc.run_branches(
+        campaign_root=campaign,
+        out_root=out1,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=None,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+    )
+    assert retried["n_jobs"] >= 1
+    rows = bc.load_jsonl(out1 / "branch_runs.jsonl")
+    same_key = [r for r in rows if r["key"] == good_row["key"]]
+    assert len(same_key) >= 3  # original + crash + new successful row
+    assert bc.is_done_row(same_key[-1]) is True
+    assert good_row["key"] in bc.completed_branch_keys(rows)
+
+    # --no-retry-errors: the same crashed row still counts as done (old behaviour)
+    out2 = tmp_path / "branches_noretry"
+    bc.run_branches(
+        campaign_root=campaign,
+        out_root=out2,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=1,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+    )
+    row2 = bc.load_jsonl(out2 / "branch_runs.jsonl")[0]
+    bc.append_jsonl(
+        out2 / "branch_runs.jsonl",
+        dict(
+            row2,
+            branch_gpr=None,
+            branch_error_type="crash",
+            run_id=row2["run_id"] + "_crash",
+        ),
+    )
+    kept = bc.run_branches(
+        campaign_root=campaign,
+        out_root=out2,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=None,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+        retry_errors=False,
+    )
+    # the 7 never-run branches are dispatched, but the crashed key is NOT retried
+    assert kept["n_jobs"] == 7
+    rows2 = bc.load_jsonl(out2 / "branch_runs.jsonl")
+    assert sum(1 for r in rows2 if r["key"] == row2["key"]) == 2
+
+
+def test_resume_never_redispatches_successful_branch(tmp_path):
+    campaign = tmp_path / "hj15_over"
+    write_episode(campaign, goal_pass_rate=1.0)
+    out1 = tmp_path / "branches_over"
+    bc.run_branches(
+        campaign_root=campaign,
+        out_root=out1,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=None,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+    )
+    n_rows = len(bc.load_jsonl(out1 / "branch_runs.jsonl"))
+    again = bc.run_branches(
+        campaign_root=campaign,
+        out_root=out1,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=None,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+    )
+    assert again["n_jobs"] == 0
+    assert again["n_finished"] == 0
+    assert len(bc.load_jsonl(out1 / "branch_runs.jsonl")) == n_rows
+
+
+def test_budget_stops_early_exits_cleanly_and_resume_continues(tmp_path, capsys):
+    campaign = tmp_path / "hj15_budget"
+    # review_every_k=2 so the branch episode actually reaches a live review and
+    # spends >=1 planner call (the default k=5 fixture ends before any review)
+    events = []
+    for ev in two_intervention_events():
+        if ev.event_type == "run_start":
+            payload = dict(ev.payload or {})
+            policy = dict(payload.get("policy") or {})
+            policy["review_every_k"] = 2
+            payload["policy"] = policy
+            ev = ev.model_copy(update={"payload": payload})
+        events.append(ev)
+    write_episode(campaign, events=events, goal_pass_rate=1.0)
+    out1 = tmp_path / "branches_budget"
+    summary = bc.run_branches(
+        campaign_root=campaign,
+        out_root=out1,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=None,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+        max_planner_calls_total=1,
+    )
+    assert summary["budget_stopped"] is True
+    assert summary["budget_max_planner_calls_total"] == 1
+    assert summary["n_finished"] < summary["n_jobs"]
+    assert (out1 / "branches.jsonl").is_file()
+    assert (out1 / "manifest.json").is_file()
+    out_text = capsys.readouterr().out
+    assert "PLANNER_BUDGET_STOPPED" in out_text
+    assert "PREFLIGHT" in out_text
+    rows = bc.load_jsonl(out1 / "branch_runs.jsonl")
+    assert rows and all(r["branch_planner_calls"] is not None for r in rows)
+    n_rows = len(rows)
+
+    # a resume with the budget unset continues from where the stop happened
+    resumed = bc.run_branches(
+        campaign_root=campaign,
+        out_root=out1,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=None,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+    )
+    assert resumed["budget_stopped"] is False
+    all_rows = bc.load_jsonl(out1 / "branch_runs.jsonl")
+    assert len(all_rows) > n_rows
+    assert len(bc.completed_branch_keys(all_rows)) == 8
+
+
+def test_branch_rows_carry_planner_cost_and_null_when_unavailable(tmp_path):
+    campaign = tmp_path / "hj15_cost"
+    write_episode(campaign, goal_pass_rate=1.0)
+    out1 = tmp_path / "branches_cost"
+    bc.run_branches(
+        campaign_root=campaign,
+        out_root=out1,
+        split="train",
+        branch_seeds=[101, 102],
+        workers=1,
+        resume=True,
+        limit=2,
+        env_kind="mock",
+        config={"executor_type": "mock"},
+        prices_path=str(PRICES),
+    )
+    rows = bc.load_jsonl(out1 / "branch_runs.jsonl")
+    assert len(rows) == 2
+    for row in rows:
+        assert "branch_planner_calls" in row
+        assert "branch_planner_tokens" in row
+        assert row["branch_planner_calls"] is not None and row["branch_planner_calls"] >= 0
+        assert row["branch_planner_tokens"] is not None and row["branch_planner_tokens"] >= 0
+
+    # unavailable -> None, never a silent 0: no result, no events
+    job = {
+        "out_root": str(tmp_path / "nowhere"),
+        "run_id": "missing_run",
+        "campaign": "camp",
+        "seed": 1,
+        "task_id": "copy_hello",
+        "i": 0,
+        "condition": "treated",
+        "branch_seed": 101,
+        "key": "k",
+    }
+    point = {"step": 5, "correction": "c"}
+    row = bc._row_from_result(job, point, 3, None, "crash")
+    assert row["branch_planner_calls"] is None
+    assert row["branch_planner_tokens"] is None
+    # result source wins when present (result.json carries n_planner_calls / totals)
+    calls, tokens = bc.planner_cost_from_result(
+        {"n_planner_calls": 7, "totals": {"planner_tokens_total": 999}}
+    )
+    assert (calls, tokens) == (7, 999)
+    ev_calls, ev_tokens = bc.planner_cost_from_events(tmp_path / "nowhere" / "missing_run")
+    assert ev_calls is None and ev_tokens is None
+
+
+def test_planner_cost_from_events_matches_ledger_four_field_tokens(tmp_path):
+    usage = {
+        "model": "gpt-5.6-luna",
+        "provider": "codex",
+        "input_tokens": 11,
+        "cached_input_tokens": 22,
+        "output_tokens": 33,
+        "reasoning_output_tokens": 44,
+        "n_calls": 3,
+    }
+    planner_ev = _event(
+        event_type="plan", step=0, actor="planner", payload={}, usage=usage
+    )
+    executor_ev = _event(
+        event_type="action",
+        step=1,
+        actor="executor",
+        payload={},
+        usage={
+            "model": "local",
+            "provider": "vllm",
+            "input_tokens": 999,
+            "cached_input_tokens": 999,
+            "output_tokens": 999,
+            "reasoning_output_tokens": 999,
+            "n_calls": 9,
+        },
+    )
+    run_dir = tmp_path / "four_field"
+    run_dir.mkdir()
+    with open(run_dir / "events.jsonl", "w", encoding="utf-8") as fh:
+        fh.write(planner_ev.model_dump_json() + "\n")
+        fh.write(executor_ev.model_dump_json() + "\n")
+    calls, tokens = bc.planner_cost_from_events(run_dir)
+    led = CostLedger(PriceSchedule.load(PRICES))
+    led.add("planner", planner_ev.usage)
+    assert tokens == led.totals()["planner_tokens_total"]
+    assert tokens == 11 + 22 + 33 + 44
+    assert calls == 3
+
+
+def test_planner_cost_from_events_n_calls_zero_stays_zero_missing_defaults_to_one(tmp_path):
+    zero_dir = tmp_path / "n_calls_zero"
+    zero_dir.mkdir()
+    zero_ev = _event(
+        event_type="plan",
+        step=0,
+        actor="planner",
+        payload={},
+        usage={
+            "model": "gpt-5.6-luna",
+            "provider": "codex",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "n_calls": 0,
+        },
+    )
+    (zero_dir / "events.jsonl").write_text(zero_ev.model_dump_json() + "\n", encoding="utf-8")
+    calls, _ = bc.planner_cost_from_events(zero_dir)
+    assert calls == 0
+
+    missing_dir = tmp_path / "n_calls_missing"
+    missing_dir.mkdir()
+    raw = {
+        "run_id": "camp/fixed_k/1/copy_hello",
+        "task_id": "copy_hello",
+        "system": "fixed_k",
+        "seed": 1,
+        "step": 0,
+        "ts": "2023-05-18T12:00:00+00:00",
+        "actor": "planner",
+        "event_type": "plan",
+        "payload": {},
+        "usage": {
+            "model": "gpt-5.6-luna",
+            "provider": "codex",
+            "input_tokens": 1,
+            "output_tokens": 1,
+        },
+    }
+    (missing_dir / "events.jsonl").write_text(json.dumps(raw) + "\n", encoding="utf-8")
+    calls, _ = bc.planner_cost_from_events(missing_dir)
+    assert calls == 1

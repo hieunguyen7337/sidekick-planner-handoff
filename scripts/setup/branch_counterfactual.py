@@ -429,23 +429,48 @@ def load_split_filter(split: str | None) -> set[str] | None:
         return None
 
 
-def completed_branch_keys(rows: list[dict[str, Any]]) -> set[str]:
-    keys: set[str] = set()
+def is_done_row(row: dict[str, Any]) -> bool:
+    """A row is done only if it represents a usable result, not a crashed one.
+
+    ``branch_error_type`` must be falsy, and the row must carry a usable metric:
+    ``branch_gpr is not None`` (the brief's criterion; every production crash row
+    has ``branch_gpr: null`` and ``branch_error_type: "crash"`` [OBSERVED
+    scripts/setup/branch_counterfactual.py:980-985]) or, for environments that
+    return no GPR at all (e.g. the mock env used by the suite), a recorded
+    ``branch_steps``. Rows failing this are retried on the next resume;
+    ``branch_runs.jsonl`` stays append-only and superseding happens at
+    aggregation time (last row per key wins, matching ``group_branch_samples``
+    [OBSERVED :631]).
+    """
+    if row.get("branch_error_type"):
+        return False
+    return row.get("branch_gpr") is not None or row.get("branch_steps") is not None
+
+
+def completed_branch_keys(rows: list[dict[str, Any]], *, retry_errors: bool = True) -> set[str]:
+    """Keys whose last row represents a usable (done) result.
+
+    Last row per key wins, mirroring the aggregation's ``setdefault`` overwrite
+    [OBSERVED :631]. With ``retry_errors=False`` the pre-W15 behaviour is restored:
+    every row counts, including crashed ones, so a run can be reproduced exactly.
+    """
+    last: dict[str, dict[str, Any]] = {}
     for row in rows:
         try:
-            keys.add(
-                branch_key(
-                    str(row["campaign"]),
-                    int(row["seed"]),
-                    str(row["task_id"]),
-                    int(row["i"]),
-                    str(row["condition"]),
-                    int(row["branch_seed"]),
-                )
+            key = branch_key(
+                str(row["campaign"]),
+                int(row["seed"]),
+                str(row["task_id"]),
+                int(row["i"]),
+                str(row["condition"]),
+                int(row["branch_seed"]),
             )
         except (KeyError, TypeError, ValueError):
             continue
-    return keys
+        last[key] = row
+    if not retry_errors:
+        return set(last)
+    return {key for key, row in last.items() if is_done_row(row)}
 
 
 def aux_from_branch_events(run_dir: Path, fallback_gpr: float | None) -> tuple[float | None, int]:
@@ -792,6 +817,60 @@ def _make_planner(job: dict[str, Any]):
     return make_planner(cfg)
 
 
+def planner_cost_from_events(run_dir: Path) -> tuple[int | None, int | None]:
+    """(planner calls, planner tokens) from a branch run's own events.jsonl.
+
+    Sums ``usage`` over events whose actor is the planner. Returns ``(None, None)``
+    when the log is missing or carries no planner usage — never a silent 0.
+    """
+    path = run_dir / "events.jsonl"
+    if not path.is_file():
+        return None, None
+    try:
+        events = list(EventLog.read(path))
+    except Exception:
+        return None, None
+    calls = 0
+    tokens = 0
+    seen = False
+    for ev in events:
+        if ev.actor != "planner" or ev.usage is None:
+            continue
+        seen = True
+        # Usage.n_calls is Field(1, ge=0): missing/None may default to 1, but a
+        # recorded 0 is measured-zero and must not be coerced [schemas.py:34-36].
+        n_calls = ev.usage.n_calls
+        calls += 1 if n_calls is None else int(n_calls)
+        # Same four fields as CostLedger._tokens [ledger.py:47-53].
+        tokens += CostLedger._tokens(ev.usage.model_dump())
+    return (calls, tokens) if seen else (None, None)
+
+
+def planner_cost_from_result(dumped: dict[str, Any] | None) -> tuple[int | None, int | None]:
+    """(planner calls, planner tokens) from an episode result, else (None, None).
+
+    Primary source: ``RunResult.n_planner_calls`` [OBSERVED
+    src/sidekick/protocols/schemas.py:141] and ``totals["planner_tokens_total"]``
+    [OBSERVED src/sidekick/cost/ledger.py:40].
+    """
+    if dumped is None:
+        return None, None
+    calls = dumped.get("n_planner_calls")
+    if calls is not None:
+        try:
+            calls = int(calls)
+        except (TypeError, ValueError):
+            calls = None
+    totals = dumped.get("totals") or {}
+    tokens = totals.get("planner_tokens_total")
+    if tokens is not None:
+        try:
+            tokens = int(tokens)
+        except (TypeError, ValueError):
+            tokens = None
+    return calls, tokens
+
+
 def _row_from_result(
     job: dict[str, Any],
     point: dict[str, Any],
@@ -813,6 +892,14 @@ def _row_from_result(
     local, n_later = aux_from_branch_events(
         Path(job["out_root"]) / job["run_id"], result_gpr({"goal_pass_rate": gpr})
     )
+    run_dir = Path(job["out_root"]) / job["run_id"]
+    calls, tokens = planner_cost_from_result(dumped)
+    if calls is None or tokens is None:
+        ev_calls, ev_tokens = planner_cost_from_events(run_dir)
+        if calls is None:
+            calls = ev_calls
+        if tokens is None:
+            tokens = ev_tokens
     return {
         "campaign": job["campaign"],
         "seed": job["seed"],
@@ -828,6 +915,8 @@ def _row_from_result(
         "branch_solved": solved,
         "branch_steps": steps,
         "branch_error_type": err if dumped is not None else (error_type or "crash"),
+        "branch_planner_calls": calls,
+        "branch_planner_tokens": tokens,
         "n_later_reviews": n_later,
         "correction": point["correction"],
         "run_id": job["run_id"],
@@ -843,7 +932,9 @@ def run_one_branch(job: dict[str, Any]) -> dict[str, Any]:
     key = job["key"]
     branch_path = out_root / "branch_runs.jsonl"
     if job.get("resume"):
-        if key in completed_branch_keys(load_jsonl(branch_path)):
+        if key in completed_branch_keys(
+            load_jsonl(branch_path), retry_errors=bool(job.get("retry_errors", True))
+        ):
             return {"skipped": True, "key": key}
         result_file = out_root / job["run_id"] / "result.json"
         if result_file.is_file():
@@ -1003,9 +1094,16 @@ def collect_jobs(
     config: dict[str, Any],
     prices_path: str,
     adapter_fallback: str | None,
+    retry_errors: bool = True,
 ) -> list[dict[str, Any]]:
     campaign = campaign_root.name
-    done = completed_branch_keys(load_jsonl(out_root / "branch_runs.jsonl")) if resume else set()
+    done = (
+        completed_branch_keys(
+            load_jsonl(out_root / "branch_runs.jsonl"), retry_errors=retry_errors
+        )
+        if resume
+        else set()
+    )
     split_ids = load_split_filter(split) if env_kind == "appworld" else None
     jobs: list[dict[str, Any]] = []
     for task_dir in iter_episode_dirs(campaign_root):
@@ -1061,6 +1159,7 @@ def collect_jobs(
                             "prices_path": prices_path,
                             "adapter": adapter,
                             "resume": resume,
+                            "retry_errors": retry_errors,
                             "split": split,
                             "review_every_k": review_k,
                             "correction": point["correction"],
@@ -1085,6 +1184,8 @@ def run_branches(
     prices_path: str | None,
     delta_band_delta: float | None = None,
     train_manifest: str | Path | None = None,
+    retry_errors: bool = True,
+    max_planner_calls_total: int | None = None,
 ) -> dict[str, Any]:
     out_root.mkdir(parents=True, exist_ok=True)
     cfg = dict(config or {})
@@ -1117,16 +1218,88 @@ def run_branches(
         config=cfg,
         prices_path=prices,
         adapter_fallback=adapter_fallback,
+        retry_errors=retry_errors,
     )
+    # Per-branch planner-call factor, stated explicitly: the per-episode cap from
+    # config (the same `max_planner_calls` the loop enforces per branch). It is an
+    # upper bound, not a hidden constant — the projection line names it.
+    planner_factor = int(
+        ((cfg.get("limits") or {}).get("max_planner_calls")) or DEFAULT_MAX_PLANNER_CALLS
+    )
+    print(
+        "PREFLIGHT "
+        + json.dumps(
+            {
+                "branches_to_run": len(jobs),
+                "per_branch_planner_call_factor": planner_factor,
+                "projected_planner_calls": len(jobs) * planner_factor,
+                "factor_source": "config limits.max_planner_calls (per-episode cap)",
+                "max_planner_calls_total": max_planner_calls_total,
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+
+    def _row_planner_calls(res: dict[str, Any]) -> int:
+        row = res.get("row") or {}
+        calls = row.get("branch_planner_calls")
+        # Unknown cost is charged at the per-branch factor, never silently 0.
+        return int(calls) if calls is not None else planner_factor
+
+    def _spent_from_rows(rows: list[dict[str, Any]]) -> int:
+        last: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            if all(k in row for k in ("campaign", "seed", "task_id", "i", "condition", "branch_seed")):
+                try:
+                    key = branch_key(
+                        str(row["campaign"]),
+                        int(row["seed"]),
+                        str(row["task_id"]),
+                        int(row["i"]),
+                        str(row["condition"]),
+                        int(row["branch_seed"]),
+                    )
+                except (KeyError, TypeError, ValueError):
+                    continue
+                last[key] = row
+        spent = 0
+        for row in last.values():
+            calls = row.get("branch_planner_calls")
+            if calls is not None and is_done_row(row):
+                spent += int(calls)
+        return spent
+
+    spent = _spent_from_rows(load_jsonl(out_root / "branch_runs.jsonl"))
     results: list[dict[str, Any]] = []
+    budget_stopped = False
     n_workers = max(1, int(workers))
     if jobs:
         if n_workers <= 1 or len(jobs) == 1:
-            results = [_mp_worker(job) for job in jobs]
+            for job in jobs:
+                if max_planner_calls_total is not None and spent >= max_planner_calls_total:
+                    budget_stopped = True
+                    break
+                res = _mp_worker(job)
+                results.append(res)
+                spent += _row_planner_calls(res)
         else:
+            # Wave dispatch: in-flight branches always finish normally; the budget
+            # is only checked between waves, before new branches are dispatched.
             ctx = multiprocessing.get_context("fork")
             with ctx.Pool(min(n_workers, len(jobs))) as pool:
-                results = list(pool.imap_unordered(_mp_worker, jobs))
+                idx = 0
+                while idx < len(jobs):
+                    if max_planner_calls_total is not None and spent >= max_planner_calls_total:
+                        budget_stopped = True
+                        break
+                    wave = jobs[idx : idx + n_workers]
+                    idx += len(wave)
+                    asyncs = [pool.apply_async(_mp_worker, (j,)) for j in wave]
+                    for a in asyncs:
+                        res = a.get()
+                        results.append(res)
+                        spent += _row_planner_calls(res)
     used_delta = rebuild_derived(
         out_root,
         branch_seeds,
@@ -1141,6 +1314,21 @@ def run_branches(
     print("FACTUAL_VS_TREATED " + json.dumps(factual, sort_keys=True), flush=True)
     print("DELTA_BAND_DELTA " + json.dumps(used_delta), flush=True)
     n_skipped = sum(1 for r in results if r.get("skipped"))
+    if budget_stopped:
+        print(
+            "PLANNER_BUDGET_STOPPED "
+            + json.dumps(
+                {
+                    "max_planner_calls_total": max_planner_calls_total,
+                    "planner_calls_spent": spent,
+                    "n_branches_run": sum(1 for r in results if not r.get("skipped")),
+                    "n_branches_remaining": len(jobs) - len(results),
+                    "note": "resume with --resume continues from where this stopped",
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
     return {
         "out_root": str(out_root),
         "n_jobs": len(jobs),
@@ -1150,6 +1338,9 @@ def run_branches(
         "n_points": len(point_rows),
         "delta_band_delta": used_delta,
         "factual_vs_treated": factual,
+        "budget_max_planner_calls_total": max_planner_calls_total,
+        "budget_stopped": budget_stopped,
+        "planner_calls_spent": spent,
     }
 
 
@@ -1180,6 +1371,25 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Train-split manifest.json to read frozen delta_band_delta from.",
     )
+    parser.add_argument(
+        "--no-retry-errors",
+        dest="retry_errors",
+        action="store_false",
+        help=(
+            "Pre-W15 resume behaviour: crashed/error rows still count as done, "
+            "so a run can be reproduced exactly as it was."
+        ),
+    )
+    parser.set_defaults(retry_errors=True)
+    parser.add_argument(
+        "--max-planner-calls-total",
+        type=int,
+        default=None,
+        help=(
+            "Campaign-level planner-call budget. Once observed total crosses N, "
+            "stop dispatching new branches, aggregate, and exit 0 (resume continues)."
+        ),
+    )
     return parser
 
 
@@ -1198,6 +1408,8 @@ def main(argv: list[str] | None = None) -> int:
         prices_path=args.prices,
         delta_band_delta=args.delta_band_delta,
         train_manifest=args.train_manifest,
+        retry_errors=bool(args.retry_errors),
+        max_planner_calls_total=args.max_planner_calls_total,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0

@@ -1,0 +1,193 @@
+=== W-20 CEILING ANALYSIS ===
+
+=======================================================
+DATASET: TRAIN
+File: /scratch/n12194778/sidekick/results/hj6_branches_train_20260917/branch_runs.jsonl
+Total rows: 6216, Null gpr rows: 1357
+Total points: 777, Complete 4-rep points: 397
+Incomplete points: 380
+=======================================================
+
+[FLOAT NOISE / THRESHOLD SENSITIVITY CHECK]
+Ceiling (mean_u >= 1.0):   131
+Ceiling (mean_u >= 0.999): 131 (diff = 0)
+Floor (mean_u <= 0.0 & mean_t <= 0.0):     3
+Floor (mean_u <= 0.001 & mean_t <= 0.001): 3 (diff = 0)
+Ceiling points: max Δ = +0.000000, min Δ = -0.625000, mean Δ = -0.049172
+Ceiling points with Δ > 0: 0
+Ceiling points with Δ == 0: 99
+Ceiling points with Δ < 0: 32
+Floor points: max Δ = +0.000000, min Δ = +0.000000, mean Δ = +0.000000
+Floor points with Δ != 0: 0
+
+--- Subset: ALL COMPLETE POINTS ---
+Count: n = 397 (1.0000 of total 397)
+mean(treated)   = 0.763704
+mean(untreated) = 0.778097
+mean(Δ)         = -0.014393 (SD = 0.149548)
+mean(help)      = 0.034101
+mean(harm)      = 0.048494
+  δ = 0.166: needed = 25 (25/397 = 0.0630), needless = 46 (46/397 = 0.1159), ambiguous = 326 (326/397 = 0.8212) | f = 0.0630, 1-f = 0.9370
+  δ = 0.100: needed = 54 (54/397 = 0.1360), needless = 67 (67/397 = 0.1688), ambiguous = 276 (276/397 = 0.6952) | f = 0.1360, 1-f = 0.8640
+  δ = 0.083: needed = 62 (62/397 = 0.1562), needless = 78 (78/397 = 0.1965), ambiguous = 257 (257/397 = 0.6474) | f = 0.1562, 1-f = 0.8438
+  δ = 0.200: needed = 18 (18/397 = 0.0453), needless = 33 (33/397 = 0.0831), ambiguous = 346 (346/397 = 0.8715) | f = 0.0453, 1-f = 0.9547
+
+--- Subset: CEILING POINTS (mean_u >= 1.0) ---
+Count: n = 131 (0.3300 of total 397)
+mean(treated)   = 0.950828
+mean(untreated) = 1.000000
+mean(Δ)         = -0.049172 (SD = 0.118553)
+mean(help)      = 0.000000
+mean(harm)      = 0.049172
+  δ = 0.166: needed = 0 (0/131 = 0.0000), needless = 15 (15/131 = 0.1145), ambiguous = 116 (116/131 = 0.8855) | f = 0.0000, 1-f = 1.0000
+  δ = 0.100: needed = 0 (0/131 = 0.0000), needless = 22 (22/131 = 0.1679), ambiguous = 109 (109/131 = 0.8321) | f = 0.0000, 1-f = 1.0000
+  δ = 0.083: needed = 0 (0/131 = 0.0000), needless = 23 (23/131 = 0.1756), ambiguous = 108 (108/131 = 0.8244) | f = 0.0000, 1-f = 1.0000
+  δ = 0.200: needed = 0 (0/131 = 0.0000), needless = 10 (10/131 = 0.0763), ambiguous = 121 (121/131 = 0.9237) | f = 0.0000, 1-f = 1.0000
+
+--- Subset: FLOOR POINTS (mean_u <= 0 and mean_t <= 0) ---
+Count: n = 3 (0.0076 of total 397)
+mean(treated)   = 0.000000
+mean(untreated) = 0.000000
+mean(Δ)         = +0.000000 (SD = 0.000000)
+mean(help)      = 0.000000
+mean(harm)      = 0.000000
+  δ = 0.166: needed = 0 (0/3 = 0.0000), needless = 0 (0/3 = 0.0000), ambiguous = 3 (3/3 = 1.0000) | f = 0.0000, 1-f = 1.0000
+  δ = 0.100: needed = 0 (0/3 = 0.0000), needless = 0 (0/3 = 0.0000), ambiguous = 3 (3/3 = 1.0000) | f = 0.0000, 1-f = 1.0000
+  δ = 0.083: needed = 0 (0/3 = 0.0000), needless = 0 (0/3 = 0.0000), ambiguous = 3 (3/3 = 1.0000) | f = 0.0000, 1-f = 1.0000
+  δ = 0.200: needed = 0 (0/3 = 0.0000), needless = 0 (0/3 = 0.0000), ambiguous = 3 (3/3 = 1.0000) | f = 0.0000, 1-f = 1.0000
+
+--- Subset: CONTESTABLE POINTS (non-ceiling & non-floor) ---
+Count: n = 263 (0.6625 of total 397)
+mean(treated)   = 0.679209
+mean(untreated) = 0.676443
+mean(Δ)         = +0.002766 (SD = 0.161017)
+mean(help)      = 0.051475
+mean(harm)      = 0.048709
+  δ = 0.166: needed = 25 (25/263 = 0.0951), needless = 31 (31/263 = 0.1179), ambiguous = 207 (207/263 = 0.7871) | f = 0.0951, 1-f = 0.9049
+  δ = 0.100: needed = 54 (54/263 = 0.2053), needless = 45 (45/263 = 0.1711), ambiguous = 164 (164/263 = 0.6236) | f = 0.2053, 1-f = 0.7947
+  δ = 0.083: needed = 62 (62/263 = 0.2357), needless = 55 (55/263 = 0.2091), ambiguous = 146 (146/263 = 0.5551) | f = 0.2357, 1-f = 0.7643
+  δ = 0.200: needed = 18 (18/263 = 0.0684), needless = 23 (23/263 = 0.0875), ambiguous = 222 (222/263 = 0.8441) | f = 0.0684, 1-f = 0.9316
+
+--- Subset: NON-CEILING POINTS (all minus ceiling) ---
+Count: n = 266 (0.6700 of total 397)
+mean(treated)   = 0.671549
+mean(untreated) = 0.668814
+mean(Δ)         = +0.002735 (SD = 0.160104)
+mean(help)      = 0.050895
+mean(harm)      = 0.048160
+  δ = 0.166: needed = 25 (25/266 = 0.0940), needless = 31 (31/266 = 0.1165), ambiguous = 210 (210/266 = 0.7895) | f = 0.0940, 1-f = 0.9060
+  δ = 0.100: needed = 54 (54/266 = 0.2030), needless = 45 (45/266 = 0.1692), ambiguous = 167 (167/266 = 0.6278) | f = 0.2030, 1-f = 0.7970
+  δ = 0.083: needed = 62 (62/266 = 0.2331), needless = 55 (55/266 = 0.2068), ambiguous = 149 (149/266 = 0.5602) | f = 0.2331, 1-f = 0.7669
+  δ = 0.200: needed = 18 (18/266 = 0.0677), needless = 23 (23/266 = 0.0865), ambiguous = 225 (225/266 = 0.8459) | f = 0.0677, 1-f = 0.9323
+
+[INVARIANT CHECK: NEEDED COUNTS]
+  δ = 0.166: ALL=25, NON_CEILING=25, CONTESTABLE=25 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+  δ = 0.100: ALL=54, NON_CEILING=54, CONTESTABLE=54 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+  δ = 0.083: ALL=62, NON_CEILING=62, CONTESTABLE=62 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+  δ = 0.200: ALL=18, NON_CEILING=18, CONTESTABLE=18 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+
+[DECOMPOSITION OF MEAN Δ]
+  Overall mean Δ (all):             -0.014393
+  Ceiling point mean Δ:             -0.049172 (weight = 131/397 = 0.3300)
+  Non-ceiling point mean Δ:         +0.002735 (weight = 266/397 = 0.6700)
+  Contestable point mean Δ:         +0.002766 (weight = 263/397 = 0.6625)
+  Floor point mean Δ:               +0.000000 (weight = 3/397 = 0.0076)
+  Ceiling point drag on overall Δ:  -0.016225
+  Reconstructed overall mean Δ:     -0.014393 (diff = -1.734723e-18)
+  Mean Δ change (All -> Non-Ceil):   +0.017128
+  Mean Δ change (All -> Contestable):+0.017159
+
+=======================================================
+DATASET: DEV
+File: /scratch/n12194778/sidekick/results/hj6_branches_dev_20260917/branch_runs.jsonl
+Total rows: 3056, Null gpr rows: 141
+Total points: 382, Complete 4-rep points: 332
+Incomplete points: 50
+=======================================================
+
+[FLOAT NOISE / THRESHOLD SENSITIVITY CHECK]
+Ceiling (mean_u >= 1.0):   68
+Ceiling (mean_u >= 0.999): 68 (diff = 0)
+Floor (mean_u <= 0.0 & mean_t <= 0.0):     0
+Floor (mean_u <= 0.001 & mean_t <= 0.001): 0 (diff = 0)
+Ceiling points: max Δ = +0.000000, min Δ = -0.541750, mean Δ = -0.044588
+Ceiling points with Δ > 0: 0
+Ceiling points with Δ == 0: 54
+Ceiling points with Δ < 0: 14
+
+--- Subset: ALL COMPLETE POINTS ---
+Count: n = 332 (1.0000 of total 332)
+mean(treated)   = 0.678471
+mean(untreated) = 0.668770
+mean(Δ)         = +0.009702 (SD = 0.174911)
+mean(help)      = 0.058932
+mean(harm)      = 0.049230
+  δ = 0.166: needed = 43 (43/332 = 0.1295), needless = 43 (43/332 = 0.1295), ambiguous = 246 (246/332 = 0.7410) | f = 0.1295, 1-f = 0.8705
+  δ = 0.100: needed = 72 (72/332 = 0.2169), needless = 61 (61/332 = 0.1837), ambiguous = 199 (199/332 = 0.5994) | f = 0.2169, 1-f = 0.7831
+  δ = 0.083: needed = 85 (85/332 = 0.2560), needless = 66 (66/332 = 0.1988), ambiguous = 181 (181/332 = 0.5452) | f = 0.2560, 1-f = 0.7440
+  δ = 0.200: needed = 36 (36/332 = 0.1084), needless = 33 (33/332 = 0.0994), ambiguous = 263 (263/332 = 0.7922) | f = 0.1084, 1-f = 0.8916
+
+--- Subset: CEILING POINTS (mean_u >= 1.0) ---
+Count: n = 68 (0.2048 of total 332)
+mean(treated)   = 0.955412
+mean(untreated) = 1.000000
+mean(Δ)         = -0.044588 (SD = 0.114636)
+mean(help)      = 0.000000
+mean(harm)      = 0.044588
+  δ = 0.166: needed = 0 (0/68 = 0.0000), needless = 7 (7/68 = 0.1029), ambiguous = 61 (61/68 = 0.8971) | f = 0.0000, 1-f = 1.0000
+  δ = 0.100: needed = 0 (0/68 = 0.0000), needless = 11 (11/68 = 0.1618), ambiguous = 57 (57/68 = 0.8382) | f = 0.0000, 1-f = 1.0000
+  δ = 0.083: needed = 0 (0/68 = 0.0000), needless = 11 (11/68 = 0.1618), ambiguous = 57 (57/68 = 0.8382) | f = 0.0000, 1-f = 1.0000
+  δ = 0.200: needed = 0 (0/68 = 0.0000), needless = 6 (6/68 = 0.0882), ambiguous = 62 (62/68 = 0.9118) | f = 0.0000, 1-f = 1.0000
+
+--- Subset: FLOOR POINTS (mean_u <= 0 and mean_t <= 0) ---
+Count: n = 0 (0.0000 of total 332)
+mean(treated)   = 0.000000
+mean(untreated) = 0.000000
+mean(Δ)         = +0.000000 (SD = 0.000000)
+mean(help)      = 0.000000
+mean(harm)      = 0.000000
+  δ = 0.166: needed = 0 (0/0 = 0.0000), needless = 0 (0/0 = 0.0000), ambiguous = 0 (0/0 = 0.0000) | f = 0.0000, 1-f = 1.0000
+  δ = 0.100: needed = 0 (0/0 = 0.0000), needless = 0 (0/0 = 0.0000), ambiguous = 0 (0/0 = 0.0000) | f = 0.0000, 1-f = 1.0000
+  δ = 0.083: needed = 0 (0/0 = 0.0000), needless = 0 (0/0 = 0.0000), ambiguous = 0 (0/0 = 0.0000) | f = 0.0000, 1-f = 1.0000
+  δ = 0.200: needed = 0 (0/0 = 0.0000), needless = 0 (0/0 = 0.0000), ambiguous = 0 (0/0 = 0.0000) | f = 0.0000, 1-f = 1.0000
+
+--- Subset: CONTESTABLE POINTS (non-ceiling & non-floor) ---
+Count: n = 264 (0.7952 of total 332)
+mean(treated)   = 0.607138
+mean(untreated) = 0.583453
+mean(Δ)         = +0.023686 (SD = 0.184927)
+mean(help)      = 0.074112
+mean(harm)      = 0.050426
+  δ = 0.166: needed = 43 (43/264 = 0.1629), needless = 36 (36/264 = 0.1364), ambiguous = 185 (185/264 = 0.7008) | f = 0.1629, 1-f = 0.8371
+  δ = 0.100: needed = 72 (72/264 = 0.2727), needless = 50 (50/264 = 0.1894), ambiguous = 142 (142/264 = 0.5379) | f = 0.2727, 1-f = 0.7273
+  δ = 0.083: needed = 85 (85/264 = 0.3220), needless = 55 (55/264 = 0.2083), ambiguous = 124 (124/264 = 0.4697) | f = 0.3220, 1-f = 0.6780
+  δ = 0.200: needed = 36 (36/264 = 0.1364), needless = 27 (27/264 = 0.1023), ambiguous = 201 (201/264 = 0.7614) | f = 0.1364, 1-f = 0.8636
+
+--- Subset: NON-CEILING POINTS (all minus ceiling) ---
+Count: n = 264 (0.7952 of total 332)
+mean(treated)   = 0.607138
+mean(untreated) = 0.583453
+mean(Δ)         = +0.023686 (SD = 0.184927)
+mean(help)      = 0.074112
+mean(harm)      = 0.050426
+  δ = 0.166: needed = 43 (43/264 = 0.1629), needless = 36 (36/264 = 0.1364), ambiguous = 185 (185/264 = 0.7008) | f = 0.1629, 1-f = 0.8371
+  δ = 0.100: needed = 72 (72/264 = 0.2727), needless = 50 (50/264 = 0.1894), ambiguous = 142 (142/264 = 0.5379) | f = 0.2727, 1-f = 0.7273
+  δ = 0.083: needed = 85 (85/264 = 0.3220), needless = 55 (55/264 = 0.2083), ambiguous = 124 (124/264 = 0.4697) | f = 0.3220, 1-f = 0.6780
+  δ = 0.200: needed = 36 (36/264 = 0.1364), needless = 27 (27/264 = 0.1023), ambiguous = 201 (201/264 = 0.7614) | f = 0.1364, 1-f = 0.8636
+
+[INVARIANT CHECK: NEEDED COUNTS]
+  δ = 0.166: ALL=43, NON_CEILING=43, CONTESTABLE=43 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+  δ = 0.100: ALL=72, NON_CEILING=72, CONTESTABLE=72 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+  δ = 0.083: ALL=85, NON_CEILING=85, CONTESTABLE=85 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+  δ = 0.200: ALL=36, NON_CEILING=36, CONTESTABLE=36 | CEIL=0, FLOOR=0 => MATCH (UNCHANGED)
+
+[DECOMPOSITION OF MEAN Δ]
+  Overall mean Δ (all):             +0.009702
+  Ceiling point mean Δ:             -0.044588 (weight = 68/332 = 0.2048)
+  Non-ceiling point mean Δ:         +0.023686 (weight = 264/332 = 0.7952)
+  Contestable point mean Δ:         +0.023686 (weight = 264/332 = 0.7952)
+  Floor point mean Δ:               +0.000000 (weight = 0/332 = 0.0000)
+  Ceiling point drag on overall Δ:  -0.009133
+  Reconstructed overall mean Δ:     +0.009702 (diff = +3.469447e-18)
+  Mean Δ change (All -> Non-Ceil):   +0.013984
+  Mean Δ change (All -> Contestable):+0.013984

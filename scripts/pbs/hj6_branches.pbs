@@ -4,7 +4,15 @@
 #PBS -l select=1:ncpus=16:ngpus=1:mem=128gb
 #PBS -l walltime=10:00:00
 #PBS -j oe
-#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj6_branches.out
+# Output_Path is evaluated at qsub time and cannot interpolate CID (CID is
+# computed below from SPLIT/DATE). A path with no filename makes PBS write
+# <job ID>.OU in this directory — unique per submission, so train/dev/resume
+# cannot share a file. The script also execs a live CID+jobid copy so a job
+# that dies after startup still leaves a campaign-id log. Do not override -o
+# with a shared filename. Optional: pass -o at qsub with a unique path:
+#   SPLIT=train DATE=20260918
+#   qsub -v SPLIT=${SPLIT},DATE=${DATE} scripts/pbs/hj6_branches.pbs
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
 #
 # HJ-6 counterfactual branches. Serves granite-4.2-8b with the sft_b LoRA
 # (static --lora-modules). Live later-reviews call the planner (codex).
@@ -22,6 +30,18 @@
 # config or requests silently hit the base model.
 
 set -uo pipefail
+# CID is not available at qsub. Compute it first and exec a live CID-named log
+# so an early death still leaves a findable file. PBS's own Output_Path is the
+# unique <job ID>.OU under campaign/workers/logs/ (see #PBS -o above).
+SPLIT="${SPLIT:-train}"
+DATE="${DATE:-$(date -u +%Y%m%d)}"
+CID="hj6_branches_${SPLIT}_${DATE}"
+JOBTAG="${PBS_JOBID:-nopbs}"
+PBS_LOGDIR="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs"
+CID_OUT="${PBS_LOGDIR}/${CID}.${JOBTAG}.out"
+mkdir -p "${PBS_LOGDIR}"
+exec >> "${CID_OUT}" 2>&1
+echo "[hj6] cid=${CID} job=${JOBTAG} cid_out=${CID_OUT}"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export HF_HOME=/scratch/n12194778/hf
 export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
@@ -50,11 +70,9 @@ OUT=/scratch/n12194778/sidekick/results
 LOGDIR=/scratch/n12194778/sidekick/logs
 PY="${SIDEKICK_VENV}/bin/python"
 MODEL=ibm-granite/granite-4.2-8b
-VLOG="${LOGDIR}/hj6_branches_vllm.log"
+VLOG="${LOGDIR}/${CID}.${JOBTAG}_vllm.log"
+echo "[hj6] vlog=${VLOG}"
 
-SPLIT="${SPLIT:-train}"
-DATE="${DATE:-$(date -u +%Y%m%d)}"
-CID="hj6_branches_${SPLIT}_${DATE}"
 CAMPAIGN_ROOT="${CAMPAIGN_ROOT:-/scratch/n12194778/sidekick/results/hj4_correction_train_20260917}"
 CFG="${CFG:-${REPO}/configs/hj4_correction.yaml}"
 OUT_CAMPAIGN="${OUT}/${CID}"
