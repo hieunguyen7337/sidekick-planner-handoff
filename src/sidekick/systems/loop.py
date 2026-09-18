@@ -75,9 +75,16 @@ class EpisodePrefix:
     Counterfactual branches set ``skip_review_at_start=True`` so the scheduled
     reviewer does not fire at ``s``. The treated arm then injects the recorded
     correction via ``inject_correction``; the untreated arm leaves it None.
-    Later scheduled ticks still call ``planner.correct()`` on the branch state.
+    Later scheduled ticks still call ``planner.correct()`` on the branch state
+    unless ``skip_next_scheduled_review`` is True, in which case the next
+    scheduled tick after ``s`` is also skipped. That tick is the next step the
+    schedule would actually have fired, not ``s + review_every_k``. Router-
+    and oracle-triggered reviews are not scheduled reviews and are not skipped.
     ``local_eval_step`` is the next scheduled review step: ``env.evaluate()``
     runs *before* that review so the short-horizon GPR is uncontaminated.
+
+    ``skip_next_scheduled_review`` defaults to False so callers that omit it
+    reproduce today's skip-at-s-only behaviour.
     """
 
     events: list[Event]
@@ -85,6 +92,25 @@ class EpisodePrefix:
     inject_correction: str | None = None
     skip_review_at_start: bool = False
     local_eval_step: int | None = None
+    skip_next_scheduled_review: bool = False
+
+
+def next_scheduled_review_step(start_step: int, review_every_k: int | None) -> int | None:
+    """First scheduled tick strictly after ``start_step``.
+
+    This is the next step at which ``step % review_every_k == 0``, not
+    ``start_step + review_every_k``. Returns None if the schedule would never
+    fire again (``review_every_k`` missing or non-positive).
+    """
+    if review_every_k is None:
+        return None
+    k = int(review_every_k)
+    if k <= 0:
+        return None
+    t = start_step - (start_step % k) + k
+    if t <= start_step:
+        t += k
+    return t
 
 
 def counters_from_events(events: list[Event]) -> tuple[int, int, int, int]:
@@ -680,6 +706,12 @@ def run_episode(
             skip_scheduled = bool(
                 prefix is not None and prefix.skip_review_at_start and step == start_step
             )
+            if (
+                prefix is not None
+                and prefix.skip_next_scheduled_review
+                and next_scheduled_review_step(start_step, policy.review_every_k) == step
+            ):
+                skip_scheduled = True
             if packet is not None and not policy.planner_drives:
                 if (
                     policy.review_every_k

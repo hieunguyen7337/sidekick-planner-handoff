@@ -1128,3 +1128,262 @@ def test_planner_cost_from_events_n_calls_zero_stays_zero_missing_defaults_to_on
     (missing_dir / "events.jsonl").write_text(json.dumps(raw) + "\n", encoding="utf-8")
     calls, _ = bc.planner_cost_from_events(missing_dir)
     assert calls == 1
+
+
+
+# ---------------------------------------------------------------------------
+# A8: untreated-mode schedule_live vs suppress_next
+# ---------------------------------------------------------------------------
+
+NOOP_CODE = "```python\nlist_files()\n```"
+
+
+def _focal_branch(
+    tmp_path,
+    *,
+    condition: str,
+    skip_next_scheduled_review: bool = False,
+    oracle_steps: frozenset[int] = frozenset(),
+    max_steps: int = 40,
+    review_every_k: int | None = 5,
+    sampling_seed: int = 101,
+    run_id: str = "br",
+    executor=None,
+    start_step: int | None = None,
+):
+    events = two_intervention_events()
+    i = 0
+    prefix = bc.prefix_events_before_intervention(events, i)
+    point = bc.enumerate_intervention_points(events)[i]
+    executor = executor or RecordingExecutor()
+    planner = CountingPlanner()
+    log = EventLog(tmp_path, run_id)
+    ledger = CostLedger(PriceSchedule.load(PRICES))
+    inject = point["correction"] if condition == "treated" else None
+    step = int(start_step) if start_step is not None else int(point["step"])
+    try:
+        run_episode(
+            name="fixed_k",
+            env=MockEnv(),
+            planner=planner,
+            executor=executor,
+            verifier=None,
+            policy=SystemPolicy(
+                plan_first=False,
+                planner_drives=False,
+                allow_executor_ask=False,
+                review_every_k=review_every_k,
+                adapter_name="sft_b",
+                oracle_steps=oracle_steps,
+            ),
+            limits=RunLimits(max_steps=max_steps),
+            task_id="copy_hello",
+            seed=1,
+            log=log,
+            ledger=ledger,
+            prefix=EpisodePrefix(
+                events=prefix,
+                start_step=step,
+                inject_correction=inject,
+                skip_review_at_start=True,
+                local_eval_step=bc.next_scheduled_review_step(step, review_every_k),
+                skip_next_scheduled_review=skip_next_scheduled_review,
+            ),
+            sampling_seed=sampling_seed,
+        )
+    finally:
+        log.close()
+    out_events = list(EventLog.read(tmp_path / run_id / "events.jsonl"))
+    return executor, planner, out_events, point
+
+
+def _live_reviews(events):
+    return [
+        e
+        for e in events
+        if e.event_type == "intervention" and (e.payload or {}).get("source") == "live_policy"
+    ]
+
+
+def test_suppress_next_untreated_zero_later_when_schedule_live_has_one(tmp_path):
+    _, planner_live, events_live, point = _focal_branch(
+        tmp_path / "live", condition="untreated", run_id="live"
+    )
+    later_live = [e for e in _live_reviews(events_live) if e.step > point["step"]]
+    assert later_live, "schedule_live must still give the untreated arm a later review"
+    assert planner_live.n_correct >= 1
+
+    _, planner_sup, events_sup, _ = _focal_branch(
+        tmp_path / "sup",
+        condition="untreated",
+        skip_next_scheduled_review=True,
+        run_id="sup",
+    )
+    later_sup = [e for e in _live_reviews(events_sup) if e.step > point["step"]]
+    assert later_sup == []
+    assert planner_sup.n_correct == 0
+
+
+def test_treated_identical_between_untreated_modes(tmp_path):
+    _, planner_live, events_live, _ = _focal_branch(
+        tmp_path / "t_live", condition="treated", run_id="t_live"
+    )
+    _, planner_sup, events_sup, _ = _focal_branch(
+        tmp_path / "t_sup",
+        condition="treated",
+        skip_next_scheduled_review=False,
+        run_id="t_sup",
+    )
+    def _sig(events):
+        return [
+            (e.step, (e.payload or {}).get("source"), (e.payload or {}).get("correction"))
+            for e in events
+            if e.event_type == "intervention"
+        ]
+
+    assert _sig(events_live) == _sig(events_sup)
+    assert planner_live.n_correct == planner_sup.n_correct >= 1
+
+
+@pytest.mark.parametrize(
+    "max_steps,review_every_k",
+    [
+        (4, 5),
+        (40, None),
+    ],
+)
+def test_suppress_next_noop_when_no_later_scheduled_tick(tmp_path, max_steps, review_every_k):
+    _, planner, events, point = _focal_branch(
+        tmp_path,
+        condition="untreated",
+        skip_next_scheduled_review=True,
+        max_steps=max_steps,
+        review_every_k=review_every_k,
+        run_id=f"end_{max_steps}_{review_every_k}",
+    )
+    later = [e for e in _live_reviews(events) if e.step > point["step"]]
+    assert later == []
+    assert planner.n_correct == 0
+    assert events, "episode must complete rather than crash"
+    assert not any(e.error_type == "crash" for e in events)
+
+
+def test_suppress_next_skips_next_actual_tick_not_s_plus_k(tmp_path):
+    start_step = 7
+    k = 5
+    assert bc.next_scheduled_review_step(start_step, k) == 10
+    assert start_step + k == 12
+    executor = RecordingExecutor(script=[NOOP_CODE] * 20)
+    _, planner, events, _ = _focal_branch(
+        tmp_path,
+        condition="untreated",
+        skip_next_scheduled_review=True,
+        start_step=start_step,
+        review_every_k=k,
+        max_steps=16,
+        executor=executor,
+        run_id="misaligned",
+    )
+    live_steps = [e.step for e in _live_reviews(events)]
+    assert 10 not in live_steps
+    assert 12 not in live_steps
+    assert 15 in live_steps
+    assert planner.n_correct >= 1
+
+
+def test_suppress_next_does_not_suppress_oracle_review(tmp_path):
+    _, planner, events, point = _focal_branch(
+        tmp_path,
+        condition="untreated",
+        skip_next_scheduled_review=True,
+        oracle_steps=frozenset({4}),
+        run_id="oracle",
+    )
+    live = _live_reviews(events)
+    assert any(e.step == 4 for e in live)
+    assert all(e.step != 5 for e in live)
+    assert all(e.step != point["step"] for e in live)
+    assert planner.n_correct == 1
+
+
+def test_untreated_mode_cli_default_is_schedule_live():
+    args = bc.build_parser().parse_args(["--campaign-root", "x", "--out-root", "y"])
+    assert args.untreated_mode == bc.DEFAULT_UNTREATED_MODE == "schedule_live"
+
+
+def test_branch_config_untreated_mode_and_estimand(tmp_path):
+    live_review, live_estimand = bc.untreated_mode_strings("schedule_live")
+    assert live_review == (
+        "live on the original schedule after the focal step; "
+        "the scheduled tick at s is skipped and either injected "
+        "(treated) or omitted (untreated)"
+    )
+    assert live_estimand == (
+        "Q(policy with intervention i present) - "
+        "Q(policy with intervention i omitted); later reviews live"
+    )
+    sup_review, sup_estimand = bc.untreated_mode_strings("suppress_next")
+    assert "next scheduled tick" in sup_review
+    assert "also suppressed" in sup_estimand
+
+    for mode in ("schedule_live", "suppress_next"):
+        out = tmp_path / mode
+        out.mkdir()
+        bc.write_manifest(
+            out,
+            campaign_root=tmp_path,
+            split="train",
+            branch_seeds=[101, 102],
+            point_rows=[],
+            branch_rows=[],
+            adapter="sft_b",
+            delta_band=None,
+            untreated_mode=mode,
+        )
+        cfg = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["branch_config"]
+        review, estimand = bc.untreated_mode_strings(mode)
+        assert cfg["untreated_mode"] == mode
+        assert cfg["review_every_k"] == review
+        assert cfg["estimand"] == estimand
+
+
+def test_run_branches_records_untreated_mode(tmp_path):
+    campaign = tmp_path / "hj8_mode"
+    write_episode(campaign, goal_pass_rate=1.0)
+    for mode in ("schedule_live", "suppress_next"):
+        out = tmp_path / f"branches_{mode}"
+        bc.run_branches(
+            campaign_root=campaign,
+            out_root=out,
+            split="train",
+            branch_seeds=[101],
+            workers=1,
+            resume=False,
+            limit=None,
+            env_kind="mock",
+            config={"executor_type": "mock"},
+            prices_path=str(PRICES),
+            untreated_mode=mode,
+        )
+        cfg = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["branch_config"]
+        review, estimand = bc.untreated_mode_strings(mode)
+        assert cfg["untreated_mode"] == mode
+        assert cfg["review_every_k"] == review
+        assert cfg["estimand"] == estimand
+        rows = bc.load_jsonl(out / "branch_runs.jsonl")
+        assert rows
+        assert {r["untreated_mode"] for r in rows} == {mode}
+        untreated = [r for r in rows if r["condition"] == "untreated"]
+        treated = [r for r in rows if r["condition"] == "treated"]
+        assert untreated and treated
+    live_rows = bc.load_jsonl(tmp_path / "branches_schedule_live" / "branch_runs.jsonl")
+    sup_rows = bc.load_jsonl(tmp_path / "branches_suppress_next" / "branch_runs.jsonl")
+
+    def _later(rows, condition):
+        return sorted(
+            (int(r["i"]), int(r["branch_seed"]), r.get("n_later_reviews"))
+            for r in rows
+            if r["condition"] == condition
+        )
+
+    assert _later(live_rows, "treated") == _later(sup_rows, "treated")

@@ -2,8 +2,14 @@
 
 Two conditions continue from the same replayed prefix (state just before
 intervention i). The treated arm injects the recorded correction; the untreated
-arm omits it. In both arms the reviewer stays live on its normal schedule for
-every later step and calls planner.correct() on the branch's own state.
+arm omits it.
+
+``--untreated-mode schedule_live`` (default, frozen estimand): both arms skip
+the scheduled tick at s, then the reviewer stays live on its normal schedule
+and calls planner.correct() on the branch's own state.
+
+``--untreated-mode suppress_next``: the untreated arm also skips the next
+scheduled tick after s (the substitute). The treated arm is unchanged.
 
 Resume keys on (point, condition, branch_seed). Derived files are rebuilt from
 ``branch_runs.jsonl`` so a kill never drops a finished branch.
@@ -45,6 +51,7 @@ from sidekick.systems.loop import (  # noqa: E402
     EpisodePrefix,
     RunLimits,
     SystemPolicy,
+    next_scheduled_review_step,
     run_episode,
 )
 from sidekick.training.sft_data import _history_from_events  # noqa: E402
@@ -56,6 +63,47 @@ DEFAULT_ADAPTER = "sft_b"
 DEFAULT_REVIEW_EVERY_K = 5
 SYSTEM_NAME = "fixed_k"
 CONDITIONS = ("treated", "untreated")
+UNTREATED_MODE_SCHEDULE_LIVE = "schedule_live"
+UNTREATED_MODE_SUPPRESS_NEXT = "suppress_next"
+UNTREATED_MODES = (UNTREATED_MODE_SCHEDULE_LIVE, UNTREATED_MODE_SUPPRESS_NEXT)
+DEFAULT_UNTREATED_MODE = UNTREATED_MODE_SCHEDULE_LIVE
+
+# Frozen schedule_live strings. Do not paraphrase: existing manifests quote them.
+_REVIEW_EVERY_K_SCHEDULE_LIVE = (
+    "live on the original schedule after the focal step; "
+    "the scheduled tick at s is skipped and either injected "
+    "(treated) or omitted (untreated)"
+)
+_ESTIMAND_SCHEDULE_LIVE = (
+    "Q(policy with intervention i present) - "
+    "Q(policy with intervention i omitted); later reviews live"
+)
+_REVIEW_EVERY_K_SUPPRESS_NEXT = (
+    "treated: live on the original schedule after the focal step; "
+    "the scheduled tick at s is skipped and injected. untreated: "
+    "the scheduled tick at s and the next scheduled tick the schedule "
+    "would actually have fired after s are both omitted; later ticks "
+    "after that stay live"
+)
+_ESTIMAND_SUPPRESS_NEXT = (
+    "Q(policy with intervention i present) - "
+    "Q(policy with intervention i omitted and the next scheduled "
+    "review after s also suppressed); later reviews after that stay live"
+)
+
+
+def resolve_untreated_mode(value: str | None) -> str:
+    mode = DEFAULT_UNTREATED_MODE if value is None else str(value)
+    if mode not in UNTREATED_MODES:
+        raise ValueError(f"untreated_mode must be one of {list(UNTREATED_MODES)}, got {mode!r}")
+    return mode
+
+
+def untreated_mode_strings(untreated_mode: str | None) -> tuple[str, str]:
+    """``(review_every_k, estimand)`` texts for the ``branch_config`` block."""
+    if resolve_untreated_mode(untreated_mode) == UNTREATED_MODE_SUPPRESS_NEXT:
+        return _REVIEW_EVERY_K_SUPPRESS_NEXT, _ESTIMAND_SUPPRESS_NEXT
+    return _REVIEW_EVERY_K_SCHEDULE_LIVE, _ESTIMAND_SCHEDULE_LIVE
 
 
 def utc_date() -> str:
@@ -187,19 +235,6 @@ def review_every_k_from_events(events: list[Event], default: int = DEFAULT_REVIE
     if raw is None:
         return int(default)
     return int(raw)
-
-
-def next_scheduled_review_step(start_step: int, review_every_k: int | None) -> int | None:
-    """First scheduled tick strictly after ``start_step``."""
-    if review_every_k is None:
-        return None
-    k = int(review_every_k)
-    if k <= 0:
-        return None
-    t = start_step - (start_step % k) + k
-    if t <= start_step:
-        t += k
-    return t
 
 
 def percentile(values: list[float], p: float) -> float:
@@ -696,7 +731,10 @@ def write_manifest(
     branch_rows: list[dict[str, Any]],
     adapter: str | None,
     delta_band: float | None,
+    untreated_mode: str = DEFAULT_UNTREATED_MODE,
 ) -> None:
+    untreated_mode = resolve_untreated_mode(untreated_mode)
+    review_every_k_text, estimand_text = untreated_mode_strings(untreated_mode)
     branches_path = out_root / "branches.jsonl"
     n_complete = sum(1 for r in point_rows if r.get("label_status") == "complete")
     n_incomplete = sum(1 for r in point_rows if r.get("label_status") != "complete")
@@ -745,20 +783,14 @@ def write_manifest(
                     "original max_steps counted from intervention step s "
                     "(branch takes steps s..max_steps, i.e. remaining includes s)"
                 ),
-                "review_every_k": (
-                    "live on the original schedule after the focal step; "
-                    "the scheduled tick at s is skipped and either injected "
-                    "(treated) or omitted (untreated)"
-                ),
+                "review_every_k": review_every_k_text,
+                "untreated_mode": untreated_mode,
                 "allow_executor_ask": False,
                 "planner_drives": False,
                 "adapter": adapter or DEFAULT_ADAPTER,
                 "sampling_seed": "branch_seed passed to executor.complete(seed=...)",
                 "delta_band_delta": delta_band,
-                "estimand": (
-                    "Q(policy with intervention i present) - "
-                    "Q(policy with intervention i omitted); later reviews live"
-                ),
+                "estimand": estimand_text,
                 "replay_prefix_k": (
                     "executed CODE/COMPLETE actions before the intervention "
                     "(not event index, not episode step)"
@@ -777,6 +809,7 @@ def rebuild_derived(
     *,
     delta_band: float | None = None,
     freeze_from_train: bool = False,
+    untreated_mode: str = DEFAULT_UNTREATED_MODE,
 ) -> float | None:
     branch_rows = load_jsonl(out_root / "branch_runs.jsonl")
     grouped_meta, samples = group_branch_samples(branch_rows)
@@ -802,6 +835,7 @@ def rebuild_derived(
         branch_rows=branch_rows,
         adapter=adapter,
         delta_band=delta_band,
+        untreated_mode=untreated_mode,
     )
     return delta_band
 
@@ -924,6 +958,7 @@ def _row_from_result(
         "key": job["key"],
         "sampling_seed": job["branch_seed"],
         "review_every_k": job.get("review_every_k"),
+        "untreated_mode": resolve_untreated_mode(job.get("untreated_mode")),
     }
 
 
@@ -982,7 +1017,9 @@ def run_one_branch(job: dict[str, Any]) -> dict[str, Any]:
     result: RunResult | None = None
     error_type: str | None = None
     review_k = int(job.get("review_every_k") or review_every_k_from_events(events))
+    untreated_mode = resolve_untreated_mode(job.get("untreated_mode"))
     inject = point["correction"] if job["condition"] == "treated" else None
+    skip_next = untreated_mode == UNTREATED_MODE_SUPPRESS_NEXT and job["condition"] == "untreated"
     local_step = next_scheduled_review_step(int(point["step"]), review_k)
     try:
         env = _make_env(job)
@@ -1002,6 +1039,8 @@ def run_one_branch(job: dict[str, Any]) -> dict[str, Any]:
                 "experiment_name": job["experiment_name"],
                 "sampling_seed": job["branch_seed"],
                 "review_every_k": review_k,
+                "untreated_mode": untreated_mode,
+                "skip_next_scheduled_review": skip_next,
             }
         )
         result = run_episode(
@@ -1028,6 +1067,7 @@ def run_one_branch(job: dict[str, Any]) -> dict[str, Any]:
                 inject_correction=inject,
                 skip_review_at_start=True,
                 local_eval_step=local_step,
+                skip_next_scheduled_review=skip_next,
             ),
             sampling_seed=int(job["branch_seed"]),
         )
@@ -1095,7 +1135,9 @@ def collect_jobs(
     prices_path: str,
     adapter_fallback: str | None,
     retry_errors: bool = True,
+    untreated_mode: str = DEFAULT_UNTREATED_MODE,
 ) -> list[dict[str, Any]]:
+    untreated_mode = resolve_untreated_mode(untreated_mode)
     campaign = campaign_root.name
     done = (
         completed_branch_keys(
@@ -1163,6 +1205,7 @@ def collect_jobs(
                             "split": split,
                             "review_every_k": review_k,
                             "correction": point["correction"],
+                            "untreated_mode": untreated_mode,
                         }
                     )
     if limit is not None:
@@ -1186,8 +1229,10 @@ def run_branches(
     train_manifest: str | Path | None = None,
     retry_errors: bool = True,
     max_planner_calls_total: int | None = None,
+    untreated_mode: str = DEFAULT_UNTREATED_MODE,
 ) -> dict[str, Any]:
     out_root.mkdir(parents=True, exist_ok=True)
+    untreated_mode = resolve_untreated_mode(untreated_mode)
     cfg = dict(config or {})
     prices = str(prices_path or cfg.get("prices") or DEFAULT_PRICES)
     adapter_fallback = (
@@ -1206,6 +1251,7 @@ def run_branches(
             adapter_fallback,
             delta_band=frozen,
             freeze_from_train=(split == "train"),
+            untreated_mode=untreated_mode,
         )
     jobs = collect_jobs(
         campaign_root=campaign_root,
@@ -1219,6 +1265,7 @@ def run_branches(
         prices_path=prices,
         adapter_fallback=adapter_fallback,
         retry_errors=retry_errors,
+        untreated_mode=untreated_mode,
     )
     # Per-branch planner-call factor, stated explicitly: the per-episode cap from
     # config (the same `max_planner_calls` the loop enforces per branch). It is an
@@ -1308,6 +1355,7 @@ def run_branches(
         adapter_fallback,
         delta_band=frozen,
         freeze_from_train=(split == "train"),
+        untreated_mode=untreated_mode,
     )
     point_rows = load_jsonl(out_root / "branches.jsonl")
     factual = factual_vs_treated_summary(point_rows)
@@ -1390,6 +1438,15 @@ def build_parser() -> argparse.ArgumentParser:
             "stop dispatching new branches, aggregate, and exit 0 (resume continues)."
         ),
     )
+    parser.add_argument(
+        "--untreated-mode",
+        choices=list(UNTREATED_MODES),
+        default=DEFAULT_UNTREATED_MODE,
+        help=(
+            "schedule_live (default, frozen estimand): later reviews stay live. "
+            "suppress_next: untreated arm also omits the next scheduled review after s."
+        ),
+    )
     return parser
 
 
@@ -1410,6 +1467,7 @@ def main(argv: list[str] | None = None) -> int:
         train_manifest=args.train_manifest,
         retry_errors=bool(args.retry_errors),
         max_planner_calls_total=args.max_planner_calls_total,
+        untreated_mode=str(args.untreated_mode),
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
