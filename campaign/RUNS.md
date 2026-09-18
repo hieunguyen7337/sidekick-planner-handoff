@@ -1871,3 +1871,158 @@ fourth seed is roughly 4 planner calls × the new branches.
 interventions are rarely needed *because* they are rarely needed — which is the paper result —
 and that same scarcity is what leaves too few positives to train the policy the campaign was
 built to test.
+
+---
+
+## 🔻 δ SENSITIVITY — the label band, and what the gate verdict actually rests on (2026-09-18)
+
+Gate B's verdict is not robust to a defensible re-derivation of δ. This block records the
+sensitivity so that no single number is quoted without it.
+
+### Why the question arose
+
+δ is pre-registered as **a rule, not a number**: the 75th percentile of
+`|treated[101] − treated[102]|` over train points — "the noise floor between two identically
+configured runs". Frozen at **0.166**.
+
+That yardstick is the spread of a difference between **two single draws**. The statistic it is
+applied to, Δ, is a difference between **two four-replicate means**. Those are not on the same
+scale: the null used to set the band is noisier than the estimator being thresholded, so the
+band is wider than the noise floor it is meant to represent, which inflates `ambiguous` and
+suppresses both `needed` and `needless`.
+
+### What was measured
+
+The frozen rule reproduces exactly from the raw data (75th percentile = 0.1660 over n = 741),
+which confirms the point definition and percentile method match how 0.166 was originally
+derived.
+
+- **Within-condition SD** is 0 at the median — scores are 0/1-heavy and replicate perfectly at
+  many points. The noise lives in the upper tail (train p90 ≈ 0.289).
+- **Observed SD(Δ)** falls from 0.1925 (seeds 101,102) to **0.1495** (all four). The shrinkage
+  ratio is 0.80, not the naive 1/√2 ≈ 0.71 — on a discrete, skewed score distribution SD is not
+  a clean scale parameter, which is itself a reason to treat any analytic adjustment as
+  approximate.
+- **Common random numbers are doing real work**: treated/untreated correlation at the same
+  branch seed is r ≈ 0.66 on train (0.59 on dev). Var(Δ) therefore carries a −2ρσ²/n term, so
+  any δ derived without CRN is an **upper bound** on the appropriate band.
+- Applying the same 75th-percentile rule to a same-condition null of two 2-replicate means —
+  which is on the same scale as a four-replicate Δ, needing no further √2 adjustment — gives
+  **δ = 0.100 on train** and **δ = 0.200 on dev**.
+
+### Label sensitivity (complete four-replicate points)
+
+⚠ `f` is the **needed** fraction, `needed / n`. It is not the needless fraction; an earlier
+analysis pass conflated the two and reported the needless column as `f`.
+
+Train, n = 397:
+
+| δ | needed | needless | ambiguous | f = needed/397 | 1 − f | needed extrapolated to 777 |
+|---|---:|---:|---:|---:|---:|---:|
+| 0.083 | 62 | 78 | 257 | 0.1562 | 0.8438 | ≈ 121 |
+| **0.100 (train-derived)** | **54** | 67 | 276 | **0.1360** | **0.8640** | **≈ 106** |
+| 0.140 | 32 | 52 | 313 | 0.0806 | 0.9194 | ≈ 63 |
+| **0.166 (frozen)** | **25** | 46 | 326 | **0.0630** | **0.9370** | **≈ 49** |
+| 0.200 (dev-derived) | 18 | 33 | 346 | 0.0453 | 0.9547 | ≈ 35 |
+
+Dev, n = 332:
+
+| δ | needed | needless | ambiguous | f = needed/332 | 1 − f |
+|---|---:|---:|---:|---:|---:|
+| 0.083 | 85 | 66 | 181 | 0.2560 | 0.7440 |
+| 0.100 | 72 | 61 | 199 | 0.2169 | 0.7831 |
+| 0.166 (frozen) | 43 | 43 | 246 | 0.1295 | 0.8705 |
+| 0.200 | 36 | 33 | 263 | 0.1084 | 0.8916 |
+
+(On dev at the frozen δ, needed and needless are both 43, so the two definitions of `f`
+coincide there by accident — which is why the dev figure was unaffected by the conflation.)
+
+### What this does to the gate
+
+- At the **frozen** δ = 0.166: f_train = 0.0630, `f_train < 0.10` **FIRES**, ≈ 49 positives
+  against the pre-registered 75.
+- At the **train-derived** δ = 0.100: f_train = 0.1360, the gate **does not fire**, and ≈ 106
+  extrapolated positives clears 75.
+- At the **dev-derived** δ = 0.200: f_train = 0.0453, the gate fires harder, ≈ 35 positives.
+
+**The campaign's central verdict turns on a parameter that a defensible derivation can move in
+either direction.** That is the finding. It is not evidence that the frozen δ is wrong, and it
+is not a licence to pick the value that yields the most positives.
+
+### Cost, honestly stated
+
+Narrowing δ buys positives by reclassifying points out of `ambiguous`, so it necessarily takes
+some points that are near the boundary. Half-vs-half label agreement on train falls from
+0.7229 at δ = 0.166 to 0.6851 at δ = 0.100 — about 4 points of stability for roughly double the
+positives.
+
+⚠ A previously recorded agreement figure of 0.8388 measures a **different quantity** (agreement
+between the two-replicate and four-replicate labels on the same points, not agreement between
+two disjoint replicate halves). The two should not be compared, and whichever is quoted should
+be re-derived under a single stated protocol first.
+
+### Status
+
+**No amendment is made here.** δ remains frozen at 0.166 and every headline number stands as
+recorded. This block exists so the sensitivity is on the record before any decision, and so
+that a later decision to amend — or not to — is made in the open with the trade-off visible.
+
+### Ceiling points — a third of train can never be `needed` (2026-09-18)
+
+A point whose untreated arm already scores 1.000 cannot have Δ > 0: the treated arm has nowhere
+to go. Such a point is structurally incapable of the `needed` label, and it enters the mean Δ
+only as zero or as harm.
+
+| split | complete n | ceiling (untreated = 1.000) | floor | contestable |
+|---|---:|---:|---:|---:|
+| train | 397 | **131 (33.00 %)** | 3 (0.76 %) | 263 (66.25 %) |
+| dev | 332 | **68 (20.48 %)** | 0 | 264 (79.52 %) |
+
+Robust to float noise: the counts are identical at a ≥ 0.999 threshold.
+
+**The invariant that matters: excluding ceiling points does not create a single positive.**
+`needed` is 25 on train at δ = 0.166 whether computed over all 397 complete points, the 266
+non-ceiling, or the 263 contestable — and likewise 54 (train, δ = 0.100), 43 (dev, δ = 0.166),
+72 (dev, δ = 0.100). The exclusion moves a **denominator**, never a numerator. So it changes
+every reported *fraction* and changes the ASK training set not at all.
+
+What it does to f:
+
+| split, δ | f over all complete | f over contestable |
+|---|---:|---:|
+| train, 0.166 (frozen) | 25/397 = 0.0630 | 25/263 = **0.0951** |
+| train, 0.100 | 54/397 = 0.1360 | 54/263 = **0.2053** |
+| dev, 0.166 (frozen) | 43/332 = 0.1295 | 43/264 = **0.1629** |
+| dev, 0.100 | 72/332 = 0.2169 | 72/264 = **0.2727** |
+
+🔺 **Gate B's verdict does not turn on this.** At the frozen δ the gate condition `f_train < 0.10`
+fires on *every* point set (0.0630 all, 0.0940 non-ceiling, 0.0951 contestable — the last only
+just); at δ = 0.100 it fires on none. **δ moves the verdict; the ceiling exclusion does not.**
+That is worth stating explicitly, because the ceiling correction is the more obviously
+"correct-looking" adjustment and it is the one that changes nothing about trainability.
+
+### What the ceiling drag does to the headline mean Δ
+
+Ceiling points carry mean Δ = −0.0492 (train) and −0.0446 (dev) — pure harm by construction,
+since help is identically zero there. Weighted by their share, that is a drag of −0.0162 on
+train and −0.0091 on dev, and the mixture reconstructs the overall mean exactly.
+
+| split | point set | n | mean Δ | mean help | mean harm |
+|---|---|---:|---:|---:|---:|
+| train | all complete | 397 | **−0.014393** | 0.034101 | 0.048494 |
+| train | ceiling | 131 | −0.049172 | 0.000000 | 0.049172 |
+| train | contestable | 263 | **+0.002766** | 0.051475 | 0.048709 |
+| dev | all complete | 332 | +0.009702 | 0.058932 | 0.049230 |
+| dev | ceiling | 68 | −0.044588 | 0.000000 | 0.044588 |
+| dev | contestable | 264 | **+0.023686** | 0.074112 | 0.050426 |
+
+**On train the sign of the headline flips**, from −0.0144 to +0.0028, purely by removing points
+where the intervention could not have helped. On dev the positive estimate roughly doubles.
+Both are small relative to SD(Δ) ≈ 0.16–0.18 over a few hundred points, so neither is a claim of
+a real effect — the point is that the all-points mean is a **biased-downward** summary of the
+intervention's value, because a third of the train points score it on a question it cannot win.
+
+**No amendment is made here either.** The pre-registered estimand is over all points and stays
+that way. This is recorded so that the all-points mean is never quoted as "the intervention
+hurts on average" without the decomposition beside it.
+

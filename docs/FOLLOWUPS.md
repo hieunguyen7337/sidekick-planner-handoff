@@ -412,7 +412,7 @@ measured on the wrong denominator reads exactly like a correct one.
 
 ---
 
-## OPEN — the J6 branch job writes its server log and PBS stdout to paths that carry no campaign id
+## RESOLVED 2026-09-18 — the J6 branch job writes its server log and PBS stdout to paths that carry no campaign id
 
 `scripts/pbs/hj6_branches.pbs` sets
 
@@ -446,6 +446,18 @@ Fix: `VLOG="${LOGDIR}/${CID}_vllm.log"` and `#PBS -o campaign/workers/logs/hj6_b
 (or passing `-o` with campaign ID at `qsub` time). Not applied mid-run, because editing the script
 while two jobs are executing from it risks the held resume job (25412609) picking up a
 half-edited file. Apply before the next J6 submission after the resume completes.
+
+**Resolution (2026-09-18, commit `2216a0b`)**: `#PBS -o` is evaluated at **submit** time and
+cannot interpolate `${CID}`, which is computed inside the script — so the directive now names
+the log directory `/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/`
+rather than a file. PBS then writes a unique `<job ID>.OU` there, ensuring train, dev and a resume
+cannot share a path, and a job that dies before the script runs still leaves a findable log
+[OBSERVED scripts/pbs/hj6_branches.pbs:7-15]. The script additionally `exec`s a `${CID}.${JOBTAG}.out`
+log (`${CID}.${PBS_JOBID}.out`) as soon as the campaign id is known, so an early death *after* startup
+still leaves a campaign-id-named log [OBSERVED scripts/pbs/hj6_branches.pbs:33-43]. `VLOG` now carries
+the campaign id and job tag (`${LOGDIR}/${CID}.${JOBTAG}_vllm.log`) [OBSERVED scripts/pbs/hj6_branches.pbs:73].
+This resolves the log collisions that previously cost two misdiagnoses during the J6 crash and
+throughput investigations.
 
 ⚠ Same family as everything else in this document: nothing failed, nothing reported an
 error, and the artifact that would have told you what happened quietly stopped being
@@ -768,3 +780,74 @@ and the first symptom was a crash rate that looked like a concurrency bug.
 
 **When a definition changes, re-derive every quantity computed from it, not just the ones the
 change was about.**
+
+---
+
+## 🔻 RESOLVED 2026-09-18 — a calibrator that decalibrated, and the invariant that caught it
+
+`fit_temperature` in `scripts/setup/fit_feature_verifier.py` claimed to minimise dev NLL by 1-D
+Newton steps. It never did. The NLL gradient is `dNLL/dT = (1/T²)·Σ(yᵢ−pᵢ)zᵢ`, so the stationary
+condition is `Σ(yᵢ−pᵢ)zᵢ = 0`; the implementation accumulated `(1/T − (yᵢ−pᵢ))·z²/T²`, carrying a
+spurious `1/T` term and weighting by `z²` instead of `z`. Its fixed point was
+`Σ(y−p)z²/Σz² = 1/T`, which is not NLL stationarity.
+
+On synthetic data where the answer is known by construction it failed in every regime: with
+labels drawn from the model (true T = 1.0) it returned 0.0500, the clamp floor; with logits 3×
+too large it returned 0.0500 again; with uninformative scores and random labels it returned
+1.0000 and never moved. In all three it was **worse than doing nothing**.
+
+On the real dev split it returned T = 0.129, which *sharpens* logits ~7.75×, and the J7 artifact
+then reported dev Brier 0.480 and ECE 0.490. The honest pre-scaling values were 0.268 and 0.145 —
+so the calibration step made Brier 1.8× worse and ECE 3.4× worse while producing output that
+looked entirely plausible.
+
+Fixed by golden-section search over log T. After the fix T = 11.04 (flattening toward the base
+rate, the correct direction for a near-uninformative model), dev ECE 0.490 → 0.0136, Brier
+0.480 → 0.2498, dev AUROC byte-identical at 0.5916711736073553.
+
+### 🔺 The standing practice this produces: every fitted quantity gets an invariant
+
+This defect was **not** caught by tests, by review, or by the number looking wrong. It was caught
+by deriving the gradient by hand and checking the optimiser against a brute-force grid. That does
+not scale, and it is now the fourth defect in this campaign to return believable numbers from
+broken internals (see the probe's `hash_match` metric, omitted `tests/integration`, and J6 zero planner budget entries above).
+
+What does scale is cheap, and it is now the expected practice for anything fitted:
+
+1. **An improvement invariant.** A step that claims to improve a quantity must be asserted to
+   improve it, against the no-op baseline. Calibration must not increase NLL; a fit must not
+   score worse than its own initialisation. `fit_temperature` now returns 1.0 whenever the
+   optimum fails to strictly beat T = 1.0.
+2. **An invariance invariant.** A transform must be asserted not to change what it cannot change.
+   Temperature scaling is monotone, so AUROC must come back bit-identical; a moved AUROC means
+   something else broke. This is what confirmed the fix touched only what it should.
+3. **Before and after, in the artifact.** `dev_nll_before` and `dev_nll_after` are now written to
+   `metrics.json`, so the next instance of this failure is visible by reading the output instead
+   of requiring someone to re-derive the mathematics.
+4. **A known-answer test.** Any optimiser gets at least one case where the correct answer is known
+   by construction, not merely plausible.
+
+## 🔻 OPEN 2026-09-18 — the planner quota is now a scheduled resource, not a free one
+
+J6 spent 37,368 hosted planner calls against a cost table that budgeted it at zero, and exhausted
+the rolling window (see the root-cause entry above). The remaining campaign needs roughly:
+
+| item | planner calls |
+|---|---:|
+| recover the 1,498 crashed branches | ≈ 6,000 |
+| J8 dev frontier | ≈ 3,200 |
+| J10 final | ≈ 11,500 |
+| **total** | **≈ 21,000** |
+
+That is of the same order as the spend that just drained the window, so these can no longer be
+launched on a first-come basis.
+
+**Priority, to be confirmed by the user before the quota resets (2026-09-19 ~21:13): recovery
+first.** It is the only one of the three that makes data we already paid for usable, it is the
+cheapest per unit of information, and until `branch_counterfactual.py`'s retry path is in place a
+resume recovers nothing at all. J8 and J10 are both downstream of decisions that the recovered
+labels may change.
+
+Every J6-family submission from here carries `--max-planner-calls-total`, so a budget overrun
+stops cleanly and resumably rather than running to exhaustion.
+
