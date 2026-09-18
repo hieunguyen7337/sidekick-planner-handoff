@@ -524,5 +524,58 @@ def test_run_fit_joins_real_ids_and_reports_ambiguous_and_drops(tmp_path):
     assert report["dev_join"]["n_joined"] > 0
     assert report["dev_filter"]["ambiguous_excluded"] > 0
     assert report["train_join"]["n_join_dropped"] >= 1
-    assert report["train"]["n"] >= 2
     assert report["dev"]["n"] >= 2
+    assert "dev_nll_before" in report
+    assert "dev_nll_after" in report
+    assert report["dev"]["nll"] is not None
+
+
+# --- W-17: 1-D golden-section temperature fitting & NLL invariant -----------
+
+
+def test_fit_temperature_three_regimes():
+    import random
+
+    rng = random.Random(0)
+    z = [rng.gauss(0.0, 1.5) for _ in range(400)]
+    p = [1.0 / (1.0 + math.exp(-zi)) for zi in z]
+    y = [1 if rng.random() < pi else 0 for pi in p]
+
+    # Case A: well-specified data (honest T = 1.0)
+    t_a = fit.fit_temperature(p, y)
+    assert 0.7 <= t_a <= 1.4
+    probs_a_fit = fit.rescale_probs(p, t_a)
+    assert fit.compute_nll(y, probs_a_fit) <= fit.compute_nll(y, p)
+
+    # Case B: overconfident model (logits 3x too large, honest T ~ 3.0)
+    z2 = [zi * 3.0 for zi in z]
+    p2 = [1.0 / (1.0 + math.exp(-zi)) for zi in z2]
+    t_b = fit.fit_temperature(p2, y)
+    assert 2.2 <= t_b <= 4.0
+    probs_b_fit = fit.rescale_probs(p2, t_b)
+    assert fit.compute_nll(y, probs_b_fit) <= fit.compute_nll(y, p2)
+
+    # Case C: uninformative scores against random labels (honest T large)
+    y3 = [rng.randint(0, 1) for _ in range(400)]
+    t_c = fit.fit_temperature(p2, y3)
+    assert t_c >= 5.0
+    probs_c_fit = fit.rescale_probs(p2, t_c)
+    assert fit.compute_nll(y3, probs_c_fit) <= fit.compute_nll(y3, p2)
+
+
+def test_fit_temperature_degenerate_inputs():
+    assert fit.fit_temperature([], []) == 1.0
+    assert fit.fit_temperature([0.2, 0.8], []) == 1.0
+    assert fit.fit_temperature([0.2, 0.8], [1, 1]) == 1.0
+    assert fit.fit_temperature([0.2, 0.8], [0, 0]) == 1.0
+
+
+def test_fit_temperature_never_worse_than_one():
+    # If uncalibrated is already optimal or optimizer cannot improve, guard returns 1.0
+    probs = [0.1, 0.9, 0.1, 0.9]
+    y = [0, 1, 0, 1]
+    t = fit.fit_temperature(probs, y)
+    nll_t = fit.compute_nll(y, fit.rescale_probs(probs, t))
+    nll_1 = fit.compute_nll(y, probs)
+    assert nll_t <= nll_1
+

@@ -1,0 +1,7 @@
+hpc: 25422408.aqua queued (cpu_inter, 2 cpu, 8gb, walltime 00:10:00)
+hpc: waiting. Ctrl-C detaches; the job keeps running (qdel 25422408 to stop it).
+hpc: queued...
+hpc: finished after 30s
+---
+n = 741 p75 = 0.16599999999999993
+hpc: full job log (with the site epilogue) at /home/n12194778/.hpc-spool/20260918-134615-3416640.out

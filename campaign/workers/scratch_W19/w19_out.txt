@@ -1,0 +1,98 @@
+hpc: 25422402.aqua queued (cpu_inter, 4 cpu, 16gb, walltime 00:20:00)
+hpc: waiting. Ctrl-C detaches; the job keeps running (qdel 25422402 to stop it).
+hpc: queued...
+hpc: finished after 35s
+---
+
+===== TRAIN =====
+[coverage] points=777 complete4=397 null_gpr_rows=1357
+[within-SD treated] n=397 median=0.0000 IQR=(0.0000,0.1369) p90=0.2887
+[within-SD untreated] n=397 median=0.0000 IQR=(0.0000,0.1443) p90=0.2887
+[CRN corr seed 101] r=0.5993
+[CRN corr seed 102] r=0.6848
+[CRN corr seed 103] r=0.6582
+[CRN corr seed 104] r=0.6820
+[CRN corr mean across seeds] 0.6561
+[null |mean(pairA)-mean(pairB)|] n=2382 p50=0.0000 p75=0.1000 p90=0.2500
+[derivation] null is diff of two 2-rep means: Var = s^2/2 + s^2/2 = s^2/2 -> SD = s/sqrt(2).
+             4-rep Delta: Var = s^2/4 + s^2/4 = s^2/2 -> SD = s/sqrt(2). SAME scale -> no further adjustment.
+[observed |Delta| reps=(101, 102)] n=397 mean_abs=0.1064 SD(D)=0.1925 p75_abs=0.1670
+[observed |Delta| reps=(103, 104)] n=397 mean_abs=0.0949 SD(D)=0.1789 p75_abs=0.1430
+[observed |Delta| reps=(101, 102, 103, 104)] n=397 mean_abs=0.0826 SD(D)=0.1495 p75_abs=0.1250
+
+===== TRAIN =====
+[coverage] points=777 complete4=397 null_gpr_rows=1357
+[within-SD treated] n=397 median=0.0000 IQR=(0.0000,0.1369) p90=0.2887
+[within-SD untreated] n=397 median=0.0000 IQR=(0.0000,0.1443) p90=0.2887
+[CRN corr seed 101] r=0.5993
+[CRN corr seed 102] r=0.6848
+[CRN corr seed 103] r=0.6582
+[CRN corr seed 104] r=0.6820
+[CRN corr mean across seeds] 0.6561
+[null |mean(pairA)-mean(pairB)|] n=2382 p50=0.0000 p75=0.1000 p90=0.2500
+[derivation] null is diff of two 2-rep means: Var = s^2/2 + s^2/2 = s^2/2 -> SD = s/sqrt(2).
+             4-rep Delta: Var = s^2/4 + s^2/4 = s^2/2 -> SD = s/sqrt(2). SAME scale -> no further adjustment.
+[observed |Delta| reps=(101, 102)] n=397 mean_abs=0.1064 SD(D)=0.1925 p75_abs=0.1670
+[observed |Delta| reps=(103, 104)] n=397 mean_abs=0.0949 SD(D)=0.1789 p75_abs=0.1430
+[observed |Delta| reps=(101, 102, 103, 104)] n=397 mean_abs=0.0826 SD(D)=0.1495 p75_abs=0.1250
+
+===== DEV =====
+[coverage] points=382 complete4=332 null_gpr_rows=141
+[within-SD treated] n=332 median=0.0000 IQR=(0.0000,0.2500) p90=0.3464
+[within-SD untreated] n=332 median=0.0000 IQR=(0.0000,0.2500) p90=0.3141
+[CRN corr seed 101] r=0.5798
+[CRN corr seed 102] r=0.6164
+[CRN corr seed 103] r=0.5535
+[CRN corr seed 104] r=0.6039
+[CRN corr mean across seeds] 0.5884
+[null |mean(pairA)-mean(pairB)|] n=1992 p50=0.0000 p75=0.2000 p90=0.3000
+[derivation] null is diff of two 2-rep means: Var = s^2/2 + s^2/2 = s^2/2 -> SD = s/sqrt(2).
+             4-rep Delta: Var = s^2/4 + s^2/4 = s^2/2 -> SD = s/sqrt(2). SAME scale -> no further adjustment.
+[observed |Delta| reps=(101, 102)] n=332 mean_abs=0.1244 SD(D)=0.2174 p75_abs=0.2035
+[observed |Delta| reps=(103, 104)] n=332 mean_abs=0.1276 SD(D)=0.2107 p75_abs=0.2500
+[observed |Delta| reps=(101, 102, 103, 104)] n=332 mean_abs=0.1082 SD(D)=0.1749 p75_abs=0.1665
+
+===== LABEL GRIDS =====
+-- TRAIN --
+[label grid]
+  delta=0.0200: needed=89 needless=116 ambiguous=192 f=0.2922 1-f=0.7078
+  delta=0.0400: needed=81 needless=104 ambiguous=212 f=0.2620 1-f=0.7380
+  delta=0.0600: needed=72 needless=87 ambiguous=238 f=0.2191 1-f=0.7809
+  delta=0.0800: needed=63 needless=79 ambiguous=255 f=0.1990 1-f=0.8010
+  delta=0.0830: needed=62 needless=78 ambiguous=257 f=0.1965 1-f=0.8035
+  delta=0.1000: needed=54 needless=67 ambiguous=276 f=0.1688 1-f=0.8312
+  delta=0.1170: needed=52 needless=65 ambiguous=280 f=0.1637 1-f=0.8363
+  delta=0.1200: needed=52 needless=65 ambiguous=280 f=0.1637 1-f=0.8363
+  delta=0.1400: needed=32 needless=52 ambiguous=313 f=0.1310 1-f=0.8690
+  delta=0.1660: needed=25 needless=46 ambiguous=326 f=0.1159 1-f=0.8841
+  delta=0.1800: needed=22 needless=45 ambiguous=330 f=0.1134 1-f=0.8866
+  delta=0.2000: needed=18 needless=33 ambiguous=346 f=0.0831 1-f=0.9169
+  delta=0.2200: needed=15 needless=27 ambiguous=355 f=0.0680 1-f=0.9320
+  delta=0.2500: needed=9 needless=20 ambiguous=368 f=0.0504 1-f=0.9496
+-- DEV --
+[label grid]
+  delta=0.0200: needed=113 needless=88 ambiguous=131 f=0.2651 1-f=0.7349
+  delta=0.0400: needed=106 needless=78 ambiguous=148 f=0.2349 1-f=0.7651
+  delta=0.0600: needed=91 needless=69 ambiguous=172 f=0.2078 1-f=0.7922
+  delta=0.0800: needed=85 needless=66 ambiguous=181 f=0.1988 1-f=0.8012
+  delta=0.0830: needed=85 needless=66 ambiguous=181 f=0.1988 1-f=0.8012
+  delta=0.1000: needed=72 needless=61 ambiguous=199 f=0.1837 1-f=0.8163
+  delta=0.1170: needed=70 needless=60 ambiguous=202 f=0.1807 1-f=0.8193
+  delta=0.1200: needed=70 needless=60 ambiguous=202 f=0.1807 1-f=0.8193
+  delta=0.1400: needed=53 needless=49 ambiguous=230 f=0.1476 1-f=0.8524
+  delta=0.1660: needed=43 needless=43 ambiguous=246 f=0.1295 1-f=0.8705
+  delta=0.1800: needed=38 needless=38 ambiguous=256 f=0.1145 1-f=0.8855
+  delta=0.2000: needed=36 needless=33 ambiguous=263 f=0.0994 1-f=0.9006
+  delta=0.2200: needed=30 needless=26 ambiguous=276 f=0.0783 1-f=0.9217
+  delta=0.2500: needed=21 needless=14 ambiguous=297 f=0.0422 1-f=0.9578
+
+===== STABILITY (half vs half) =====
+-- TRAIN (derived delta=0.1000 vs frozen 0.166) --
+[stability delta=0.0830] half-agreement=0.6574 (n=397)
+[stability delta=0.1000] half-agreement=0.6851 (n=397)
+[stability delta=0.1660] half-agreement=0.7229 (n=397)
+-- DEV (derived delta=0.2000 vs frozen 0.166) --
+[stability delta=0.0830] half-agreement=0.6205 (n=332)
+[stability delta=0.1660] half-agreement=0.6355 (n=332)
+[stability delta=0.2000] half-agreement=0.6837 (n=332)
+hpc: full job log (with the site epilogue) at /home/n12194778/.hpc-spool/20260918-134428-3390803.out

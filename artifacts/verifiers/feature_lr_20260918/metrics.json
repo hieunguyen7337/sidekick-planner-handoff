@@ -1,0 +1,63 @@
+{
+  "l2": 1.0,
+  "train": {
+    "n": 71,
+    "n_tick_states": 71,
+    "positive_rate": 0.352112676056338,
+    "brier": 0.21893146596227459,
+    "ece": 0.06540101345897724,
+    "nll": 0.6284434149583509,
+    "auroc_all_states": 0.7182608695652174,
+    "auroc_tick_states": 0.7182608695652174
+  },
+  "dev": {
+    "n": 86,
+    "n_tick_states": 86,
+    "positive_rate": 0.5,
+    "brier": 0.24980540651056946,
+    "ece": 0.013557368953354076,
+    "nll": 0.6927574856775385,
+    "auroc_all_states": 0.5916711736073553,
+    "auroc_tick_states": 0.5916711736073553,
+    "nll_before": 0.7311743159891501,
+    "nll_after": 0.6927574856775385
+  },
+  "dev_nll_before": 0.7311743159891501,
+  "dev_nll_after": 0.6927574856775385,
+  "temperature": 11.036021409862434,
+  "feature_spec_version": "feature_lr_v1",
+  "threats_to_validity": [
+    "train/serve distribution shift: J4 labels exist only at timer-tick states (steps 5, 10, 15, ...) but the router and the sidekick gate score every step; auroc_tick_states and auroc_all_states are reported separately to expose this.",
+    "labels are noisy: measured 2026-09-17 on partial J6 data, split-half reliability of the underlying effect is 0.17-0.20 per replicate, so the two-replicate mean the labels are cut from has reliability ~0.29. An AUROC near 0.5 is a plausible and reportable outcome, not necessarily a bug. Do not tune against dev metrics.",
+    "ambiguous label rows (~69% of points on partial data) are excluded from fitting and reported separately; treating them as negatives would fit mostly noise.",
+    "temperature is fit on dev: dev calibration metrics (brier, ece, nll) are evaluated on the same dev split used for temperature fitting, so reported dev calibration is in-sample and optimistic."
+  ],
+  "train_filter": {
+    "n_rows_read": 777,
+    "n_kept_for_fit": 71,
+    "incomplete_dropped": 380,
+    "ambiguous_excluded": 326,
+    "missing_label_dropped": 0,
+    "n_positive_kept": 25,
+    "n_negative_kept": 46
+  },
+  "dev_filter": {
+    "n_rows_read": 382,
+    "n_kept_for_fit": 86,
+    "incomplete_dropped": 50,
+    "ambiguous_excluded": 246,
+    "missing_label_dropped": 0,
+    "n_positive_kept": 43,
+    "n_negative_kept": 43
+  },
+  "train_join": {
+    "n_rows_read": 777,
+    "n_join_dropped": 0,
+    "n_joined": 777
+  },
+  "dev_join": {
+    "n_rows_read": 382,
+    "n_join_dropped": 0,
+    "n_joined": 382
+  }
+}

@@ -3,7 +3,7 @@
 Run inside a PBS job (`hpc -c 4 -m 16gb -t 00:20:00 python scripts/setup/
 fit_feature_verifier.py ...`), never on the login node. No numpy/sklearn
 dependency: pure-stdlib logistic regression via batch gradient descent with
-early stopping, and dev-set temperature scaling by 1-D Newton steps.
+early stopping, and dev-set temperature scaling by 1-D golden-section search.
 
 Input: two J6 ``branches.jsonl`` files (train and dev are separate explicit
 inputs — real rows have no ``split`` key) plus the two campaign roots whose
@@ -308,28 +308,80 @@ def predict_probs(params: list[float], X: list[list[float]]) -> list[float]:
     return out
 
 
-def fit_temperature(probs: list[float], y: list[int], iterations: int = 100) -> float:
-    """Temperature T minimising dev NLL of p^(1/T); 1-D Newton, T clamped."""
-    logit = [math.log(max(p, 1e-12) / max(1.0 - p, 1e-12)) for p in probs]
-    T = 1.0
+def compute_nll(y_true: list[int], probs: list[float]) -> float:
+    """Mean binary negative log-likelihood (cross-entropy in nats)."""
+    if not y_true or len(y_true) != len(probs):
+        return 0.0
+    tot = 0.0
+    for yi, p in zip(y_true, probs):
+        p = min(max(p, 1e-12), 1.0 - 1e-12)
+        tot -= yi * math.log(p) + (1 - yi) * math.log(1.0 - p)
+    return tot / len(y_true)
+
+
+nll = compute_nll
+
+
+def fit_temperature(
+    probs: list[float],
+    y: list[int],
+    min_t: float = 0.05,
+    max_t: float = 20.0,
+    iterations: int = 80,
+) -> float:
+    """Temperature T minimising dev NLL of p^(1/T); 1-D golden-section search.
+
+    Searches over log(T) in [log(min_t), log(max_t)]. Guards against making
+    calibration worse than uncalibrated (T=1.0) by returning 1.0 if the
+    optimum does not strictly improve dev NLL.
+    """
+    if not probs or not y or len(probs) != len(y) or len(set(y)) < 2:
+        return 1.0
+
+    logits = [
+        math.log(min(max(p, 1e-12), 1.0 - 1e-12) / (1.0 - min(max(p, 1e-12), 1.0 - 1e-12)))
+        for p in probs
+    ]
+
+    def _nll_at_t(t: float) -> float:
+        tot = 0.0
+        for z, yi in zip(logits, y):
+            scaled_z = max(-30.0, min(30.0, z / t))
+            q = 1.0 / (1.0 + math.exp(-scaled_z))
+            q = min(max(q, 1e-12), 1.0 - 1e-12)
+            tot -= yi * math.log(q) + (1 - yi) * math.log(1.0 - q)
+        return tot / len(y)
+
+    inv_phi = (math.sqrt(5.0) - 1.0) / 2.0  # ~0.618033988749895
+    a = math.log(min_t)
+    b = math.log(max_t)
+    c = b - inv_phi * (b - a)
+    d = a + inv_phi * (b - a)
+    fc = _nll_at_t(math.exp(c))
+    fd = _nll_at_t(math.exp(d))
+
     for _ in range(iterations):
-        num = 0.0
-        den = 1e-12
-        for zi, yi in zip(logit, y):
-            z = zi / T
-            p = 1.0 / (1.0 + math.exp(-max(-30.0, min(30.0, z))))
-            num += (1.0 / T - (yi - p)) * z * z / (T * T)
-            den += z * z / (T * T)
-        if den <= 1e-12:
-            break
-        new_T = T - num / den
-        if not math.isfinite(new_T) or new_T <= 0:
-            break
-        done = abs(new_T - T) < 1e-8
-        T = max(new_T, 0.05)
-        if done:
-            break
-    return float(T)
+        if fc < fd:
+            b = d
+            d = c
+            fd = fc
+            c = b - inv_phi * (b - a)
+            fc = _nll_at_t(math.exp(c))
+        else:
+            a = c
+            c = d
+            fc = fd
+            d = a + inv_phi * (b - a)
+            fd = _nll_at_t(math.exp(d))
+
+    opt_t = math.exp((a + b) / 2.0)
+    nll_opt = _nll_at_t(opt_t)
+    nll_1 = _nll_at_t(1.0)
+
+    # Invariant: calibration may never make things worse than T = 1.0
+    if nll_opt >= nll_1:
+        return 1.0
+    return float(opt_t)
 
 
 def auroc(y_true: list[int], scores: list[float]) -> float:
@@ -388,6 +440,16 @@ def is_tick_state(row: dict) -> bool:
         return False
 
 
+def rescale_probs(probs: list[float], temperature: float) -> list[float]:
+    """Scale probabilities by temperature: sigmoid(logit(p) / T)."""
+    out = []
+    for p in probs:
+        p = min(max(p, 1e-12), 1.0 - 1e-12)
+        z = math.log(p / (1.0 - p)) / temperature
+        out.append(1.0 / (1.0 + math.exp(-max(-30.0, min(30.0, z)))))
+    return out
+
+
 def fit_all(
     train_rows: list[dict],
     dev_rows: list[dict],
@@ -407,16 +469,7 @@ def fit_all(
     train_probs = predict_probs(params, Xtr)
     dev_probs_raw = predict_probs(params, Xdev)
     temperature = fit_temperature(dev_probs_raw, ydev) if ydev else 1.0
-
-    def rescale(probs: list[float]) -> list[float]:
-        out = []
-        for p in probs:
-            p = min(max(p, 1e-12), 1.0 - 1e-12)
-            z = math.log(p / (1.0 - p)) / temperature
-            out.append(1.0 / (1.0 + math.exp(-max(-30.0, min(30.0, z)))))
-        return out
-
-    dev_probs = rescale(dev_probs_raw)
+    dev_probs = rescale_probs(dev_probs_raw, temperature)
 
     columns = feature_spec()["columns"]
     weights = {c: params[i] / stds[i] for i, c in enumerate(columns)}
@@ -434,6 +487,7 @@ def fit_all(
             "positive_rate": (sum(y) / len(y)) if y else None,
             "brier": brier(y, probs) if y else None,
             "ece": expected_calibration_error(y, probs) if y else None,
+            "nll": compute_nll(y, probs) if y else None,
         }
         if y:
             out["auroc_all_states"] = auroc(y, probs)
@@ -444,6 +498,11 @@ def fit_all(
 
     report["train"] = block(train_rows, train_probs, ytr)
     report["dev"] = block(dev_rows, dev_probs, ydev) if dev_rows else {"n": 0}
+    if dev_rows and ydev:
+        report["dev"]["nll_before"] = compute_nll(ydev, dev_probs_raw)
+        report["dev"]["nll_after"] = compute_nll(ydev, dev_probs)
+    report["dev_nll_before"] = compute_nll(ydev, dev_probs_raw) if ydev else None
+    report["dev_nll_after"] = compute_nll(ydev, dev_probs) if ydev else None
     report["temperature"] = temperature
     report["feature_spec_version"] = FEATURE_SPEC_VERSION
     report["threats_to_validity"] = [
@@ -459,6 +518,9 @@ def fit_all(
         "ambiguous label rows (~69% of points on partial data) are excluded "
         "from fitting and reported separately; treating them as negatives "
         "would fit mostly noise.",
+        "temperature is fit on dev: dev calibration metrics (brier, ece, nll) "
+        "are evaluated on the same dev split used for temperature fitting, so "
+        "reported dev calibration is in-sample and optimistic.",
     ]
     return verifier, report
 
