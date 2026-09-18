@@ -42,6 +42,9 @@
 #
 # Job variables (override at qsub time):
 #   ARMSET (free|live|all), DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS
+#   SMOKE_ONLY=1 (default 0): each pending arm runs its 3-task smoke and
+#   gate, then stops before the 57×2 campaign. Job rc is the first failed
+#   smoke/gate. Unset or 0 leaves the full run unchanged.
 # Do NOT add reasoning-parser flags (G3); they parked generations in
 # reasoning_content and looked like parse_error.
 
@@ -51,13 +54,14 @@ set -uo pipefail
 # the unique <job ID>.OU under campaign/workers/logs/ (see #PBS -o above).
 ARMSET="${ARMSET:-free}"
 DATE="${DATE:-$(date -u +%Y%m%d)}"
+SMOKE_ONLY="${SMOKE_ONLY:-0}"
 JOB_CID="hj8_frontier_${ARMSET}_${DATE}"
 JOBTAG="${PBS_JOBID:-nopbs}"
 PBS_LOGDIR="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs"
 CID_OUT="${PBS_LOGDIR}/${JOB_CID}.${JOBTAG}.out"
 mkdir -p "${PBS_LOGDIR}"
 exec >> "${CID_OUT}" 2>&1
-echo "[hj8] job_cid=${JOB_CID} armset=${ARMSET} date=${DATE} job=${JOBTAG} cid_out=${CID_OUT}"
+echo "[hj8] job_cid=${JOB_CID} armset=${ARMSET} date=${DATE} smoke_only=${SMOKE_ONLY} job=${JOBTAG} cid_out=${CID_OUT}"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export HF_HOME=/scratch/n12194778/hf
 export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
@@ -92,7 +96,8 @@ echo "[hj8] vlog=${VLOG}"
 
 # ---- LoRA aliases: MUST equal executor.lora_name in each eval config ---------
 # Default path is the HEAVY_JOBS J5a output name. Override if the trainer
-# wrote a dated directory. register_lora hard-fails if it is not a directory.
+# wrote a dated directory. register_lora hard-fails unless the path is a
+# loadable PEFT dir (adapter_config.json + weights), not merely a directory.
 ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
 ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_granite8b}"
 MAX_LORAS=4
@@ -263,6 +268,19 @@ register_lora () {
     echo "[hj8] FATAL: adapter path for alias ${alias} is not a directory: ${path}" >&2
     exit 2
   fi
+  # vLLM 0.29 LoRAModel.from_local_checkpoint (non-tensorizer) requires a PEFT
+  # layout: adapter_config.json plus one of adapter_model.safetensors /
+  # adapter_model.bin / adapter_model.pt. PEFT's own save names are the first
+  # two; vLLM also accepts .pt. A trainer output directory exists from step 0
+  # with only trainer_state/ — do not treat "is a directory" as loadable.
+  if [[ ! -f "${path}/adapter_config.json" ]]; then
+    echo "[hj8] FATAL: adapter for alias ${alias} missing adapter_config.json: ${path}" >&2
+    exit 2
+  fi
+  if [[ ! -f "${path}/adapter_model.safetensors" && ! -f "${path}/adapter_model.bin" && ! -f "${path}/adapter_model.pt" ]]; then
+    echo "[hj8] FATAL: adapter for alias ${alias} missing weights file (need adapter_model.safetensors, adapter_model.bin, or adapter_model.pt): ${path}" >&2
+    exit 2
+  fi
   LORA_MODULES+=("${alias}=${path}")
   echo "[hj8] lora-module ${alias}=${path}"
 }
@@ -284,6 +302,10 @@ kill_vllm () {
 }
 
 # Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
+# SMOKE_ONLY=1 returns after smoke+gate (scid is still removed). Does not
+# --purge-broken or write a manifest on the real cid, so a later full run
+# still sees n_runs=0 and will smoke itself; an existing campaign is left
+# intact. An arm that already has result.json still skips smoke.
 # executor_alone must not pass --expect-planner (planner is never called; the
 # flag would fail a healthy arm). Cached sft_plan keeps --expect-planner (hj3).
 run_arm () {
@@ -309,8 +331,12 @@ run_arm () {
     return 0
   fi
 
-  echo "[hj8] ---- purge broken runs from earlier attempts ----"
-  timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -2
+  if [[ "${SMOKE_ONLY}" == "1" ]]; then
+    echo "[hj8] smoke_only: not purging ${cid} (will not touch a real campaign tree)"
+  else
+    echo "[hj8] ---- purge broken runs from earlier attempts ----"
+    timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -2
+  fi
 
   stats="$(campaign_stats "${cid}" || true)"
   read -r n_runs n_broken <<<"${stats:-0 0}"
@@ -318,6 +344,10 @@ run_arm () {
   n_broken="${n_broken:-0}"
   echo "[hj8] resume: ${cid} n_runs=${n_runs} n_broken=${n_broken} n_planned=${N_PLANNED}"
   if [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_broken}" -eq 0 ]]; then
+    if [[ "${SMOKE_ONLY}" == "1" ]]; then
+      echo "[hj8] smoke_only: ${cid} has a full clean tree; smoke skipped; not writing manifest"
+      return 0
+    fi
     echo "[hj8] resume: ${cid} has a full clean tree; writing missing manifest"
     timeout 300 "${PY}" "${SUM}" \
       --out "${OUT}" --campaign-id "${cid}" \
@@ -350,6 +380,11 @@ run_arm () {
     rm -rf "${OUT:?}/${scid:?}"
   else
     echo "[hj8] resume: ${cid} already has ${n_runs} result.json; smoke skipped"
+  fi
+
+  if [[ "${SMOKE_ONLY}" == "1" ]]; then
+    echo "[hj8] smoke_only: ${cid} stopping before full campaign"
+    return 0
   fi
 
   echo "[hj8] ---- full campaign (${cid}) ----"
