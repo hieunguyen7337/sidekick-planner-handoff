@@ -104,15 +104,20 @@ def build_codex_argv(
     model: str,
     reasoning_effort: str,
     scratch: str,
-    prompt: str,
     thread_id: Optional[str] = None,
     schema_path: Optional[str] = None,
     sandbox: str = "read-only",
 ) -> list[str]:
-    """Build a `codex exec` argv. Never includes `--ephemeral` (that blocks resume)."""
+    """Build a `codex exec` argv. Never includes `--ephemeral` (that blocks resume).
+
+    The prompt is not an argv element (Linux MAX_ARG_STRLEN is 128 KiB). The
+    caller must write it to the child's stdin and close the pipe. Do not also
+    pass a positional PROMPT: `codex exec` would append stdin as a `<stdin>`
+    block and the argv element would still hit E2BIG.
+    """
     effort = f"model_reasoning_effort={reasoning_effort}"
     if thread_id:
-        # `codex exec resume [OPTIONS] [SESSION_ID] [PROMPT]` — no -s/-C on resume.
+        # `codex exec resume [OPTIONS] [SESSION_ID]` — prompt on stdin; no -s/-C.
         cmd = [
             binary,
             "exec",
@@ -128,7 +133,7 @@ def build_codex_argv(
         ]
         if schema_path:
             cmd.extend(["--output-schema", schema_path])
-        cmd.extend([thread_id, prompt])
+        cmd.append(thread_id)
         return cmd
     cmd = [
         binary,
@@ -148,7 +153,6 @@ def build_codex_argv(
     ]
     if schema_path:
         cmd.extend(["--output-schema", schema_path])
-    cmd.append(prompt)
     return cmd
 
 
@@ -392,7 +396,6 @@ class CodexExecPlanner:
             model=self.config.model,
             reasoning_effort=self.config.reasoning_effort,
             scratch=scratch_dir,
-            prompt=prompt,
             thread_id=self._thread_id,
             schema_path=schema_path,
             sandbox=self.config.sandbox,
@@ -403,9 +406,10 @@ class CodexExecPlanner:
         try:
             proc = self._runner(
                 argv,
-                stdin=subprocess.DEVNULL,
+                input=prompt,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired as exc:
