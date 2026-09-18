@@ -1,0 +1,144 @@
+{
+  "tag": "B_missing_arm",
+  "exit_code": 1,
+  "headline": "PLUMBING CHECK, NOT A RESULT. INCOMPLETE: missing_arm:sidekick",
+  "incomplete": true,
+  "hypothesis_decisions_refused": true,
+  "incomplete_reasons": [
+    "missing_arm:sidekick"
+  ],
+  "missing_and_crashed": {
+    "planner_alone": {
+      "n_expected": 114,
+      "n_ok": 101,
+      "n_scored_failure": 13,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      }
+    },
+    "executor_alone": {
+      "n_expected": 114,
+      "n_ok": 77,
+      "n_scored_failure": 37,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 37,
+        "none": 77
+      }
+    },
+    "prompt_only": {
+      "n_expected": 114,
+      "n_ok": 74,
+      "n_scored_failure": 40,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 40,
+        "none": 74
+      }
+    },
+    "fixed_k": {
+      "n_expected": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      }
+    },
+    "sft_plan": {
+      "n_expected": 114,
+      "n_ok": 99,
+      "n_scored_failure": 15,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 15,
+        "none": 99
+      }
+    },
+    "fixed_k_k5": {
+      "n_expected": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      }
+    }
+  },
+  "arms_tgc_mean": {
+    "planner_alone": 0.684211,
+    "executor_alone": 0.017544,
+    "prompt_only": 0.052632,
+    "fixed_k": 0.5,
+    "sft_plan": 0.429825,
+    "fixed_k_k5": 0.5
+  },
+  "arms_calls_mean": {
+    "planner_alone": 14.429825,
+    "executor_alone": 0.0,
+    "prompt_only": 1.008772,
+    "fixed_k": 4.350877,
+    "sft_plan": 1.0,
+    "fixed_k_k5": 4.350877
+  },
+  "H2": {
+    "status": "refused",
+    "reason": "incomplete or unresolved input"
+  },
+  "H1_status": "refused",
+  "H1_holds": null,
+  "contrasts": {}
+}

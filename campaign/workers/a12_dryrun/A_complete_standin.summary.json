@@ -1,0 +1,288 @@
+{
+  "tag": "A_complete_standin",
+  "exit_code": 0,
+  "headline": "PLUMBING CHECK, NOT A RESULT. COMPLETE matrix; hypothesis decisions follow.",
+  "incomplete": false,
+  "hypothesis_decisions_refused": false,
+  "incomplete_reasons": [],
+  "missing_and_crashed": {
+    "planner_alone": {
+      "n_expected": 114,
+      "n_ok": 101,
+      "n_scored_failure": 13,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      }
+    },
+    "executor_alone": {
+      "n_expected": 114,
+      "n_ok": 77,
+      "n_scored_failure": 37,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 37,
+        "none": 77
+      }
+    },
+    "prompt_only": {
+      "n_expected": 114,
+      "n_ok": 74,
+      "n_scored_failure": 40,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 40,
+        "none": 74
+      }
+    },
+    "fixed_k": {
+      "n_expected": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      }
+    },
+    "sft_plan": {
+      "n_expected": 114,
+      "n_ok": 99,
+      "n_scored_failure": 15,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 15,
+        "none": 99
+      }
+    },
+    "sidekick": {
+      "n_expected": 114,
+      "n_ok": 99,
+      "n_scored_failure": 15,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 15,
+        "none": 99
+      }
+    },
+    "fixed_k_k5": {
+      "n_expected": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      }
+    }
+  },
+  "arms_tgc_mean": {
+    "planner_alone": 0.684211,
+    "executor_alone": 0.017544,
+    "prompt_only": 0.052632,
+    "fixed_k": 0.5,
+    "sft_plan": 0.429825,
+    "sidekick": 0.429825,
+    "fixed_k_k5": 0.5
+  },
+  "arms_calls_mean": {
+    "planner_alone": 14.429825,
+    "executor_alone": 0.0,
+    "prompt_only": 1.008772,
+    "fixed_k": 4.350877,
+    "sft_plan": 1.0,
+    "sidekick": 1.0,
+    "fixed_k_k5": 4.350877
+  },
+  "H2": {
+    "status": "decided",
+    "holds": false,
+    "detail": {
+      "holds": false,
+      "clauses": {
+        "1_vs_fixed_k_k_matched": {
+          "rule": "ci95_pp[0] >= -7.00 against fixed_k(k_matched) [OBSERVED docs/prereg_v1.md:120]",
+          "ci95_pp": [
+            -15.79,
+            0.88
+          ],
+          "holds": false
+        },
+        "2_vs_sft_plan": {
+          "rule": "ci95_pp[0] > 0.00 against sft_plan(sft_b_plus) [OBSERVED docs/prereg_v1.md:121]",
+          "ci95_pp": [
+            0.0,
+            0.0
+          ],
+          "holds": false
+        },
+        "3_calls_vs_fixed_k_5": {
+          "rule": "ci95[1] < 0.00 calls against fixed_k(k=5) [OBSERVED docs/prereg_v1.md:122]",
+          "ci95_calls": [
+            -3.7895,
+            -2.9386
+          ],
+          "ci95_pp_from_paired_diff": [
+            -378.95,
+            -293.86
+          ],
+          "holds": true
+        }
+      },
+      "conjunctive": true
+    },
+    "note": "Three-clause form in docs/prereg_v1.md; RUNS.md H2a/H2b replacement is listed under unresolved_ambiguities and is not applied."
+  },
+  "H1_status": "decided",
+  "H1_holds": false,
+  "contrasts": {
+    "tgc_sidekick_minus_fixed_k": {
+      "diff_pp": -7.02,
+      "ci95_pp": [
+        -15.79,
+        0.88
+      ],
+      "diff": -0.0702,
+      "ci95": [
+        -0.1579,
+        0.0088
+      ],
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "resample": "task"
+    },
+    "tgc_sidekick_minus_sft_plan": {
+      "diff_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "diff": 0.0,
+      "ci95": [
+        0.0,
+        0.0
+      ],
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "resample": "task"
+    },
+    "calls_sidekick_minus_fixed_k_k5": {
+      "diff_pp": -335.09,
+      "ci95_pp": [
+        -378.95,
+        -293.86
+      ],
+      "diff": -3.3509,
+      "ci95": [
+        -3.7895,
+        -2.9386
+      ],
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "resample": "task"
+    },
+    "tgc_sidekick_minus_planner_alone": {
+      "diff_pp": -25.44,
+      "ci95_pp": [
+        -37.72,
+        -13.16
+      ],
+      "diff": -0.2544,
+      "ci95": [
+        -0.3772,
+        -0.1316
+      ],
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "resample": "task"
+    },
+    "tgc_sidekick_minus_executor_alone": {
+      "diff_pp": 41.23,
+      "ci95_pp": [
+        29.82,
+        52.63
+      ],
+      "diff": 0.4123,
+      "ci95": [
+        0.2982,
+        0.5263
+      ],
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "resample": "task"
+    },
+    "tgc_sidekick_minus_prompt_only": {
+      "diff_pp": 37.72,
+      "ci95_pp": [
+        26.32,
+        49.12
+      ],
+      "diff": 0.3772,
+      "ci95": [
+        0.2632,
+        0.4912
+      ],
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "resample": "task"
+    }
+  }
+}

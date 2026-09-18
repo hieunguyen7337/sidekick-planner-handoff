@@ -1,0 +1,1001 @@
+{
+  "label": "PLUMBING CHECK, NOT A RESULT \u2014 dev has been inspected; these numbers are not evidence about the thesis.",
+  "headline": "PLUMBING CHECK, NOT A RESULT. COMPLETE matrix; hypothesis decisions follow.",
+  "incomplete": false,
+  "incomplete_reasons": [],
+  "hypothesis_decisions_refused": false,
+  "split": "dev",
+  "plumbing_check": true,
+  "resample_unit": "task",
+  "resample_unit_justification": "The unit of resampling is the task. scripts/setup/hj1_gate.py:paired_diff(resample='task') draws tasks with replacement and carries every matched seed of that task together [OBSERVED scripts/setup/hj1_gate.py:91-100, 161-174]; scripts/setup/branch_counterfactual.py:task_clustered_bootstrap does the same [OBSERVED scripts/setup/branch_counterfactual.py:299-338, 735-738]. Paired seeds on one task are not independent samples; treating (task, seed) pairs as the resample unit would understate every interval. Prereg \u00a73.1 first averages TGC across the N seeds of a task and then bootstraps the task-difference vector [OBSERVED docs/prereg_v1.md:107-117]. With equal seed counts per task that estimand equals the clustered seed-level mean that paired_diff reports. This script refuses a contrast rather than mix cluster sizes, so the two writings coincide when a decision is emitted.",
+  "bootstrap": {
+    "n": 10000,
+    "seed": 20260915,
+    "source": "scripts/setup/hj1_gate.py"
+  },
+  "j9_parameters": {
+    "k_matched": 5,
+    "tau": null,
+    "router_tau": null,
+    "note": "These are frozen on dev at J9 and are inputs here, not estimated [OBSERVED docs/prereg_v1.md:219-231]."
+  },
+  "expected": {
+    "n_tasks": 57,
+    "n_tasks_observed_union": 57,
+    "seeds": [
+      1,
+      2
+    ],
+    "n_cells_per_arm": 114
+  },
+  "missing_and_crashed": {
+    "planner_alone": {
+      "n_expected": 114,
+      "n_ok": 101,
+      "n_scored_failure": 13,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      }
+    },
+    "executor_alone": {
+      "n_expected": 114,
+      "n_ok": 77,
+      "n_scored_failure": 37,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 37,
+        "none": 77
+      }
+    },
+    "prompt_only": {
+      "n_expected": 114,
+      "n_ok": 74,
+      "n_scored_failure": 40,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 40,
+        "none": 74
+      }
+    },
+    "fixed_k": {
+      "n_expected": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      }
+    },
+    "sft_plan": {
+      "n_expected": 114,
+      "n_ok": 99,
+      "n_scored_failure": 15,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 15,
+        "none": 99
+      }
+    },
+    "sidekick": {
+      "n_expected": 114,
+      "n_ok": 98,
+      "n_scored_failure": 16,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "crash": 1,
+        "limit": 15,
+        "none": 98
+      }
+    },
+    "fixed_k_k5": {
+      "n_expected": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "complete": true,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      }
+    }
+  },
+  "arms": {
+    "planner_alone": {
+      "label": "planner_alone",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 101,
+      "n_scored_failure": 13,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "planner_alone"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.684211,
+      "n_success": 78,
+      "planner_calls_mean": 14.429825,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      },
+      "disagreements_n": 0,
+      "secondary": {
+        "n": 114,
+        "sgc": {
+          "value": 0.4474,
+          "scenarios_scored": 38,
+          "scenarios_complete": 17,
+          "dropped_incomplete": 0
+        },
+        "n_asks_total": 0,
+        "n_steps_total": 1541,
+        "r_ask": 0.0,
+        "usd_total": 4.04458132,
+        "n_success": 78,
+        "usd_per_success": 0.051854,
+        "usd_per_run": 0.035479,
+        "unsafe_irreversible_violations": {
+          "value": null,
+          "reason": "RunResult has no such field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+        }
+      }
+    },
+    "executor_alone": {
+      "label": "executor_alone",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 77,
+      "n_scored_failure": 37,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "executor_alone"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.017544,
+      "n_success": 2,
+      "planner_calls_mean": 0.0,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 37,
+        "none": 77
+      },
+      "disagreements_n": 0,
+      "secondary": {
+        "n": 114,
+        "sgc": {
+          "value": 0.0,
+          "scenarios_scored": 38,
+          "scenarios_complete": 0,
+          "dropped_incomplete": 0
+        },
+        "n_asks_total": 0,
+        "n_steps_total": 3438,
+        "r_ask": 0.0,
+        "usd_total": 0.0,
+        "n_success": 2,
+        "usd_per_success": 0.0,
+        "usd_per_run": 0.0,
+        "unsafe_irreversible_violations": {
+          "value": null,
+          "reason": "RunResult has no such field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+        }
+      }
+    },
+    "prompt_only": {
+      "label": "prompt_only",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 74,
+      "n_scored_failure": 40,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "prompt_only"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.052632,
+      "n_success": 6,
+      "planner_calls_mean": 1.008772,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 40,
+        "none": 74
+      },
+      "disagreements_n": 0,
+      "secondary": {
+        "n": 114,
+        "sgc": {
+          "value": 0.0,
+          "scenarios_scored": 38,
+          "scenarios_complete": 0,
+          "dropped_incomplete": 0
+        },
+        "n_asks_total": 1,
+        "n_steps_total": 3624,
+        "r_ask": 0.000276,
+        "usd_total": 0.0037702000000000005,
+        "n_success": 6,
+        "usd_per_success": 0.000628,
+        "usd_per_run": 3.3e-05,
+        "unsafe_irreversible_violations": {
+          "value": null,
+          "reason": "RunResult has no such field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+        }
+      }
+    },
+    "fixed_k": {
+      "label": "fixed_k",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.5,
+      "n_success": 57,
+      "planner_calls_mean": 4.350877,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      },
+      "disagreements_n": 0,
+      "secondary": {
+        "n": 114,
+        "sgc": {
+          "value": 0.2368,
+          "scenarios_scored": 38,
+          "scenarios_complete": 9,
+          "dropped_incomplete": 0
+        },
+        "n_asks_total": 0,
+        "n_steps_total": 2125,
+        "r_ask": 0.0,
+        "usd_total": 1.03455476,
+        "n_success": 57,
+        "usd_per_success": 0.01815,
+        "usd_per_run": 0.009075,
+        "unsafe_irreversible_violations": {
+          "value": null,
+          "reason": "RunResult has no such field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+        }
+      }
+    },
+    "sft_plan": {
+      "label": "sft_plan",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 99,
+      "n_scored_failure": 15,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "sft_plan"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.429825,
+      "n_success": 49,
+      "planner_calls_mean": 1.0,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 15,
+        "none": 99
+      },
+      "disagreements_n": 0,
+      "secondary": {
+        "n": 114,
+        "sgc": {
+          "value": 0.2895,
+          "scenarios_scored": 38,
+          "scenarios_complete": 11,
+          "dropped_incomplete": 0
+        },
+        "n_asks_total": 0,
+        "n_steps_total": 2016,
+        "r_ask": 0.0,
+        "usd_total": 0.0,
+        "n_success": 49,
+        "usd_per_success": 0.0,
+        "usd_per_run": 0.0,
+        "unsafe_irreversible_violations": {
+          "value": null,
+          "reason": "RunResult has no such field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+        }
+      }
+    },
+    "sidekick": {
+      "label": "sidekick",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 98,
+      "n_scored_failure": 16,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "sft_plan"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.429825,
+      "n_success": 49,
+      "planner_calls_mean": 1.0,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "crash": 1,
+        "limit": 15,
+        "none": 98
+      },
+      "disagreements_n": 0,
+      "secondary": {
+        "n": 114,
+        "sgc": {
+          "value": 0.2895,
+          "scenarios_scored": 38,
+          "scenarios_complete": 11,
+          "dropped_incomplete": 0
+        },
+        "n_asks_total": 0,
+        "n_steps_total": 2016,
+        "r_ask": 0.0,
+        "usd_total": 0.0,
+        "n_success": 49,
+        "usd_per_success": 0.0,
+        "usd_per_run": 0.0,
+        "unsafe_irreversible_violations": {
+          "value": null,
+          "reason": "RunResult has no such field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+        }
+      }
+    },
+    "fixed_k_k5": {
+      "label": "fixed_k_k5",
+      "n_expected": 114,
+      "n_cleaned": 114,
+      "n_ok": 107,
+      "n_scored_failure": 7,
+      "n_missing_run": 0,
+      "n_missing_metric": 0,
+      "n_scored_failure_disagrees_with_recorded_tgc": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "n_extra_runs_ignored": 0,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "root_missing": false,
+      "complete": true,
+      "tgc_mean": 0.5,
+      "n_success": 57,
+      "planner_calls_mean": 4.350877,
+      "quota_stall_n": 0,
+      "quota_stall_frac": 0.0,
+      "quota_stall": false,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      },
+      "disagreements_n": 0,
+      "secondary": {
+        "n": 114,
+        "sgc": {
+          "value": 0.2368,
+          "scenarios_scored": 38,
+          "scenarios_complete": 9,
+          "dropped_incomplete": 0
+        },
+        "n_asks_total": 0,
+        "n_steps_total": 2125,
+        "r_ask": 0.0,
+        "usd_total": 1.03455476,
+        "n_success": 57,
+        "usd_per_success": 0.01815,
+        "usd_per_run": 0.009075,
+        "unsafe_irreversible_violations": {
+          "value": null,
+          "reason": "RunResult has no such field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+        }
+      }
+    }
+  },
+  "contrasts": {
+    "tgc_sidekick_minus_fixed_k": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "diff_pp": -7.02,
+      "ci95_pp": [
+        -15.79,
+        0.88
+      ],
+      "bootstrap": 10000,
+      "diff": -0.0702,
+      "ci95": [
+        -0.1579,
+        0.0088
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "diff_pp": -7.02,
+        "ci95_pp": [
+          -14.91,
+          0.88
+        ],
+        "bootstrap": 10000,
+        "diff": -0.0702,
+        "ci95": [
+          -0.1491,
+          0.0088
+        ]
+      },
+      "resample_unit_for_decision": "task"
+    },
+    "tgc_sidekick_minus_sft_plan": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "diff_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "bootstrap": 10000,
+      "diff": 0.0,
+      "ci95": [
+        0.0,
+        0.0
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "diff_pp": 0.0,
+        "ci95_pp": [
+          0.0,
+          0.0
+        ],
+        "bootstrap": 10000,
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "resample_unit_for_decision": "task"
+    },
+    "calls_sidekick_minus_fixed_k_k5": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "diff_pp": -335.09,
+      "ci95_pp": [
+        -378.95,
+        -293.86
+      ],
+      "bootstrap": 10000,
+      "diff": -3.3509,
+      "ci95": [
+        -3.7895,
+        -2.9386
+      ],
+      "units": "planner_calls (ci95); paired_diff also reports ci95_pp = 100\u00d7calls",
+      "resample_unit_for_decision": "task"
+    },
+    "tgc_sidekick_minus_planner_alone": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "diff_pp": -25.44,
+      "ci95_pp": [
+        -37.72,
+        -13.16
+      ],
+      "bootstrap": 10000,
+      "diff": -0.2544,
+      "ci95": [
+        -0.3772,
+        -0.1316
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "diff_pp": -25.44,
+        "ci95_pp": [
+          -35.96,
+          -14.91
+        ],
+        "bootstrap": 10000,
+        "diff": -0.2544,
+        "ci95": [
+          -0.3596,
+          -0.1491
+        ]
+      },
+      "resample_unit_for_decision": "task"
+    },
+    "tgc_sidekick_minus_executor_alone": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "diff_pp": 41.23,
+      "ci95_pp": [
+        29.82,
+        52.63
+      ],
+      "bootstrap": 10000,
+      "diff": 0.4123,
+      "ci95": [
+        0.2982,
+        0.5263
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "diff_pp": 41.23,
+        "ci95_pp": [
+          32.46,
+          50.0
+        ],
+        "bootstrap": 10000,
+        "diff": 0.4123,
+        "ci95": [
+          0.3246,
+          0.5
+        ]
+      },
+      "resample_unit_for_decision": "task"
+    },
+    "tgc_sidekick_minus_prompt_only": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "diff_pp": 37.72,
+      "ci95_pp": [
+        26.32,
+        49.12
+      ],
+      "bootstrap": 10000,
+      "diff": 0.3772,
+      "ci95": [
+        0.2632,
+        0.4912
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "diff_pp": 37.72,
+        "ci95_pp": [
+          28.07,
+          47.37
+        ],
+        "bootstrap": 10000,
+        "diff": 0.3772,
+        "ci95": [
+          0.2807,
+          0.4737
+        ]
+      },
+      "resample_unit_for_decision": "task"
+    }
+  },
+  "hypotheses": {
+    "H2": {
+      "status": "decided",
+      "holds": false,
+      "detail": {
+        "holds": false,
+        "clauses": {
+          "1_vs_fixed_k_k_matched": {
+            "rule": "ci95_pp[0] >= -7.00 against fixed_k(k_matched) [OBSERVED docs/prereg_v1.md:120]",
+            "ci95_pp": [
+              -15.79,
+              0.88
+            ],
+            "holds": false
+          },
+          "2_vs_sft_plan": {
+            "rule": "ci95_pp[0] > 0.00 against sft_plan(sft_b_plus) [OBSERVED docs/prereg_v1.md:121]",
+            "ci95_pp": [
+              0.0,
+              0.0
+            ],
+            "holds": false
+          },
+          "3_calls_vs_fixed_k_5": {
+            "rule": "ci95[1] < 0.00 calls against fixed_k(k=5) [OBSERVED docs/prereg_v1.md:122]",
+            "ci95_calls": [
+              -3.7895,
+              -2.9386
+            ],
+            "ci95_pp_from_paired_diff": [
+              -378.95,
+              -293.86
+            ],
+            "holds": true
+          }
+        },
+        "conjunctive": true
+      },
+      "note": "Three-clause form in docs/prereg_v1.md; RUNS.md H2a/H2b replacement is listed under unresolved_ambiguities and is not applied."
+    },
+    "H1": {
+      "status": "decided",
+      "tgc_noninferiority": {
+        "rule": "ci95_pp[0] >= -7.00 vs planner_alone [OBSERVED docs/prereg_v1.md:46]",
+        "ci95_pp": [
+          -37.72,
+          -13.16
+        ],
+        "holds": false
+      },
+      "fcd_tokens": {
+        "status": "ok",
+        "billed_pooled": 1.0,
+        "ledger_unweighted_pooled": 1.0,
+        "mean_of_per_task_billed_ratios": 1.0,
+        "n_tasks_in_paired_mean": 57,
+        "n_tasks_skipped_zero_planner_baseline": 0,
+        "strictly_positive": {
+          "billed_pooled": true,
+          "ledger_unweighted_pooled": true,
+          "mean_of_per_task_billed_ratios": true
+        },
+        "all_defined_agree_strictly_positive": true
+      },
+      "holds": false,
+      "note": "Secondary; reported whatever it shows [OBSERVED docs/prereg_v1.md:47]."
+    },
+    "H4": {
+      "status": "arm_absent",
+      "reason": "router_seq is optional [OBSERVED docs/prereg_v1.md:86]",
+      "holds": null
+    },
+    "H3": {
+      "status": "not_a_j10_archive_quantity",
+      "reason": "H3 is AUROC/ECE against dev oracle labels [OBSERVED docs/prereg_v1.md:50-51, 146-147]"
+    }
+  },
+  "secondary_not_computed_from_j10_archives": {
+    "H3_auroc_ece": "dev oracle labels, not J10 [OBSERVED docs/prereg_v1.md:50-51]",
+    "f_dev": "Gate B / J6 on dev [OBSERVED docs/prereg_v1.md:52-53, 148-149]",
+    "unsafe_irreversible_violations": "no RunResult field [OBSERVED src/sidekick/protocols/schemas.py:129-145]"
+  },
+  "unresolved_ambiguities": [
+    {
+      "id": "one_sided_vs_two_sided_bootstrap",
+      "citations": [
+        "docs/prereg_v1.md:36",
+        "docs/prereg_v1.md:46",
+        "docs/prereg_v1.md:117-122",
+        "scripts/setup/hj1_gate.py:129-136"
+      ],
+      "what": "H2 and H1 are described as a one-sided 95% paired bootstrap, but \u00a73.2 names hj1_gate.paired_diff as the exact procedure, and that function uses two-sided percentile endpoints at 2.5% and 97.5%.",
+      "script_behaviour": "Official CIs are hj1_gate.paired_diff two-sided 95% intervals because \u00a73.2 names that function. A one-sided interval is not computed. J9 must freeze which one is the test."
+    },
+    {
+      "id": "task_mean_vector_vs_clustered_seed_diffs",
+      "citations": [
+        "docs/prereg_v1.md:107-117",
+        "docs/prereg_v1.md:36",
+        "scripts/setup/hj1_gate.py:153-175"
+      ],
+      "what": "\u00a73.1 defines \u0394_i as the difference of per-task seed-means (168 numbers) and bootstraps that vector. \u00a71.1 counts 504 paired (task, seed) comparisons. paired_diff computes seed-level diffs and then clusters the bootstrap by task. These coincide only when every task has the same number of seeds.",
+      "script_behaviour": "Uses paired_diff(resample='task') as the named \u00a73.2 procedure, and refuses the contrast if cluster sizes would be unequal (incomplete seed coverage). J9 should say whether the estimand is the 168-vector or the clustered 504-vector."
+    },
+    {
+      "id": "h2_three_clause_vs_h2a_h2b",
+      "citations": [
+        "docs/prereg_v1.md:35-40",
+        "docs/prereg_v1.md:119-123",
+        "campaign/RUNS.md:1465-1470",
+        "campaign/RUNS.md:1541-1559"
+      ],
+      "what": "The prereg file still states a three-clause conjunctive H2 (vs fixed_k(k_matched) at \u22127 pp; vs sft_plan CI>0; fewer calls than fixed_k(k=5)). campaign/RUNS.md later says that form is not satisfiable as written and replaces it at J9 with H2a\u2227H2b.",
+      "script_behaviour": "Computes the three-clause form written in docs/prereg_v1.md. Does not replace it with H2a/H2b. J9 must freeze the primary."
+    },
+    {
+      "id": "failure_scoring_vs_never_coerce_none",
+      "citations": [
+        "docs/prereg_v1.md:175",
+        "scripts/setup/hj1_gate.py:15-16",
+        "src/sidekick/protocols/schemas.py:35-37",
+        "src/sidekick/systems/loop.py:954-968"
+      ],
+      "what": "\u00a76.1 scores limit/timeout/crash/parse_error/api_error as TGC=0. loop.py still writes evaluate()'s tgc (which can be 1.0) on a limit run, and the campaign convention is that None means not measured and must never be coerced to 0.",
+      "script_behaviour": "error_type in the \u00a76.1 set with recorded tgc None or 0.0 is scored 0 and counted as a scored failure (not dropped). tgc is None and error_type is not in that set \u2192 missing metric, refuse. recorded tgc not in {0, None} on a \u00a76.1 failure \u2192 recorded-vs-6.1 disagreement, refuse. J9 should say whether evaluate() TGC on a limit/timeout run is kept."
+    },
+    {
+      "id": "complete_accounting_vs_intersection_pairing",
+      "citations": [
+        "docs/prereg_v1.md:174",
+        "scripts/setup/hj1_gate.py:132-152"
+      ],
+      "what": "\u00a76.1 forbids dropping any initialized (task, seed) from the denominator. paired_diff pairs on the intersection of keys and drops unmatched runs.",
+      "script_behaviour": "If any required cell is missing, hypothesis decisions are refused. paired_diff is only called when the intersection is the full registered matrix, so nothing is dropped."
+    },
+    {
+      "id": "fcd_pooled_vs_paired_and_billed_vs_unweighted",
+      "citations": [
+        "docs/prereg_v1.md:137-139",
+        "docs/PLAN.md:157-159",
+        "src/sidekick/cost/ledger.py:40, 57-67"
+      ],
+      "what": "Prereg \u00a74.3 defines C_P as billed planner tokens (input + 0.10\u00d7cached + output + reasoning) and FCD as 1 \u2212 C_P,sidekick / C_P,planner_alone. PLAN.md says FCD is always paired by task. CostLedger.planner_tokens_total is an unweighted sum and frontier_displacement uses that.",
+      "script_behaviour": "Reports billed-pooled, ledger-unweighted-pooled, and mean of per-task billed ratios. H1's FCD>0 conjunct is refused if those definitions disagree on the sign of (FCD>0) or any is undefined."
+    },
+    {
+      "id": "h4_pvalue_and_matched_calls",
+      "citations": [
+        "docs/prereg_v1.md:48-49",
+        "scripts/setup/hj1_gate.py:124-192"
+      ],
+      "what": "H4 asks for p<0.05 at matched planner calls. paired_diff does not return a p-value. 'Matched' is a J9 calibration of router \u03c4* on dev; the prereg does not say what to do if test call counts then differ.",
+      "script_behaviour": "If router_seq is absent, H4 is skipped (optional arm). If present, the TGC contrast CI is reported and no p-value is invented. No H4 pass/fail is emitted; J9 must define 'matched' and the p-value."
+    },
+    {
+      "id": "c_solved_denominator",
+      "citations": [
+        "docs/prereg_v1.md:140-142"
+      ],
+      "what": "'Number of completed tasks' is not defined (successes vs. finished episodes vs. initialized cells).",
+      "script_behaviour": "Reports usd_total / n_success per arm and usd_total / n_runs. Does not pick one as C_solved for a test."
+    },
+    {
+      "id": "h3_and_f_dev_are_not_j10_archive_quantities",
+      "citations": [
+        "docs/prereg_v1.md:50-53",
+        "docs/prereg_v1.md:146-149"
+      ],
+      "what": "H3 (AUROC/ECE vs oracle labels) and f_dev are defined on dev counterfactual branches (J6/J7), not on the J10 test_normal matrix.",
+      "script_behaviour": "These are not computed from J10 arm archives. The report states that rather than inventing a test-set calibration."
+    },
+    {
+      "id": "unsafe_irreversible_not_in_schema",
+      "citations": [
+        "docs/prereg_v1.md:150-152",
+        "src/sidekick/protocols/schemas.py:129-145"
+      ],
+      "what": "Unsafe irreversible-action violations have no field on RunResult, and this script does not design an events.jsonl parser to recover them.",
+      "script_behaviour": "Reported as unmeasurable from result.json."
+    },
+    {
+      "id": "paired_diff_scales_calls_as_percentage_points",
+      "citations": [
+        "docs/prereg_v1.md:122",
+        "scripts/setup/hj1_gate.py:189-190"
+      ],
+      "what": "H2 clause 3 is in units of planner calls, but paired_diff always multiplies the mean difference by 100 and labels it pp.",
+      "script_behaviour": "The resampling is still paired_diff. Call contrasts are also reported in native units (pp/100). The sign test against 0 is invariant to that scale. J9 should say the call CI is not in pp."
+    }
+  ],
+  "none_means_not_measured": "tgc None with error_type not in ['api_error', 'crash', 'limit', 'parse_error', 'timeout'] is a missing metric and is never averaged as 0 [OBSERVED src/sidekick/protocols/schemas.py:35-37]."
+}

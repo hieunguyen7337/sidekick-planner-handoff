@@ -1,0 +1,1 @@
+/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/a12_dryrun/stage_crash/sft_plan/1/0d8a4ee_2/result.json
