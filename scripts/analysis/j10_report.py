@@ -20,6 +20,7 @@ import os
 import statistics
 import sys
 from collections import Counter
+from itertools import combinations
 from pathlib import Path
 from typing import Any, Iterable, Literal, Optional
 
@@ -573,6 +574,7 @@ def inventory_arm(
             row = runs[key]
             scored = score_tgc(row)
             slot.update(scored)
+            slot["goal_pass_rate"] = optional_float(row, "goal_pass_rate")
             counts[scored["status"]] += 1
             if scored["status"] == "scored_failure_disagrees_with_recorded_tgc":
                 disagree.append(slot)
@@ -601,6 +603,7 @@ def inventory_arm(
                 "task_id": task_id,
                 "seed": seed,
                 "tgc": tgc,
+                "goal_pass_rate": slot["goal_pass_rate"],
                 "success": success,
                 "n_planner_calls": calls,
                 "steps": 0 if steps is None else steps,
@@ -638,6 +641,14 @@ def inventory_arm(
 
     tgc_values = [row["tgc"] for row in cleaned.values()]
     call_values = [row["n_planner_calls"] for row in cleaned.values()]
+    gpr_values = [
+        row["goal_pass_rate"]
+        for row in cleaned.values()
+        if row["goal_pass_rate"] is not None
+    ]
+    n_gpr_missing = sum(
+        1 for row in cleaned.values() if row["goal_pass_rate"] is None
+    )
     return {
         "label": label,
         "n_expected": expected_n,
@@ -657,6 +668,11 @@ def inventory_arm(
         "tgc_mean": (
             round(statistics.fmean(tgc_values), 6) if tgc_values and complete else None
         ),
+        "goal_pass_rate_mean": (
+            round(statistics.fmean(gpr_values), 6) if gpr_values else None
+        ),
+        "n_goal_pass_rate_recorded": len(gpr_values),
+        "n_goal_pass_rate_missing": n_gpr_missing,
         "n_success": sum(1 for row in cleaned.values() if row["success"]),
         "planner_calls_mean": (
             round(statistics.fmean(call_values), 6) if call_values and complete else None
@@ -728,6 +744,69 @@ def contrast_calls(
     out = native_from_paired_diff(task)
     out["units"] = "planner_calls (ci95); paired_diff also reports ci95_pp = 100×calls"
     out["resample_unit_for_decision"] = RESAMPLE_UNIT
+    return out
+
+
+def contrast_goal_pass_rate(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+) -> dict[str, Any]:
+    """Task-clustered contrast on recorded goal_pass_rate only.
+
+    Missing/null values are dropped and counted, never coerced to 0.0.
+    paired_diff skips None then zips the unfiltered key list against the
+    filtered diffs [OBSERVED scripts/setup/hj1_gate.py:180-207], so this
+    wrapper keeps only pairs with a recorded value before calling it.
+    """
+    field = "goal_pass_rate"
+    shared = set(left) & set(right)
+    unmatched = {
+        "base": len(left) - len(shared),
+        "other": len(right) - len(shared),
+        "total": (len(left) - len(shared)) + (len(right) - len(shared)),
+    }
+    left_ok: dict[tuple[str, int], dict[str, Any]] = {}
+    right_ok: dict[tuple[str, int], dict[str, Any]] = {}
+    missing_field = 0
+    for key in shared:
+        lv = left[key].get(field)
+        rv = right[key].get(field)
+        if lv is None or rv is None:
+            missing_field += 1
+            continue
+        left_ok[key] = left[key]
+        right_ok[key] = right[key]
+    empty = {
+        "field": field,
+        "n_pairs": 0,
+        "n_tasks": 0,
+        "n_clusters": 0,
+        "mean_cluster_size": None,
+        "resample": RESAMPLE_UNIT,
+        "resample_unit": RESAMPLE_UNIT,
+        "resample_unit_for_decision": RESAMPLE_UNIT,
+        "pairs_dropped_missing_field": missing_field,
+        "dropped_unmatched_keys": unmatched,
+        "dropped_from_base": unmatched["base"],
+        "dropped_from_other": unmatched["other"],
+        "note": "no pairs with a recorded goal_pass_rate value",
+        "ci95": None,
+        "ci95_pp": None,
+        "diff": None,
+        "diff_pp": None,
+    }
+    if not left_ok:
+        return empty
+    task = paired_diff(left_ok, right_ok, field, resample="task")
+    pair = paired_diff(left_ok, right_ok, field, resample="pair")
+    out = native_from_paired_diff(task)
+    out["diagnostic_pair_resample"] = native_from_paired_diff(pair)
+    out["resample_unit_for_decision"] = RESAMPLE_UNIT
+    out["field"] = field
+    out["pairs_dropped_missing_field"] = missing_field
+    out["dropped_unmatched_keys"] = unmatched
+    out["dropped_from_base"] = unmatched["base"]
+    out["dropped_from_other"] = unmatched["other"]
     return out
 
 
@@ -921,7 +1000,11 @@ def build_report(
     tau: Optional[str],
     router_tau: Optional[str],
     confirm_heldout_test_split: bool,
+    partial_matrix: bool = False,
 ) -> tuple[dict[str, Any], int]:
+    requested_arm_labels = list(arm_dirs.keys())
+    if partial_matrix:
+        plumbing_check = True
     proto = protocol_guard(
         split, confirm_heldout_test_split, arm_dirs.values(), plumbing_check
     )
@@ -959,18 +1042,24 @@ def build_report(
         reasons.append(f"k_matched_{k_matched}_not_in_{sorted(K_MATCHED_ALLOWED)}")
 
     # Alias k=5 onto the matched timer arm when the caller did not pass a second tree.
-    if "fixed_k" in arm_dirs and "fixed_k_k5" not in arm_dirs and k_matched == 5:
+    if (
+        not partial_matrix
+        and "fixed_k" in arm_dirs
+        and "fixed_k_k5" not in arm_dirs
+        and k_matched == 5
+    ):
         loaded["fixed_k_k5"] = loaded["fixed_k"]
         arm_dirs = dict(arm_dirs)
         arm_dirs["fixed_k_k5"] = arm_dirs["fixed_k"]
 
-    missing_required = [name for name in REQUIRED_ARMS if name not in arm_dirs]
-    if missing_required:
-        reasons.append("missing_arm:" + ",".join(missing_required))
-    if k_matched is not None and k_matched != 5 and "fixed_k_k5" not in arm_dirs:
-        reasons.append("missing_arm:fixed_k_k5 (needed for H2 clause 3 when k_matched≠5)")
-    if k_matched is None:
-        reasons.append("k_matched_not_supplied (J9 parameter; cannot decide H2)")
+    if not partial_matrix:
+        missing_required = [name for name in REQUIRED_ARMS if name not in arm_dirs]
+        if missing_required:
+            reasons.append("missing_arm:" + ",".join(missing_required))
+        if k_matched is not None and k_matched != 5 and "fixed_k_k5" not in arm_dirs:
+            reasons.append("missing_arm:fixed_k_k5 (needed for H2 clause 3 when k_matched≠5)")
+        if k_matched is None:
+            reasons.append("k_matched_not_supplied (J9 parameter; cannot decide H2)")
 
     inventories = {
         label: inventory_arm(label, blob, tasks, seeds) for label, blob in loaded.items()
@@ -993,6 +1082,9 @@ def build_report(
 
     incomplete = bool(reasons)
     decisions_refused = incomplete
+    if partial_matrix:
+        # Pairwise plumbing contrasts are not H1/H2. Never decide those here.
+        decisions_refused = True
 
     missing_table = {
         label: {
@@ -1008,6 +1100,8 @@ def build_report(
             "n_unreadable": inv["n_unreadable"],
             "n_duplicates": inv["n_duplicates"],
             "n_extra_runs_ignored": inv["n_extra_runs_ignored"],
+            "n_goal_pass_rate_missing": inv["n_goal_pass_rate_missing"],
+            "n_goal_pass_rate_recorded": inv["n_goal_pass_rate_recorded"],
             "complete": inv["complete"],
             "quota_stall": inv["quota_stall"],
             "error_types": inv["error_types"],
@@ -1015,18 +1109,29 @@ def build_report(
         for label, inv in inventories.items()
     }
 
-    label = (
-        "PLUMBING CHECK, NOT A RESULT — dev has been inspected; these numbers "
-        "are not evidence about the thesis."
-        if plumbing_check
-        else "J10 analysis"
-    )
-    if incomplete:
-        headline = "INCOMPLETE: " + "; ".join(reasons)
-    else:
-        headline = "COMPLETE matrix; hypothesis decisions follow."
-    if plumbing_check:
+    if partial_matrix:
+        label = (
+            "PLUMBING CHECK, NOT A RESULT — partial matrix among named arms; "
+            "these numbers are not the J10 result."
+        )
+        if incomplete:
+            headline = "INCOMPLETE: " + "; ".join(reasons)
+        else:
+            headline = "PARTIAL MATRIX: pairwise contrasts among named arms only."
         headline = "PLUMBING CHECK, NOT A RESULT. " + headline
+    else:
+        label = (
+            "PLUMBING CHECK, NOT A RESULT — dev has been inspected; these numbers "
+            "are not evidence about the thesis."
+            if plumbing_check
+            else "J10 analysis"
+        )
+        if incomplete:
+            headline = "INCOMPLETE: " + "; ".join(reasons)
+        else:
+            headline = "COMPLETE matrix; hypothesis decisions follow."
+        if plumbing_check:
+            headline = "PLUMBING CHECK, NOT A RESULT. " + headline
 
     contrasts: dict[str, Any] = {}
     hypotheses: dict[str, Any] = {
@@ -1042,7 +1147,16 @@ def build_report(
         },
     }
 
-    if not decisions_refused:
+    if partial_matrix:
+        named = [n for n in requested_arm_labels if n in inventories]
+        for a, b in combinations(named, 2):
+            left = inventories[a]["cleaned"]
+            right = inventories[b]["cleaned"]
+            contrasts[f"tgc_{a}_minus_{b}"] = contrast_tgc(left, right)
+            contrasts[f"goal_pass_rate_{a}_minus_{b}"] = contrast_goal_pass_rate(
+                left, right
+            )
+    elif not decisions_refused:
         sk = inventories["sidekick"]["cleaned"]
         contrasts["tgc_sidekick_minus_fixed_k"] = contrast_tgc(
             sk, inventories["fixed_k"]["cleaned"]
@@ -1061,9 +1175,27 @@ def build_report(
                 contrasts[f"tgc_sidekick_minus_{name}"] = contrast_tgc(
                     sk, inventories[name]["cleaned"]
                 )
+        contrasts["goal_pass_rate_sidekick_minus_fixed_k"] = contrast_goal_pass_rate(
+            sk, inventories["fixed_k"]["cleaned"]
+        )
+        contrasts["goal_pass_rate_sidekick_minus_sft_plan"] = contrast_goal_pass_rate(
+            sk, inventories["sft_plan"]["cleaned"]
+        )
+        contrasts["goal_pass_rate_sidekick_minus_planner_alone"] = (
+            contrast_goal_pass_rate(sk, inventories["planner_alone"]["cleaned"])
+        )
+        for name in ("executor_alone", "prompt_only", "router_seq"):
+            if name in inventories and inventories[name]["complete"]:
+                contrasts[f"goal_pass_rate_sidekick_minus_{name}"] = (
+                    contrast_goal_pass_rate(sk, inventories[name]["cleaned"])
+                )
         # Refuse if paired_diff dropped anything (should be impossible here).
+        # goal_pass_rate contrasts may drop missing-field cells; that is counted,
+        # not a matrix refusal.
         drop_problems = []
         for cname, cmp in contrasts.items():
+            if cname.startswith("goal_pass_rate_"):
+                continue
             dropped = cmp.get("dropped_unmatched_keys") or {}
             if dropped.get("total"):
                 drop_problems.append(cname)
@@ -1160,6 +1292,9 @@ def build_report(
         "hypothesis_decisions_refused": decisions_refused,
         "split": split,
         "plumbing_check": plumbing_check,
+        "partial_matrix": partial_matrix,
+        "named_arms": requested_arm_labels,
+        "not_the_j10_result": bool(partial_matrix or plumbing_check),
         "resample_unit": RESAMPLE_UNIT,
         "resample_unit_justification": RESAMPLE_JUSTIFICATION,
         "bootstrap": {"n": BOOTSTRAP, "seed": SEED, "source": "scripts/setup/hj1_gate.py"},
@@ -1188,7 +1323,10 @@ def build_report(
         "none_means_not_measured": (
             "tgc None with error_type not in "
             f"{sorted(SCORED_FAILURE_TYPES)} is a missing metric and is never "
-            "averaged as 0 [OBSERVED src/sidekick/protocols/schemas.py:35-37]."
+            "averaged as 0 [OBSERVED src/sidekick/protocols/schemas.py:35-37]. "
+            "goal_pass_rate missing or null is dropped from the goal-pass "
+            "contrast and counted, never read as 0.0 "
+            "[OBSERVED src/sidekick/protocols/schemas.py:139]."
         ),
     }
     exit_code = 1 if report["hypothesis_decisions_refused"] else 0
@@ -1241,6 +1379,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Stamp the report as a plumbing check, not a result. Required for any pre-J10 dry-run.",
     )
+    p.add_argument(
+        "--partial-matrix",
+        action="store_true",
+        help=(
+            "Inventory only the named --arm labels and emit pairwise TGC and "
+            "goal_pass_rate contrasts. Not the J10 result. Always stamps "
+            "PLUMBING CHECK, NOT A RESULT. Does not relax the default "
+            "full-matrix missing_arm / k_matched_not_supplied refusals."
+        ),
+    )
     p.add_argument("--out", default=None, help="Write the JSON report here.")
     return p
 
@@ -1267,6 +1415,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         tau=args.tau,
         router_tau=args.router_tau,
         confirm_heldout_test_split=args.confirm_heldout_test_split,
+        partial_matrix=args.partial_matrix,
     )
     text = json.dumps(report, indent=2, default=str) + "\n"
     print(text, end="")

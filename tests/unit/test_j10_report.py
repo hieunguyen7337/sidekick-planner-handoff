@@ -59,6 +59,7 @@ def write_run(
     n_asks: int = 0,
     planner_tokens: int = 100,
     usd: float = 0.02,
+    goal_pass_rate=None,
 ) -> Path:
     dest = root / system / str(seed) / task_id / "result.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -79,6 +80,8 @@ def write_run(
         "error_type": error_type,
         "totals": _totals(planner_tokens, usd, n_planner_calls),
     }
+    if goal_pass_rate is not None:
+        row["goal_pass_rate"] = goal_pass_rate
     dest.write_text(json.dumps(row) + "\n", encoding="utf-8")
     return dest
 
@@ -429,3 +432,186 @@ def test_h3_is_not_invented_from_j10_archives(tmp_path: Path, capsys):
     j10.main(argv_for(tmp_path))
     report = json.loads(capsys.readouterr().out)
     assert report["hypotheses"]["H3"]["status"] == "not_a_j10_archive_quantity"
+
+
+PARTIAL_ARMS = ("sft_plan", "executor_alone")
+
+
+def write_named_arms(
+    tmp_path: Path,
+    arms: tuple[str, ...],
+    *,
+    tgc: dict[str, float],
+    calls: dict[str, int],
+    goal_pass_rate: dict[str, float] | None = None,
+) -> None:
+    gpr = goal_pass_rate or {}
+    for arm in arms:
+        for task_id in TASKS:
+            for seed in SEEDS:
+                write_run(
+                    tmp_path,
+                    arm,
+                    seed,
+                    task_id,
+                    tgc=tgc[arm],
+                    n_planner_calls=calls[arm],
+                    goal_pass_rate=gpr.get(arm),
+                )
+
+
+def argv_partial(tmp_path: Path, arms: tuple[str, ...], extra: list[str] | None = None) -> list[str]:
+    args = [
+        "--split",
+        "dev",
+        "--seeds",
+        "1,2,3",
+        "--expected-n-tasks",
+        str(len(TASKS)),
+        "--partial-matrix",
+    ]
+    for arm in arms:
+        args.extend(["--arm", f"{arm}={tmp_path / arm}"])
+    if extra:
+        args.extend(extra)
+    return args
+
+
+def test_partial_matrix_emits_tgc_and_goal_pass_contrasts(tmp_path: Path, capsys):
+    write_named_arms(
+        tmp_path,
+        PARTIAL_ARMS,
+        tgc={"sft_plan": 1.0, "executor_alone": 0.0},
+        calls={"sft_plan": 1, "executor_alone": 0},
+        goal_pass_rate={"sft_plan": 1.0, "executor_alone": 0.0},
+    )
+    rc = j10.main(argv_partial(tmp_path, PARTIAL_ARMS))
+    report = json.loads(capsys.readouterr().out)
+    assert rc == 1  # H1/H2 are not decided in partial mode
+    assert report["partial_matrix"] is True
+    assert report["plumbing_check"] is True
+    assert "PLUMBING CHECK, NOT A RESULT" in report["label"]
+    assert "PLUMBING CHECK, NOT A RESULT" in report["headline"]
+    tgc_c = report["contrasts"]["tgc_sft_plan_minus_executor_alone"]
+    gpr_c = report["contrasts"]["goal_pass_rate_sft_plan_minus_executor_alone"]
+    assert tgc_c["ci95"] is not None and tgc_c["ci95_pp"] is not None
+    assert gpr_c["ci95"] is not None and gpr_c["ci95_pp"] is not None
+    assert tgc_c["resample"] == "task"
+    assert gpr_c["resample"] == "task"
+    assert tgc_c["ci95"][0] > 0
+    assert gpr_c["ci95"][0] > 0
+    assert tgc_c["n_pairs"] == len(TASKS) * len(SEEDS)
+    assert gpr_c["n_pairs"] == len(TASKS) * len(SEEDS)
+    assert gpr_c["pairs_dropped_missing_field"] == 0
+    assert report["hypotheses"]["H2"]["status"] == "refused"
+
+
+def test_full_j10_still_refuses_incomplete_matrix(tmp_path: Path, capsys):
+    write_named_arms(
+        tmp_path,
+        PARTIAL_ARMS,
+        tgc={"sft_plan": 1.0, "executor_alone": 0.0},
+        calls={"sft_plan": 1, "executor_alone": 0},
+        goal_pass_rate={"sft_plan": 1.0, "executor_alone": 0.0},
+    )
+    args = [
+        "--split",
+        "dev",
+        "--seeds",
+        "1,2,3",
+        "--expected-n-tasks",
+        str(len(TASKS)),
+        "--plumbing-check",
+        "--arm",
+        f"sft_plan={tmp_path / 'sft_plan'}",
+        "--arm",
+        f"executor_alone={tmp_path / 'executor_alone'}",
+    ]
+    rc = j10.main(args)
+    report = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert report["partial_matrix"] is False
+    assert "INCOMPLETE" in report["headline"]
+    assert any("missing_arm:" in r for r in report["incomplete_reasons"])
+    assert any("k_matched_not_supplied" in r for r in report["incomplete_reasons"])
+    assert report["contrasts"] == {}
+    assert report["hypotheses"]["H2"]["status"] == "refused"
+
+
+def test_full_j10_still_refuses_when_k_matched_absent(tmp_path: Path, capsys):
+    write_complete_matrix(
+        tmp_path,
+        tgc={arm: 1.0 for arm in REQUIRED},
+        calls={arm: 1 for arm in REQUIRED},
+    )
+    args = argv_for(tmp_path)
+    idx = args.index("--k-matched")
+    del args[idx : idx + 2]
+    rc = j10.main(args)
+    report = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert any("k_matched_not_supplied" in r for r in report["incomplete_reasons"])
+    assert "k_matched_not_supplied" in report["headline"]
+    assert report["contrasts"] == {}
+    assert report["hypotheses"]["H2"]["status"] == "refused"
+
+
+def test_missing_goal_pass_rate_is_dropped_and_counted(tmp_path: Path, capsys):
+    write_named_arms(
+        tmp_path,
+        PARTIAL_ARMS,
+        tgc={"sft_plan": 1.0, "executor_alone": 0.0},
+        calls={"sft_plan": 1, "executor_alone": 0},
+        goal_pass_rate={"sft_plan": 0.8, "executor_alone": 0.2},
+    )
+    write_run(
+        tmp_path,
+        "sft_plan",
+        1,
+        TASKS[0],
+        tgc=1.0,
+        n_planner_calls=1,
+    )
+    rc = j10.main(argv_partial(tmp_path, PARTIAL_ARMS))
+    report = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    n = len(TASKS) * len(SEEDS)
+    gpr_c = report["contrasts"]["goal_pass_rate_sft_plan_minus_executor_alone"]
+    tgc_c = report["contrasts"]["tgc_sft_plan_minus_executor_alone"]
+    assert gpr_c["pairs_dropped_missing_field"] == 1
+    assert gpr_c["n_pairs"] == n - 1
+    assert tgc_c["n_pairs"] == n
+    assert report["arms"]["sft_plan"]["n_goal_pass_rate_missing"] == 1
+    assert report["arms"]["sft_plan"]["n_goal_pass_rate_recorded"] == n - 1
+    assert report["arms"]["sft_plan"]["goal_pass_rate_mean"] == pytest.approx(0.8)
+    assert report["missing_and_crashed"]["sft_plan"]["n_goal_pass_rate_missing"] == 1
+
+
+def test_partial_matrix_never_emits_unnamed_arms(tmp_path: Path, capsys):
+    write_named_arms(
+        tmp_path,
+        PARTIAL_ARMS,
+        tgc={"sft_plan": 1.0, "executor_alone": 0.0},
+        calls={"sft_plan": 1, "executor_alone": 0},
+        goal_pass_rate={"sft_plan": 1.0, "executor_alone": 0.0},
+    )
+    rc = j10.main(argv_partial(tmp_path, PARTIAL_ARMS))
+    report = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert set(report["arms"]) == set(PARTIAL_ARMS)
+    assert report["named_arms"] == list(PARTIAL_ARMS)
+    for key in report["contrasts"]:
+        rest = key
+        if rest.startswith("goal_pass_rate_"):
+            rest = rest[len("goal_pass_rate_") :]
+        elif rest.startswith("tgc_"):
+            rest = rest[len("tgc_") :]
+        else:
+            raise AssertionError(f"unexpected contrast key {key}")
+        left, sep, right = rest.partition("_minus_")
+        assert sep
+        assert left in PARTIAL_ARMS
+        assert right in PARTIAL_ARMS
+    for arm in report["arms"]:
+        assert arm in PARTIAL_ARMS
+
