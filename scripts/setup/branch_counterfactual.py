@@ -8,8 +8,9 @@ arm omits it.
 the scheduled tick at s, then the reviewer stays live on its normal schedule
 and calls planner.correct() on the branch's own state.
 
-``--untreated-mode suppress_next``: the untreated arm also skips the next
-scheduled tick after s (the substitute). The treated arm is unchanged.
+``--untreated-mode suppress_next``: both arms also skip the next scheduled
+tick after s (the substitute). The arms then differ only by the injected
+correction at s.
 
 Resume keys on (point, condition, branch_seed). Derived files are rebuilt from
 ``branch_runs.jsonl`` so a kill never drops a finished branch.
@@ -79,16 +80,15 @@ _ESTIMAND_SCHEDULE_LIVE = (
     "Q(policy with intervention i omitted); later reviews live"
 )
 _REVIEW_EVERY_K_SUPPRESS_NEXT = (
-    "treated: live on the original schedule after the focal step; "
-    "the scheduled tick at s is skipped and injected. untreated: "
-    "the scheduled tick at s and the next scheduled tick the schedule "
-    "would actually have fired after s are both omitted; later ticks "
-    "after that stay live"
+    "both arms skip the scheduled tick at s and the next scheduled tick "
+    "the schedule would actually have fired after s; treated injects at s, "
+    "untreated omits at s; later ticks after that stay live in both arms"
 )
 _ESTIMAND_SUPPRESS_NEXT = (
     "Q(policy with intervention i present) - "
-    "Q(policy with intervention i omitted and the next scheduled "
-    "review after s also suppressed); later reviews after that stay live"
+    "Q(policy with intervention i omitted); "
+    "the next scheduled review after s is suppressed in both arms; "
+    "later reviews after that stay live"
 )
 
 
@@ -1019,7 +1019,7 @@ def run_one_branch(job: dict[str, Any]) -> dict[str, Any]:
     review_k = int(job.get("review_every_k") or review_every_k_from_events(events))
     untreated_mode = resolve_untreated_mode(job.get("untreated_mode"))
     inject = point["correction"] if job["condition"] == "treated" else None
-    skip_next = untreated_mode == UNTREATED_MODE_SUPPRESS_NEXT and job["condition"] == "untreated"
+    skip_next = untreated_mode == UNTREATED_MODE_SUPPRESS_NEXT
     local_step = next_scheduled_review_step(int(point["step"]), review_k)
     try:
         env = _make_env(job)
@@ -1444,7 +1444,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_UNTREATED_MODE,
         help=(
             "schedule_live (default, frozen estimand): later reviews stay live. "
-            "suppress_next: untreated arm also omits the next scheduled review after s."
+            "suppress_next: both arms omit the next scheduled review after s."
         ),
     )
     return parser

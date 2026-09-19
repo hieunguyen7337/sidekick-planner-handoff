@@ -1306,6 +1306,78 @@ def test_suppress_next_does_not_suppress_oracle_review(tmp_path):
     assert planner.n_correct == 1
 
 
+def test_suppress_next_treated_arm_skips_tick_t(tmp_path):
+    """Treated arm must skip t under suppress_next; that was the asymmetric bug."""
+    start_step = 7
+    k = 5
+    t = bc.next_scheduled_review_step(start_step, k)
+    assert t == 10
+    _, planner, events, _ = _focal_branch(
+        tmp_path,
+        condition="treated",
+        skip_next_scheduled_review=True,
+        start_step=start_step,
+        review_every_k=k,
+        max_steps=16,
+        executor=RecordingExecutor(script=[NOOP_CODE] * 20),
+        run_id="treated_skip_t",
+    )
+    live_steps = [e.step for e in _live_reviews(events)]
+    assert t not in live_steps
+    focal = [
+        e
+        for e in events
+        if e.event_type == "intervention" and (e.payload or {}).get("source") == "replayed_focal"
+    ]
+    assert focal and focal[0].step == start_step
+    assert 15 in live_steps
+    assert planner.n_correct >= 1
+
+
+def test_suppress_next_arms_differ_only_by_injection_at_s(tmp_path):
+    start_step = 7
+    k = 5
+    t = bc.next_scheduled_review_step(start_step, k)
+    kwargs = dict(
+        skip_next_scheduled_review=True,
+        start_step=start_step,
+        review_every_k=k,
+        max_steps=16,
+    )
+    _, _, events_t, _ = _focal_branch(
+        tmp_path / "t",
+        condition="treated",
+        executor=RecordingExecutor(script=[NOOP_CODE] * 20),
+        run_id="t",
+        **kwargs,
+    )
+    _, _, events_u, _ = _focal_branch(
+        tmp_path / "u",
+        condition="untreated",
+        executor=RecordingExecutor(script=[NOOP_CODE] * 20),
+        run_id="u",
+        **kwargs,
+    )
+    live_t = [e.step for e in _live_reviews(events_t)]
+    live_u = [e.step for e in _live_reviews(events_u)]
+    assert live_t == live_u
+    assert t not in live_t
+    assert 15 in live_t
+    assert 15 in live_u
+    focal_t = [
+        e
+        for e in events_t
+        if e.event_type == "intervention" and (e.payload or {}).get("source") == "replayed_focal"
+    ]
+    focal_u = [
+        e
+        for e in events_u
+        if e.event_type == "intervention" and (e.payload or {}).get("source") == "replayed_focal"
+    ]
+    assert focal_t and focal_t[0].step == start_step
+    assert focal_u == []
+
+
 def test_untreated_mode_cli_default_is_schedule_live():
     args = bc.build_parser().parse_args(["--campaign-root", "x", "--out-root", "y"])
     assert args.untreated_mode == bc.DEFAULT_UNTREATED_MODE == "schedule_live"
@@ -1323,8 +1395,17 @@ def test_branch_config_untreated_mode_and_estimand(tmp_path):
         "Q(policy with intervention i omitted); later reviews live"
     )
     sup_review, sup_estimand = bc.untreated_mode_strings("suppress_next")
-    assert "next scheduled tick" in sup_review
-    assert "also suppressed" in sup_estimand
+    assert sup_review == (
+        "both arms skip the scheduled tick at s and the next scheduled tick "
+        "the schedule would actually have fired after s; treated injects at s, "
+        "untreated omits at s; later ticks after that stay live in both arms"
+    )
+    assert sup_estimand == (
+        "Q(policy with intervention i present) - "
+        "Q(policy with intervention i omitted); "
+        "the next scheduled review after s is suppressed in both arms; "
+        "later reviews after that stay live"
+    )
 
     for mode in ("schedule_live", "suppress_next"):
         out = tmp_path / mode
@@ -1386,4 +1467,10 @@ def test_run_branches_records_untreated_mode(tmp_path):
             if r["condition"] == condition
         )
 
-    assert _later(live_rows, "treated") == _later(sup_rows, "treated")
+    assert _later(live_rows, "treated") == _later(live_rows, "untreated")
+    assert _later(sup_rows, "treated") == _later(sup_rows, "untreated")
+    live_n = [n for _, _, n in _later(live_rows, "treated")]
+    sup_n = [n for _, _, n in _later(sup_rows, "treated")]
+    assert live_n and len(live_n) == len(sup_n)
+    assert all((ln or 0) >= (sn or 0) for ln, sn in zip(live_n, sup_n))
+    assert any((ln or 0) > (sn or 0) for ln, sn in zip(live_n, sup_n))

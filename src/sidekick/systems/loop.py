@@ -77,7 +77,9 @@ class EpisodePrefix:
     correction via ``inject_correction``; the untreated arm leaves it None.
     Later scheduled ticks still call ``planner.correct()`` on the branch state
     unless ``skip_next_scheduled_review`` is True, in which case the next
-    scheduled tick after ``s`` is also skipped. That tick is the next step the
+    scheduled tick after ``s`` is also skipped in the arm that sets the flag.
+    Counterfactual ``suppress_next`` sets the flag on both arms so the
+    substitute cannot confound the contrast. That tick is the next step the
     schedule would actually have fired, not ``s + review_every_k``. Router-
     and oracle-triggered reviews are not scheduled reviews and are not skipped.
     ``local_eval_step`` is the next scheduled review step: ``env.evaluate()``
