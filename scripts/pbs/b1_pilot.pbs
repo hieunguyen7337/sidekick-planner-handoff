@@ -1,0 +1,574 @@
+#!/bin/bash
+#PBS -N b1-pilot
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=16:ngpus=1:mem=128gb
+#PBS -l walltime=10:00:00
+#PBS -j oe
+# Output_Path is evaluated at qsub time and cannot interpolate CID (CID is
+# computed below from DATE). A path with no filename makes PBS write
+# <job ID>.OU in this directory — unique per submission, so smoke/full/resume
+# cannot share a file. The script also execs a live CID+jobid copy so a job
+# that dies after startup still leaves a campaign-id log. Do not override -o
+# with a shared filename. Optional: pass -o at qsub with a unique path:
+#   DATE=20260919
+#   qsub -v DATE=${DATE} scripts/pbs/b1_pilot.pbs
+#   qsub -v DATE=${DATE},SMOKE_ONLY=1 scripts/pbs/b1_pilot.pbs
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#
+# B1 clean-counterfactual pilot (suppress_next). Serves granite-4.2-8b with
+# the sft_b LoRA (static --lora-modules). Live later-reviews call the planner
+# (codex). Wrapper: campaign/workers/scratch_A16/run_b1_pilot.py — the frozen
+# 200-point sample, 1600 branches. Do NOT submit from a worker; the
+# orchestrator submits after the planner quota resets. The --lora-modules
+# alias MUST equal executor.lora_name in the campaign config or requests
+# silently hit the base model.
+#
+# Invocation is frozen by docs/prereg_b1_pilot.md §13. Do not "improve" flags.
+# Walltime 10:00:00 exceeds the wrapper `timeout 35100` (~9.75 h). Resource
+# shape copied from scripts/pbs/hj6_branches.pbs. Do NOT add
+# qlist=gpu_inter_exec to select — that Can Never Run under site policy.
+#
+# Job variables (override at qsub time):
+#   DATE (default 20260919, the prereg CID date), CAMPAIGN_ROOT, ADAPTER_SFT_B,
+#   ALIAS_SFT_B, CFG, SMOKE_ONLY=1 (default 0)
+# SMOKE_ONLY=1 runs the same wrapper against a sibling out-root
+# (${CID}_smoke), confirms PREFLIGHT 1600, lets a handful of branches finish
+# (2 points = 16 rows), prints spend, and stops before the full campaign.
+# It does not purge or write into the real ${CID} tree.
+
+# ---- independent guards (no side effects; B1_GUARD_SELFTEST exercises these) --
+FORBIDDEN_HJ6_ROOT="/scratch/n12194778/sidekick/results/hj6_branches_train_20260917"
+B1_EXPECTED_BRANCHES=1600
+B1_EXPECTED_CAP=10000
+
+b1_canon() {
+  local p="$1"
+  if command -v realpath >/dev/null 2>&1; then
+    realpath -m "$p" 2>/dev/null || printf '%s\n' "$p"
+  else
+    readlink -f "$p" 2>/dev/null || printf '%s\n' "$p"
+  fi
+}
+
+b1_assert_outroot() {
+  local out="$1"
+  local forbidden="${FORBIDDEN_HJ6_ROOT}"
+  local out_c forb_c
+  out_c="$(b1_canon "${out}")"
+  forb_c="$(b1_canon "${forbidden}")"
+  if [[ "${out_c}" == "${forb_c}" || "${out_c}" == "${forb_c}/"* ]]; then
+    echo "[b1] FATAL: out-root is or is inside ${forbidden}"
+    echo "[b1] FATAL: that tree holds the frozen J6 schedule_live data; writing it would destroy the mode-to-mode comparison"
+    echo "[b1] out-root=${out} canonical=${out_c}"
+    return 2
+  fi
+  case "/${out_c}/" in
+    *"/hj6_branches_train_20260917/"*)
+      echo "[b1] FATAL: out-root is or is inside ${forbidden}"
+      echo "[b1] FATAL: that tree holds the frozen J6 schedule_live data; writing it would destroy the mode-to-mode comparison"
+      echo "[b1] out-root=${out} canonical=${out_c}"
+      return 2
+      ;;
+  esac
+  echo "[b1] out-root guard: ${out_c} is not inside ${forb_c}"
+  return 0
+}
+
+b1_assert_untreated_cmd() {
+  local cmd="$1"
+  if printf '%s\n' "${cmd}" | grep -Eq -- '--untreated-mode(=|[[:space:]]+)suppress_next([[:space:]]|$)'; then
+    echo "[b1] untreated-mode guard: suppress_next present on assembled command"
+    return 0
+  fi
+  echo "[b1] FATAL: assembled command is missing --untreated-mode suppress_next"
+  echo "[b1] FATAL: defaulting to schedule_live would run the contaminated estimand under this campaign id"
+  echo "[b1] assembled: ${cmd}"
+  return 2
+}
+
+b1_assert_preflight_line() {
+  local line="$1"
+  local out_root="${2:?b1_assert_preflight_line requires out-root}"
+  local repo="${REPO:-/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15}"
+  # Import completed_branch_keys/load_jsonl from the campaign script (same key
+  # logic as collect_jobs). Do not count raw jsonl lines: retried errors are
+  # not completions. PYTHONPATH here matches the live job (src + scripts/setup).
+  PYTHONPATH="${repo}/src:${repo}/scripts/setup:${PYTHONPATH:-}" \
+  "${PY}" - "${line}" "${B1_EXPECTED_BRANCHES}" "${B1_EXPECTED_CAP}" "${out_root}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from branch_counterfactual import completed_branch_keys, load_jsonl
+
+line = sys.argv[1]
+expected_branches = int(sys.argv[2])
+expected_cap = int(sys.argv[3])
+out_root = Path(sys.argv[4])
+if not line.startswith("PREFLIGHT "):
+    print("[b1] FATAL: not a PREFLIGHT line")
+    print(f"[b1] got: {line!r}")
+    sys.exit(2)
+try:
+    obj = json.loads(line[len("PREFLIGHT "):])
+except json.JSONDecodeError as exc:
+    print(f"[b1] FATAL: PREFLIGHT JSON did not parse: {exc}")
+    print(f"[b1] got: {line!r}")
+    sys.exit(2)
+if not isinstance(obj, dict):
+    print("[b1] FATAL: PREFLIGHT payload is not an object")
+    sys.exit(2)
+br = obj.get("branches_to_run")
+cap = obj.get("max_planner_calls_total")
+n_completed = len(
+    completed_branch_keys(
+        load_jsonl(out_root / "branch_runs.jsonl"), retry_errors=True
+    )
+)
+total = (n_completed + br) if isinstance(br, int) else None
+print(
+    f"[b1] PREFLIGHT parsed branches_to_run={br!r} max_planner_calls_total={cap!r} "
+    f"completed_branch_keys={n_completed}"
+)
+# Single clearly-marked line for an operator following prereg §13, who will
+# not see PREFLIGHT at byte 0 of job stdout (vLLM starts first).
+print(
+    f"[b1] OPERATOR_CONFIRM branches_to_run={br} max_planner_calls_total={cap} "
+    f"completed_branch_keys={n_completed} completed_plus_to_run={total}"
+)
+failed = 0
+if cap != expected_cap:
+    print(
+        f"[b1] FATAL: PREFLIGHT max_planner_calls_total is {cap!r}, expected {expected_cap}"
+    )
+    failed = 1
+if br == 6216:
+    print(
+        f"[b1] FATAL: PREFLIGHT branches_to_run is {br!r}, expected {expected_branches} "
+        "(6216 means the wrapper was not used)"
+    )
+    failed = 1
+elif n_completed == 0:
+    if br != expected_branches:
+        print(
+            f"[b1] FATAL: PREFLIGHT branches_to_run is {br!r}, expected {expected_branches} "
+            "on a fresh out-root (a short fresh run is not a resume; "
+            "6216 means the wrapper was not used)"
+        )
+        failed = 1
+else:
+    if not isinstance(br, int):
+        print(
+            f"[b1] FATAL: PREFLIGHT branches_to_run is {br!r}, not an integer remainder"
+        )
+        failed = 1
+    elif total > expected_branches:
+        print(
+            f"[b1] FATAL: out-root already holds branches that are not from this frozen sample: "
+            f"completed_branch_keys={n_completed} + branches_to_run={br} = {total}, "
+            f"which exceeds {expected_branches}. This is not a resume of the B1 200-point sample."
+        )
+        failed = 1
+    elif br >= expected_branches:
+        print(
+            f"[b1] FATAL: PREFLIGHT resume branches_to_run is {br}, "
+            f"expected a remainder < {expected_branches}"
+        )
+        failed = 1
+    elif total != expected_branches:
+        print(
+            f"[b1] FATAL: PREFLIGHT resume identity failed: "
+            f"completed_branch_keys={n_completed} + branches_to_run={br} = {total}, "
+            f"expected {expected_branches}"
+        )
+        failed = 1
+if failed:
+    sys.exit(2)
+print(
+    "[b1] PREFLIGHT guard: sample identity holds "
+    f"(completed_branch_keys + branches_to_run == {expected_branches}) "
+    "and max_planner_calls_total matches prereg §13"
+)
+PY
+}
+
+if [[ "${B1_GUARD_SELFTEST:-0}" == "1" ]]; then
+  set -euo pipefail
+  PY="${PY:-/scratch/n12194778/sidekick/env/bin/python}"
+  case "${GUARD_CASE:?}" in
+    preflight_6216)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 6216, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 10000, "per_branch_planner_call_factor": 81, "projected_planner_calls": 503496}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_bad_cap)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 1600, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 999999, "per_branch_planner_call_factor": 81, "projected_planner_calls": 129600}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_ok)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 1600, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 10000, "per_branch_planner_call_factor": 81, "projected_planner_calls": 129600}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_fresh_1400)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 1400, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 10000, "per_branch_planner_call_factor": 81, "projected_planner_calls": 113400}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_resume_ok)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 1400, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 10000, "per_branch_planner_call_factor": 81, "projected_planner_calls": 113400}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_resume_1700)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 1500, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 10000, "per_branch_planner_call_factor": 81, "projected_planner_calls": 121500}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_resume_foreign)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 1600, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 10000, "per_branch_planner_call_factor": 81, "projected_planner_calls": 129600}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_bad_cap_resume)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 1400, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 999999, "per_branch_planner_call_factor": 81, "projected_planner_calls": 113400}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    preflight_6216_resume)
+      b1_assert_preflight_line 'PREFLIGHT {"branches_to_run": 6216, "factor_source": "config limits.max_planner_calls (per-episode cap)", "max_planner_calls_total": 10000, "per_branch_planner_call_factor": 81, "projected_planner_calls": 503496}' "${GUARD_OUT_ROOT:?}"
+      ;;
+    outroot_hj6)
+      b1_assert_outroot "${FORBIDDEN_HJ6_ROOT}"
+      ;;
+    outroot_hj6_child)
+      b1_assert_outroot "${FORBIDDEN_HJ6_ROOT}/nested_write"
+      ;;
+    outroot_ok)
+      b1_assert_outroot "/scratch/n12194778/sidekick/results/b1_pilot_train_20260919"
+      ;;
+    cmd_missing_untreated)
+      b1_assert_untreated_cmd "timeout 35100 python run_b1_pilot.py --campaign-root X --split train --out-root Y --branch-seeds 101 102 103 104 --workers 10 --resume --env appworld --config Z --delta-band-delta 0.166 --max-planner-calls-total 10000"
+      ;;
+    cmd_schedule_live)
+      b1_assert_untreated_cmd "timeout 35100 python run_b1_pilot.py --untreated-mode schedule_live --max-planner-calls-total 10000"
+      ;;
+    cmd_ok)
+      b1_assert_untreated_cmd "timeout 35100 python run_b1_pilot.py --campaign-root X --split train --out-root Y --branch-seeds 101 102 103 104 --workers 10 --resume --env appworld --config Z --delta-band-delta 0.166 --untreated-mode suppress_next --max-planner-calls-total 10000"
+      ;;
+    *)
+      echo "[b1] FATAL: unknown GUARD_CASE=${GUARD_CASE}"
+      exit 2
+      ;;
+  esac
+  exit 0
+fi
+
+set -uo pipefail
+# CID is not available at qsub. Compute it first and exec a live CID-named log
+# so an early death still leaves a findable file. PBS's own Output_Path is the
+# unique <job ID>.OU under campaign/workers/logs/ (see #PBS -o above).
+DATE="${DATE:-20260919}"
+SMOKE_ONLY="${SMOKE_ONLY:-0}"
+SPLIT=train
+CID="b1_pilot_${SPLIT}_${DATE}"
+JOBTAG="${PBS_JOBID:-nopbs}"
+PBS_LOGDIR="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs"
+CID_OUT="${PBS_LOGDIR}/${CID}.${JOBTAG}.out"
+mkdir -p "${PBS_LOGDIR}"
+exec >> "${CID_OUT}" 2>&1
+echo "[b1] cid=${CID} smoke_only=${SMOKE_ONLY} job=${JOBTAG} cid_out=${CID_OUT}"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export PYTHONUNBUFFERED=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+# §13 requires scripts/setup on PYTHONPATH so the wrapper can import
+# branch_counterfactual. hj6_branches.pbs only exported src; that is not enough here.
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/scripts/setup:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u9] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+PY="${SIDEKICK_VENV}/bin/python"
+MODEL=ibm-granite/granite-4.2-8b
+VLOG="${LOGDIR}/${CID}.${JOBTAG}_vllm.log"
+echo "[b1] vlog=${VLOG}"
+
+CAMPAIGN_ROOT="${CAMPAIGN_ROOT:-/scratch/n12194778/sidekick/results/hj4_correction_train_20260917}"
+CFG="${CFG:-${REPO}/configs/hj4_correction.yaml}"
+WRAPPER="${REPO}/campaign/workers/scratch_A16/run_b1_pilot.py"
+POINTS="${REPO}/campaign/workers/scratch_A16/b1_pilot_points.txt"
+# Real campaign tree from prereg §13. Smoke uses a sibling, never this path.
+OUT_REAL="${OUT}/${CID}"
+if [[ "${SMOKE_ONLY}" == "1" ]]; then
+  OUT_CAMPAIGN="${OUT}/${CID}_smoke"
+  echo "[b1] smoke_only: out-root=${OUT_CAMPAIGN} (will not write ${OUT_REAL})"
+else
+  OUT_CAMPAIGN="${OUT_REAL}"
+fi
+
+# ---- LoRA aliases: MUST equal executor.lora_name in the campaign config ------
+ALIAS_SFT_B="${ALIAS_SFT_B:-sft_b}"
+ADAPTER_SFT_B="${ADAPTER_SFT_B:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_s123_granite8b}"
+
+cd "${REPO}" || exit 1
+mkdir -p "${LOGDIR}" "${OUT}/results"
+
+# Guard 2: out-root must not be the frozen J6 schedule_live tree. Independent of
+# the wrapper. Checked before mkdir so a bad override cannot create/write it.
+b1_assert_outroot "${OUT_CAMPAIGN}" || exit 2
+mkdir -p "${OUT_CAMPAIGN}"
+
+if [[ ! -f "${CFG}" ]]; then
+  echo "[b1] FATAL: campaign config absent: ${CFG}"
+  echo "[b1] not starting vLLM. Static LoRA line that will be used:"
+  echo "[b1] --enable-lora --max-loras 4 --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B}=${ADAPTER_SFT_B}"
+  echo "[b1] alias source: ALIAS_SFT_B, which must equal executor.lora_name"
+  exit 2
+fi
+if [[ ! -d "${CAMPAIGN_ROOT}" ]]; then
+  echo "[b1] FATAL: campaign root is not a directory: ${CAMPAIGN_ROOT}" >&2
+  exit 2
+fi
+if [[ ! -f "${WRAPPER}" ]]; then
+  echo "[b1] FATAL: B1 wrapper absent: ${WRAPPER}" >&2
+  exit 2
+fi
+if [[ ! -f "${POINTS}" ]]; then
+  echo "[b1] FATAL: frozen point list absent: ${POINTS}" >&2
+  exit 2
+fi
+
+LORA_MODULES=()
+register_lora () {
+  local alias="$1"
+  local path="$2"
+  if [[ -z "${path}" ]]; then
+    return 0
+  fi
+  if [[ ! -d "${path}" ]]; then
+    echo "[b1] FATAL: adapter path for alias ${alias} is not a directory: ${path}" >&2
+    exit 2
+  fi
+  LORA_MODULES+=("${alias}=${path}")
+  echo "[b1] lora-module ${alias}=${path}"
+}
+register_lora "${ALIAS_SFT_B}" "${ADAPTER_SFT_B}"
+if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
+  echo "[b1] FATAL: no LoRA modules registered; set ADAPTER_SFT_B" >&2
+  exit 2
+fi
+
+# Assembled command: frozen by docs/prereg_b1_pilot.md §13. Do not add --limit
+# (applied inside collect_jobs before the A16 filter; it is the wrong sample).
+PILOT_TIMEOUT_S=35100
+if [[ "${SMOKE_ONLY}" == "1" ]]; then
+  PILOT_TIMEOUT_S=3600
+fi
+PILOT_CMD=(
+  timeout "${PILOT_TIMEOUT_S}" "${PY}" "${WRAPPER}"
+  --campaign-root "${CAMPAIGN_ROOT}"
+  --split train
+  --out-root "${OUT_CAMPAIGN}"
+  --branch-seeds 101 102 103 104
+  --workers 10
+  --resume
+  --env appworld
+  --config "${CFG}"
+  --delta-band-delta 0.166
+  --untreated-mode suppress_next
+  --max-planner-calls-total 10000
+)
+
+# Guard 3: --untreated-mode suppress_next must be on the assembled command,
+# independent of argparse defaults (default is schedule_live).
+b1_assert_untreated_cmd "${PILOT_CMD[*]}" || exit 2
+
+VLLM_PID=""
+
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
+    kill "${VLLM_PID}" 2>/dev/null || true
+    for _ in $(seq 1 12); do kill -0 "${VLLM_PID}" 2>/dev/null || break; sleep 5; done
+    kill -9 "${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+  pkill -f "vllm serve" 2>/dev/null || true
+  pkill -f "EngineCore" 2>/dev/null || true
+  sleep 5
+  echo "[b1] GPU after shutdown:"
+  nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+}
+
+stop_pilot () {
+  local pid="${1:-}"
+  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+    kill "${pid}" 2>/dev/null || true
+    for _ in $(seq 1 12); do kill -0 "${pid}" 2>/dev/null || break; sleep 1; done
+    kill -9 "${pid}" 2>/dev/null || true
+    wait "${pid}" 2>/dev/null || true
+  fi
+}
+
+print_smoke_spend () {
+  local out_root="$1"
+  "${PY}" - "${out_root}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+path = root / "branch_runs.jsonl"
+n = 0
+calls = 0
+unknown = 0
+if path.is_file():
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if not raw.strip():
+            continue
+        n += 1
+        try:
+            row = json.loads(raw)
+        except json.JSONDecodeError:
+            unknown += 1
+            continue
+        c = row.get("branch_planner_calls")
+        if c is None:
+            unknown += 1
+        else:
+            calls += int(c)
+print(f"[b1] smoke spend: n_rows={n} branch_planner_calls_sum={calls} unknown_call_rows={unknown} jsonl={path}")
+PY
+}
+
+# ---- preflight: the planner must be reachable BEFORE a GPU is held ------------
+echo "[b1] ---- preflight ----"
+if ! command -v codex >/dev/null 2>&1; then
+  echo "[b1] FATAL: codex not on PATH"; exit 1
+fi
+if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+  echo "[b1] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate"
+  exit 1
+fi
+echo "[b1] codex $(codex --version 2>/dev/null || echo '?')"
+echo "[b1] auth.json present (contents never printed)"
+
+# ---- vLLM: LoRA registered statically at launch --------------------------------
+kill_vllm
+# The --lora-modules line. Alias comes from ALIAS_SFT_B / executor.lora_name, not the directory name.
+"${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+  --served-model-name "${MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len 32768 \
+  --host 127.0.0.1 --port 8000 \
+  --gpu-memory-utilization 0.85 \
+  --enable-lora \
+  --max-loras 4 \
+  --max-lora-rank 64 \
+  --lora-modules "${LORA_MODULES[@]}" \
+  > "${VLOG}" 2>&1 &
+VLLM_PID=$!
+echo "[b1] vllm serve ${MODEL} pid=${VLLM_PID} --enable-lora --max-loras 4 --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+while (( $(date +%s) < deadline )); do
+  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+    echo "[b1] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+  fi
+  if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+    echo "[b1] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  fi
+  sleep 5
+done
+if [[ "${healthy}" -ne 1 ]]; then
+  echo "[b1] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
+fi
+
+echo "[b1] ---- branches split=${SPLIT} out=${OUT_CAMPAIGN} source=${CAMPAIGN_ROOT} wrapper=${WRAPPER} ----"
+echo "[b1] cmd=${PILOT_CMD[*]}"
+echo "[b1] branch seeds=101 102 103 104"
+
+pilot_log="${LOGDIR}/${CID}.${JOBTAG}_pilot.log"
+: > "${pilot_log}"
+"${PILOT_CMD[@]}" > >(tee -a "${pilot_log}") 2>&1 &
+pilot_pid=$!
+echo "[b1] wrapper pid=${pilot_pid} log=${pilot_log}"
+
+# Guard 1: parse the job's own PREFLIGHT line and abort before dispatch if the
+# wrapper was skipped (6216), the cap is not the preregistered 10000, or the
+# sample identity fails (fresh: to_run==1600; resume: completed+to_run==1600).
+# Grep the wrapper log rather than requiring PREFLIGHT at byte 0 of stdout
+# (vLLM starts first). Do not change that grep.
+preflight_seen=0
+pf_deadline=$(( $(date +%s) + 3600 ))
+while (( $(date +%s) < pf_deadline )); do
+  if grep -q '^PREFLIGHT ' "${pilot_log}" 2>/dev/null; then
+    pf_line="$(grep -m1 '^PREFLIGHT ' "${pilot_log}")"
+    preflight_seen=1
+    echo "[b1] saw ${pf_line}"
+    if ! b1_assert_preflight_line "${pf_line}" "${OUT_CAMPAIGN}"; then
+      echo "[b1] FATAL: PREFLIGHT guard failed; killing wrapper before dispatch continues"
+      stop_pilot "${pilot_pid}"
+      kill_vllm
+      exit 2
+    fi
+    break
+  fi
+  if ! kill -0 "${pilot_pid}" 2>/dev/null; then
+    echo "[b1] FATAL: wrapper exited before PREFLIGHT; log tail:"
+    tail -n 80 "${pilot_log}" || true
+    wait "${pilot_pid}" 2>/dev/null || true
+    kill_vllm
+    exit 1
+  fi
+  sleep 0.5
+done
+if [[ "${preflight_seen}" -ne 1 ]]; then
+  echo "[b1] FATAL: no PREFLIGHT line within 3600s; killing wrapper"
+  stop_pilot "${pilot_pid}"
+  kill_vllm
+  exit 2
+fi
+
+if [[ "${SMOKE_ONLY}" == "1" ]]; then
+  SMOKE_TARGET_ROWS=16
+  smoke_deadline=$(( $(date +%s) + 3600 ))
+  jsonl="${OUT_CAMPAIGN}/branch_runs.jsonl"
+  echo "[b1] smoke_only: waiting for ${SMOKE_TARGET_ROWS} branch_runs rows (2 points × 2 conditions × 4 seeds) then stopping"
+  while (( $(date +%s) < smoke_deadline )); do
+    n=0
+    if [[ -f "${jsonl}" ]]; then
+      n="$(wc -l < "${jsonl}" | tr -d ' ')"
+    fi
+    if [[ "${n}" -ge "${SMOKE_TARGET_ROWS}" ]]; then
+      echo "[b1] smoke_only: ${n} branch_runs rows; stopping before full campaign"
+      stop_pilot "${pilot_pid}"
+      break
+    fi
+    if ! kill -0 "${pilot_pid}" 2>/dev/null; then
+      echo "[b1] smoke_only: wrapper exited before ${SMOKE_TARGET_ROWS} rows"
+      break
+    fi
+    sleep 5
+  done
+  if kill -0 "${pilot_pid}" 2>/dev/null; then
+    echo "[b1] smoke_only: wall reached; stopping before full campaign"
+    stop_pilot "${pilot_pid}"
+  fi
+  wait "${pilot_pid}" 2>/dev/null || true
+  print_smoke_spend "${OUT_CAMPAIGN}"
+  echo "[b1] smoke_only: did not purge; did not write ${OUT_REAL}"
+  kill_vllm
+  echo "[b1] done=$(date -Iseconds) smoke_only=1 cid=${CID} out=${OUT_CAMPAIGN}"
+  exit 0
+fi
+
+wait "${pilot_pid}"
+branch_rc=$?
+echo "[b1] wrapper rc=${branch_rc}"
+
+kill_vllm
+echo "[b1] done=$(date -Iseconds) branch_rc=${branch_rc} cid=${CID}"
+exit "${branch_rc}"
