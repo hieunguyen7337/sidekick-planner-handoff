@@ -86,7 +86,43 @@ def make_outroot(label: str, n_done: int, n_errors: int = 0) -> Path:
     return root
 
 
-def run_selftest(case: str, out_root: Path | None = None) -> subprocess.CompletedProcess[str]:
+def make_smoke_outroot(label: str, rows: list[dict]) -> Path:
+    root = OUTROOTS / label
+    root.mkdir(parents=True, exist_ok=True)
+    jsonl = root / "branch_runs.jsonl"
+    jsonl.write_text(
+        "\n".join(json.dumps(row, sort_keys=True) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+    return root
+
+
+def _smoke_row(**over) -> dict:
+    row = {
+        "campaign": "hj4_correction_train_20260917",
+        "seed": 1,
+        "task_id": "smoke_task",
+        "i": 0,
+        "condition": "treated",
+        "branch_seed": 101,
+        "branch_gpr": 0.5,
+        "branch_error_type": None,
+        "branch_error_detail": None,
+        "branch_planner_calls": 4,
+        "branch_planner_tokens": 120,
+        "branch_live_planner_calls": 2,
+        "branch_steps": 10,
+        "replay_k": 3,
+    }
+    row.update(over)
+    return row
+
+
+def run_selftest(
+    case: str,
+    out_root: Path | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["B1_GUARD_SELFTEST"] = "1"
     env["GUARD_CASE"] = case
@@ -96,6 +132,8 @@ def run_selftest(case: str, out_root: Path | None = None) -> subprocess.Complete
     env["MKL_NUM_THREADS"] = "1"
     if out_root is not None:
         env["GUARD_OUT_ROOT"] = str(out_root)
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         ["bash", str(PBS)],
         cwd=str(REPO),
@@ -108,8 +146,13 @@ def run_selftest(case: str, out_root: Path | None = None) -> subprocess.Complete
     )
 
 
-def expect_fatal(case: str, needle: str, out_root: Path | None = None) -> str:
-    proc = run_selftest(case, out_root=out_root)
+def expect_fatal(
+    case: str,
+    needle: str,
+    out_root: Path | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> str:
+    proc = run_selftest(case, out_root=out_root, extra_env=extra_env)
     out = proc.stdout
     assert proc.returncode != 0, (
         f"{case}: guard did not abort (rc={proc.returncode})\n{out}"
@@ -119,8 +162,13 @@ def expect_fatal(case: str, needle: str, out_root: Path | None = None) -> str:
     return out
 
 
-def expect_ok(case: str, needle: str, out_root: Path | None = None) -> str:
-    proc = run_selftest(case, out_root=out_root)
+def expect_ok(
+    case: str,
+    needle: str,
+    out_root: Path | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> str:
+    proc = run_selftest(case, out_root=out_root, extra_env=extra_env)
     out = proc.stdout
     assert proc.returncode == 0, f"{case}: unexpected abort rc={proc.returncode}\n{out}"
     assert "FATAL" not in out, f"{case}: unexpected FATAL\n{out}"
@@ -260,6 +308,105 @@ def test_cmd_ok() -> str:
     )
 
 
+def test_smoke_error_type() -> str:
+    """Any non-null branch_error_type FATALS; first three details are printed."""
+    rows = [
+        _smoke_row(
+            task_id=f"err_{i}",
+            branch_error_type="crash",
+            branch_error_detail=f"HTTPStatusError: 404 row {i}",
+            branch_planner_tokens=50,
+            branch_steps=10,
+            replay_k=3,
+        )
+        for i in range(3)
+    ]
+    out = expect_fatal(
+        "smoke_error",
+        "FATAL: smoke gate: 3 rows with branch_error_type",
+        out_root=make_smoke_outroot("smoke_error", rows),
+    )
+    assert "smoke error_detail: HTTPStatusError: 404 row 0" in out
+    assert "smoke error_detail: HTTPStatusError: 404 row 1" in out
+    assert "smoke error_detail: HTTPStatusError: 404 row 2" in out
+    assert "live_planner_calls_sum=" in out
+    assert "branch_planner_calls_tick_sum=" in out
+    return out
+
+
+def test_smoke_no_live_step() -> str:
+    """No row with branch_steps > replay_k + 1 FATALS (prefix-only executor)."""
+    row = _smoke_row(
+        branch_error_type=None,
+        branch_planner_tokens=80,
+        branch_live_planner_calls=1,
+        branch_steps=4,
+        replay_k=3,
+    )
+    return expect_fatal(
+        "smoke_no_live_step",
+        "FATAL: smoke gate: no row with branch_steps > replay_k + 1",
+        out_root=make_smoke_outroot("smoke_no_live_step", [row]),
+    )
+
+
+def test_smoke_zero_tokens() -> str:
+    """sum(branch_planner_tokens)==0 FATALS (no live planner call proven)."""
+    row = _smoke_row(
+        branch_error_type=None,
+        branch_planner_tokens=0,
+        branch_live_planner_calls=0,
+        branch_steps=10,
+        replay_k=3,
+    )
+    return expect_fatal(
+        "smoke_zero_tokens",
+        "FATAL: smoke gate: sum(branch_planner_tokens)==0",
+        out_root=make_smoke_outroot("smoke_zero_tokens", [row]),
+    )
+
+
+def test_smoke_ok() -> str:
+    row = _smoke_row()
+    out = expect_ok(
+        "smoke_ok",
+        "live_planner_calls_sum=2",
+        out_root=make_smoke_outroot("smoke_ok", [row]),
+    )
+    assert "branch_planner_calls_tick_sum=4" in out
+    assert "planner_tokens_sum=120" in out
+    return out
+
+
+def test_port_pick() -> str:
+    out = expect_ok(
+        "port_pick",
+        "vllm_port=",
+        extra_env={"PBS_JOBID": "25519712.aqua"},
+    )
+    assert "base_url=http://127.0.0.1:" in out
+    m = re.search(r"vllm_port=(\d+)", out)
+    assert m is not None, out
+    port = int(m.group(1))
+    assert 20000 <= port < 40000, port
+    return out
+
+
+def test_c1_source_contract() -> None:
+    pbs = PBS.read_text(encoding="utf-8")
+    assert "8000" not in pbs
+    assert "setsid" in pbs
+    assert 'pkill -f "vllm serve"' not in pbs
+    assert 'pkill -f "EngineCore"' not in pbs
+    assert "trap kill_vllm EXIT" in pbs
+    assert "SIDEKICK_VLLM_BASE_URL" in pbs
+    assert 'kill -TERM -- -"${pid}"' in pbs
+    assert "port .* is used by process" in pbs
+    assert "SMOKE_TARGET_ROWS=32" in pbs
+    assert "4 points" in pbs
+    assert "SMOKE_TARGET_ROWS=16" not in pbs
+
+
 def test_bash_n() -> None:
     proc = subprocess.run(
         ["bash", "-n", str(PBS)],
@@ -339,6 +486,12 @@ def main() -> int:
         ("cmd_missing_untreated", test_cmd_missing_untreated),
         ("cmd_schedule_live", test_cmd_schedule_live),
         ("cmd_ok", test_cmd_ok),
+        ("smoke_error_type", test_smoke_error_type),
+        ("smoke_no_live_step", test_smoke_no_live_step),
+        ("smoke_zero_tokens", test_smoke_zero_tokens),
+        ("smoke_ok", test_smoke_ok),
+        ("port_pick", test_port_pick),
+        ("c1_source_contract", test_c1_source_contract),
     ]
     for name, fn in tests:
         try:

@@ -1017,8 +1017,12 @@ def test_branch_rows_carry_planner_cost_and_null_when_unavailable(tmp_path):
     for row in rows:
         assert "branch_planner_calls" in row
         assert "branch_planner_tokens" in row
+        assert "branch_live_planner_calls" in row
+        assert "branch_error_detail" in row
         assert row["branch_planner_calls"] is not None and row["branch_planner_calls"] >= 0
         assert row["branch_planner_tokens"] is not None and row["branch_planner_tokens"] >= 0
+        assert row["branch_live_planner_calls"] is not None and row["branch_live_planner_calls"] >= 0
+        assert row["branch_error_detail"] is None
 
     # unavailable -> None, never a silent 0: no result, no events
     job = {
@@ -1036,13 +1040,98 @@ def test_branch_rows_carry_planner_cost_and_null_when_unavailable(tmp_path):
     row = bc._row_from_result(job, point, 3, None, "crash")
     assert row["branch_planner_calls"] is None
     assert row["branch_planner_tokens"] is None
+    assert row["branch_live_planner_calls"] is None
+    assert row["branch_error_type"] == "crash"
     # result source wins when present (result.json carries n_planner_calls / totals)
-    calls, tokens = bc.planner_cost_from_result(
+    calls, tokens, live = bc.planner_cost_from_result(
+        {"n_planner_calls": 7, "totals": {"planner_tokens_total": 999, "planner_calls_total": 2}}
+    )
+    assert (calls, tokens, live) == (7, 999, 2)
+    calls_only, tokens_only, live_only = bc.planner_cost_from_result(
         {"n_planner_calls": 7, "totals": {"planner_tokens_total": 999}}
     )
-    assert (calls, tokens) == (7, 999)
+    assert (calls_only, tokens_only, live_only) == (7, 999, None)
     ev_calls, ev_tokens = bc.planner_cost_from_events(tmp_path / "nowhere" / "missing_run")
     assert ev_calls is None and ev_tokens is None
+
+
+def test_spent_from_rows_replayed_only_contributes_zero():
+    row = _base_row(branch_planner_calls=4, branch_live_planner_calls=0)
+    assert bc.spent_from_rows([row], unknown_factor=81) == 0
+    assert row["branch_planner_calls"] == 4
+
+
+def test_spent_from_rows_live_count_not_tick_sum():
+    row = _base_row(branch_planner_calls=7, branch_live_planner_calls=2)
+    assert bc.spent_from_rows([row], unknown_factor=81) == 2
+    assert row["branch_planner_calls"] == 7
+
+
+def test_spent_from_rows_missing_or_none_live_field_charged_unknown():
+    missing = _base_row(branch_planner_calls=4)
+    assert "branch_live_planner_calls" not in missing
+    assert bc.spent_from_rows([missing], unknown_factor=81) == 81
+    none_row = _base_row(branch_planner_calls=4, branch_live_planner_calls=None)
+    assert bc.spent_from_rows([none_row], unknown_factor=81) == 81
+
+
+def test_row_error_detail_and_live_calls_from_events(tmp_path):
+    run_id = "err_run"
+    job = {
+        "out_root": str(tmp_path),
+        "run_id": run_id,
+        "campaign": "camp",
+        "seed": 1,
+        "task_id": "copy_hello",
+        "i": 0,
+        "condition": "treated",
+        "branch_seed": 101,
+        "key": "k",
+    }
+    run_dir = tmp_path / run_id
+    run_dir.mkdir()
+    detail = (
+        "Client error '404 Not Found' for url 'http://127.0.0.1:8000/v1/completions': "
+        "HTTPStatusError the model 'sft_b' does not exist"
+    )
+    ev = _event(
+        event_type="error",
+        step=5,
+        actor="system",
+        payload={"detail": detail, "exc_type": "HTTPStatusError"},
+        run_id=run_id,
+    )
+    (run_dir / "events.jsonl").write_text(ev.model_dump_json() + "\n", encoding="utf-8")
+    point = {"step": 5, "correction": "c"}
+    dumped = {
+        "n_planner_calls": 5,
+        "steps": 6,
+        "success": False,
+        "error_type": "crash",
+        "totals": {"planner_tokens_total": 0, "planner_calls_total": 0},
+    }
+    row = bc._row_from_result(job, point, 3, dumped, "crash")
+    assert row["branch_planner_calls"] == 5
+    assert row["branch_live_planner_calls"] == 0
+    assert row["branch_error_type"] == "crash"
+    assert row["branch_error_detail"] is not None
+    assert row["branch_error_detail"].startswith("HTTPStatusError:")
+    assert "404 Not Found" in row["branch_error_detail"]
+    clipped = bc.error_detail_from_events(run_dir)
+    assert clipped is not None
+    payload_part = clipped.split(": ", 1)[1]
+    assert len(payload_part) <= 200
+    long_detail = "X" * 250
+    long_ev = _event(
+        event_type="error",
+        step=5,
+        actor="system",
+        payload={"detail": long_detail, "exc_type": "HTTPStatusError"},
+        run_id=run_id,
+    )
+    (run_dir / "events.jsonl").write_text(long_ev.model_dump_json() + "\n", encoding="utf-8")
+    long_clip = bc.error_detail_from_events(run_dir)
+    assert long_clip == "HTTPStatusError: " + ("X" * 200)
 
 
 def test_planner_cost_from_events_matches_ledger_four_field_tokens(tmp_path):

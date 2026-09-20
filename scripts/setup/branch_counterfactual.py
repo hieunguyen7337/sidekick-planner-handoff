@@ -880,15 +880,18 @@ def planner_cost_from_events(run_dir: Path) -> tuple[int | None, int | None]:
     return (calls, tokens) if seen else (None, None)
 
 
-def planner_cost_from_result(dumped: dict[str, Any] | None) -> tuple[int | None, int | None]:
-    """(planner calls, planner tokens) from an episode result, else (None, None).
+def planner_cost_from_result(
+    dumped: dict[str, Any] | None,
+) -> tuple[int | None, int | None, int | None]:
+    """(replay-inclusive calls, live tokens, live calls) from a result.
 
-    Primary source: ``RunResult.n_planner_calls`` [OBSERVED
-    src/sidekick/protocols/schemas.py:141] and ``totals["planner_tokens_total"]``
-    [OBSERVED src/sidekick/cost/ledger.py:40].
+    Primary source: ``RunResult.n_planner_calls`` (replay-inclusive prefix
+    counters) [OBSERVED src/sidekick/protocols/schemas.py:141],
+    ``totals["planner_tokens_total"]``, and ``totals["planner_calls_total"]``
+    (ledger live-only) [OBSERVED src/sidekick/cost/ledger.py:40-41].
     """
     if dumped is None:
-        return None, None
+        return None, None, None
     calls = dumped.get("n_planner_calls")
     if calls is not None:
         try:
@@ -902,7 +905,76 @@ def planner_cost_from_result(dumped: dict[str, Any] | None) -> tuple[int | None,
             tokens = int(tokens)
         except (TypeError, ValueError):
             tokens = None
-    return calls, tokens
+    live_calls = totals.get("planner_calls_total")
+    if live_calls is not None:
+        try:
+            live_calls = int(live_calls)
+        except (TypeError, ValueError):
+            live_calls = None
+    return calls, tokens, live_calls
+
+
+def error_detail_from_events(run_dir: Path) -> str | None:
+    """First error event's ``exc_type`` plus the first 200 chars of ``detail``."""
+    path = run_dir / "events.jsonl"
+    if not path.is_file():
+        return None
+    try:
+        events = list(EventLog.read(path))
+    except Exception:
+        return None
+    for ev in events:
+        if ev.event_type != "error":
+            continue
+        payload = ev.payload or {}
+        detail = str(payload.get("detail") or "")[:200]
+        exc_type = str(payload.get("exc_type") or "")
+        if exc_type and detail:
+            return f"{exc_type}: {detail}"
+        if exc_type:
+            return exc_type
+        if detail:
+            return detail
+        return None
+    return None
+
+
+def live_planner_calls_charged(row: dict[str, Any], unknown_factor: int) -> int:
+    """Live hosted-planner calls for the budget cap.
+
+    Missing field or ``None`` is charged at ``unknown_factor`` (the per-branch
+    cap, 81 in the B1 prereg), never silently 0. A recorded 0 (replayed ticks
+    only) is measured-zero and must stay 0.
+    """
+    if "branch_live_planner_calls" not in row:
+        return int(unknown_factor)
+    calls = row.get("branch_live_planner_calls")
+    if calls is None:
+        return int(unknown_factor)
+    return int(calls)
+
+
+def spent_from_rows(rows: list[dict[str, Any]], unknown_factor: int) -> int:
+    """Sum live planner calls over the last row per branch key."""
+    last: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if all(k in row for k in ("campaign", "seed", "task_id", "i", "condition", "branch_seed")):
+            try:
+                key = branch_key(
+                    str(row["campaign"]),
+                    int(row["seed"]),
+                    str(row["task_id"]),
+                    int(row["i"]),
+                    str(row["condition"]),
+                    int(row["branch_seed"]),
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+            last[key] = row
+    spent = 0
+    for row in last.values():
+        spent += live_planner_calls_charged(row, unknown_factor)
+    return spent
 
 
 def _row_from_result(
@@ -927,13 +999,15 @@ def _row_from_result(
         Path(job["out_root"]) / job["run_id"], result_gpr({"goal_pass_rate": gpr})
     )
     run_dir = Path(job["out_root"]) / job["run_id"]
-    calls, tokens = planner_cost_from_result(dumped)
+    calls, tokens, live_calls = planner_cost_from_result(dumped)
     if calls is None or tokens is None:
         ev_calls, ev_tokens = planner_cost_from_events(run_dir)
         if calls is None:
             calls = ev_calls
         if tokens is None:
             tokens = ev_tokens
+    err_final = err if dumped is not None else (error_type or "crash")
+    err_detail = error_detail_from_events(run_dir) if err_final else None
     return {
         "campaign": job["campaign"],
         "seed": job["seed"],
@@ -948,9 +1022,11 @@ def _row_from_result(
         "branch_gpr_local": local,
         "branch_solved": solved,
         "branch_steps": steps,
-        "branch_error_type": err if dumped is not None else (error_type or "crash"),
+        "branch_error_type": err_final,
+        "branch_error_detail": err_detail,
         "branch_planner_calls": calls,
         "branch_planner_tokens": tokens,
+        "branch_live_planner_calls": live_calls,
         "n_later_reviews": n_later,
         "correction": point["correction"],
         "run_id": job["run_id"],
@@ -1290,32 +1366,11 @@ def run_branches(
 
     def _row_planner_calls(res: dict[str, Any]) -> int:
         row = res.get("row") or {}
-        calls = row.get("branch_planner_calls")
-        # Unknown cost is charged at the per-branch factor, never silently 0.
-        return int(calls) if calls is not None else planner_factor
+        # Unknown live cost is charged at the per-branch factor, never silently 0.
+        return live_planner_calls_charged(row, planner_factor)
 
     def _spent_from_rows(rows: list[dict[str, Any]]) -> int:
-        last: dict[str, dict[str, Any]] = {}
-        for row in rows:
-            if all(k in row for k in ("campaign", "seed", "task_id", "i", "condition", "branch_seed")):
-                try:
-                    key = branch_key(
-                        str(row["campaign"]),
-                        int(row["seed"]),
-                        str(row["task_id"]),
-                        int(row["i"]),
-                        str(row["condition"]),
-                        int(row["branch_seed"]),
-                    )
-                except (KeyError, TypeError, ValueError):
-                    continue
-                last[key] = row
-        spent = 0
-        for row in last.values():
-            calls = row.get("branch_planner_calls")
-            if calls is not None and is_done_row(row):
-                spent += int(calls)
-        return spent
+        return spent_from_rows(rows, planner_factor)
 
     spent = _spent_from_rows(load_jsonl(out_root / "branch_runs.jsonl"))
     results: list[dict[str, Any]] = []

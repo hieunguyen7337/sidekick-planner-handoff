@@ -33,7 +33,7 @@
 #   ALIAS_SFT_B, CFG, SMOKE_ONLY=1 (default 0)
 # SMOKE_ONLY=1 runs the same wrapper against a sibling out-root
 # (${CID}_smoke), confirms PREFLIGHT 1600, lets a handful of branches finish
-# (2 points = 16 rows), prints spend, and stops before the full campaign.
+# (4 points × 2 conditions × 4 seeds = 32 rows), prints spend, and stops before the full campaign.
 # It does not purge or write into the real ${CID} tree.
 
 # ---- independent guards (no side effects; B1_GUARD_SELFTEST exercises these) --
@@ -192,6 +192,147 @@ print(
 PY
 }
 
+b1_pick_vllm_port () {
+  local jobnum tries in_use
+  jobnum="${PBS_JOBID-}"
+  jobnum="${jobnum%%.*}"
+  jobnum="${jobnum//[^0-9]/}"
+  if [[ -z "${jobnum}" ]]; then
+    jobnum="$$"
+  fi
+  VLLM_PORT=$(( 20000 + jobnum % 20000 ))
+  tries=0
+  if command -v ss >/dev/null 2>&1; then
+    while (( tries < 50 )); do
+      in_use=0
+      if ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq ":${VLLM_PORT}$"; then
+        in_use=1
+      fi
+      if [[ "${in_use}" -eq 0 ]]; then
+        break
+      fi
+      VLLM_PORT=$(( VLLM_PORT + 1 ))
+      if (( VLLM_PORT >= 40000 )); then
+        VLLM_PORT=20000
+      fi
+      tries=$(( tries + 1 ))
+    done
+    if (( tries >= 50 )); then
+      echo "[b1] FATAL: could not find a free vLLM port in 20000-39999 after 50 tries"
+      return 2
+    fi
+  fi
+  export VLLM_PORT
+  export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"
+  echo "[b1] vllm_port=${VLLM_PORT} base_url=${SIDEKICK_VLLM_BASE_URL}"
+}
+
+print_smoke_spend () {
+  local out_root="$1"
+  "${PY}" - "${out_root}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+path = root / "branch_runs.jsonl"
+rows = []
+if path.is_file():
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if not raw.strip():
+            continue
+        try:
+            rows.append(json.loads(raw))
+        except json.JSONDecodeError:
+            rows.append({"_unparseable": True})
+
+n = len(rows)
+live_sum = 0
+tick_sum = 0
+token_sum = 0
+unknown_live = 0
+unknown_tick = 0
+error_rows = []
+live_step = False
+for row in rows:
+    if row.get("_unparseable"):
+        unknown_live += 1
+        unknown_tick += 1
+        continue
+    if row.get("branch_error_type"):
+        error_rows.append(row)
+    live = row.get("branch_live_planner_calls") if "branch_live_planner_calls" in row else None
+    if "branch_live_planner_calls" not in row or row.get("branch_live_planner_calls") is None:
+        unknown_live += 1
+    else:
+        live_sum += int(live)
+    ticks = row.get("branch_planner_calls")
+    if ticks is None:
+        unknown_tick += 1
+    else:
+        tick_sum += int(ticks)
+    tok = row.get("branch_planner_tokens")
+    if tok is not None:
+        token_sum += int(tok)
+    steps = row.get("branch_steps")
+    replay_k = row.get("replay_k")
+    try:
+        if steps is not None and replay_k is not None and int(steps) > int(replay_k) + 1:
+            live_step = True
+    except (TypeError, ValueError):
+        pass
+
+print(
+    f"[b1] smoke spend: n_rows={n} live_planner_calls_sum={live_sum} "
+    f"branch_planner_calls_tick_sum={tick_sum} planner_tokens_sum={token_sum} "
+    f"unknown_live_call_rows={unknown_live} unknown_call_rows={unknown_tick} jsonl={path}"
+)
+
+failed = 0
+if error_rows:
+    print(f"[b1] FATAL: smoke gate: {len(error_rows)} rows with branch_error_type")
+    for row in error_rows[:3]:
+        print(f"[b1] smoke error_detail: {row.get('branch_error_detail')}")
+    failed = 1
+if not live_step:
+    print(
+        "[b1] FATAL: smoke gate: no row with branch_steps > replay_k + 1 "
+        "(executor never took a live step past the replayed prefix)"
+    )
+    failed = 1
+if token_sum == 0:
+    print(
+        "[b1] FATAL: smoke gate: sum(branch_planner_tokens)==0 "
+        "(no live planner call is proven)"
+    )
+    failed = 1
+sys.exit(2 if failed else 0)
+PY
+}
+
+b1_smoke_error_count () {
+  local jsonl="$1"
+  "${PY}" - "${jsonl}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+n = 0
+if path.is_file():
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if not raw.strip():
+            continue
+        try:
+            row = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if row.get("branch_error_type"):
+            n += 1
+print(n)
+PY
+}
+
 if [[ "${B1_GUARD_SELFTEST:-0}" == "1" ]]; then
   set -euo pipefail
   PY="${PY:-/scratch/n12194778/sidekick/env/bin/python}"
@@ -240,6 +381,21 @@ if [[ "${B1_GUARD_SELFTEST:-0}" == "1" ]]; then
       ;;
     cmd_ok)
       b1_assert_untreated_cmd "timeout 35100 python run_b1_pilot.py --campaign-root X --split train --out-root Y --branch-seeds 101 102 103 104 --workers 10 --resume --env appworld --config Z --delta-band-delta 0.166 --untreated-mode suppress_next --max-planner-calls-total 10000"
+      ;;
+    smoke_error)
+      print_smoke_spend "${GUARD_OUT_ROOT:?}"
+      ;;
+    smoke_no_live_step)
+      print_smoke_spend "${GUARD_OUT_ROOT:?}"
+      ;;
+    smoke_zero_tokens)
+      print_smoke_spend "${GUARD_OUT_ROOT:?}"
+      ;;
+    smoke_ok)
+      print_smoke_spend "${GUARD_OUT_ROOT:?}"
+      ;;
+    port_pick)
+      b1_pick_vllm_port
       ;;
     *)
       echo "[b1] FATAL: unknown GUARD_CASE=${GUARD_CASE}"
@@ -390,18 +546,22 @@ b1_assert_untreated_cmd "${PILOT_CMD[*]}" || exit 2
 VLLM_PID=""
 
 kill_vllm () {
-  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
-    kill "${VLLM_PID}" 2>/dev/null || true
-    for _ in $(seq 1 12); do kill -0 "${VLLM_PID}" 2>/dev/null || break; sleep 5; done
-    kill -9 "${VLLM_PID}" 2>/dev/null || true
-    wait "${VLLM_PID}" 2>/dev/null || true
+  local pid="${VLLM_PID:-}"
+  if [[ -n "${pid}" ]]; then
+    if kill -0 "${pid}" 2>/dev/null; then
+      kill -TERM -- -"${pid}" 2>/dev/null || true
+      for _ in $(seq 1 12); do kill -0 "${pid}" 2>/dev/null || break; sleep 5; done
+      kill -KILL -- -"${pid}" 2>/dev/null || true
+    else
+      kill -KILL -- -"${pid}" 2>/dev/null || true
+    fi
+    wait "${pid}" 2>/dev/null || true
   fi
-  pkill -f "vllm serve" 2>/dev/null || true
-  pkill -f "EngineCore" 2>/dev/null || true
-  sleep 5
+  VLLM_PID=""
   echo "[b1] GPU after shutdown:"
   nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
 }
+trap kill_vllm EXIT
 
 stop_pilot () {
   local pid="${1:-}"
@@ -411,37 +571,6 @@ stop_pilot () {
     kill -9 "${pid}" 2>/dev/null || true
     wait "${pid}" 2>/dev/null || true
   fi
-}
-
-print_smoke_spend () {
-  local out_root="$1"
-  "${PY}" - "${out_root}" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-root = Path(sys.argv[1])
-path = root / "branch_runs.jsonl"
-n = 0
-calls = 0
-unknown = 0
-if path.is_file():
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        if not raw.strip():
-            continue
-        n += 1
-        try:
-            row = json.loads(raw)
-        except json.JSONDecodeError:
-            unknown += 1
-            continue
-        c = row.get("branch_planner_calls")
-        if c is None:
-            unknown += 1
-        else:
-            calls += int(c)
-print(f"[b1] smoke spend: n_rows={n} branch_planner_calls_sum={calls} unknown_call_rows={unknown} jsonl={path}")
-PY
 }
 
 # ---- preflight: the planner must be reachable BEFORE a GPU is held ------------
@@ -457,13 +586,83 @@ echo "[b1] codex $(codex --version 2>/dev/null || echo '?')"
 echo "[b1] auth.json present (contents never printed)"
 
 # ---- vLLM: LoRA registered statically at launch --------------------------------
-kill_vllm
+b1_vllm_fatal () {
+  echo "[b1] FATAL: $*"
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]]; then
+    echo "[b1] vllm log tail:"
+    tail -n 60 "${VLOG}" || true
+  fi
+  kill_vllm
+  exit 1
+}
+
+b1_vllm_port_collision_in_log () {
+  [[ -n "${VLOG:-}" && -f "${VLOG}" ]] || return 1
+  grep -Eq 'port .* is used by process' "${VLOG}"
+}
+
+b1_vllm_require_lora_ids () {
+  local body="$1"
+  shift
+  printf '%s\n' "${body}" | "${PY}" - "$@" <<'PY'
+import json
+import sys
+
+body = sys.stdin.read()
+aliases = sys.argv[1:]
+try:
+    obj = json.loads(body)
+except json.JSONDecodeError as exc:
+    print(f"[b1] FATAL: /v1/models JSON did not parse: {exc}")
+    sys.exit(2)
+ids = []
+for item in obj.get("data") or []:
+    if isinstance(item, dict) and item.get("id") is not None:
+        ids.append(str(item["id"]))
+print(f"[b1] vllm /v1/models ids={ids} required_aliases={list(aliases)}")
+missing = [a for a in aliases if a not in ids]
+if missing:
+    print(f"[b1] FATAL: vllm /v1/models missing lora alias(es): {missing}")
+    sys.exit(2)
+PY
+}
+
+b1_vllm_require_listen_pgid () {
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "[b1] WARN: ss not available; skipping listen-pid pgid check"
+    return 0
+  fi
+  local line pid pgid
+  line="$(ss -ltnp "sport = :${VLLM_PORT}" 2>/dev/null || true)"
+  pid="$(printf '%s\n' "${line}" | grep -oE 'pid=[0-9]+' | head -n1 | cut -d= -f2 || true)"
+  if [[ -z "${pid}" ]]; then
+    line="$(ss -ltnp 2>/dev/null | grep -E ":${VLLM_PORT}[[:space:]]" || true)"
+    pid="$(printf '%s\n' "${line}" | grep -oE 'pid=[0-9]+' | head -n1 | cut -d= -f2 || true)"
+  fi
+  if [[ -z "${pid}" ]]; then
+    echo "[b1] WARN: ss -ltnp did not report a pid LISTENing on ${VLLM_PORT}; skipping pgid check"
+    return 0
+  fi
+  pgid="$(ps -o pgid= -p "${pid}" 2>/dev/null | tr -d ' ')"
+  echo "[b1] vllm listen pid=${pid} pgid=${pgid} vllm_pid=${VLLM_PID}"
+  if [[ "${pgid}" != "${VLLM_PID}" ]]; then
+    echo "[b1] FATAL: pid LISTENing on ${VLLM_PORT} has pgid ${pgid}, expected ${VLLM_PID}"
+    return 2
+  fi
+  return 0
+}
+
+if ! command -v setsid >/dev/null 2>&1; then
+  echo "[b1] FATAL: setsid not on PATH; cannot isolate the vLLM process group"
+  exit 1
+fi
+b1_pick_vllm_port || exit 1
 # The --lora-modules line. Alias comes from ALIAS_SFT_B / executor.lora_name, not the directory name.
-"${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
   --served-model-name "${MODEL}" \
   --dtype bfloat16 \
   --max-model-len 32768 \
-  --host 127.0.0.1 --port 8000 \
+  --host 127.0.0.1 --port "${VLLM_PORT}" \
   --gpu-memory-utilization 0.85 \
   --enable-lora \
   --max-loras 4 \
@@ -471,20 +670,40 @@ kill_vllm
   --lora-modules "${LORA_MODULES[@]}" \
   > "${VLOG}" 2>&1 &
 VLLM_PID=$!
-echo "[b1] vllm serve ${MODEL} pid=${VLLM_PID} --enable-lora --max-loras 4 --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+echo "[b1] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} --enable-lora --max-loras 4 --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
 t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
 while (( $(date +%s) < deadline )); do
-  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
-    echo "[b1] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+  if b1_vllm_port_collision_in_log; then
+    b1_vllm_fatal "vllm log reports port is used by process"
   fi
-  if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
-    echo "[b1] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+    b1_vllm_fatal "vllm died before healthy"
+  fi
+  if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
+    echo "[b1] vllm port answered after $(( $(date +%s) - t0 ))s"
+    healthy=1
+    break
   fi
   sleep 5
 done
 if [[ "${healthy}" -ne 1 ]]; then
-  echo "[b1] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
+  b1_vllm_fatal "vllm not healthy within 300s"
 fi
+if b1_vllm_port_collision_in_log; then
+  b1_vllm_fatal "vllm log reports port is used by process"
+fi
+body=$(curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models") || b1_vllm_fatal "vllm /v1/models failed after port answered"
+aliases=()
+for _mod in "${LORA_MODULES[@]}"; do
+  aliases+=("${_mod%%=*}")
+done
+if ! b1_vllm_require_lora_ids "${body}" "${aliases[@]}"; then
+  b1_vllm_fatal "lora identity check failed"
+fi
+if ! b1_vllm_require_listen_pgid; then
+  b1_vllm_fatal "listen-pid pgid check failed"
+fi
+echo "[b1] vllm healthy after $(( $(date +%s) - t0 ))s port=${VLLM_PORT}"
 
 echo "[b1] ---- branches split=${SPLIT} out=${OUT_CAMPAIGN} source=${CAMPAIGN_ROOT} wrapper=${WRAPPER} ----"
 echo "[b1] cmd=${PILOT_CMD[*]}"
@@ -533,14 +752,20 @@ if [[ "${preflight_seen}" -ne 1 ]]; then
 fi
 
 if [[ "${SMOKE_ONLY}" == "1" ]]; then
-  SMOKE_TARGET_ROWS=16
+  SMOKE_TARGET_ROWS=32
   smoke_deadline=$(( $(date +%s) + 3600 ))
   jsonl="${OUT_CAMPAIGN}/branch_runs.jsonl"
-  echo "[b1] smoke_only: waiting for ${SMOKE_TARGET_ROWS} branch_runs rows (2 points × 2 conditions × 4 seeds) then stopping"
+  echo "[b1] smoke_only: waiting for ${SMOKE_TARGET_ROWS} branch_runs rows (4 points × 2 conditions × 4 seeds) then stopping"
   while (( $(date +%s) < smoke_deadline )); do
     n=0
     if [[ -f "${jsonl}" ]]; then
       n="$(wc -l < "${jsonl}" | tr -d ' ')"
+    fi
+    err_n="$(b1_smoke_error_count "${jsonl}")"
+    if [[ "${err_n}" -gt 0 ]]; then
+      echo "[b1] FATAL: smoke_only: ${err_n} rows with branch_error_type; stopping"
+      stop_pilot "${pilot_pid}"
+      break
     fi
     if [[ "${n}" -ge "${SMOKE_TARGET_ROWS}" ]]; then
       echo "[b1] smoke_only: ${n} branch_runs rows; stopping before full campaign"
@@ -558,11 +783,12 @@ if [[ "${SMOKE_ONLY}" == "1" ]]; then
     stop_pilot "${pilot_pid}"
   fi
   wait "${pilot_pid}" 2>/dev/null || true
-  print_smoke_spend "${OUT_CAMPAIGN}"
+  smoke_rc=0
+  print_smoke_spend "${OUT_CAMPAIGN}" || smoke_rc=$?
   echo "[b1] smoke_only: did not purge; did not write ${OUT_REAL}"
   kill_vllm
-  echo "[b1] done=$(date -Iseconds) smoke_only=1 cid=${CID} out=${OUT_CAMPAIGN}"
-  exit 0
+  echo "[b1] done=$(date -Iseconds) smoke_only=1 cid=${CID} out=${OUT_CAMPAIGN} smoke_rc=${smoke_rc}"
+  exit "${smoke_rc}"
 fi
 
 wait "${pilot_pid}"
