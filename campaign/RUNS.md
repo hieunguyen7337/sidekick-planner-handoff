@@ -2223,3 +2223,88 @@ Key findings and predictions:
 - **Scientific Consequence**:
   - With the `sft_b_plus` adapter, the **executor-internal ask hypothesis is not being tested** by these arms [INFERRED]. They measure a verifier veto on a channel that never opens [INFERRED].
   - Testing the hypothesis requires an ASK-trained adapter (`sft_c`), which is not yet trained and remains gated on the completion of the B1 pilot [INFERRED].
+
+---
+
+## 10. J8 dev frontier — 2026-09-20 (twelve arms, n=114 each)
+
+### Provenance
+
+- Report: `scripts/analysis/j8_frontier.py`, run 2026-09-20 17:23, output JSON `campaign/results/hj8_frontier_dev_20260920.report.json` [OBSERVED scripts/analysis/j8_frontier.py].
+- Live arms from PBS jobs `25560358` (`fixed_k_3`, `fixed_k_10`, `oracle_escalation`, `sidekick_tau03`, `sidekick_tau07`; rc=0, 2h19) and `25560363` (`fixed_k_5`, `router_seq_tau03`/`05`/`07`, `sidekick_tau05`; rc=0) [OBSERVED campaign/workers/brief_C1_dev_frontier_record.md:21-23]. Free arms `executor_alone` / `sft_plan` from the 2026-09-19 `_bplus` trees [OBSERVED campaign/workers/brief_C1_dev_frontier_record.md:23].
+- Split: dev, 57 tasks × 2 seeds = 114 pairs. Resample unit: task. Adapter `sft_b_plus_granite8b` [OBSERVED campaign/workers/brief_C1_dev_frontier_record.md:24].
+- `planner_calls` throughout is the live ledger count (`totals.planner_calls_total`), not the replay-inclusive tick count [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: keys "quality_populations", "planner_calls_definition"].
+- Oracle semantics: runs free (not replayed from a source prefix) [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "oracle_semantics_citation"].
+- Headline population: all-episodes, a crashed episode scoring 0. Survivor columns reported alongside; a paired survivor contrast drops a (task_id, seed) pair if either side crashed [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: keys "quality_populations", "planner_calls_definition"].
+
+### The arm table
+
+```
+arm                  n  n_crashed  tgc_all  tgc_surv   gp_all   gp_surv  calls  crash/call%
+executor_alone     114          0   0.1316    0.1316   0.5289    0.5289      0          NA
+sft_plan           114          0   0.4035    0.4035   0.7000    0.7000    114        0.00
+fixed_k_3          114         17   0.2982    0.3505   0.5149    0.6051    768        2.21
+fixed_k_5          114         10   0.3772    0.4135   0.6238    0.6838    566        1.77
+fixed_k_10         114          3   0.3860    0.3964   0.6447    0.6621    314        0.96
+oracle_escalation  114          0   0.3772    0.3772   0.6660    0.6660    148        0.00
+router_seq_tau03   114         21   0.2719    0.3333   0.4924    0.6036   1754        1.20
+router_seq_tau05   114          0   0.4211    0.4211   0.7121    0.7121    126        0.00
+router_seq_tau07   114          0   0.3772    0.3772   0.6837    0.6837    114        0.00
+sidekick_tau03     114          0   0.3596    0.3596   0.6694    0.6694    114        0.00
+sidekick_tau05     114          0   0.3860    0.3860   0.6694    0.6694    114        0.00
+sidekick_tau07     114          0   0.3947    0.3947   0.6601    0.6601    114        0.00
+```
+
+`calls` is the arm total over 114 episodes. Per-episode call rates are: `fixed_k_3` 6.74, `fixed_k_5` 4.96, `fixed_k_10` 2.75, `oracle_escalation` 1.30, `router_seq_tau03` 15.39, `router_seq_tau05` 1.11, and 1.00 for all other arms [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "frontier"].
+
+Planner token spend across ledger totals: `router_seq_tau03` consumed 203,504,742 tokens and USD 4.68 — 7.8× `fixed_k_3` (47,289,426 tokens) and 136× `oracle_escalation` (1,496,956 tokens) [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "arms"]. `fixed_k_5` consumed 26,185,136 tokens; `fixed_k_10` consumed 10,329,506 tokens; `router_seq_tau05` consumed 6,608,437 tokens [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "arms"]. The four zero-escalation arms (`router_seq_tau07`, `sidekick_tau03`, `sidekick_tau05`, `sidekick_tau07`) spent 0 planner tokens because their single plan call per episode was served from cache [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "arms"].
+
+### F1 non-inferiority evaluation
+
+Rule: `ci95_pp[0] >= -7.00` vs `fixed_k(k_matched)` AND `ci95[1] < 0` calls vs `fixed_k(5)`.
+
+```
+arm               holds    k_matched   q_pp     q_ci95_pp   calls_d      calls_ci95   fewer<k5
+router_seq_tau03  False    fixed_k_3  -2.63  [-14.91,9.65]   +10.42    [8.45,12.52]      False
+router_seq_tau05   True   fixed_k_10  +3.51   [-6.14,13.16]    -3.86   [-4.32,-3.39]       True
+router_seq_tau07  False   fixed_k_10  -0.88  [-10.53,8.77]    -3.96   [-4.41,-3.53]       True
+sidekick_tau03    False   fixed_k_10  -2.63  [-13.16,7.89]    -3.96   [-4.41,-3.53]       True
+sidekick_tau05    False   fixed_k_10   0.00   [-8.77,9.65]    -3.96   [-4.41,-3.53]       True
+sidekick_tau07    False   fixed_k_10  +0.88  [-9.65,12.28]    -3.96   [-4.41,-3.53]       True
+```
+
+Only `router_seq_tau05` passes, and it passes by 0.86 pp of CI lower bound (−6.14 pp vs −7.00 pp) [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "f1"]. `sidekick_tau05` has a point estimate of exactly 0.00 pp and fails because its interval is wider [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "f1"]. At n=114 the F1 verdict is decided by bootstrap interval width, not by measured quality [INFERRED]. F1 is therefore not resolvable on dev and must be evaluated on test [INFERRED].
+
+### Oracle headroom (F2)
+
+Comparing `oracle_escalation` vs `fixed_k_10` (its k_matched) across 114 pairs:
+- Quality (TGC): difference −0.88 pp, CI95 [−10.53, +9.65] — no detectable difference [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "oracle_headroom"].
+- Live calls: difference −1.46 per episode, CI95 [−1.75, −1.18] — significantly cheaper [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "oracle_headroom"].
+
+F2 as originally framed (oracle strictly outperforming fixed_k on both axes simultaneously) is not established [INFERRED]. What is established is equal quality at 47% of the calls (1.30 vs 2.75 per episode) and 14% of the planner tokens [INFERRED].
+
+### H3 — Gate calibration against dev oracle labels (n=848 steps, 43 positive)
+
+```
+gate               AUROC    ECE    n_escalations  degenerate
+router_seq_tau03  0.6294  0.3066           1533       false
+router_seq_tau05  0.4988  0.0531             12       false
+router_seq_tau07  0.5000  0.0507              0        true
+sidekick_tau03    0.5983  0.0488              0        true
+sidekick_tau05    0.6311  0.0488              0        true
+sidekick_tau07    0.6759  0.0488              0        true
+```
+
+AUROC is computed on the gate's scores and is therefore well-defined even when the gate never fires [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: keys "quality_populations", "planner_calls_definition"]. The `sidekick` self-gate reaches AUROC 0.6759, the highest of any gate measured in this project — above A7's value-function router at 0.6212 and above that router's feature-blind floor of 0.6245 — while escalating zero times at every tested τ [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"] [OBSERVED campaign/RUNS.md:2066-2067]. The scores discriminate; the operating point is in the wrong place [INFERRED]. This represents a calibration failure, not a discrimination failure, with the caveat that labels are J6 dev `schedule_live` (a contaminated estimand) with only 43 positives [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"].
+
+### Replicate-noise measurement
+
+`configs/hj8_sidekick_tau03.yaml`, `configs/hj8_sidekick_tau05.yaml`, and `configs/hj8_sidekick_tau07.yaml` differ only in `verifier.threshold` (0.3 / 0.5 / 0.7) — verified by diff [OBSERVED configs/hj8_sidekick_tau03.yaml:37] and [OBSERVED configs/hj8_sidekick_tau07.yaml:37]. Decoding is `temperature: 0.7` [OBSERVED configs/hj8_sidekick_tau03.yaml:25]. All three escalated zero times and made exactly 114 live calls, so τ had no causal effect on behaviour [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "frontier"]. The three arms are therefore three stochastic replicates of one policy, and their spread is a direct estimate of run-to-run noise on this split [INFERRED]:
+- TGC 0.3596 / 0.3860 / 0.3947 → range 3.5 pp [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "frontier"].
+- goal_pass 0.6694 / 0.6694 / 0.6601 → range 0.9 pp [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "frontier"].
+
+The 7 pp non-inferiority band is only about twice the TGC replicate noise, and every quality difference among the non-degenerate arms (`fixed_k_5` 0.3772, `fixed_k_10` 0.3860, `oracle_escalation` 0.3772, `router_seq_tau05` 0.4211, `sft_plan` 0.4035) lies within or near that range [INFERRED]. `goal_pass` is the substantially more stable of the two metrics here [INFERRED].
+
+### What the frontier shows about cost
+
+Two arms are genuinely worse on quality and both are the high-call arms: `fixed_k_3` (0.2982, 17 crashes) and `router_seq_tau03` (0.2719, 21 crashes, 15.39 calls/episode) [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "frontier"]. Per-call crash rate is not constant across arms (2.21%, 1.77%, 1.20%, 0.96%, 0.00%), which a fixed independent per-call failure probability would not produce; the numbers are reported without offering an unmeasured cause [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "frontier"]. `executor_alone` at TGC 0.1316 is far below every other arm and is the one large, unambiguous effect in the table [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "frontier"].
