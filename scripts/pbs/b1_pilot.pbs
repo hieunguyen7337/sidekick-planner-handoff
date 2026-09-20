@@ -333,6 +333,38 @@ print(n)
 PY
 }
 
+# Pipe the body into python -c, not `python -` plus a heredoc. `python -` reads
+# the program from stdin, so a later <<'PY' redirection replaces the pipe and
+# sys.stdin.read() is always empty (job 25558683).
+b1_vllm_require_lora_ids () {
+  local body="$1"
+  shift
+  printf '%s\n' "${body}" | "${PY}" -c '
+import json
+import sys
+
+body = sys.stdin.read()
+aliases = sys.argv[1:]
+if not body.strip():
+    print("[b1] FATAL: /v1/models body is empty")
+    sys.exit(2)
+try:
+    obj = json.loads(body)
+except json.JSONDecodeError as exc:
+    print(f"[b1] FATAL: /v1/models JSON did not parse: {exc}")
+    sys.exit(2)
+ids = []
+for item in obj.get("data") or []:
+    if isinstance(item, dict) and item.get("id") is not None:
+        ids.append(str(item["id"]))
+print(f"[b1] vllm /v1/models ids={ids} required_aliases={list(aliases)}")
+missing = [a for a in aliases if a not in ids]
+if missing:
+    print(f"[b1] FATAL: vllm /v1/models missing lora alias(es): {missing}")
+    sys.exit(2)
+' "$@"
+}
+
 if [[ "${B1_GUARD_SELFTEST:-0}" == "1" ]]; then
   set -euo pipefail
   PY="${PY:-/scratch/n12194778/sidekick/env/bin/python}"
@@ -396,6 +428,13 @@ if [[ "${B1_GUARD_SELFTEST:-0}" == "1" ]]; then
       ;;
     port_pick)
       b1_pick_vllm_port
+      ;;
+    lora_ids_ok|lora_ids_missing|lora_ids_not_json|lora_ids_empty)
+      aliases=()
+      if [[ -n "${GUARD_LORA_ALIASES:-}" ]]; then
+        read -r -a aliases <<< "${GUARD_LORA_ALIASES}"
+      fi
+      b1_vllm_require_lora_ids "${GUARD_LORA_BODY-}" "${aliases[@]}"
       ;;
     *)
       echo "[b1] FATAL: unknown GUARD_CASE=${GUARD_CASE}"
@@ -599,32 +638,6 @@ b1_vllm_fatal () {
 b1_vllm_port_collision_in_log () {
   [[ -n "${VLOG:-}" && -f "${VLOG}" ]] || return 1
   grep -Eq 'port .* is used by process' "${VLOG}"
-}
-
-b1_vllm_require_lora_ids () {
-  local body="$1"
-  shift
-  printf '%s\n' "${body}" | "${PY}" - "$@" <<'PY'
-import json
-import sys
-
-body = sys.stdin.read()
-aliases = sys.argv[1:]
-try:
-    obj = json.loads(body)
-except json.JSONDecodeError as exc:
-    print(f"[b1] FATAL: /v1/models JSON did not parse: {exc}")
-    sys.exit(2)
-ids = []
-for item in obj.get("data") or []:
-    if isinstance(item, dict) and item.get("id") is not None:
-        ids.append(str(item["id"]))
-print(f"[b1] vllm /v1/models ids={ids} required_aliases={list(aliases)}")
-missing = [a for a in aliases if a not in ids]
-if missing:
-    print(f"[b1] FATAL: vllm /v1/models missing lora alias(es): {missing}")
-    sys.exit(2)
-PY
 }
 
 b1_vllm_require_listen_pgid () {
