@@ -51,6 +51,82 @@ class ThresholdRouter:
         return self.verifier.score(trajectory_state) > self.threshold
 
 
+# Label-free action-review gate. Observation failures in this corpus use
+# "Execution failed. Traceback:" (not "Traceback (most recent call last)").
+EXCEPTION_MARKER = "Execution failed. Traceback:"
+DEFAULT_RULE_TRIGGER_RULES = ("on_exception",)
+DEFAULT_IRREVERSIBLE_PATTERNS = (
+    r"\.create_",
+    r"\.delete_",
+    r"\.send_",
+    r"\.update_",
+)
+
+
+def _state_mapping(trajectory_state: Any) -> dict[str, Any]:
+    return trajectory_state if isinstance(trajectory_state, dict) else {}
+
+
+def _observation_text(state: dict[str, Any]) -> str:
+    obs = state.get("last_observation")
+    if obs is None:
+        return ""
+    if isinstance(obs, dict):
+        return str(obs.get("text") or "")
+    return str(getattr(obs, "text", "") or "")
+
+
+def _proposed_action_blob(state: dict[str, Any]) -> str:
+    action = state.get("proposed_action")
+    if action is None:
+        action = state.get("last_action")
+    if action is None:
+        return ""
+    if isinstance(action, dict):
+        return "\n".join(
+            str(action.get(key) or "") for key in ("code", "raw_output", "message", "kind")
+        )
+    return "\n".join(
+        str(getattr(action, key, None) or "")
+        for key in ("code", "raw_output", "message", "kind")
+    )
+
+
+@dataclass
+class RuleTriggerVerifier:
+    """Return 1.0 if any enabled rule matches, else 0.0.
+
+    Rules are independently toggleable. When ``rules`` is omitted at construction
+    the default is ``[on_exception]``.
+    """
+
+    rules: list[str] = field(default_factory=lambda: list(DEFAULT_RULE_TRIGGER_RULES))
+    irreversible_patterns: list[str] = field(
+        default_factory=lambda: list(DEFAULT_IRREVERSIBLE_PATTERNS)
+    )
+    _compiled: tuple[re.Pattern[str], ...] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self.rules = [str(rule) for rule in self.rules]
+        self.irreversible_patterns = [str(pat) for pat in self.irreversible_patterns]
+        self._compiled = tuple(re.compile(pat) for pat in self.irreversible_patterns)
+
+    def score(self, trajectory_state: Any) -> float:
+        state = _state_mapping(trajectory_state)
+        enabled = set(self.rules)
+        if "on_exception" in enabled and EXCEPTION_MARKER in _observation_text(state):
+            return 1.0
+        if "on_irreversible" in enabled and self._irreversible_match(state):
+            return 1.0
+        return 0.0
+
+    def _irreversible_match(self, state: dict[str, Any]) -> bool:
+        blob = _proposed_action_blob(state)
+        if not blob:
+            return False
+        return any(pat.search(blob) for pat in self._compiled)
+
+
 # ---------------------------------------------------------------------------
 # FeatureVerifier — logistic regression over features of trajectory_state.
 #

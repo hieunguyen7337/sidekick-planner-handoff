@@ -1,0 +1,36 @@
+# HJ-11 action-review arm: on_exception + on_irreversible. BUILD ONLY — not an eval config.
+# Executor block mirrors configs/hj8_sft_plan_bplus.yaml (frozen; do not edit that file).
+# Run later with: --system action_review
+env: appworld
+campaign_id: hj11_action_review_exception_irreversible_20260920
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
+  on_missing: fail
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300
+  max_prompt_tokens: 30720
+verifier:
+  kind: rule_trigger
+  rules: [on_exception, on_irreversible]
+  irreversible_patterns: ["\\.create_", "\\.delete_", "\\.send_", "\\.update_"]
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000
+  per_step_timeout_s: 300
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

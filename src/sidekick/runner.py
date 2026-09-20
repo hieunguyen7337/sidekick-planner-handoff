@@ -11,7 +11,13 @@ from typing import Any
 
 from sidekick.agents.executor import MockExecutor, VLLMExecutor
 from sidekick.agents.planner import CachedPacketPlanner, CodexExecConfig, CodexExecPlanner, MockPlanner
-from sidekick.agents.verifier import ConstantVerifier, FeatureVerifier, ScriptedVerifier, SelfVerifier
+from sidekick.agents.verifier import (
+    ConstantVerifier,
+    FeatureVerifier,
+    RuleTriggerVerifier,
+    ScriptedVerifier,
+    SelfVerifier,
+)
 from sidekick.cost.ledger import CostLedger
 from sidekick.cost.prices import PriceSchedule
 from sidekick.environments.appworld_env import AppWorldEnv
@@ -208,6 +214,13 @@ def make_verifier(cfg: dict[str, Any]) -> Any:
         if not path:
             raise ValueError("verifier.kind=feature_lr requires verifier.path")
         return FeatureVerifier.load(path)
+    if kind == "rule_trigger":
+        kwargs: dict[str, Any] = {}
+        if "rules" in vcfg and vcfg["rules"] is not None:
+            kwargs["rules"] = [str(r) for r in vcfg["rules"]]
+        if "irreversible_patterns" in vcfg and vcfg["irreversible_patterns"] is not None:
+            kwargs["irreversible_patterns"] = [str(p) for p in vcfg["irreversible_patterns"]]
+        return RuleTriggerVerifier(**kwargs)
     return ConstantVerifier(float(vcfg.get("value", 0.5)))
 
 
@@ -226,11 +239,11 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None
     kwargs: dict[str, Any] = {}
     if name == "fixed_k":
         kwargs["k"] = int(cfg.get("fixed_k", cfg.get("k", 5)))
-    if name in ("sft_plan", "router_seq", "sidekick", "oracle_escalation"):
+    if name in ("sft_plan", "router_seq", "sidekick", "oracle_escalation", "action_review"):
         adapter = (cfg.get("executor") or {}).get("lora_name") or cfg.get("adapter_name")
         if adapter:
             kwargs["adapter_name"] = adapter
-    if name in ("router_seq", "sidekick"):
+    if name in ("router_seq", "sidekick", "action_review"):
         if "verifier_threshold" in cfg:
             kwargs["verifier_threshold"] = float(cfg["verifier_threshold"])
         vcfg = cfg.get("verifier") or {}

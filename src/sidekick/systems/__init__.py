@@ -1,3 +1,4 @@
+from sidekick.systems.action_review import ActionReview
 from sidekick.systems.executor_alone import ExecutorAlone
 from sidekick.systems.fixed_k import FixedK
 from sidekick.systems.oracle_escalation import OracleEscalation
@@ -7,6 +8,9 @@ from sidekick.systems.router_seq import RouterSeq
 from sidekick.systems.sidekick import Sidekick
 from sidekick.systems.sft_plan import SftPlan
 
+# Seam contract lists eight names. action_review is an additional experimental
+# system (E4). Keep the original eight first so existing exact-tuple tests stay
+# a prefix; append the ninth.
 SYSTEM_NAMES = (
     "planner_alone",
     "executor_alone",
@@ -16,6 +20,7 @@ SYSTEM_NAMES = (
     "router_seq",
     "sidekick",
     "oracle_escalation",
+    "action_review",
 )
 
 SYSTEMS = {
@@ -27,6 +32,7 @@ SYSTEMS = {
     "router_seq": RouterSeq,
     "sidekick": Sidekick,
     "oracle_escalation": OracleEscalation,
+    "action_review": ActionReview,
 }
 
 
@@ -50,4 +56,5 @@ __all__ = [
     "RouterSeq",
     "Sidekick",
     "OracleEscalation",
+    "ActionReview",
 ]

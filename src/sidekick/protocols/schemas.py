@@ -105,7 +105,7 @@ class Observation(BaseModel):
 
 EventType = Literal[
     "run_start", "plan", "action", "observation", "intervention", "ask",
-    "report", "evaluate", "error", "run_end",
+    "report", "evaluate", "error", "run_end", "action_review",
 ]
 
 

@@ -7,6 +7,7 @@ from typing import Any, Callable, Optional
 
 from sidekick.agents.planner import CodexTimeoutError, PacketParseError, PlannerClient
 from sidekick.agents.verifier import ConstantVerifier, SelfVerifier, ThresholdRouter, Verifier
+from sidekick.systems.action_review_gate import run_action_review
 from sidekick.environments.base import BaseEnv
 from sidekick.protocols.prompts import format_executor_action, render_executor_messages
 from sidekick.protocols.schemas import (
@@ -61,6 +62,7 @@ class SystemPolicy:
     oracle_steps: frozenset[int] = frozenset()
     adapter_name: str | None = None
     verifier_threshold: float = 0.5
+    review_proposed_action: bool = False
 
 
 @dataclass
@@ -597,6 +599,8 @@ def run_episode(
                 "adapter_name": policy.adapter_name,
             },
         }
+        if policy.review_proposed_action:
+            run_start_payload["policy"]["review_proposed_action"] = True
         if prefix is not None:
             run_start_payload["prefix"] = {
                 "start_step": start_step,
@@ -808,6 +812,32 @@ def run_episode(
                 action = action_from_executor(step)
                 if action is None:
                     break
+                if policy.review_proposed_action:
+                    action = run_action_review(
+                        action=action,
+                        step=step,
+                        packet=packet,
+                        policy=policy,
+                        verifier=verifier,
+                        trajectory_state=trajectory_state(step),
+                        transcript=transcript,
+                        planner=planner,
+                        timeout_s=timeout_s,
+                        call_planner=call_planner,
+                        emit=emit,
+                    )
+                    if action is None:
+                        break
+                    if over_token_limit():
+                        error_type = "limit"
+                        emit(
+                            step=step,
+                            actor="system",
+                            event_type="error",
+                            payload={"limit": "max_tokens_per_episode", "episode_tokens": episode_tokens},
+                            error="limit",
+                        )
+                        break
 
             last_action = action
 
