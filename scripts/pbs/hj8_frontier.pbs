@@ -2,7 +2,7 @@
 #PBS -N hj8-frontier
 #PBS -q gpu_inter
 #PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
-#PBS -l walltime=08:00:00
+#PBS -l walltime=10:00:00
 #PBS -j oe
 # Output_Path is evaluated at qsub time and cannot interpolate ARMSET/DATE/CID
 # (those are computed below). A path with no filename makes PBS write
@@ -16,6 +16,8 @@
 #
 # HJ-8 dev frontier: serve granite-4.2-8b with the sft_b_plus LoRA (static
 # --lora-modules) and run 12 arms. ARMSET=free|live|all (default free).
+# ARMS="<stem> <stem> ..." overrides ARMSET with an explicit stem list so the
+# 10 live arms can be split across two GPU jobs (max_run=2).
 # free = zero hosted planner calls (run before the quota reset).
 # live = waits for the reset. Do NOT submit from a worker; the orchestrator
 # submits after reviewing the diff. The --lora-modules alias MUST equal
@@ -37,11 +39,13 @@
 #     [OBSERVED qstat -fx resources_used.mem / Resource_List.select]
 #   Peak RSS ≈ 12 GB, so 64gb is ~5× headroom; 12 ncpus matches the working
 #   granite eval/serve size (hj1a/hj15/G3) and tonight's train-sft request.
-#   Walltime 08:00:00 matches docs/HEAVY_JOBS.md J8; 12 arms will not finish
-#   in one job — completed arms are skipped on resume.
+#   Walltime 10:00:00: five live arms at ~114 episodes are estimated 5–6 h;
+#   8 h had no margin. 12 arms will not finish in one job — completed arms
+#   are skipped on resume.
 #
 # Job variables (override at qsub time):
-#   ARMSET (free|live|all), DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS
+#   ARMSET (free|live|all), ARMS (space-separated cid stems; overrides ARMSET),
+#   DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS
 #   SMOKE_ONLY=1 (default 0): each pending arm runs its 3-task smoke and
 #   gate, then stops before the 57×2 campaign. Job rc is the first failed
 #   smoke/gate. Unset or 0 leaves the full run unchanged.
@@ -59,9 +63,11 @@ JOB_CID="hj8_frontier_${ARMSET}_${DATE}"
 JOBTAG="${PBS_JOBID:-nopbs}"
 PBS_LOGDIR="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs"
 CID_OUT="${PBS_LOGDIR}/${JOB_CID}.${JOBTAG}.out"
-mkdir -p "${PBS_LOGDIR}"
-exec >> "${CID_OUT}" 2>&1
-echo "[hj8] job_cid=${JOB_CID} armset=${ARMSET} date=${DATE} smoke_only=${SMOKE_ONLY} job=${JOBTAG} cid_out=${CID_OUT}"
+if [[ "${HJ8_GUARD_SELFTEST:-0}" != "1" ]]; then
+  mkdir -p "${PBS_LOGDIR}"
+  exec >> "${CID_OUT}" 2>&1
+fi
+echo "[hj8] job_cid=${JOB_CID} armset=${ARMSET} arms=${ARMS:-} date=${DATE} smoke_only=${SMOKE_ONLY} job=${JOBTAG} cid_out=${CID_OUT}"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export HF_HOME=/scratch/n12194778/hf
 export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
@@ -85,10 +91,14 @@ export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
 mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
 
 REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
-export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+if [[ "${HJ8_GUARD_SELFTEST:-0}" != "1" ]]; then
+  export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+else
+  export SIDEKICK_START_COMMIT="${SIDEKICK_START_COMMIT:-unknown}"
+fi
 OUT=/scratch/n12194778/sidekick/results
 LOGDIR=/scratch/n12194778/sidekick/logs
-PY="${SIDEKICK_VENV}/bin/python"
+PY="${PY:-${SIDEKICK_VENV}/bin/python}"
 SUM="${REPO}/scripts/setup/campaign_summarize.py"
 MODEL=ibm-granite/granite-4.2-8b
 VLOG="${LOGDIR}/${JOB_CID}.${JOBTAG}_vllm.log"
@@ -108,16 +118,20 @@ N_FULL_SEEDS=2
 N_PLANNED=$((N_FULL_TASKS * N_FULL_SEEDS))
 
 cd "${REPO}" || exit 1
-mkdir -p "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
+if [[ "${HJ8_GUARD_SELFTEST:-0}" != "1" ]]; then
+  mkdir -p "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
+fi
 
 # ---- config gate. Named in the failure line so a reader knows why we stopped.
 # Another unit owns verify_configs.py; it may still exit non-zero. Wire it anyway.
-echo "[hj8] ---- scripts/setup/verify_configs.py ----"
-timeout 300 "${PY}" "${REPO}/scripts/setup/verify_configs.py"
-VERIFY_RC=$?
-if [[ "${VERIFY_RC}" -ne 0 ]]; then
-  echo "[hj8] FATAL: scripts/setup/verify_configs.py exited ${VERIFY_RC}; not starting vLLM"
-  exit "${VERIFY_RC}"
+if [[ "${HJ8_GUARD_SELFTEST:-0}" != "1" ]]; then
+  echo "[hj8] ---- scripts/setup/verify_configs.py ----"
+  timeout 300 "${PY}" "${REPO}/scripts/setup/verify_configs.py"
+  VERIFY_RC=$?
+  if [[ "${VERIFY_RC}" -ne 0 ]]; then
+    echo "[hj8] FATAL: scripts/setup/verify_configs.py exited ${VERIFY_RC}; not starting vLLM"
+    exit "${VERIFY_RC}"
+  fi
 fi
 
 # system|config|cid_stem   — cid is ${cid_stem}_${DATE}. Each (arm, τ) is its own cid.
@@ -138,31 +152,75 @@ LIVE_ARMS=(
   "oracle_escalation|${REPO}/configs/hj8_oracle_escalation.yaml|hj8_oracle_escalation"
 )
 
-SELECTED_ARMS=()
-case "${ARMSET}" in
-  free) SELECTED_ARMS=("${FREE_ARMS[@]}");;
-  live) SELECTED_ARMS=("${LIVE_ARMS[@]}");;
-  all)  SELECTED_ARMS=("${FREE_ARMS[@]}" "${LIVE_ARMS[@]}");;
-  *)
-    echo "[hj8] FATAL: ARMSET must be free|live|all, got ${ARMSET}"
-    exit 2
-    ;;
-esac
-
-cfg_missing=0
-for spec in "${SELECTED_ARMS[@]}"; do
-  IFS='|' read -r _system cfg _stem <<<"${spec}"
-  if [[ ! -f "${cfg}" ]]; then
-    echo "[hj8] eval config absent: ${cfg}"
-    cfg_missing=1
+hj8_select_arms () {
+  SELECTED_ARMS=()
+  local all_specs valid_stems spec sys cfg s matches
+  local -a given=()
+  all_specs=("${FREE_ARMS[@]}" "${LIVE_ARMS[@]}")
+  valid_stems=()
+  for spec in "${all_specs[@]}"; do
+    IFS='|' read -r sys cfg s <<<"${spec}"
+    valid_stems+=("${s}")
+  done
+  if [[ -n "${ARMS:-}" ]]; then
+    read -r -a given <<< "${ARMS}"
+    local g
+    for g in "${given[@]}"; do
+      [[ -z "${g}" ]] && continue
+      matches=()
+      for spec in "${all_specs[@]}"; do
+        IFS='|' read -r sys cfg s <<<"${spec}"
+        if [[ "${s}" == "${g}" ]]; then
+          matches+=("${spec}")
+        fi
+      done
+      if [[ "${#matches[@]}" -eq 0 ]]; then
+        echo "[hj8] FATAL: unknown ARMS stem ${g}; valid stems: ${valid_stems[*]}"
+        exit 2
+      fi
+      if [[ "${#matches[@]}" -ne 1 ]]; then
+        echo "[hj8] FATAL: ARMS stem ${g} matched ${#matches[@]} entries (need exactly one); valid stems: ${valid_stems[*]}"
+        exit 2
+      fi
+      SELECTED_ARMS+=("${matches[0]}")
+    done
+    if [[ "${#SELECTED_ARMS[@]}" -eq 0 ]]; then
+      echo "[hj8] FATAL: ARMS is set but no stems were parsed from: ${ARMS}; valid stems: ${valid_stems[*]}"
+      exit 2
+    fi
+    echo "[hj8] ARMS override: ${#SELECTED_ARMS[@]} arms: ${given[*]}"
+    return 0
   fi
-done
-if [[ "${cfg_missing}" -ne 0 ]]; then
-  echo "[hj8] not starting vLLM. Static LoRA line that will be used:"
-  echo "[hj8] --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}"
-  echo "[hj8] alias source: ALIAS_SFT_B_PLUS, which must equal executor.lora_name"
-  exit 2
-fi
+  case "${ARMSET}" in
+    free) SELECTED_ARMS=("${FREE_ARMS[@]}");;
+    live) SELECTED_ARMS=("${LIVE_ARMS[@]}");;
+    all)  SELECTED_ARMS=("${FREE_ARMS[@]}" "${LIVE_ARMS[@]}");;
+    *)
+      echo "[hj8] FATAL: ARMSET must be free|live|all, got ${ARMSET}"
+      exit 2
+      ;;
+  esac
+}
+
+# hj8_select_arms is invoked after helper functions / selftest dispatch below.
+
+hj8_assert_selected_configs_exist () {
+  local cfg_missing=0
+  local spec _system cfg _stem
+  for spec in "${SELECTED_ARMS[@]}"; do
+    IFS='|' read -r _system cfg _stem <<<"${spec}"
+    if [[ ! -f "${cfg}" ]]; then
+      echo "[hj8] eval config absent: ${cfg}"
+      cfg_missing=1
+    fi
+  done
+  if [[ "${cfg_missing}" -ne 0 ]]; then
+    echo "[hj8] not starting vLLM. Static LoRA line that will be used:"
+    echo "[hj8] --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}"
+    echo "[hj8] alias source: ALIAS_SFT_B_PLUS, which must equal executor.lora_name"
+    exit 2
+  fi
+}
 
 # Second, independent quota guard for the free set. Does not import sidekick;
 # reads the YAML itself. make_planner treats type=="codex" as CodexExecPlanner
@@ -213,8 +271,10 @@ sys.exit(failed)
 PY
 }
 
-if [[ "${ARMSET}" == "free" || "${ARMSET}" == "all" ]]; then
-  assert_free_configs_cannot_spend || exit $?
+if [[ "${HJ8_GUARD_SELFTEST:-0}" != "1" ]]; then
+  if [[ "${ARMSET}" == "free" || "${ARMSET}" == "all" ]]; then
+    assert_free_configs_cannot_spend || exit $?
+  fi
 fi
 
 # n_runs / n_broken over <OUT>/<cid>/**/result.json. BROKEN matches
@@ -286,20 +346,271 @@ register_lora () {
 }
 
 VLLM_PID=""
+SMOKE_TREES=()
 
 kill_vllm () {
-  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
-    kill "${VLLM_PID}" 2>/dev/null || true
-    for _ in $(seq 1 12); do kill -0 "${VLLM_PID}" 2>/dev/null || break; sleep 5; done
-    kill -9 "${VLLM_PID}" 2>/dev/null || true
+  if [[ "${HJ8_GUARD_SELFTEST:-0}" == "1" ]]; then
+    echo "[hj8] selftest: kill_vllm skipped (pid=${VLLM_PID:-})"
+    return 0
+  fi
+  if [[ -n "${VLLM_PID}" ]]; then
+    kill -TERM -- -"${VLLM_PID}" 2>/dev/null || true
+    local _
+    for _ in $(seq 1 12); do
+      kill -0 "${VLLM_PID}" 2>/dev/null || break
+      sleep 5
+    done
+    kill -KILL -- -"${VLLM_PID}" 2>/dev/null || true
     wait "${VLLM_PID}" 2>/dev/null || true
   fi
-  pkill -f "vllm serve" 2>/dev/null || true
-  pkill -f "EngineCore" 2>/dev/null || true
   sleep 5
   echo "[hj8] GPU after shutdown:"
   nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
 }
+if [[ "${HJ8_GUARD_SELFTEST:-0}" != "1" ]]; then
+  trap kill_vllm EXIT
+fi
+
+hj8_vllm_fatal () {
+  echo "[hj8] FATAL: $*"
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]]; then
+    echo "[hj8] vllm log tail:"
+    tail -n 60 "${VLOG}" || true
+  fi
+  kill_vllm
+  exit 1
+}
+
+hj8_port_listening () {
+  local p="$1"
+  ss -ltn 2>/dev/null | awk -v want="$p" '
+    $1 == "LISTEN" {
+      n = split($4, a, ":")
+      if (n > 0 && a[n] == want) found = 1
+    }
+    END { exit found ? 0 : 1 }
+  '
+}
+
+hj8_choose_vllm_port () {
+  local raw jobnum tries
+  raw="${PBS_JOBID%%.*}"
+  jobnum="${raw//[^0-9]/}"
+  if [[ -z "${jobnum}" ]]; then
+    jobnum="$$"
+  fi
+  VLLM_PORT=$(( 20000 + jobnum % 20000 ))
+  tries=0
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "[hj8] WARN: ss not available; using derived VLLM_PORT=${VLLM_PORT} without LISTEN probe"
+  else
+    while hj8_port_listening "${VLLM_PORT}"; do
+      tries=$((tries + 1))
+      if [[ "${tries}" -ge 50 ]]; then
+        echo "[hj8] FATAL: no free vLLM port after 50 tries (last=${VLLM_PORT})"
+        exit 1
+      fi
+      VLLM_PORT=$((VLLM_PORT + 1))
+      if [[ "${VLLM_PORT}" -ge 40000 ]]; then
+        VLLM_PORT=20000
+      fi
+    done
+  fi
+  export VLLM_PORT
+  export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"
+  echo "[hj8] vllm_port=${VLLM_PORT} base_url=${SIDEKICK_VLLM_BASE_URL}"
+}
+
+hj8_vllm_identity_check () {
+  local body ids_file alias spec missing have ss_line listen_pid listen_pgid
+  body=$(curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models") || hj8_vllm_fatal "/v1/models failed after the port answered"
+  ids_file="$(mktemp)"
+  printf '%s' "${body}" | "${PY}" -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    body = json.loads(raw or "null")
+except json.JSONDecodeError as exc:
+    sys.stderr.write(f"[hj8] FATAL: /v1/models body is not JSON: {exc}\n")
+    sys.exit(2)
+ids = []
+if isinstance(body, dict):
+    data = body.get("data")
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and item.get("id") is not None:
+                ids.append(str(item["id"]))
+    if body.get("id") is not None:
+        ids.append(str(body["id"]))
+print("\n".join(ids))
+' > "${ids_file}" || hj8_vllm_fatal "/v1/models body is not JSON"
+  missing=()
+  have="$(tr '\n' ' ' < "${ids_file}")"
+  for spec in "${LORA_MODULES[@]}"; do
+    alias="${spec%%=*}"
+    if ! grep -Fxq "${alias}" "${ids_file}"; then
+      missing+=("${alias}")
+    fi
+  done
+  rm -f "${ids_file}"
+  if [[ "${#missing[@]}" -ne 0 ]]; then
+    hj8_vllm_fatal "vLLM /v1/models missing LoRA alias(es): ${missing[*]} (have: ${have})"
+  fi
+  echo "[hj8] vllm identity: all LoRA aliases present in /v1/models (${LORA_MODULES[*]%%=*})"
+
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "[hj8] WARN: ss unavailable; skipping pgid identity check"
+  else
+    ss_line="$(ss -ltnp 2>/dev/null | awk -v p="${VLLM_PORT}" '
+      $1 == "LISTEN" {
+        n = split($4, a, ":")
+        if (n > 0 && a[n] == p) { print; exit }
+      }
+    ')"
+    if [[ -z "${ss_line}" ]]; then
+      echo "[hj8] WARN: ss did not show a LISTEN on ${VLLM_PORT}; skipping pgid identity check"
+    else
+      listen_pid=""
+      if [[ "${ss_line}" =~ pid=([0-9]+) ]]; then
+        listen_pid="${BASH_REMATCH[1]}"
+      fi
+      if [[ -z "${listen_pid}" ]]; then
+        echo "[hj8] WARN: ss LISTEN line for ${VLLM_PORT} has no pid=; skipping pgid identity check"
+      else
+        listen_pgid="$(ps -o pgid= -p "${listen_pid}" 2>/dev/null | tr -d '[:space:]')"
+        if [[ "${listen_pgid}" != "${VLLM_PID}" ]]; then
+          hj8_vllm_fatal "vLLM port ${VLLM_PORT} is held by pid=${listen_pid} pgid=${listen_pgid}, expected pgid=${VLLM_PID}"
+        fi
+        echo "[hj8] vllm identity: listen pid=${listen_pid} pgid=${listen_pgid} matches VLLM_PID"
+      fi
+    fi
+  fi
+
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]] && grep -Eq 'port .* is used by process' "${VLOG}"; then
+    hj8_vllm_fatal "vLLM log reports port is used by process"
+  fi
+}
+
+hj8_print_smoke_escalation_table () {
+  echo "[hj8] ---- smoke escalation table ----"
+  echo "arm | n_episodes | live_planner_calls | n_interventions | n_success | steps_mean"
+  if [[ "${#SMOKE_TREES[@]}" -eq 0 ]]; then
+    echo "[hj8] no smoke trees this pass"
+    return 0
+  fi
+  local entry system stem scid line live
+  local -a router_calls=() sidekick_calls=()
+  for entry in "${SMOKE_TREES[@]}"; do
+    IFS='|' read -r system stem scid <<<"${entry}"
+    line="$(timeout 120 "${PY}" - "${OUT}" "${scid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+from statistics import mean
+
+root = Path(sys.argv[1]) / sys.argv[2]
+n_episodes = 0
+n_success = 0
+n_interventions = 0
+steps = []
+live = 0
+for path in sorted(root.rglob("result.json")):
+    n_episodes += 1
+    try:
+        data = json.loads(path.read_text(encoding="utf-8") or "{}")
+    except (OSError, json.JSONDecodeError):
+        continue
+    if data.get("success"):
+        n_success += 1
+    n_interventions += int(data.get("n_interventions") or 0)
+    steps.append(int(data.get("steps") or 0))
+for path in root.rglob("events.jsonl"):
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        continue
+    for raw in text.splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            ev = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        usage = ev.get("usage") or {}
+        if ev.get("actor") == "planner" and usage.get("provider") == "codex":
+            live += max(1, int(usage.get("n_calls") or 1))
+steps_mean = round(mean(steps), 2) if steps else "None"
+print(f"{n_episodes} | {live} | {n_interventions} | {n_success} | {steps_mean}")
+PY
+)"
+    echo "${stem} | ${line}"
+    live="$(printf '%s' "${line}" | awk -F '|' '{gsub(/ /, "", $2); print $2}')"
+    case "${system}" in
+      router_seq) router_calls+=("${live}");;
+      sidekick) sidekick_calls+=("${live}");;
+    esac
+  done
+  local uniq
+  if [[ "${#router_calls[@]}" -ge 2 ]]; then
+    uniq="$(printf '%s\n' "${router_calls[@]}" | sort -u | wc -l | tr -d '[:space:]')"
+    if [[ "${uniq}" -eq 1 ]]; then
+      echo "[hj8] WARN: every router_seq arm in this smoke pass has identical live_planner_calls=${router_calls[0]} (gate-never-fires signature)"
+    fi
+  fi
+  if [[ "${#sidekick_calls[@]}" -ge 2 ]]; then
+    uniq="$(printf '%s\n' "${sidekick_calls[@]}" | sort -u | wc -l | tr -d '[:space:]')"
+    if [[ "${uniq}" -eq 1 ]]; then
+      echo "[hj8] WARN: every sidekick arm in this smoke pass has identical live_planner_calls=${sidekick_calls[0]} (gate-never-fires signature)"
+    fi
+  fi
+}
+
+hj8_run_guard_selftest () {
+  if [[ -n "${HJ8_STUB_DIR:-}" ]]; then
+    export PATH="${HJ8_STUB_DIR}:${PATH}"
+  fi
+  case "${GUARD_CASE:?}" in
+    arms_unknown)
+      ARMS="${ARMS_STEM:-not_a_real_stem}"
+      hj8_select_arms
+      echo "[hj8] UNREACHABLE: arms_unknown should have been FATAL"
+      exit 99
+      ;;
+    health_missing_alias)
+      export VLLM_PORT="${VLLM_PORT:-21001}"
+      export VLLM_PID="${VLLM_PID:-12345}"
+      VLOG="$(mktemp)"
+      : > "${VLOG}"
+      LORA_MODULES=("sft_b_plus=/tmp/r1_missing_alias")
+      hj8_vllm_identity_check
+      echo "[hj8] UNREACHABLE: health_missing_alias should have been FATAL"
+      exit 99
+      ;;
+    health_foreign_pgid)
+      export VLLM_PORT="${VLLM_PORT:-21002}"
+      export VLLM_PID="${VLLM_PID:-11111}"
+      VLOG="$(mktemp)"
+      : > "${VLOG}"
+      LORA_MODULES=("sft_b_plus=/tmp/r1_foreign_pgid")
+      hj8_vllm_identity_check
+      echo "[hj8] UNREACHABLE: health_foreign_pgid should have been FATAL"
+      exit 99
+      ;;
+    *)
+      echo "[hj8] FATAL: unknown GUARD_CASE=${GUARD_CASE}"
+      exit 2
+      ;;
+  esac
+}
+
+if [[ "${HJ8_GUARD_SELFTEST:-0}" == "1" ]]; then
+  hj8_run_guard_selftest
+  exit 0
+fi
+
+hj8_select_arms
+hj8_assert_selected_configs_exist
 
 # Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
 # SMOKE_ONLY=1 returns after smoke+gate (scid is still removed). Does not
@@ -312,6 +623,7 @@ run_arm () {
   local system="$1"
   local cfg="$2"
   local cid="$3"
+  local stem="${4:-}"
   local scid="${cid}_smoke"
   local smoke_rc=0
   local gate_rc=0
@@ -321,6 +633,9 @@ run_arm () {
   local n_broken=0
   local stats=""
   local gate_cmd=(--gate)
+  if [[ -z "${stem}" ]]; then
+    stem="${cid%_${DATE}}"
+  fi
   if [[ "${system}" != "executor_alone" ]]; then
     gate_cmd+=(--expect-planner --expect-model gpt-5.6-luna)
   fi
@@ -365,6 +680,9 @@ run_arm () {
       --env appworld --workers 3 \
       --config "${cfg}" --campaign-id "${scid}" --out "${OUT}"
     smoke_rc=$?
+    if [[ "${SMOKE_ONLY}" == "1" ]]; then
+      SMOKE_TREES+=("${system}|${stem}|${scid}")
+    fi
     if [[ "${smoke_rc}" -ne 0 ]]; then
       echo "[hj8] FATAL: smoke runner exited ${smoke_rc} (${cid})"
       return "${smoke_rc}"
@@ -377,7 +695,9 @@ run_arm () {
       echo "[hj8] FATAL: smoke gate failed (rc=${gate_rc}) (${cid})"
       return "${gate_rc}"
     fi
-    rm -rf "${OUT:?}/${scid:?}"
+    if [[ "${SMOKE_ONLY}" != "1" ]]; then
+      rm -rf "${OUT:?}/${scid:?}"
+    fi
   else
     echo "[hj8] resume: ${cid} already has ${n_runs} result.json; smoke skipped"
   fi
@@ -464,12 +784,13 @@ fi
 
 # ---- vLLM: LoRA registered statically at launch --------------------------------
 kill_vllm
+hj8_choose_vllm_port
 # The --lora-modules line. Alias comes from ALIAS_SFT_B_PLUS / executor.lora_name, not the directory name.
-"${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
   --served-model-name "${MODEL}" \
   --dtype bfloat16 \
   --max-model-len 32768 \
-  --host 127.0.0.1 --port 8000 \
+  --host 127.0.0.1 --port "${VLLM_PORT}" \
   --gpu-memory-utilization 0.85 \
   --enable-lora \
   --max-loras "${MAX_LORAS}" \
@@ -477,13 +798,13 @@ kill_vllm
   --lora-modules "${LORA_MODULES[@]}" \
   > "${VLOG}" 2>&1 &
 VLLM_PID=$!
-echo "[hj8] vllm serve ${MODEL} pid=${VLLM_PID} --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+echo "[hj8] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
 t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
 while (( $(date +%s) < deadline )); do
   if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
     echo "[hj8] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
   fi
-  if curl -sf http://127.0.0.1:8000/v1/models >/dev/null 2>&1; then
+  if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
     echo "[hj8] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
   fi
   sleep 5
@@ -491,6 +812,7 @@ done
 if [[ "${healthy}" -ne 1 ]]; then
   echo "[hj8] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
 fi
+hj8_vllm_identity_check
 
 # A gate that can pass or fail on cached results is not a gate. Separate _smoke
 # campaign id, purge, then full run + manifest. Continue after an arm failure so
@@ -500,13 +822,21 @@ for spec in "${PENDING_ARMS[@]}"; do
   IFS='|' read -r system cfg stem <<<"${spec}"
   cid="${stem}_${DATE}"
   arm_rc=125
-  run_arm "${system}" "${cfg}" "${cid}"
+  run_arm "${system}" "${cfg}" "${cid}" "${stem}"
   arm_rc=$?
   echo "[hj8] arm (${cid}) rc=${arm_rc}"
   if [[ "${arm_rc}" -ne 0 && "${job_rc}" -eq 0 ]]; then
     job_rc="${arm_rc}"
   fi
 done
+
+if [[ "${SMOKE_ONLY}" == "1" ]]; then
+  hj8_print_smoke_escalation_table
+  for entry in "${SMOKE_TREES[@]}"; do
+    IFS='|' read -r _system _stem scid <<<"${entry}"
+    rm -rf "${OUT:?}/${scid:?}"
+  done
+fi
 
 kill_vllm
 echo "[hj8] done=$(date -Iseconds) job_rc=${job_rc} job_cid=${JOB_CID} pending_was=${#PENDING_ARMS[@]}"

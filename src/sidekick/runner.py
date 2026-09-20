@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import multiprocessing
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -149,6 +150,19 @@ def make_planner(
     return planner
 
 
+def resolve_executor_base_url(exec_cfg: dict[str, Any] | None = None) -> str:
+    """Effective executor URL: SIDEKICK_VLLM_BASE_URL > yaml executor.base_url > default.
+
+    Frozen YAML still names :8000. The listen port is a deployment fact, so a
+    non-empty env override wins without editing those configs.
+    """
+    env_url = str(os.environ.get("SIDEKICK_VLLM_BASE_URL") or "").strip()
+    if env_url:
+        return env_url
+    cfg = exec_cfg or {}
+    return str(cfg.get("base_url", "http://127.0.0.1:8000"))
+
+
 def make_executor(cfg: dict[str, Any]) -> Any:
     exec_cfg = cfg.get("executor") or {}
     kind = str(exec_cfg.get("type") or cfg.get("executor_type") or "mock")
@@ -159,7 +173,7 @@ def make_executor(cfg: dict[str, Any]) -> Any:
     if kind == "vllm":
         return VLLMExecutor(
             model=str(exec_cfg.get("model", "Qwen/Qwen3-8B")),
-            base_url=str(exec_cfg.get("base_url", "http://127.0.0.1:8000")),
+            base_url=resolve_executor_base_url(exec_cfg),
             lora_name=exec_cfg.get("lora_name"),
             temperature=float(exec_cfg.get("temperature", 0.0)),
             max_tokens=int(exec_cfg.get("max_tokens", 1024)),
@@ -264,6 +278,7 @@ def run_single(job: dict[str, Any]) -> dict[str, Any]:
                 "env": job["env_kind"],
                 "campaign_id": job["campaign_id"],
                 "experiment_name": job["experiment_name"],
+                "executor_base_url": resolve_executor_base_url(cfg.get("executor") or {}),
             }
         )
         result = system.run(env, job["task_id"], job["seed"], log, ledger)
