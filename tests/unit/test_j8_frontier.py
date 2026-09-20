@@ -255,3 +255,140 @@ def test_live_calls_not_substituted_for_replay_count(tmp_path: Path):
     assert row["planner_calls_replay_inclusive"] == 2
     assert row["calls_live_differs_from_replay"] is True
     assert a["n_episodes_live_differs_from_replay"] == len(TASKS) * len(SEEDS)
+
+
+def _crash_keys(n_crash: int) -> set[tuple[str, int]]:
+    keys = [(task_id, seed) for task_id in TASKS for seed in SEEDS]
+    return set(keys[:n_crash])
+
+
+def write_arm_with_crashes(
+    root: Path,
+    system: str,
+    crash_keys: set[tuple[str, int]],
+    *,
+    tgc_ok: float,
+    gpr_ok: float,
+    tgc_crash: float = 0.0,
+    calls_ok: int = 2,
+    calls_crash: int = 2,
+) -> Path:
+    for task_id in TASKS:
+        for seed in SEEDS:
+            crashed = (task_id, seed) in crash_keys
+            write_run(
+                root,
+                system,
+                seed,
+                task_id,
+                tgc=tgc_crash if crashed else tgc_ok,
+                n_planner_calls=calls_crash if crashed else calls_ok,
+                error_type="crash" if crashed else None,
+                goal_pass_rate=None if crashed else gpr_ok,
+            )
+    return root
+
+
+def test_crashed_episodes_split_tgc_all_and_survivors(tmp_path: Path):
+    crash_keys = _crash_keys(2)
+    root = write_arm_with_crashes(
+        tmp_path / "fixed_k_3",
+        "fixed_k",
+        crash_keys,
+        tgc_ok=1.0,
+        gpr_ok=1.0,
+        calls_ok=2,
+        calls_crash=4,
+    )
+    arm = j8.summarise_arm("fixed_k_3", j10.load_arm_tree(root), list(SEEDS))
+    assert arm["n"] == 8
+    assert arm["n_crashed"] == 2
+    assert arm["n_survivors"] == 6
+    assert arm["tgc_all"] == pytest.approx(0.75)
+    assert arm["tgc_survivors"] == pytest.approx(1.0)
+    assert arm["goal_pass_all"] == pytest.approx(0.75)
+    assert arm["goal_pass_survivors"] == pytest.approx(1.0)
+    assert arm["tgc_all"] != arm["tgc_survivors"]
+    assert arm["goal_pass_all"] != arm["goal_pass_survivors"]
+    assert arm["planner_calls_total"] == 6 * 2 + 2 * 4
+    assert arm["crash_per_call_pct"] == pytest.approx(10.0)
+    assert arm["populations_coincide"] is False
+
+
+def test_survivor_contrast_drops_pairs_where_either_side_crashed(tmp_path: Path):
+    crash_keys = _crash_keys(2)
+    a_dir = write_arm_with_crashes(
+        tmp_path / "a", "fixed_k", crash_keys, tgc_ok=1.0, gpr_ok=1.0
+    )
+    b_dir = write_arm_with_crashes(
+        tmp_path / "b", "fixed_k", set(), tgc_ok=0.0, gpr_ok=0.0
+    )
+    a = j8.summarise_arm("fixed_k_3", j10.load_arm_tree(a_dir), list(SEEDS))
+    b = j8.summarise_arm("fixed_k_5", j10.load_arm_tree(b_dir), list(SEEDS))
+    all_c = j8.paired_contrast(a, b, "tgc", population="all")
+    surv = j8.paired_contrast(a, b, "tgc", population="survivors")
+    assert all_c["n_pairs"] == 8
+    assert all_c["n_pairs_dropped_crash"] == 0
+    assert all_c["population"] == "all-episodes"
+    assert surv["n_pairs_dropped_crash"] == 2
+    assert surv["n_pairs"] == 6
+    assert surv["n_pairs_shared"] == 8
+    assert surv["population"] == "survivors"
+    gp_surv = j8.paired_contrast(a, b, "goal_pass_rate", population="survivors")
+    assert gp_surv["n_pairs"] == 6
+    assert gp_surv["n_pairs_dropped_crash"] == 2
+
+
+def test_zero_crashes_populations_coincide(tmp_path: Path):
+    a, _b = _summaries(tmp_path)
+    assert a["n_crashed"] == 0
+    assert a["tgc_all"] == a["tgc_survivors"]
+    assert a["goal_pass_all"] == a["goal_pass_survivors"]
+    assert a["populations_coincide"] is True
+    a["complete_n"] = True
+    notes = j8.population_notes({"sidekick": a})
+    joined = "\n".join(notes)
+    assert "coincide" in joined
+    assert "0 crashes" in joined
+    table = j8.format_table({"sidekick": a}, [])
+    assert "tgc_all" in table
+    assert "tgc_surv" in table
+    assert "spurious" not in table.lower()
+
+
+def test_all_vs_survivor_sign_disagreement_is_flagged(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(j8, "MIN_ROWS", 8)
+    crash_keys = _crash_keys(6)
+    a_dir = write_arm_with_crashes(
+        tmp_path / "a", "fixed_k", crash_keys, tgc_ok=1.0, gpr_ok=1.0
+    )
+    b_dir = write_arm_with_crashes(
+        tmp_path / "b", "fixed_k", set(), tgc_ok=0.5, gpr_ok=0.5
+    )
+    out = tmp_path / "report.json"
+    rc = j8.main(
+        [
+            "--arm",
+            f"fixed_k_3={a_dir}",
+            "--arm",
+            f"fixed_k_5={b_dir}",
+            "--out",
+            str(out),
+        ]
+    )
+    captured = capsys.readouterr()
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert "CONTRAST DISAGREEMENT" in captured.out
+    assert "sign differs" in captured.out
+    assert "dropped_crash=" in captured.out
+    tgc_all = report["contrasts"]["tgc_all_fixed_k_3_minus_fixed_k_5"]
+    tgc_surv = report["contrasts"]["tgc_survivors_fixed_k_3_minus_fixed_k_5"]
+    assert tgc_all["diff"] < 0
+    assert tgc_surv["diff"] > 0
+    assert tgc_surv["n_pairs_dropped_crash"] == 6
+    assert tgc_surv["n_pairs"] == 2
+    assert any(item["sign_disagree"] for item in report["population_disagreements"])
+

@@ -56,6 +56,14 @@ TICK_MAX = 40
 FIXED_K_LABEL = re.compile(
     r"(?:^|_)fixed_k(?:_k|_|=)?(?P<k>3|5|7|10)$", re.IGNORECASE
 )
+CRASH_ERROR_TYPE = "crash"
+HEADLINE_POPULATION = "all-episodes"
+POPULATION_PREAMBLE = (
+    "Headline quality contrast uses all-episodes for every metric "
+    "(crashed episode scores 0). Survivor columns/contrasts use episodes "
+    "with error_type != 'crash'; a paired survivor contrast drops a "
+    "(task_id, seed) pair if either side crashed."
+)
 
 
 def parse_arm_spec(spec: str) -> tuple[str, Path]:
@@ -243,8 +251,207 @@ def is_oracle_label(label: str) -> bool:
     return label.lower().startswith("oracle_escalation")
 
 
-def refuse_partial_arms(arm_n: dict[str, int], min_rows: int = MIN_ROWS) -> list[str]:
+def is_crashed(row: dict[str, Any]) -> bool:
+    return row.get("error_type") == CRASH_ERROR_TYPE
+
+
+def _sign_label(value: Any) -> str:
+    if value is None:
+        return "none"
+    number = float(value)
+    if number > 0:
+        return "positive"
+    if number < 0:
+        return "negative"
+    return "zero"
+
+
+def ci_excludes_zero(ci: Any) -> Optional[bool]:
+    if not ci or len(ci) < 2 or ci[0] is None or ci[1] is None:
+        return None
+    lo, hi = float(ci[0]), float(ci[1])
+    return bool(lo > 0.0 or hi < 0.0)
+
+
+def coerce_crash_quality(
+    cleaned: dict[tuple[str, int], dict[str, Any]],
+    field: str,
+) -> dict[tuple[str, int], dict[str, Any]]:
+    """All-episodes view: a crashed episode scores 0 on quality fields."""
+    out: dict[tuple[str, int], dict[str, Any]] = {}
+    for key, row in cleaned.items():
+        copy = dict(row)
+        if is_crashed(copy) and field in {"tgc", "goal_pass_rate"}:
+            copy[field] = 0.0
+        out[key] = copy
+    return out
+
+
+def both_survived_subset(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+) -> tuple[
+    dict[tuple[str, int], dict[str, Any]],
+    dict[tuple[str, int], dict[str, Any]],
+    int,
+    int,
+]:
+    """Keep only shared (task_id, seed) pairs where neither side crashed."""
+    shared = set(left) & set(right)
+    n_dropped_crash = 0
+    left_ok: dict[tuple[str, int], dict[str, Any]] = {}
+    right_ok: dict[tuple[str, int], dict[str, Any]] = {}
+    for key in shared:
+        if is_crashed(left[key]) or is_crashed(right[key]):
+            n_dropped_crash += 1
+            continue
+        left_ok[key] = left[key]
+        right_ok[key] = right[key]
+    return left_ok, right_ok, n_dropped_crash, len(shared)
+
+
+def total_planner_calls(
+    cleaned: dict[tuple[str, int], dict[str, Any]],
+) -> Optional[int]:
+    live = [row.get("planner_calls_live") for row in cleaned.values()]
+    if live and all(v is not None for v in live):
+        return int(sum(int(v) for v in live))
+    replay = [row.get("n_planner_calls") for row in cleaned.values()]
+    if replay and all(v is not None for v in replay):
+        return int(sum(int(v) for v in replay))
+    return None
+
+
+def mean_quality(
+    rows: list[dict[str, Any]],
+    field: str,
+    *,
+    crash_as_zero: bool,
+) -> Optional[float]:
+    values: list[float] = []
+    missing_noncrash = 0
+    for row in rows:
+        if crash_as_zero and is_crashed(row):
+            values.append(0.0)
+            continue
+        raw = row.get(field)
+        if raw is None:
+            missing_noncrash += 1
+            continue
+        values.append(float(raw))
+    if crash_as_zero and missing_noncrash:
+        return None
+    if not values:
+        return None
+    return round(statistics.fmean(values), 6)
+
+
+def population_contrast_disagreement(
+    all_c: dict[str, Any],
+    surv_c: dict[str, Any],
+) -> dict[str, Any]:
+    all_diff = all_c.get("diff")
+    surv_diff = surv_c.get("diff")
+    sign_disagree = _sign_label(all_diff) != _sign_label(surv_diff)
+    all_excl = ci_excludes_zero(all_c.get("ci95"))
+    surv_excl = ci_excludes_zero(surv_c.get("ci95"))
+    ci_disagree = all_excl is not None and surv_excl is not None and all_excl != surv_excl
+    return {
+        "disagree": bool(sign_disagree or ci_disagree),
+        "sign_disagree": sign_disagree,
+        "ci_excludes_zero_disagree": ci_disagree,
+        "all_diff": all_diff,
+        "surv_diff": surv_diff,
+        "all_ci95": all_c.get("ci95"),
+        "surv_ci95": surv_c.get("ci95"),
+        "all_ci_excludes_zero": all_excl,
+        "surv_ci_excludes_zero": surv_excl,
+        "n_pairs_all": all_c.get("n_pairs"),
+        "n_pairs_survivors": surv_c.get("n_pairs"),
+        "n_pairs_dropped_crash": surv_c.get("n_pairs_dropped_crash"),
+        "field": all_c.get("field") or surv_c.get("field"),
+        "left": all_c.get("left") or surv_c.get("left"),
+        "right": all_c.get("right") or surv_c.get("right"),
+    }
+
+
+def population_notes(arms: dict[str, dict[str, Any]]) -> list[str]:
+    notes: list[str] = []
+    rates: list[tuple[str, float]] = []
+    for label, arm in arms.items():
+        if not arm.get("complete_n"):
+            continue
+        if int(arm.get("n_crashed") or 0) == 0:
+            notes.append(
+                f"{label}: 0 crashes; all-episodes and survivor populations coincide"
+            )
+        pct = arm.get("crash_per_call_pct")
+        if pct is not None:
+            rates.append((label, float(pct)))
+    if len(rates) >= 2 and len({p for _, p in rates}) > 1:
+        bits = ", ".join(f"{lab}={pct:.2f}%" for lab, pct in rates)
+        notes.append(
+            f"per-call crash rate is not constant across arms ({bits}). "
+            "A fixed independent per-call failure probability would be flat."
+        )
+    return notes
+
+
+def disagreement_lines(items: list[dict[str, Any]]) -> list[str]:
+    lines: list[str] = []
+    for item in items:
+        parts: list[str] = []
+        if item.get("sign_disagree"):
+            all_d = item.get("all_diff")
+            surv_d = item.get("surv_diff")
+            all_txt = "None" if all_d is None else f"{float(all_d):+.4f}"
+            surv_txt = "None" if surv_d is None else f"{float(surv_d):+.4f}"
+            parts.append(
+                f"sign differs (all-episodes {all_txt}, survivors {surv_txt})"
+            )
+        if item.get("ci_excludes_zero_disagree"):
+            parts.append(
+                "CI-excludes-zero differs "
+                f"(all-episodes {item.get('all_ci_excludes_zero')}, "
+                f"survivors {item.get('surv_ci_excludes_zero')})"
+            )
+        dropped = item.get("n_pairs_dropped_crash")
+        lines.append(
+            "CONTRAST DISAGREEMENT: "
+            f"{item.get('field')} {item.get('left')} minus {item.get('right')}: "
+            + "; ".join(parts)
+            + f". Survivor contrast dropped {dropped} pairs where either side crashed."
+        )
+    return lines
+
+
+def contrast_accounting_lines(contrasts: dict[str, Any]) -> list[str]:
+    lines = [
+        "survivor contrast pair accounting (a pair is dropped if either side crashed):"
+    ]
+    n_lines = 0
+    for name, row in contrasts.items():
+        if not isinstance(row, dict):
+            continue
+        if row.get("population") != "survivors":
+            continue
+        if row.get("field") not in {"tgc", "goal_pass_rate"}:
+            continue
+        lines.append(
+            f"  {name}: n_pairs={row.get('n_pairs')} "
+            f"dropped_crash={row.get('n_pairs_dropped_crash')} "
+            f"shared={row.get('n_pairs_shared')}"
+        )
+        n_lines += 1
+    if n_lines == 0:
+        return []
+    return lines
+
+
+def refuse_partial_arms(arm_n: dict[str, int], min_rows: int | None = None) -> list[str]:
     """Return refusal messages for arms with fewer than min_rows episodes."""
+    if min_rows is None:
+        min_rows = MIN_ROWS
     messages: list[str] = []
     for label, n in arm_n.items():
         if n < min_rows:
@@ -305,26 +512,40 @@ def summarise_arm(
     n_calls_differ = sum(
         1 for row in cleaned.values() if row.get("calls_live_differs_from_replay")
     )
-    tgc_mean = (
-        round(statistics.fmean([row["tgc"] for row in cleaned.values()]), 6)
-        if cleaned
-        else None
+    cleaned_rows = list(cleaned.values())
+    survivors = [row for row in cleaned_rows if not is_crashed(row)]
+    n_crashed = sum(1 for row in runs.values() if is_crashed(row))
+    tgc_all = mean_quality(cleaned_rows, "tgc", crash_as_zero=True)
+    tgc_survivors = mean_quality(survivors, "tgc", crash_as_zero=False)
+    goal_pass_all = mean_quality(cleaned_rows, "goal_pass_rate", crash_as_zero=True)
+    goal_pass_survivors = mean_quality(
+        survivors, "goal_pass_rate", crash_as_zero=False
     )
-    gpr_vals = [
-        row["goal_pass_rate"]
-        for row in cleaned.values()
-        if row.get("goal_pass_rate") is not None
-    ]
+    calls_total = total_planner_calls(cleaned)
+    crash_per_call = None
+    crash_per_call_pct = None
+    if calls_total is not None and calls_total > 0:
+        crash_per_call = n_crashed / calls_total
+        crash_per_call_pct = round(100.0 * crash_per_call, 2)
     complete_n = n >= MIN_ROWS
+    populations_coincide = n_crashed == 0
     return {
         "label": label,
         "n": n,
         "n_broken": n_broken,
+        "n_crashed": n_crashed,
+        "n_survivors": n - n_crashed,
         "n_cleaned": len(cleaned),
-        "tgc": tgc_mean if complete_n else None,
-        "goal_pass": (round(statistics.fmean(gpr_vals), 6) if gpr_vals else None)
-        if complete_n
-        else None,
+        "tgc_all": tgc_all,
+        "tgc_survivors": tgc_survivors,
+        "goal_pass_all": goal_pass_all,
+        "goal_pass_survivors": goal_pass_survivors,
+        "populations_coincide": populations_coincide,
+        "planner_calls_total": calls_total,
+        "crash_per_call": crash_per_call,
+        "crash_per_call_pct": crash_per_call_pct,
+        "tgc": tgc_all if complete_n else None,
+        "goal_pass": goal_pass_all if complete_n else None,
         "planner_calls_per_episode": mean_or_none(live_vals) if complete_n else None,
         "planner_calls_replay_inclusive_per_episode": mean_or_none(replay_vals)
         if complete_n
@@ -353,10 +574,27 @@ def paired_contrast(
     arm_a: dict[str, Any],
     arm_b: dict[str, Any],
     field: str,
+    population: str = "all",
 ) -> dict[str, Any]:
-    """Task-clustered paired bootstrap. Delegates to j10_report / hj1_gate."""
+    """Task-clustered paired bootstrap. Delegates to j10_report / hj1_gate.
+
+    population='all': every shared (task_id, seed); crashed quality scores 0.
+    population='survivors': drop a pair if either side crashed, and count it.
+    """
     left = arm_a["cleaned"]
     right = arm_b["cleaned"]
+    n_shared = len(set(left) & set(right))
+    n_dropped_crash = 0
+    if population in {"survivors", "survivor"}:
+        left, right, n_dropped_crash, n_shared = both_survived_subset(left, right)
+        pop_name = "survivors"
+    elif population in {"all", "all-episodes"}:
+        if field in {"tgc", "goal_pass_rate"}:
+            left = coerce_crash_quality(left, field)
+            right = coerce_crash_quality(right, field)
+        pop_name = "all-episodes"
+    else:
+        raise ValueError(f"unknown population {population!r}")
     if field == "tgc":
         out = j10.contrast_tgc(left, right)
     elif field == "goal_pass_rate":
@@ -375,6 +613,9 @@ def paired_contrast(
     out["field"] = field
     out["left"] = arm_a["label"]
     out["right"] = arm_b["label"]
+    out["population"] = pop_name
+    out["n_pairs_dropped_crash"] = n_dropped_crash
+    out["n_pairs_shared"] = n_shared
     return out
 
 
@@ -442,8 +683,16 @@ def frontier_table(arms: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
                 "label": label,
                 "role": role,
                 "k": arm.get("k"),
-                "tgc": arm.get("tgc"),
-                "goal_pass": arm.get("goal_pass"),
+                "n": arm.get("n"),
+                "n_crashed": arm.get("n_crashed"),
+                "tgc_all": arm.get("tgc_all"),
+                "tgc_survivors": arm.get("tgc_survivors"),
+                "goal_pass_all": arm.get("goal_pass_all"),
+                "goal_pass_survivors": arm.get("goal_pass_survivors"),
+                "planner_calls_total": arm.get("planner_calls_total"),
+                "crash_per_call_pct": arm.get("crash_per_call_pct"),
+                "tgc": arm.get("tgc_all"),
+                "goal_pass": arm.get("goal_pass_all"),
                 "planner_calls_per_episode": arm.get("planner_calls_per_episode"),
                 "planner_calls_replay_inclusive_per_episode": arm.get(
                     "planner_calls_replay_inclusive_per_episode"
@@ -702,32 +951,38 @@ def format_table(arms: dict[str, dict[str, Any]], refusals: list[str]) -> str:
     if refusals:
         lines.extend(refusals)
         lines.append("")
+    lines.append(POPULATION_PREAMBLE)
     header = (
-        f"{'arm':<28} {'n':>5} {'n_broken':>8} {'tgc':>8} {'goal_pass':>10} "
-        f"{'calls_live':>11} {'calls_replay':>13} {'tokens':>10}"
+        f"{'arm':<28} {'n':>5} {'n_crashed':>10} "
+        f"{'tgc_all':>8} {'tgc_surv':>8} {'gp_all':>8} {'gp_surv':>8} "
+        f"{'calls':>8} {'crash/call%':>12}"
     )
     lines.append(header)
     lines.append("-" * len(header))
+
+    def fmt(v: Any, width: int, digits: int = 4) -> str:
+        if v is None:
+            return f"{'NA':>{width}}"
+        if isinstance(v, float):
+            return f"{v:>{width}.{digits}f}"
+        return f"{v:>{width}}"
+
     for label, arm in arms.items():
         if not arm.get("complete_n"):
             lines.append(
-                f"{label:<28} {arm['n']:>5} {arm['n_broken']:>8} "
-                f"{'REFUSED':>8} {'—':>10} {'—':>11} {'—':>13} {'—':>10}"
+                f"{label:<28} {arm['n']:>5} {arm.get('n_crashed', 0):>10} "
+                f"{'REFUSED':>8} {'—':>8} {'—':>8} {'—':>8} "
+                f"{'—':>8} {'—':>12}"
             )
             continue
-        def fmt(v: Any, width: int) -> str:
-            if v is None:
-                return f"{'NA':>{width}}"
-            if isinstance(v, float):
-                return f"{v:>{width}.4f}"
-            return f"{v:>{width}}"
-
+        crash_pct = arm.get("crash_per_call_pct")
         lines.append(
-            f"{label:<28} {arm['n']:>5} {arm['n_broken']:>8} "
-            f"{fmt(arm.get('tgc'), 8)} {fmt(arm.get('goal_pass'), 10)} "
-            f"{fmt(arm.get('planner_calls_per_episode'), 11)} "
-            f"{fmt(arm.get('planner_calls_replay_inclusive_per_episode'), 13)} "
-            f"{fmt(arm.get('planner_tokens_per_episode'), 10)}"
+            f"{label:<28} {arm['n']:>5} {arm.get('n_crashed', 0):>10} "
+            f"{fmt(arm.get('tgc_all'), 8)} {fmt(arm.get('tgc_survivors'), 8)} "
+            f"{fmt(arm.get('goal_pass_all'), 8)} "
+            f"{fmt(arm.get('goal_pass_survivors'), 8)} "
+            f"{fmt(arm.get('planner_calls_total'), 8, 0)} "
+            f"{fmt(crash_pct, 12, 2)}"
         )
     return "\n".join(lines)
 
@@ -764,23 +1019,42 @@ def build_report(
     headline_ok = not refusals
     headline = None
     if headline_ok:
-        headline = "J8 frontier (dev): all named arms have ≥114 rows."
+        headline = (
+            "J8 frontier (dev): all named arms have ≥114 rows. "
+            "Headline quality contrast uses all-episodes (crash = 0) for every "
+            "metric; survivor population is reported alongside."
+        )
     else:
         headline = None
 
     complete = {k: v for k, v in arms.items() if v.get("complete_n")}
     contrasts: dict[str, Any] = {}
+    disagreements: list[dict[str, Any]] = []
     if complete:
         for a, b in combinations(complete.keys(), 2):
-            contrasts[f"tgc_{a}_minus_{b}"] = paired_contrast(
-                complete[a], complete[b], "tgc"
+            tgc_all_c = paired_contrast(complete[a], complete[b], "tgc", "all")
+            tgc_surv_c = paired_contrast(
+                complete[a], complete[b], "tgc", "survivors"
             )
-            contrasts[f"goal_pass_rate_{a}_minus_{b}"] = paired_contrast(
-                complete[a], complete[b], "goal_pass_rate"
+            gp_all_c = paired_contrast(
+                complete[a], complete[b], "goal_pass_rate", "all"
             )
+            gp_surv_c = paired_contrast(
+                complete[a], complete[b], "goal_pass_rate", "survivors"
+            )
+            contrasts[f"tgc_all_{a}_minus_{b}"] = tgc_all_c
+            contrasts[f"tgc_survivors_{a}_minus_{b}"] = tgc_surv_c
+            contrasts[f"tgc_{a}_minus_{b}"] = tgc_all_c
+            contrasts[f"goal_pass_all_{a}_minus_{b}"] = gp_all_c
+            contrasts[f"goal_pass_survivors_{a}_minus_{b}"] = gp_surv_c
+            contrasts[f"goal_pass_rate_{a}_minus_{b}"] = gp_all_c
             contrasts[f"calls_live_{a}_minus_{b}"] = paired_contrast(
                 complete[a], complete[b], "planner_calls_live"
             )
+            for all_c, surv_c in ((tgc_all_c, tgc_surv_c), (gp_all_c, gp_surv_c)):
+                info = population_contrast_disagreement(all_c, surv_c)
+                if info["disagree"]:
+                    disagreements.append(info)
 
     frontier = frontier_table(arms)
     headroom = oracle_headroom(arms, oracle_info) if headline_ok else {
@@ -837,6 +1111,19 @@ def build_report(
         "oracle_headroom": headroom,
         "f1": f1_rows,
         "h3": h3,
+        "headline_population": HEADLINE_POPULATION,
+        "population_preamble": POPULATION_PREAMBLE,
+        "population_notes": population_notes(arms),
+        "population_disagreements": disagreements,
+        "population_disagreements_text": disagreement_lines(disagreements),
+        "contrast_accounting": contrast_accounting_lines(contrasts),
+        "quality_populations": (
+            "tgc_all and goal_pass_all average every episode (crash scores 0). "
+            "tgc_survivors and goal_pass_survivors average episodes with "
+            "error_type != 'crash'. Headline contrast uses all-episodes for "
+            "every quality metric. Survivor paired contrasts drop a "
+            "(task_id, seed) pair if either arm crashed."
+        ),
     }
     code = 0 if headline_ok else 1
     return report, code
@@ -862,6 +1149,12 @@ def main(argv: list[str] | None = None) -> int:
     table = format_table(report["arms"], report.get("refusals") or [])
     print(report.get("oracle_semantics") or "")
     print(table)
+    for line in report.get("population_notes") or []:
+        print(line)
+    for line in report.get("contrast_accounting") or []:
+        print(line)
+    for line in report.get("population_disagreements_text") or []:
+        print(line)
     if report.get("headline"):
         print(f"\nheadline: {report['headline']}")
     else:
