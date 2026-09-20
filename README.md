@@ -28,9 +28,7 @@ executor intervention-aware beats training it to merely follow plans**, at the s
 
 ## Status
 
-**Plan stage.** The harness is being built; no training run and no evaluation campaign has been
-submitted. The one thing that has run is the feasibility probe confirming the planner is reachable and
-billable from a batch node.
+**Campaign stage.** Baselines (HJ-1/HJ-1R), teacher collection (HJ-2B), state probe (HJ-1.5), LoRA adapter training (`sft_b`, `sft_b_plus`), counterfactual branch runs (HJ-6), and dev baseline evaluation (J8a) are complete. Harness repairs are complete, and the J8 dev frontier evaluation and B1 clean counterfactual pilot are the next submissions.
 
 ## Where to read
 

@@ -1,0 +1,326 @@
+{
+  "headline": null,
+  "headline_refused": true,
+  "refusals": [
+    "REFUSE headline: arm 'fixed_k_10' has 3 rows (need 114)",
+    "REFUSE headline: arm 'fixed_k_3' has 3 rows (need 114)",
+    "REFUSE headline: arm 'fixed_k_5' has 3 rows (need 114)",
+    "REFUSE headline: arm 'oracle_escalation' has 3 rows (need 114)",
+    "REFUSE headline: arm 'router_seq_tau03' has 3 rows (need 114)",
+    "REFUSE headline: arm 'router_seq_tau05' has 3 rows (need 114)",
+    "REFUSE headline: arm 'router_seq_tau07' has 3 rows (need 114)",
+    "REFUSE headline: arm 'sidekick_tau03' has 3 rows (need 114)",
+    "REFUSE headline: arm 'sidekick_tau05' has 3 rows (need 114)",
+    "REFUSE headline: arm 'sidekick_tau07' has 3 rows (need 114)"
+  ],
+  "oracle_semantics": "oracle semantics: runs free  (src/sidekick/runner.py:284; src/sidekick/systems/loop.py:623; src/sidekick/systems/loop.py:727; src/sidekick/systems/oracle_escalation.py:9-18; configs/hj8_oracle_escalation.yaml:37-38)",
+  "oracle_semantics_citation": "src/sidekick/runner.py:284; src/sidekick/systems/loop.py:623; src/sidekick/systems/loop.py:727; src/sidekick/systems/oracle_escalation.py:9-18; configs/hj8_oracle_escalation.yaml:37-38",
+  "oracle_semantics_established": true,
+  "min_rows": 114,
+  "seeds": [
+    1,
+    2
+  ],
+  "resample_unit": "task",
+  "planner_calls_definition": "planner_calls_per_episode is the mean of ledger live totals.planner_calls_total; planner_calls_replay_inclusive_per_episode is the mean of RunResult.n_planner_calls. The live count is never silently replaced by the replay count.",
+  "arms": {
+    "fixed_k_10": {
+      "label": "fixed_k_10",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": 10,
+      "gated": false,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "fixed_k_3": {
+      "label": "fixed_k_3",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": 3,
+      "gated": false,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "fixed_k_5": {
+      "label": "fixed_k_5",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": 5,
+      "gated": false,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "oracle_escalation": {
+      "label": "oracle_escalation",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": false,
+      "oracle": true,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "router_seq_tau03": {
+      "label": "router_seq_tau03",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": true,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "router_seq_tau05": {
+      "label": "router_seq_tau05",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": true,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "router_seq_tau07": {
+      "label": "router_seq_tau07",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": true,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "sidekick_tau03": {
+      "label": "sidekick_tau03",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": true,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "sidekick_tau05": {
+      "label": "sidekick_tau05",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": true,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "sidekick_tau07": {
+      "label": "sidekick_tau07",
+      "n": 3,
+      "n_broken": 3,
+      "n_cleaned": 3,
+      "tgc": null,
+      "goal_pass": null,
+      "planner_calls_per_episode": null,
+      "planner_calls_replay_inclusive_per_episode": null,
+      "planner_tokens_per_episode": null,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": true,
+      "oracle": false,
+      "complete_n": false,
+      "error_types": {
+        "crash": 3
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    }
+  },
+  "contrasts": {},
+  "frontier": [],
+  "oracle_headroom": {
+    "error": "headline refused; not emitting headroom"
+  },
+  "f1": {},
+  "h3": [
+    {
+      "label": "router_seq_tau03",
+      "auroc": 0.5,
+      "ece": 0.0,
+      "n": 24,
+      "n_positive": 0,
+      "n_escalations": 3,
+      "degenerate": true,
+      "note": "degenerate gate (zero escalations)"
+    },
+    {
+      "label": "router_seq_tau05",
+      "auroc": 0.5,
+      "ece": 0.0,
+      "n": 24,
+      "n_positive": 0,
+      "n_escalations": 0,
+      "degenerate": true,
+      "note": "degenerate gate (zero escalations)"
+    },
+    {
+      "label": "router_seq_tau07",
+      "auroc": 0.5,
+      "ece": 0.0,
+      "n": 24,
+      "n_positive": 0,
+      "n_escalations": 0,
+      "degenerate": true,
+      "note": "degenerate gate (zero escalations)"
+    },
+    {
+      "label": "sidekick_tau03",
+      "auroc": 0.5,
+      "ece": 0.0,
+      "n": 24,
+      "n_positive": 0,
+      "n_escalations": 0,
+      "degenerate": true,
+      "note": "degenerate gate (zero escalations)"
+    },
+    {
+      "label": "sidekick_tau05",
+      "auroc": 0.5,
+      "ece": 0.0,
+      "n": 24,
+      "n_positive": 0,
+      "n_escalations": 0,
+      "degenerate": true,
+      "note": "degenerate gate (zero escalations)"
+    },
+    {
+      "label": "sidekick_tau07",
+      "auroc": 0.5,
+      "ece": 0.0,
+      "n": 24,
+      "n_positive": 0,
+      "n_escalations": 0,
+      "degenerate": true,
+      "note": "degenerate gate (zero escalations)"
+    }
+  ]
+}

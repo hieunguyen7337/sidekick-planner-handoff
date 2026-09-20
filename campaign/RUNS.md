@@ -2140,4 +2140,9 @@ and only contrasts `sidekick − *`. That is a J10-script limitation, not a
 data problem. Goal-pass CIs were computed by the A15 helper with the same
 `paired_diff` call the script uses for TGC.
 
+### 8. Discard Record: 2026-09-19 Smoke Collision (`b1_pilot_train_20260919_smoke` & `hj8_*_20260919livesmoke_smoke`)
+
+The result trees `/scratch/n12194778/sidekick/results/b1_pilot_train_20260919_smoke` and every `hj8_*_20260919livesmoke_smoke` tree (`/scratch/n12194778/sidekick/results/hj8_*_20260919livesmoke_smoke`) contain **no valid data** and must never be analysed or resumed from because a vLLM port 8000 collision on node `gpu0n007` between jobs `25519712` and `25519749` routed B1 requests to J8's server (failing with 404 missing LoRA alias `sft_b` on 20/20 rows) and subsequent B1 node-wide cleanup killed J8's server mid-run (arms 2–10 failed on step 1).
+
+
 

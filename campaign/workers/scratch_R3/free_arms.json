@@ -1,0 +1,242 @@
+{
+  "headline": "J8 frontier (dev): all named arms have \u2265114 rows.",
+  "headline_refused": false,
+  "refusals": [],
+  "oracle_semantics": "oracle semantics: runs free  (src/sidekick/runner.py:284; src/sidekick/systems/loop.py:623; src/sidekick/systems/loop.py:727; src/sidekick/systems/oracle_escalation.py:9-18; configs/hj8_oracle_escalation.yaml:37-38)",
+  "oracle_semantics_citation": "src/sidekick/runner.py:284; src/sidekick/systems/loop.py:623; src/sidekick/systems/loop.py:727; src/sidekick/systems/oracle_escalation.py:9-18; configs/hj8_oracle_escalation.yaml:37-38",
+  "oracle_semantics_established": true,
+  "min_rows": 114,
+  "seeds": [
+    1,
+    2
+  ],
+  "resample_unit": "task",
+  "planner_calls_definition": "planner_calls_per_episode is the mean of ledger live totals.planner_calls_total; planner_calls_replay_inclusive_per_episode is the mean of RunResult.n_planner_calls. The live count is never silently replaced by the replay count.",
+  "arms": {
+    "executor_alone": {
+      "label": "executor_alone",
+      "n": 114,
+      "n_broken": 0,
+      "n_cleaned": 114,
+      "tgc": 0.131579,
+      "goal_pass": 0.528886,
+      "planner_calls_per_episode": 0.0,
+      "planner_calls_replay_inclusive_per_episode": 0.0,
+      "planner_tokens_per_episode": 0.0,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": false,
+      "oracle": false,
+      "complete_n": true,
+      "error_types": {
+        "limit": 31,
+        "none": 83
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "sft_plan": {
+      "label": "sft_plan",
+      "n": 114,
+      "n_broken": 0,
+      "n_cleaned": 114,
+      "tgc": 0.403509,
+      "goal_pass": 0.700009,
+      "planner_calls_per_episode": 1.0,
+      "planner_calls_replay_inclusive_per_episode": 1.0,
+      "planner_tokens_per_episode": 0.0,
+      "n_episodes_live_differs_from_replay": 0,
+      "k": null,
+      "gated": false,
+      "oracle": false,
+      "complete_n": true,
+      "error_types": {
+        "limit": 21,
+        "none": 93
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    }
+  },
+  "contrasts": {
+    "tgc_executor_alone_minus_sft_plan": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -27.19,
+      "ci95_pp": [
+        -37.72,
+        -16.67
+      ],
+      "bootstrap": 10000,
+      "diff": -0.2719,
+      "ci95": [
+        -0.3772,
+        -0.1667
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -27.19,
+        "ci95_pp": [
+          -36.84,
+          -17.54
+        ],
+        "bootstrap": 10000,
+        "diff": -0.2719,
+        "ci95": [
+          -0.3684,
+          -0.1754
+        ]
+      },
+      "resample_unit_for_decision": "task",
+      "field": "tgc",
+      "left": "executor_alone",
+      "right": "sft_plan"
+    },
+    "goal_pass_rate_executor_alone_minus_sft_plan": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -17.11,
+      "ci95_pp": [
+        -23.74,
+        -10.36
+      ],
+      "bootstrap": 10000,
+      "diff": -0.1711,
+      "ci95": [
+        -0.2374,
+        -0.1036
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -17.11,
+        "ci95_pp": [
+          -23.83,
+          -10.41
+        ],
+        "bootstrap": 10000,
+        "diff": -0.1711,
+        "ci95": [
+          -0.2383,
+          -0.1041
+        ]
+      },
+      "resample_unit_for_decision": "task",
+      "field": "goal_pass_rate",
+      "left": "executor_alone",
+      "right": "sft_plan"
+    },
+    "calls_live_executor_alone_minus_sft_plan": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -100.0,
+      "ci95_pp": [
+        -100.0,
+        -100.0
+      ],
+      "bootstrap": 10000,
+      "diff": -1.0,
+      "ci95": [
+        -1.0,
+        -1.0
+      ],
+      "units": "planner_calls (ci95); paired_diff also reports ci95_pp = 100\u00d7calls",
+      "resample_unit_for_decision": "task",
+      "field": "planner_calls_live",
+      "left": "executor_alone",
+      "right": "sft_plan"
+    }
+  },
+  "frontier": [
+    {
+      "label": "executor_alone",
+      "role": "other",
+      "k": null,
+      "tgc": 0.131579,
+      "goal_pass": 0.528886,
+      "planner_calls_per_episode": 0.0,
+      "planner_calls_replay_inclusive_per_episode": 0.0,
+      "n": 114
+    },
+    {
+      "label": "sft_plan",
+      "role": "other",
+      "k": null,
+      "tgc": 0.403509,
+      "goal_pass": 0.700009,
+      "planner_calls_per_episode": 1.0,
+      "planner_calls_replay_inclusive_per_episode": 1.0,
+      "n": 114
+    }
+  ],
+  "oracle_headroom": {
+    "error": "no complete oracle_escalation arm"
+  },
+  "f1": {},
+  "h3": []
+}

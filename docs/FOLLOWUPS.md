@@ -848,4 +848,43 @@ Across two independent estimators fitted over `feature_lr_v1` (the 9 hand-crafte
 
 **Diagnosis**: The binding constraint on task-state discrimination is the **feature representation**, not classifier capacity, temperature calibration, or label noise (label noise ceiling was shown by A9b to be $\approx 0.93–0.96$). Hand-crafted counters carry almost no task-state signal beyond episode length and step progress. A richer text representation (e.g. fine-tuned transcript encoder) is the required next rung for future campaign prefixes.
 
+## RESOLVED 2026-09-20 — The 2026-09-19 collision, false-pass smoke gate, and live-call budget cap
+
+Two GPU jobs submitted concurrently on 2026-09-19 (`25519712` B1 pilot smoke and `25519749` J8 live smoke) exposed a cluster-level infrastructure collision, an uninformative smoke gate, and a budget accounting discrepancy across three separate defects:
+
+### 1. The vLLM port collision & node-wide pkill incident
+
+- **Mechanism**: Both jobs started at 23:45:45 on node `gpu0n007` [OBSERVED campaign/workers/logs/b1_pilot_train_20260919.25519712.aqua.out:1, campaign/workers/logs/hj8_frontier_live_20260919livesmoke.25519749.aqua.out:1]. Every GPU PBS script pinned vLLM to `--host 127.0.0.1 --port 8000`, and health checks probed only port liveness. Because vLLM 0.29 does not hard-fail when failing to bind, both servers printed `Application startup complete` [OBSERVED /scratch/n12194778/sidekick/logs/b1_pilot_train_20260919.25519712.aqua_vllm.log:94, /scratch/n12194778/sidekick/logs/hj8_frontier_live_20260919livesmoke.25519749.aqua_vllm.log:94]. J8's server (PID 233054) held the socket; B1's server (PID 233045) served nothing and logged a warning naming PID 233054 as the port owner [OBSERVED /scratch/n12194778/sidekick/logs/b1_pilot_train_20260919.25519712.aqua_vllm.log:111-112], which was ignored.
+- **Consequence for B1**: B1's branches requested adapter alias `sft_b`, but reached J8's server which had only `sft_b_plus` loaded [OBSERVED /scratch/n12194778/sidekick/logs/hj8_frontier_live_20260919livesmoke.25519749.aqua_vllm.log:101-145]. This resulted in 20 × `404 The model 'sft_b' does not exist`, causing `branch_error_type: "crash"` on 20 of 20 rows with 0 live planner tokens [OBSERVED /scratch/n12194778/sidekick/results/b1_pilot_train_20260919_smoke/branch_runs.jsonl:1-20].
+- **Consequence for J8**: B1's cleanup executed node-wide `pkill -f "vllm serve"` and `pkill -f "EngineCore"`, which killed J8's vLLM server at 23:48:18 mid-run [OBSERVED /scratch/n12194778/sidekick/logs/hj8_frontier_live_20260919livesmoke.25519749.aqua_vllm.log:152]. Before the kill, J8 arm 1 had completed 5 executor calls and 2 live planner interventions with recorded usage and `returncode: 0` [OBSERVED campaign/workers/logs/hj8_frontier_live_20260919livesmoke.25519749.aqua.out:131-145], confirming the live planner path itself is functional. Arms 2 through 10 ran after server shutdown and failed at step 1 [OBSERVED campaign/workers/logs/hj8_frontier_live_20260919livesmoke.25519749.aqua.out:150-609].
+
+### 2. Defect: Smoke gate ignored branch errors
+
+The B1 smoke gate counted rows and summed `branch_planner_calls`, without checking `branch_error_type`. It reported `n_rows=20 branch_planner_calls_sum=88 unknown_call_rows=0` and exited 0 [OBSERVED campaign/workers/logs/b1_pilot_train_20260919.25519712.aqua.out:540] on a run where all 20 branches crashed and zero live planner calls were made. The "88 calls" were replayed cached review ticks from prefix trajectories, falsely validating a completely crashed run.
+
+### 3. Defect: Budget cap counted replayed prefix ticks
+
+`--max-planner-calls-total` summed `branch_planner_calls` [OBSERVED scripts/setup/branch_counterfactual.py:1291, 1297-1318], derived from `RunResult.n_planner_calls` [OBSERVED scripts/setup/branch_counterfactual.py:883-905], which `counters_from_events` [OBSERVED src/sidekick/systems/loop.py:119-133] accumulates over all prefix events including replayed interventions. The pre-registered budget is live hosted-planner spend: 6,118 expected calls against a 10,000 cap [OBSERVED docs/prereg_b1_pilot.md:158-199]. With ~2–3 replayed ticks per branch across 1,600 branches, the 10,000 cap would have triggered at ~6,000 live calls, prematurely halting the pilot before completion on an unearned budget exhaustion.
+
+### Repairs Landed on 2026-09-20 (R1, R2)
+
+1. **Per-job port allocation**: Ports are dynamically derived from the PBS job number (`VLLM_PORT=$(( 20000 + jobnum % 20000 ))`), probed for conflicts via `ss -ltn`, and exported as `SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"` [OBSERVED scripts/pbs/hj8_frontier.pbs:395-422, scripts/pbs/b1_pilot.pbs:195-228].
+2. **`SIDEKICK_VLLM_BASE_URL` env override**: Wired into `src/sidekick/runner.py:153-163` (precedence: env > yaml > default), called in `make_executor` (`:176`), and recorded in `manifest.json` (`:281`) [OBSERVED src/sidekick/runner.py:153-163, 176, 281].
+3. **Identity-verified health check**: Queries `/v1/models` and FATALs unless every registered LoRA alias is present in model IDs, verifies that the LISTENing process matches `${VLLM_PID}` via `ss -ltnp`, and FATALs if the vLLM log contains `port .* is used by process` [OBSERVED scripts/pbs/hj8_frontier.pbs:424-492, scripts/pbs/b1_pilot.pbs:599-653, 674-706].
+4. **Scoped process-group shutdown**: Servers are launched under `setsid` and terminated via process group signals (`kill -TERM -- -"${VLLM_PID}"` / `kill -KILL -- -"${VLLM_PID}"`), completely removing node-wide `pkill -f` invocations [OBSERVED scripts/pbs/hj8_frontier.pbs:351-369, 789, scripts/pbs/b1_pilot.pbs:548-563, 661].
+5. **Exit trap**: `trap kill_vllm EXIT` ensures background servers are cleaned up on any early termination [OBSERVED scripts/pbs/hj8_frontier.pbs:370-372, scripts/pbs/b1_pilot.pbs:564].
+6. **Outcome-based smoke gate & error detail**: `branch_counterfactual.py` records `branch_error_detail` (first 200 chars of detail + exc_type), `branch_steps`, `replay_k`, and `branch_planner_tokens` on each row [OBSERVED scripts/setup/branch_counterfactual.py:917-939, 1010, 1024-1033], and `b1_pilot.pbs` FATALs on non-null `branch_error_type` (printing error details), no steps taken past `replay_k + 1`, or zero planner tokens [OBSERVED scripts/pbs/b1_pilot.pbs:277-309].
+7. **Live-call budget tracking**: `spent_from_rows` now sums `branch_live_planner_calls` from ledger `totals.planner_calls_total`, charging the pre-registered 81 penalty for unknown/None rows [OBSERVED scripts/setup/branch_counterfactual.py:908-914, 942-955, 957-977, 1029, 1367-1404].
+
+Beyond the stated fixes, one behaviour change was introduced to budget tracking: the budget cap calculation no longer filters on `is_done_row`, so a branch that crashes with no result at all is now charged the unknown-cost factor of 81 rather than contributing zero [OBSERVED scripts/setup/branch_counterfactual.py:942-977]. This is faithful to §8 of the pre-registration and makes the cap stricter than before—a run with many hard crashes will reach the cap sooner and require the §9 resume procedure.
+
+### Standing Hazard: Legacy PBS Scripts
+
+The following legacy scripts retain node-wide `pkill` and/or hardcoded port 8000:
+- **Node-wide `pkill`**: `scripts/pbs/hj6_branches.pbs:131-132` and `scripts/pbs/hj3_eval.pbs:125-126` (`pkill -f "vllm serve"`, `pkill -f "EngineCore"`).
+- **Hardcoded port 8000**: `scripts/pbs/hj4_correction.pbs:183,197`, `scripts/pbs/hj4b_fixed_k_dev.pbs:157,171`, `scripts/pbs/hj1a_executor_alone.pbs:77,93`, `scripts/pbs/hj1c_fixed_k.pbs:86,95`, `scripts/pbs/hj1c_prompt_only.pbs:83,92`, and `scripts/pbs/hj15_state_probe.pbs:77,133,144,258,271,294,307,317,333,346,356,395,408`.
+
+These scripts are frozen historical artifacts and are not being resubmitted. Any future resubmission or template reuse must incorporate the C1 port isolation and scoped shutdown contracts before submission.
+
+
 
