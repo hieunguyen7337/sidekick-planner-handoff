@@ -9,6 +9,7 @@ import pytest
 
 from sidekick.training.matched_sft import (
     ASK_TEMPLATE,
+    _combine_teacher_and_correction,
     build_ask_dataset,
     build_sft_b_plus,
     classify_branch_label,
@@ -414,3 +415,129 @@ def test_real_j4_row_trainer_mask_covers_only_supervised_indices(tmp_path, no_he
         span_labels = masked["labels"][len(prefix) : len(full)]
         assert span_labels
         assert all(lab == -100 for lab in span_labels)
+
+
+def _synthetic_teacher(tmp_path: Path) -> Path:
+    path = tmp_path / "teacher.jsonl"
+    path.write_text("", encoding="utf-8")
+    return path
+
+
+def _iv_record(*, task_id: str = "copy_hello") -> dict:
+    return {
+        "messages": [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "task"},
+            {"role": "assistant", "content": "```python\nprint(1)\n```"},
+            {"role": "user", "content": "INTERVENTION: do the write"},
+            {"role": "assistant", "content": "```python\nprint(2)\n```"},
+        ],
+        "meta": {
+            "task_id": task_id,
+            "source": "correction",
+            "supervised_message_indices": [4],
+            "n_action_targets": 1,
+            "n_ask_targets": 0,
+        },
+    }
+
+
+def _ask_record(*, task_id: str = "copy_hello") -> dict:
+    return {
+        "messages": [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "task"},
+            {"role": "assistant", "content": ASK_TEMPLATE},
+        ],
+        "meta": {
+            "task_id": task_id,
+            "source": "correction",
+            "supervised_message_indices": [2],
+            "n_action_targets": 0,
+            "n_ask_targets": 1,
+        },
+    }
+
+
+def _clean_record(*, task_id: str = "copy_hello") -> dict:
+    return {
+        "messages": [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "task"},
+            {"role": "assistant", "content": "```python\nprint(1)\n```"},
+        ],
+        "meta": {
+            "task_id": task_id,
+            "source": "correction",
+            "supervised_message_indices": [2],
+            "n_action_targets": 1,
+            "n_ask_targets": 0,
+        },
+    }
+
+
+def _run_combine(tmp_path, records, **kwargs):
+    teacher = _synthetic_teacher(tmp_path)
+    out = kwargs.pop("out_jsonl", tmp_path / "combined.jsonl")
+    return _combine_teacher_and_correction(
+        teacher,
+        records,
+        {},
+        Path(out),
+        quiet=True,
+        adapter_manifest=tmp_path / "no_adapter.json",
+        **kwargs,
+    )
+
+
+def test_combine_default_raises_on_intervention_turn(tmp_path, no_heldout):
+    with pytest.raises(RuntimeError, match="INTERVENTION:"):
+        _run_combine(tmp_path, [_iv_record()])
+
+
+def test_combine_retain_keeps_intervention_text(tmp_path, no_heldout):
+    out = tmp_path / "retain.jsonl"
+    _run_combine(tmp_path, [_iv_record()], allow_interventions=True, out_jsonl=out)
+    blob = out.read_text(encoding="utf-8")
+    assert "INTERVENTION:" in blob
+    rows = [json.loads(line) for line in blob.splitlines() if line.strip()]
+    assert any(
+        "INTERVENTION:" in str(m.get("content") or "")
+        for row in rows
+        for m in row.get("messages") or []
+    )
+
+
+def test_combine_ask_guard_ignores_allow_interventions(tmp_path, no_heldout):
+    with pytest.raises(RuntimeError, match="ASK_PLANNER"):
+        _run_combine(tmp_path, [_ask_record()])
+    with pytest.raises(RuntimeError, match="ASK_PLANNER"):
+        _run_combine(tmp_path, [_ask_record()], allow_interventions=True)
+
+
+def test_combine_retain_still_asserts_no_leakage(tmp_path, no_heldout):
+    with pytest.raises(ValueError, match="Split leakage"):
+        _run_combine(
+            tmp_path,
+            [_iv_record(task_id="held_out_task")],
+            allow_interventions=True,
+        )
+
+
+def test_combine_reports_intervention_mode(tmp_path, no_heldout):
+    strip_out = tmp_path / "strip.jsonl"
+    strip_sum = _run_combine(tmp_path, [_clean_record()], out_jsonl=strip_out)
+    assert strip_sum["intervention_mode"] == "strip"
+    strip_manifest = json.loads(Path(str(strip_out) + ".manifest.json").read_text())
+    assert strip_manifest["intervention_mode"] == "strip"
+
+    retain_out = tmp_path / "retain.jsonl"
+    retain_sum = _run_combine(
+        tmp_path,
+        [_iv_record()],
+        allow_interventions=True,
+        out_jsonl=retain_out,
+    )
+    assert retain_sum["intervention_mode"] == "retain"
+    retain_manifest = json.loads(Path(str(retain_out) + ".manifest.json").read_text())
+    assert retain_manifest["intervention_mode"] == "retain"

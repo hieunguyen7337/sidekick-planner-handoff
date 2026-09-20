@@ -507,6 +507,7 @@ def _build_correction_records(
         ),
         "system": system,
         "strip_interventions": strip_interventions,
+        "intervention_mode": "strip" if strip_interventions else "retain",
         "n_interventions_seen": n_interventions_seen,
         "n_forced_true": n_forced_true,
         "n_ask_events": n_ask_events,
@@ -589,12 +590,15 @@ def _combine_teacher_and_correction(
     quiet: bool,
     extra_summary: dict[str, Any] | None = None,
     adapter_manifest: Path = DEFAULT_ADAPTER_MANIFEST,
+    allow_interventions: bool = False,
 ) -> dict:
     teacher_rows = _load_jsonl_rows(teacher_jsonl)
     records = list(teacher_rows) + list(correction_records)
     allow_ask_targets = extra_summary is not None
     for row in records:
-        if _sft._contains_intervention_mark(row.get("messages") or []):
+        if (not allow_interventions) and _sft._contains_intervention_mark(
+            row.get("messages") or []
+        ):
             raise RuntimeError(
                 "combined dataset contains an INTERVENTION: turn; refusing to write"
             )
@@ -694,6 +698,7 @@ def _combine_teacher_and_correction(
         "n_forced_true": int(correction_summary.get("n_forced_true") or 0),
         "n_ask_events": int(correction_summary.get("n_ask_events") or 0),
         "correction": slim_corr,
+        "intervention_mode": "retain" if allow_interventions else "strip",
     }
     if extra_summary:
         summary.update(extra_summary)
@@ -734,6 +739,7 @@ def build_sft_b_plus(
         quiet=quiet,
         extra_summary=None,
         adapter_manifest=Path(adapter_manifest),
+        allow_interventions=not strip_interventions,
     )
 
 
@@ -784,6 +790,7 @@ def build_ask_dataset(
         quiet=quiet,
         extra_summary=extra,
         adapter_manifest=Path(adapter_manifest),
+        allow_interventions=not strip_interventions,
     )
 
 
