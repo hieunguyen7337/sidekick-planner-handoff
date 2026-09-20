@@ -1,38 +1,53 @@
 # STATUS E2 — intervention-retaining dataset + variant adapter
 
-**Unit:** E2 **State:** done **Last update:** 2026-09-21 01:17 AEST
+**Unit:** E2 / E2b resume
+**State:** complete
+**Last update:** 2026-09-21 ~01:18 AEST
 
-No eval, no HJ8/J10, no test-split reads, no writes under `/scratch/.../results/`, no git, `train_sft.pbs` unedited. Original jsonl/adapter left in place.
+## Owned files
 
-## Build command (verbatim, successful)
+- this STATUS
+- `/scratch/n12194778/sidekick/artifacts/sft/sft_b_plus_iaware_20260920.jsonl` (+ `.manifest.json`)
+- `/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b` (+ `_dryrun`)
+- `campaign/workers/logs/train_sft_sft_b_plus_20260918.out`
 
-```
-timeout 7800 hpc -c 4 -m 32gb -t 02:00:00 bash -lc 'cd /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15 && OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld HF_HOME=/scratch/n12194778/hf PYTHONPATH=src:. /scratch/n12194778/sidekick/env/bin/python -u -m sidekick.training.matched_sft --mode sft_b_plus --campaign-root /scratch/n12194778/sidekick/results/hj4_correction_train_20260917 --split train --out /scratch/n12194778/sidekick/artifacts/sft/sft_b_plus_iaware_20260920.jsonl --no-strip-interventions'
-```
+Did not overwrite `sft_b_plus_20260918.jsonl` or `sft_b_plus_granite8b` (mtime Sep 18 / Sep 19 still). [OBSERVED ls] No eval, no HJ8/J10, no test-split reads, no git, no edits to `train_sft.pbs`.
 
-Job `25574101.aqua` Exit_status 0, walltime 01:23:32. [OBSERVED `/home/n12194778/.hpc-spool/20260920-213856-1565089.out` resources_used / Exit_status]
+## Step 2 numbers (all four, before GPU)
 
-First attempt `25573230.aqua` used original `-t 00:30:00`, killed walltime 1813>1800, no jsonl. [OBSERVED `/home/n12194778/.hpc-spool/20260920-210700-1073700.out`] Retry added `-u` and 02:00:00 only.
+1. `wc -l` = **497** (original 497; not below). [OBSERVED wc]
+2. `grep -c 'INTERVENTION:'` = **267** (not 0). [OBSERVED grep]
+3. `dropped_counts` = `{"correction_no_intervention": 3}`; `intervention_mode` = `"retain"`; no `intervention_in_context` key. [OBSERVED jsonl.manifest.json:440-443]
+4. Truncation: `n_truncated` = **22** (original jsonl was 21); token_length_percentiles max=102646 p50=18906 p90=29705. Row count stayed 497 so truncation did **not** drop episodes. [OBSERVED jsonl.manifest.json:453-455,1054-1058; original jsonl.manifest.json:452]
 
-## Step 1 numbers
+## Build
 
-1. New `wc -l` = **497**. [OBSERVED `/scratch/n12194778/sidekick/artifacts/sft/sft_b_plus_iaware_20260920.jsonl`]
-2. New `grep -c INTERVENTION:` = **267** (>0). [OBSERVED same]
-3. Original `grep -c INTERVENTION:` = **0**. [OBSERVED `/scratch/n12194778/sidekick/artifacts/sft/sft_b_plus_20260918.jsonl`]
-4. `intervention_in_context` (`DROP_INTERVENTION_LEAK`): original **0** (key absent; only `correction_no_intervention`: 3); new **0** (same). Episode difference **0**; both `n_sequences`=497, `n_correction_sequences`=267. [OBSERVED both `*.jsonl.manifest.json` dropped_counts / n_sequences] New `intervention_mode`=`retain`. [OBSERVED iaware `.manifest.json`] Leak drop is `if strip_interventions and mark`; strip already left 0 leaks, so retain did not add episodes. [OBSERVED `src/sidekick/training/matched_sft.py:445-447`]
+`25574101.aqua` Exit_status=0, walltime 01:23:32. [OBSERVED qstat -x; spool 20260920-213856-1565089.out:1063,1098]
 
-## qsub (verbatim)
+## qsub (verbatim; not issued by E2b)
+
+Did **not** `qsub`: a GPU job with the exact vars was already queued (`25576173.aqua`, ctime 23:04:00). One-GPU rule. Submit_arguments [OBSERVED `qstat -f 25576173.aqua`]:
 
 ```
 qsub -v DATA_JSONL=/scratch/n12194778/sidekick/artifacts/sft/sft_b_plus_iaware_20260920.jsonl,ADAPTER_OUT=/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b,BASE_MODEL=ibm-granite/granite-4.2-8b scripts/pbs/train_sft.pbs
 ```
 
+Copied `campaign/workers/logs/train_sft.out` → `train_sft_sft_b_plus_20260918.out` (55719 bytes; data=`sft_b_plus_20260918.jsonl`) while still Q. [OBSERVED ls/cmp; backup log:3]
+
 ## Train
 
-- job **25576173.aqua**, Exit_status **0**, walltime **02:11:15** (stime 23:05:30, mtime 01:16:49, gpu1n009). [OBSERVED `qstat -xf 25576173`]
-- dry-run exit=0 23:08:22; full training exit=0 01:16:45. [OBSERVED `campaign/workers/logs/train_sft.out:59,:195`]
-- `OUT/manifest.json`: hyperparameters epochs=2.0 lr=0.0001 r=64 seed=42 (file-level) max_length=32768 effective_batch=8 bf16=true; `n_sequences`=479; `n_rows_in`=497; `data_sha256`=`f2f439d9a24df8e1ac3ca5f94a4f0360aeb23e7564597a082f26dbaf5c77d066` (matches jsonl `sha256`); `base_model`=`ibm-granite/granite-4.2-8b`. [OBSERVED `/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b/manifest.json`] Original adapter still `n_sequences`=479 `data_sha256`=`e557657e…`. [OBSERVED `…/sft_b_plus_granite8b/manifest.json`]
+- Job **`25576173.aqua`**, Exit_status **0**, walltime **02:11:15** (stime 23:05:30, obit 01:16:49). [OBSERVED train_sft.out:199-200,231; qstat -x]
+- Log data path is the **iaware** jsonl. [OBSERVED train_sft.out:2-3]
+- Dry-run exit=0 at 23:08:22; full training exit=0 at 01:16:45. [OBSERVED train_sft.out:59,195]
+
+`OUT/manifest.json` [OBSERVED `/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b/manifest.json`]:
+- `base_model`: `ibm-granite/granite-4.2-8b` (:2)
+- `data`: iaware jsonl (:4)
+- `data_sha256`: `f2f439d9a24df8e1ac3ca5f94a4f0360aeb23e7564597a082f26dbaf5c77d066` (:5)
+- `n_sequences`: **479** (= original adapter 479; `n_rows_in` 497; dropped 18 truncated-past-labels). [OBSERVED :84-90; original adapter manifest:43]
+- `hyperparameters`: epochs 2.0, lr 0.0001, r 64, seed 42, effective_batch 8, max_length 32768, max_steps null (:48-63,100)
+- `n_truncated_kept`: 18 (:90)
 
 ## Resume
 
-Done. Do not resubmit. If STATUS is the only missing piece, rewrite this file from the artifacts above; do not retrain.
+Done. Adapter is at `.../adapters/sft_b_plus_iaware_granite8b`. Do not resubmit. Do not eval from this unit.
