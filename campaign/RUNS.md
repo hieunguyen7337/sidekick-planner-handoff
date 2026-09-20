@@ -2144,5 +2144,82 @@ data problem. Goal-pass CIs were computed by the A15 helper with the same
 
 The result trees `/scratch/n12194778/sidekick/results/b1_pilot_train_20260919_smoke` and every `hj8_*_20260919livesmoke_smoke` tree (`/scratch/n12194778/sidekick/results/hj8_*_20260919livesmoke_smoke`) contain **no valid data** and must never be analysed or resumed from because a vLLM port 8000 collision on node `gpu0n007` between jobs `25519712` and `25519749` routed B1 requests to J8's server (failing with 404 missing LoRA alias `sft_b` on 20/20 rows) and subsequent B1 node-wide cleanup killed J8's server mid-run (arms 2–10 failed on step 1).
 
+### 9. Pre-Flight Smoke Findings & Live Gate Pre-Registration (2026-09-20)
 
+Recorded **before** full-scale run execution. The 10-arm dev frontier evaluation and the B1 pilot training were submitted on 2026-09-20 (jobs `25560358`, `25560363`, `25560367`) [OBSERVED campaign/workers/brief_R7_smoke_record.md:7-8]. This entry records what was empirically measured and predicted during pre-flight smoke testing before any full-scale results exist, establishing that downstream arm degeneracies were anticipated from first principles and smoke data rather than rationalised post-hoc.
 
+#### 1. Parallel Smoke Validation & Collision Isolation
+
+- **Source Logs**:
+  - J8 live smoke: `campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out` (job `25558685.aqua`) [OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:1].
+  - B1 pilot smoke: `campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out` (job `25559748.aqua`) [OBSERVED campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:1].
+- **Parallel Port & Alias Isolation**:
+  - The two smoke jobs ran simultaneously on GPU nodes and selected independent ports (J8 on port `38685`, B1 on port `39748`) [OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:98, campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:11].
+  - Each server verified that its expected LoRA alias was loaded in `/v1/models` (`sft_b_plus` for J8, `sft_b` for B1) and that its own process group held the listening socket (`pid=1821315` / `pgid=1821315` for J8; `pid=2006139` / `pgid=2006139` for B1) [OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:101-102, campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:14-15].
+  - This verifies the fix for the 2026-09-19 port collision under concurrent multi-job execution.
+- **Outcomes**:
+  - J8 live smoke completed with `job_rc=0`, all ten arms passing smoke gates [OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:150-603, 621].
+  - B1 smoke completed with `smoke_rc=0` across 32 branch runs [OBSERVED campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:1117-1122].
+
+#### 2. B1 Pilot Smoke & Budget Counter Empirical Calibration
+
+- **Observed Smoke Spend**:
+  ```
+  n_rows=32 live_planner_calls_sum=44 branch_planner_calls_tick_sum=165 planner_tokens_sum=1343501 error_type_counts=None=17,limit=15
+  ```
+  [OBSERVED campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:1118].
+- **Replay Tick vs Live Call Discrepancy**:
+  - Observed ratio is **44 live calls vs 165 replayed ticks — a factor of 3.75 (approx 3.7x)** [OBSERVED campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:1118].
+  - The pre-registration budgets 6,118 live calls against a 10,000 cap [INFERRED]. Under the previous replay-inclusive counter, the 10,000 cap would have fired prematurely at roughly **2,667 live calls (≈ 2,700)** [INFERRED] — less than half the required budget.
+  - The post-mortem preliminary estimate of "around 6,000" was optimistic; the actual inflation factor (3.75x) shows the undercounting defect was more severe than initial estimates indicated [INFERRED].
+- **Clean Execution & Error Distribution**:
+  - Across 32 branches (4 points × 2 conditions × 4 seeds), 17 ended cleanly (`None`) and 15 ended at the step limit (`limit`) [OBSERVED campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:1118].
+  - Zero infrastructure faults (`crash`/`timeout`/`api_error` = 0) [OBSERVED campaign/workers/logs/b1_pilot_train_20260920c.25559748.aqua.out:1118]. This confirms why the previous rigid gate (which treated step limits as fatal errors) was defective.
+
+#### 3. J8 Live Smoke Escalation Analysis & Structural Degeneracies
+
+Across 3 episodes per arm on dev, the live smoke produced the following escalation profile:
+
+```
+arm                    | live_planner_calls | n_interventions | steps_mean
+hj8_fixed_k_3          | 14 | 14 | 14.33
+hj8_fixed_k_5          | 16 | 16 | 28
+hj8_fixed_k_10         |  5 |  5 | 21.67
+hj8_router_seq_tau03   | 33 | 33 | 11
+hj8_router_seq_tau05   |  0 |  0 | 16.33
+hj8_router_seq_tau07   |  0 |  0 | 11
+hj8_sidekick_tau03     |  0 |  0 | 12.67
+hj8_sidekick_tau05     |  0 |  0 | 20
+hj8_sidekick_tau07     |  0 |  0 | 33
+hj8_oracle_escalation  |  0 |  0 | 30
+```
+[OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:607-617].
+
+Key findings and predictions:
+
+1. **`sidekick` arms escalate 0 times across all thresholds (predicted by construction)**:
+   - The `sft_b_plus` adapter was trained without ASK targets by construction [INFERRED]. The self-gate verifier functions strictly as a veto on executor-emitted ASK tokens; it cannot create an escalation unprompted [INFERRED].
+   - Lowering the self-gate threshold $\tau$ cannot raise the ask rate when the executor never emits an ASK token [INFERRED]. The historical base rate of the untrained ask channel is negligible: 0 asks / 114 episodes in HJ-1 [OBSERVED campaign/RUNS.md:490] and 1 ask / 114 episodes in HJ-1R [OBSERVED campaign/RUNS.md:486].
+   - The smoke test automatically logged: `WARN: every sidekick arm in this smoke pass has identical live_planner_calls=0 (gate-never-fires signature)` [OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:618].
+
+2. **`router_seq` exhibits binary all-or-nothing behavior**:
+   - At $\tau = 0.3$, the sequential router fired 33 times across 3 episodes (more per episode than any fixed schedule) [OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:611].
+   - At $\tau = 0.5$ and $\tau = 0.7$, it fired 0 times [OBSERVED campaign/workers/logs/hj8_frontier_live_20260920livesmoke.25558685.aqua.out:612-613].
+   - Consequently, all router scores lie in $[0.3, 0.5)$ across these episodes [INFERRED]. The pre-specified grid points $\tau \in \{0.5, 0.7\}$ cannot produce a frontier point distinct from the zero-call baseline [INFERRED]. Intermediate grid points in $(0.3, 0.5)$ will be required in follow-up work to trace the router's curve, as an addition to the pre-registered grid rather than a post-hoc substitution for it [INFERRED].
+
+3. **`oracle_escalation` zero-call outcome is consistent with label sparsity**:
+   - Inlined dev oracle labels cover 106 task/seed pairs (with 8 of 114 expected pairs having no key at all, distinct from an empty list) [OBSERVED configs/hj8_oracle_escalation.yaml:37-216].
+   - Of these 106 pairs, only 28 have at least one oracle escalation step (26.4%), containing 43 total oracle escalation steps [OBSERVED configs/hj8_oracle_escalation.yaml:37-216].
+   - The probability of drawing zero oracle steps in 3 independent random episodes under this base rate is $(1 - 0.2641)^3 \approx 0.398$ (near 0.40) [INFERRED]. The zero observed in smoke is expected sampling variation from label sparsity, not an execution defect [INFERRED].
+
+#### 4. Decision Taken & Consequence for the Core Hypothesis
+
+- **Decision**: All ten arms were submitted unchanged [OBSERVED campaign/workers/brief_R7_smoke_record.md:7-8, 93-97].
+- **Rationale**:
+  - The campaign plan's contingency for a degenerate gate mandates recording the finding and running rather than tuning thresholds post-hoc [INFERRED].
+  - Zero-escalation arms consume no hosted planner quota, incurring only cluster GPU compute time [INFERRED].
+  - A full 114-episode zero provides substantially stronger statistical evidence for the negative result than a 3-episode smoke sample [INFERRED].
+  - Revising pre-specified threshold grids after observing smoke data would violate the campaign's pre-registration discipline [INFERRED].
+- **Scientific Consequence**:
+  - With the `sft_b_plus` adapter, the **executor-internal ask hypothesis is not being tested** by these arms [INFERRED]. They measure a verifier veto on a channel that never opens [INFERRED].
+  - Testing the hypothesis requires an ASK-trained adapter (`sft_c`), which is not yet trained and remains gated on the completion of the B1 pilot [INFERRED].
