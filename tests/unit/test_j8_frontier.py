@@ -392,3 +392,166 @@ def test_all_vs_survivor_sign_disagreement_is_flagged(
     assert tgc_surv["n_pairs"] == 2
     assert any(item["sign_disagree"] for item in report["population_disagreements"])
 
+
+def _gate_ev(step: int, p_ask=None, *, ask: bool = False) -> dict:
+    payload: dict = {}
+    if p_ask is not None:
+        payload["p_ask"] = p_ask
+    return {
+        "step": step,
+        "event_type": "ask" if ask else "action",
+        "payload": payload,
+    }
+
+
+def write_h3_arm(root: Path, label: str, episodes: list[dict]) -> dict:
+    system = "sidekick" if label.startswith("sidekick") else "router_seq"
+    seeds = sorted({int(ep["seed"]) for ep in episodes})
+    for ep in episodes:
+        write_run(
+            root,
+            system,
+            int(ep["seed"]),
+            ep["task_id"],
+            tgc=1.0,
+            n_planner_calls=1,
+            steps=int(ep["steps"]),
+            events=list(ep["events"]),
+        )
+    arm = j8.summarise_arm(label, j10.load_arm_tree(root), seeds)
+    arm["root"] = root
+    return arm
+
+
+def test_h3_early_end_excludes_post_episode_ticks_from_scored(tmp_path: Path):
+    arm = write_h3_arm(
+        tmp_path / "early",
+        "sidekick_tau05",
+        [
+            {
+                "task_id": "t_early",
+                "seed": 1,
+                "steps": 10,
+                "events": [_gate_ev(5, 0.2), _gate_ev(10, 0.3)],
+            }
+        ],
+    )
+    labels = {"t_early/1": [5]}
+    row = j8.collect_h3_for_arm(arm, labels)
+    scored = row["populations"]["scored"]
+    grid = row["populations"]["grid"]
+    assert scored["n"] == 2
+    assert grid["n"] == 8
+    assert row["n"] == 2
+    assert row["headline_population"] == "scored"
+    assert row["n_excluded_from_scored"] == 6
+    assert row["excluded_from_scored_reason"] == "past_episode_end"
+    assert row["excluded_counts"]["past_episode_end"] == 6
+    assert row["excluded_counts"]["within_episode_missing_slot"] == 0
+    assert scored["n_positive"] == 1
+    assert grid["n_positive"] == 1
+    assert row["populations_coincide"] is False
+
+
+def test_h3_grid_above_chance_scored_below_is_flagged(tmp_path: Path):
+    arm = write_h3_arm(
+        tmp_path / "disagree",
+        "sidekick_tau07",
+        [
+            {
+                "task_id": "t_dis",
+                "seed": 1,
+                "steps": 10,
+                "events": [_gate_ev(5, 0.1), _gate_ev(10, 0.9)],
+            }
+        ],
+    )
+    labels = {"t_dis/1": [5]}
+    row = j8.collect_h3_for_arm(arm, labels)
+    scored_auroc = row["populations"]["scored"]["auroc"]
+    grid_auroc = row["populations"]["grid"]["auroc"]
+    assert scored_auroc == pytest.approx(0.0)
+    assert grid_auroc > 0.5
+    assert scored_auroc < 0.5
+    assert row["auroc_chance_disagreement"] is True
+    text = j8.format_h3_table([row])
+    assert "CONTRAST DISAGREEMENT" in text
+    assert "scored (primary)" in text
+    assert "grid" in text
+    lines = j8.h3_disagreement_lines([row])
+    assert any("CONTRAST DISAGREEMENT" in line for line in lines)
+    assert any("exceeds 0.5" in line for line in lines)
+
+
+def test_h3_full_grid_populations_coincide(tmp_path: Path):
+    events = [_gate_ev(tick, 0.4) for tick in j8.tick_grid()]
+    arm = write_h3_arm(
+        tmp_path / "full",
+        "sidekick_tau03",
+        [{"task_id": "t_full", "seed": 1, "steps": 40, "events": events}],
+    )
+    labels = {"t_full/1": [20]}
+    row = j8.collect_h3_for_arm(arm, labels)
+    assert row["populations"]["scored"]["n"] == 8
+    assert row["populations"]["grid"]["n"] == 8
+    assert row["populations"]["scored"]["auroc"] == row["populations"]["grid"]["auroc"]
+    assert row["n_excluded_from_scored"] == 0
+    assert row["populations_coincide"] is True
+    assert row["auroc_chance_disagreement"] is False
+    text = j8.format_h3_table([row])
+    assert "scored and grid H3 populations coincide" in text
+    assert "CONTRAST DISAGREEMENT" not in text
+    assert "spurious" not in text.lower()
+
+
+def test_h3_tick_without_p_ask_stays_in_scored(tmp_path: Path):
+    arm = write_h3_arm(
+        tmp_path / "nopask",
+        "router_seq_tau03",
+        [
+            {
+                "task_id": "t_ask",
+                "seed": 1,
+                "steps": 10,
+                "events": [_gate_ev(5, ask=True), _gate_ev(10, 0.0)],
+            }
+        ],
+    )
+    labels = {"t_ask/1": [5]}
+    row = j8.collect_h3_for_arm(arm, labels)
+    scored = row["populations"]["scored"]
+    assert scored["n"] == 2
+    assert scored["n_positive"] == 1
+    assert row["n_escalations"] == 1
+    assert scored["auroc"] == pytest.approx(1.0)
+    assert row["score_quantiles"]["n"] == 1
+    assert row["score_quantiles"]["max"] == pytest.approx(0.0)
+
+
+def test_h3_score_quantile_table_on_known_distribution(tmp_path: Path):
+    known = [0.1, 0.2, 0.3, 0.4]
+    q = j8.score_quantiles(known)
+    assert q["n"] == 4
+    assert q["mean"] == pytest.approx(0.25)
+    assert q["min"] == pytest.approx(0.1)
+    assert q["median"] == pytest.approx(0.25)
+    assert q["p90"] == pytest.approx(0.37)
+    assert q["p95"] == pytest.approx(0.385)
+    assert q["p99"] == pytest.approx(0.397)
+    assert q["max"] == pytest.approx(0.4)
+    ticks = j8.tick_grid()
+    events = [_gate_ev(ticks[i], known[i]) for i in range(4)]
+    arm = write_h3_arm(
+        tmp_path / "quant",
+        "sidekick_tau05",
+        [{"task_id": "t_q", "seed": 1, "steps": 20, "events": events}],
+    )
+    row = j8.collect_h3_for_arm(arm, {"t_q/1": []})
+    assert row["score_quantiles"]["n"] == 4
+    assert row["score_quantiles"]["p90"] == pytest.approx(0.37)
+    table = j8.format_score_quantile_table([row])
+    assert "sidekick_tau05" in table
+    assert "0.250000" in table or "0.25" in table
+    assert "0.370000" in table or "0.37" in table
+
+

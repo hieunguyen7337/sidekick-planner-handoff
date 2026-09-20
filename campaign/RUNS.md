@@ -2283,19 +2283,42 @@ Comparing `oracle_escalation` vs `fixed_k_10` (its k_matched) across 114 pairs:
 
 F2 as originally framed (oracle strictly outperforming fixed_k on both axes simultaneously) is not established [INFERRED]. What is established is equal quality at 47% of the calls (1.30 vs 2.75 per episode) and 14% of the planner tokens [INFERRED].
 
-### H3 — Gate calibration against dev oracle labels (n=848 steps, 43 positive)
+### H3 — Gate calibration against dev oracle labels
+
+`scripts/analysis/j8_frontier.py` reports two H3 populations: `scored` (ticks at or before the episode's final step; the primary population) and `grid` (the published behaviour over the fixed 5,10,…,40 tick grid with post-episode filler scored 0.0) [OBSERVED scripts/analysis/j8_frontier.py].
 
 ```
-gate               AUROC    ECE    n_escalations  degenerate
-router_seq_tau03  0.6294  0.3066           1533       false
-router_seq_tau05  0.4988  0.0531             12       false
-router_seq_tau07  0.5000  0.0507              0        true
-sidekick_tau03    0.5983  0.0488              0        true
-sidekick_tau05    0.6311  0.0488              0        true
-sidekick_tau07    0.6759  0.0488              0        true
+gate              scored_auroc  grid_auroc  n_scored  n_pos_scored  excluded  n_escalations
+router_seq_tau03        0.5082      0.6294       269            24       579           1533
+router_seq_tau05        0.4971      0.4988       385            36       463             12
+router_seq_tau07        0.5000      0.5000       405            33       443              0
+sidekick_tau03          0.4332      0.5983       400            30       448              0
+sidekick_tau05          0.3867      0.6311       396            34       452              0
+sidekick_tau07          0.4407      0.6759       393            36       455              0
 ```
+[OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"].
 
-AUROC is computed on the gate's scores and is therefore well-defined even when the gate never fires [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: keys "quality_populations", "planner_calls_definition"]. The `sidekick` self-gate reaches AUROC 0.6759, the highest of any gate measured in this project — above A7's value-function router at 0.6212 and above that router's feature-blind floor of 0.6245 — while escalating zero times at every tested τ [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"] [OBSERVED campaign/RUNS.md:2066-2067]. The scores discriminate; the operating point is in the wrong place [INFERRED]. This represents a calibration failure, not a discrimination failure, with the caveat that labels are J6 dev `schedule_live` (a contaminated estimand) with only 43 positives [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"].
+`scored` is the primary population [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"]. Every exclusion is `past_episode_end`; `within_episode_missing_slot` is 0 for all six arms [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"]. The three `sidekick` arms are flagged `auroc_chance_disagreement` — above 0.5 on the grid, below 0.5 on real decision points [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"].
+
+The `sidekick` gate's real `p_ask` scores:
+
+```
+arm                n   mean     median     p90      p95      p99      max
+sidekick_tau03   400  0.00407  0.000924  0.01268  0.01674  0.02715  0.03470
+sidekick_tau05   396  0.00411  0.001315  0.01305  0.01641  0.01942  0.02341
+sidekick_tau07   393  0.00416  0.001262  0.01286  0.01848  0.02351  0.02400
+```
+[OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3_score_quantiles"].
+
+`router_seq` emits no `p_ask` at all (`n = 0` in the quantile table); its H3 scores fall back to a binary escalated / not-escalated indicator, so its "AUROC" measures agreement between its decisions and the oracle labels, not a ranking [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3_score_quantiles"]. That changes how the router numbers should be read [INFERRED]. `router_seq_tau03`'s scored ECE is 0.896, consistent with escalating on nearly every tick while roughly 9 % of ticks carry a positive label [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"].
+
+**Conclusions:**
+1. **No gate measured here discriminates.** On real decision points every gate sits at or below chance [INFERRED]. `router_seq_tau03`, the only one that appeared to carry signal, falls from 0.6294 to 0.5082 [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"].
+2. **The `sidekick` self-gate is a discrimination failure, not a calibration failure.** Its `p_ask` never exceeds 0.0347 across any arm while τ was set at 0.3 / 0.5 / 0.7, so it could not fire [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3_score_quantiles"]; but lowering τ would not rescue it, because its ranking is below chance [INFERRED]. At τ = 0.01 it would fire on about 16 % of ticks at precision 0.082 against a base rate of 0.092 — worse than escalating at random [INFERRED].
+3. **There is therefore no τ\* worth freezing for this gate on this adapter**, and no corrected-threshold re-run is justified [INFERRED].
+4. The oracle labels remain the contaminated J6 dev `schedule_live` estimand with 43 positives over 106 labelled episodes; that caveat applies to every number in this subsection [OBSERVED campaign/results/hj8_frontier_dev_20260920.report.json: key "h3"].
+
+The first committed version of §10 (commit `e096b0d`) reported the grid population as the headline and drew the opposite conclusion. The defect was in the analysis script's tick sampling rather than in any run: no episode data was re-run, only the analysis changed.
 
 ### Replicate-noise measurement
 

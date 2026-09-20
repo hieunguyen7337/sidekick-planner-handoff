@@ -27419,65 +27419,327 @@
   "h3": [
     {
       "label": "router_seq_tau03",
-      "auroc": 0.6293803264480716,
-      "ece": 0.30660377358490565,
-      "n": 848,
-      "n_positive": 43,
+      "headline_population": "scored",
+      "auroc": 0.5081632653061224,
+      "ece": 0.895910780669145,
+      "n": 269,
+      "n_positive": 24,
       "n_escalations": 1533,
       "degenerate": false,
-      "note": null
+      "note": null,
+      "n_excluded_from_scored": 579,
+      "excluded_from_scored_reason": "past_episode_end",
+      "excluded_counts": {
+        "past_episode_end": 579,
+        "within_episode_missing_slot": 0
+      },
+      "populations": {
+        "scored": {
+          "auroc": 0.5081632653061224,
+          "ece": 0.895910780669145,
+          "n": 269,
+          "n_positive": 24
+        },
+        "grid": {
+          "auroc": 0.6293803264480716,
+          "ece": 0.30660377358490565,
+          "n": 848,
+          "n_positive": 43
+        }
+      },
+      "populations_coincide": false,
+      "auroc_chance_disagreement": false,
+      "score_quantiles": {
+        "n": 0,
+        "mean": null,
+        "min": null,
+        "median": null,
+        "p90": null,
+        "p95": null,
+        "p99": null,
+        "max": null
+      }
     },
     {
       "label": "router_seq_tau05",
-      "auroc": 0.49875776397515525,
-      "ece": 0.05306603773584905,
-      "n": 848,
-      "n_positive": 43,
+      "headline_population": "scored",
+      "auroc": 0.497134670487106,
+      "ece": 0.0987012987012987,
+      "n": 385,
+      "n_positive": 36,
       "n_escalations": 12,
       "degenerate": false,
-      "note": null
+      "note": null,
+      "n_excluded_from_scored": 463,
+      "excluded_from_scored_reason": "past_episode_end",
+      "excluded_counts": {
+        "past_episode_end": 463,
+        "within_episode_missing_slot": 0
+      },
+      "populations": {
+        "scored": {
+          "auroc": 0.497134670487106,
+          "ece": 0.0987012987012987,
+          "n": 385,
+          "n_positive": 36
+        },
+        "grid": {
+          "auroc": 0.49875776397515525,
+          "ece": 0.05306603773584905,
+          "n": 848,
+          "n_positive": 43
+        }
+      },
+      "populations_coincide": false,
+      "auroc_chance_disagreement": false,
+      "score_quantiles": {
+        "n": 0,
+        "mean": null,
+        "min": null,
+        "median": null,
+        "p90": null,
+        "p95": null,
+        "p99": null,
+        "max": null
+      }
     },
     {
       "label": "router_seq_tau07",
+      "headline_population": "scored",
       "auroc": 0.5,
-      "ece": 0.05070754716981132,
-      "n": 848,
-      "n_positive": 43,
+      "ece": 0.08148148148148149,
+      "n": 405,
+      "n_positive": 33,
       "n_escalations": 0,
       "degenerate": true,
-      "note": "degenerate gate (zero escalations)"
+      "note": "degenerate gate (zero escalations)",
+      "n_excluded_from_scored": 443,
+      "excluded_from_scored_reason": "past_episode_end",
+      "excluded_counts": {
+        "past_episode_end": 443,
+        "within_episode_missing_slot": 0
+      },
+      "populations": {
+        "scored": {
+          "auroc": 0.5,
+          "ece": 0.08148148148148149,
+          "n": 405,
+          "n_positive": 33
+        },
+        "grid": {
+          "auroc": 0.5,
+          "ece": 0.05070754716981132,
+          "n": 848,
+          "n_positive": 43
+        }
+      },
+      "populations_coincide": false,
+      "auroc_chance_disagreement": false,
+      "score_quantiles": {
+        "n": 0,
+        "mean": null,
+        "min": null,
+        "median": null,
+        "p90": null,
+        "p95": null,
+        "p99": null,
+        "max": null
+      }
     },
     {
       "label": "sidekick_tau03",
-      "auroc": 0.5983388704318937,
-      "ece": 0.048789809239564726,
-      "n": 848,
-      "n_positive": 43,
+      "headline_population": "scored",
+      "auroc": 0.43315315315315317,
+      "ece": 0.07093439558787722,
+      "n": 400,
+      "n_positive": 30,
       "n_escalations": 0,
       "degenerate": true,
-      "note": "degenerate gate (zero escalations)"
+      "note": "degenerate gate (zero escalations)",
+      "n_excluded_from_scored": 448,
+      "excluded_from_scored_reason": "past_episode_end",
+      "excluded_counts": {
+        "past_episode_end": 448,
+        "within_episode_missing_slot": 0
+      },
+      "populations": {
+        "scored": {
+          "auroc": 0.43315315315315317,
+          "ece": 0.07093439558787722,
+          "n": 400,
+          "n_positive": 30
+        },
+        "grid": {
+          "auroc": 0.5983388704318937,
+          "ece": 0.048789809239564726,
+          "n": 848,
+          "n_positive": 43
+        }
+      },
+      "populations_coincide": false,
+      "auroc_chance_disagreement": true,
+      "score_quantiles": {
+        "n": 400,
+        "mean": 0.004065604412122786,
+        "min": 0.0,
+        "median": 0.0009240413945585293,
+        "p90": 0.01268099035669398,
+        "p95": 0.016744176328607623,
+        "p99": 0.027146716870541834,
+        "max": 0.034704566053076175
+      }
     },
     {
       "label": "sidekick_tau05",
-      "auroc": 0.6311425682507583,
-      "ece": 0.048790423149426915,
-      "n": 848,
-      "n_positive": 43,
+      "headline_population": "scored",
+      "auroc": 0.3867403314917127,
+      "ece": 0.08175322937048995,
+      "n": 396,
+      "n_positive": 34,
       "n_escalations": 0,
       "degenerate": true,
-      "note": "degenerate gate (zero escalations)"
+      "note": "degenerate gate (zero escalations)",
+      "n_excluded_from_scored": 452,
+      "excluded_from_scored_reason": "past_episode_end",
+      "excluded_counts": {
+        "past_episode_end": 452,
+        "within_episode_missing_slot": 0
+      },
+      "populations": {
+        "scored": {
+          "auroc": 0.3867403314917127,
+          "ece": 0.08175322937048995,
+          "n": 396,
+          "n_positive": 34
+        },
+        "grid": {
+          "auroc": 0.6311425682507583,
+          "ece": 0.048790423149426915,
+          "n": 848,
+          "n_positive": 43
+        }
+      },
+      "populations_coincide": false,
+      "auroc_chance_disagreement": true,
+      "score_quantiles": {
+        "n": 396,
+        "mean": 0.004105356488095901,
+        "min": 0.0,
+        "median": 0.0013150365655815346,
+        "p90": 0.013045024915614264,
+        "p95": 0.01640749818906157,
+        "p99": 0.019417950266744755,
+        "max": 0.023414338308319217
+      }
     },
     {
       "label": "sidekick_tau07",
-      "auroc": 0.6758630651451683,
-      "ece": 0.048779801013367895,
-      "n": 848,
-      "n_positive": 43,
+      "headline_population": "scored",
+      "auroc": 0.4407096171802054,
+      "ece": 0.08744343831892105,
+      "n": 393,
+      "n_positive": 36,
       "n_escalations": 0,
       "degenerate": true,
-      "note": "degenerate gate (zero escalations)"
+      "note": "degenerate gate (zero escalations)",
+      "n_excluded_from_scored": 455,
+      "excluded_from_scored_reason": "past_episode_end",
+      "excluded_counts": {
+        "past_episode_end": 455,
+        "within_episode_missing_slot": 0
+      },
+      "populations": {
+        "scored": {
+          "auroc": 0.4407096171802054,
+          "ece": 0.08744343831892105,
+          "n": 393,
+          "n_positive": 36
+        },
+        "grid": {
+          "auroc": 0.6758630651451683,
+          "ece": 0.048779801013367895,
+          "n": 848,
+          "n_positive": 43
+        }
+      },
+      "populations_coincide": false,
+      "auroc_chance_disagreement": true,
+      "score_quantiles": {
+        "n": 393,
+        "mean": 0.0041596151161934535,
+        "min": 0.0,
+        "median": 0.001261621416804973,
+        "p90": 0.012860665827441617,
+        "p95": 0.018484808417281576,
+        "p99": 0.023506716958196647,
+        "max": 0.024000544716228082
+      }
     }
   ],
+  "h3_headline_population": "scored",
+  "h3_populations": "scored is the primary H3 population: ticks at or before the episode's final step (decision points that existed). grid retains the published 5,10,...,40 tick grid, including post-episode filler scored as 0.0. Headline H3 uses scored.",
+  "h3_score_quantiles": {
+    "router_seq_tau03": {
+      "n": 0,
+      "mean": null,
+      "min": null,
+      "median": null,
+      "p90": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    },
+    "router_seq_tau05": {
+      "n": 0,
+      "mean": null,
+      "min": null,
+      "median": null,
+      "p90": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    },
+    "router_seq_tau07": {
+      "n": 0,
+      "mean": null,
+      "min": null,
+      "median": null,
+      "p90": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    },
+    "sidekick_tau03": {
+      "n": 400,
+      "mean": 0.004065604412122786,
+      "min": 0.0,
+      "median": 0.0009240413945585293,
+      "p90": 0.01268099035669398,
+      "p95": 0.016744176328607623,
+      "p99": 0.027146716870541834,
+      "max": 0.034704566053076175
+    },
+    "sidekick_tau05": {
+      "n": 396,
+      "mean": 0.004105356488095901,
+      "min": 0.0,
+      "median": 0.0013150365655815346,
+      "p90": 0.013045024915614264,
+      "p95": 0.01640749818906157,
+      "p99": 0.019417950266744755,
+      "max": 0.023414338308319217
+    },
+    "sidekick_tau07": {
+      "n": 393,
+      "mean": 0.0041596151161934535,
+      "min": 0.0,
+      "median": 0.001261621416804973,
+      "p90": 0.012860665827441617,
+      "p95": 0.018484808417281576,
+      "p99": 0.023506716958196647,
+      "max": 0.024000544716228082
+    }
+  },
   "headline_population": "all-episodes",
   "population_preamble": "Headline quality contrast uses all-episodes for every metric (crashed episode scores 0). Survivor columns/contrasts use episodes with error_type != 'crash'; a paired survivor contrast drops a (task_id, seed) pair if either side crashed.",
   "population_notes": [

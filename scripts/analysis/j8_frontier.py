@@ -64,6 +64,14 @@ POPULATION_PREAMBLE = (
     "with error_type != 'crash'; a paired survivor contrast drops a "
     "(task_id, seed) pair if either side crashed."
 )
+H3_HEADLINE_POPULATION = "scored"
+H3_POPULATIONS = (
+    "scored is the primary H3 population: ticks at or before the episode's "
+    "final step (decision points that existed). grid retains the published "
+    "5,10,...,40 tick grid, including post-episode filler scored as 0.0. "
+    "Headline H3 uses scored."
+)
+H3_EXCLUDED_REASON = "past_episode_end"
 
 
 def parse_arm_spec(spec: str) -> tuple[str, Path]:
@@ -813,6 +821,82 @@ def h3_row(
     }
 
 
+def tick_grid() -> list[int]:
+    return list(range(TICK_K, TICK_MAX + 1, TICK_K))
+
+
+def slot_score(slot: dict[str, Any] | None) -> float:
+    if slot is None:
+        return 0.0
+    if slot.get("score") is not None:
+        return float(slot["score"])
+    return 1.0 if slot.get("escalated") else 0.0
+
+
+def _linear_quantile(sorted_xs: list[float], p: float) -> float:
+    """Hyndman-Fan R7 (linear, numpy default): h = 1 + (n-1)p, 1-indexed."""
+    n = len(sorted_xs)
+    if n == 1:
+        return float(sorted_xs[0])
+    h = 1.0 + (n - 1) * float(p)
+    lo = max(1, min(n, math.floor(h)))
+    hi = max(1, min(n, math.ceil(h)))
+    a = float(sorted_xs[lo - 1])
+    b = float(sorted_xs[hi - 1])
+    if lo == hi:
+        return a
+    return a + (h - lo) * (b - a)
+
+
+def score_quantiles(scores: list[float]) -> dict[str, Any]:
+    """Quantiles of real gate p_ask values (not the 0/1 escalation fallback)."""
+    if not scores:
+        return {
+            "n": 0,
+            "mean": None,
+            "min": None,
+            "median": None,
+            "p90": None,
+            "p95": None,
+            "p99": None,
+            "max": None,
+        }
+    xs = sorted(float(s) for s in scores)
+    return {
+        "n": len(xs),
+        "mean": _json_number(statistics.fmean(xs)),
+        "min": _json_number(xs[0]),
+        "median": _json_number(_linear_quantile(xs, 0.5)),
+        "p90": _json_number(_linear_quantile(xs, 0.90)),
+        "p95": _json_number(_linear_quantile(xs, 0.95)),
+        "p99": _json_number(_linear_quantile(xs, 0.99)),
+        "max": _json_number(xs[-1]),
+    }
+
+
+def _h3_pop_fields(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "auroc": row.get("auroc"),
+        "ece": row.get("ece"),
+        "n": row.get("n"),
+        "n_positive": row.get("n_positive"),
+    }
+
+
+def auroc_exceeds_chance(value: Any) -> Optional[bool]:
+    if value is None:
+        return None
+    return bool(float(value) > 0.5)
+
+
+def h3_auroc_chance_disagreement(grid_auroc: Any, scored_auroc: Any) -> bool:
+    grid_above = auroc_exceeds_chance(grid_auroc)
+    scored_above = auroc_exceeds_chance(scored_auroc)
+    if grid_above is None or scored_above is None:
+        return False
+    return bool(grid_above != scored_above)
+
+
 def _events_path_for_result(result_path: Path) -> Path:
     return result_path.parent / "events.jsonl"
 
@@ -861,9 +945,14 @@ def collect_h3_for_arm(
     arm: dict[str, Any],
     labels: dict[str, list[int]],
 ) -> dict[str, Any]:
-    scores: list[float] = []
-    y: list[int] = []
+    grid_scores: list[float] = []
+    grid_y: list[int] = []
+    scored_scores: list[float] = []
+    scored_y: list[int] = []
+    real_p_ask: list[float] = []
     n_escalations = 0
+    n_excluded_past_end = 0
+    n_within_missing = 0
     loaded = arm["loaded"]
     runs: dict[tuple[str, int], dict[str, Any]] = loaded["runs"]
     # Locate events.jsonl beside each result.json via a second walk of the tree.
@@ -888,19 +977,58 @@ def collect_h3_for_arm(
         if lab_key not in labels:
             continue
         positives = {int(s) for s in labels[lab_key]}
+        steps = int(row.get("steps") or 0)
         by_step = gate_scores_from_events(events_index.get(key, Path()))
         n_escalations += sum(1 for slot in by_step.values() if slot.get("escalated"))
-        for tick in range(TICK_K, TICK_MAX + 1, TICK_K):
+        for tick in tick_grid():
             slot = by_step.get(tick)
+            grid_scores.append(slot_score(slot))
+            grid_y.append(1 if tick in positives else 0)
+            if tick > steps:
+                n_excluded_past_end += 1
+                continue
             if slot is None:
-                score = 0.0
+                n_within_missing += 1
             elif slot.get("score") is not None:
-                score = float(slot["score"])
-            else:
-                score = 1.0 if slot.get("escalated") else 0.0
-            scores.append(score)
-            y.append(1 if tick in positives else 0)
-    return h3_row(arm["label"], scores, y, n_escalations)
+                real_p_ask.append(float(slot["score"]))
+            scored_scores.append(slot_score(slot))
+            scored_y.append(1 if tick in positives else 0)
+    label = arm["label"]
+    grid = h3_row(label, grid_scores, grid_y, n_escalations)
+    scored = h3_row(label, scored_scores, scored_y, n_escalations)
+    coincide = (
+        scored.get("n") == grid.get("n")
+        and scored.get("auroc") == grid.get("auroc")
+        and scored.get("ece") == grid.get("ece")
+        and scored.get("n_positive") == grid.get("n_positive")
+    )
+    chance_disagree = h3_auroc_chance_disagreement(
+        grid.get("auroc"), scored.get("auroc")
+    )
+    return {
+        "label": label,
+        "headline_population": H3_HEADLINE_POPULATION,
+        "auroc": scored.get("auroc"),
+        "ece": scored.get("ece"),
+        "n": scored.get("n"),
+        "n_positive": scored.get("n_positive"),
+        "n_escalations": n_escalations,
+        "degenerate": scored.get("degenerate"),
+        "note": scored.get("note"),
+        "n_excluded_from_scored": n_excluded_past_end,
+        "excluded_from_scored_reason": H3_EXCLUDED_REASON,
+        "excluded_counts": {
+            H3_EXCLUDED_REASON: n_excluded_past_end,
+            "within_episode_missing_slot": n_within_missing,
+        },
+        "populations": {
+            "scored": _h3_pop_fields(scored),
+            "grid": _h3_pop_fields(grid),
+        },
+        "populations_coincide": coincide,
+        "auroc_chance_disagreement": chance_disagree,
+        "score_quantiles": score_quantiles(real_p_ask),
+    }
 
 
 def h3_calibration(
@@ -983,6 +1111,126 @@ def format_table(arms: dict[str, dict[str, Any]], refusals: list[str]) -> str:
             f"{fmt(arm.get('goal_pass_survivors'), 8)} "
             f"{fmt(arm.get('planner_calls_total'), 8, 0)} "
             f"{fmt(crash_pct, 12, 2)}"
+        )
+    return "\n".join(lines)
+
+
+def _fmt_metric(v: Any, width: int, digits: int = 4) -> str:
+    if v is None:
+        return f"{'NA':>{width}}"
+    if isinstance(v, float):
+        return f"{v:>{width}.{digits}f}"
+    if isinstance(v, bool):
+        return f"{str(v):>{width}}"
+    return f"{v:>{width}}"
+
+
+def h3_disagreement_lines(h3_rows: list[dict[str, Any]]) -> list[str]:
+    lines: list[str] = []
+    for row in h3_rows:
+        if not row.get("auroc_chance_disagreement"):
+            continue
+        pops = row.get("populations") or {}
+        grid_auroc = (pops.get("grid") or {}).get("auroc")
+        scored_auroc = (pops.get("scored") or {}).get("auroc")
+        grid_txt = "None" if grid_auroc is None else f"{float(grid_auroc):.4f}"
+        scored_txt = "None" if scored_auroc is None else f"{float(scored_auroc):.4f}"
+        lines.append(
+            "CONTRAST DISAGREEMENT: "
+            f"H3 AUROC {row.get('label')}: grid {grid_txt} vs scored "
+            f"{scored_txt} disagree on whether AUROC exceeds 0.5."
+        )
+    return lines
+
+
+def h3_population_notes(h3_rows: list[dict[str, Any]]) -> list[str]:
+    notes: list[str] = []
+    for row in h3_rows:
+        label = row.get("label")
+        if row.get("populations_coincide"):
+            notes.append(
+                f"{label}: scored and grid H3 populations coincide"
+            )
+        reason = row.get("excluded_from_scored_reason")
+        n_ex = row.get("n_excluded_from_scored")
+        if n_ex:
+            notes.append(
+                f"{label}: excluded {n_ex} ticks from scored ({reason})"
+            )
+    return notes
+
+
+def format_h3_table(h3_rows: list[dict[str, Any]]) -> str:
+    if not h3_rows:
+        return ""
+    lines: list[str] = [
+        H3_POPULATIONS,
+        f"headline H3 population: {H3_HEADLINE_POPULATION} (primary)",
+    ]
+    header = (
+        f"{'gate':<22} {'pop':<16} {'AUROC':>8} {'ECE':>8} "
+        f"{'n':>6} {'n_pos':>6} {'excl':>6} {'esc':>6} {'degen':>6}"
+    )
+    lines.append(header)
+    lines.append("-" * len(header))
+    for row in h3_rows:
+        pops = row.get("populations")
+        if not pops:
+            lines.append(
+                f"{str(row.get('label')):<22} "
+                f"{'NA':<16} {'NA':>8} {'NA':>8} "
+                f"{'NA':>6} {'NA':>6} {'NA':>6} "
+                f"{_fmt_metric(row.get('n_escalations'), 6, 0)} "
+                f"{_fmt_metric(row.get('degenerate'), 6)} "
+                f"  {row.get('note') or ''}".rstrip()
+            )
+            continue
+        for pop_name, primary in (("scored", True), ("grid", False)):
+            pop = pops.get(pop_name) or {}
+            pop_label = "scored (primary)" if primary else "grid"
+            excl = row.get("n_excluded_from_scored") if primary else 0
+            lines.append(
+                f"{str(row.get('label')):<22} {pop_label:<16} "
+                f"{_fmt_metric(pop.get('auroc'), 8)} "
+                f"{_fmt_metric(pop.get('ece'), 8)} "
+                f"{_fmt_metric(pop.get('n'), 6, 0)} "
+                f"{_fmt_metric(pop.get('n_positive'), 6, 0)} "
+                f"{_fmt_metric(excl, 6, 0)} "
+                f"{_fmt_metric(row.get('n_escalations'), 6, 0)} "
+                f"{_fmt_metric(row.get('degenerate'), 6)}"
+            )
+    for note in h3_population_notes(h3_rows):
+        lines.append(note)
+    for line in h3_disagreement_lines(h3_rows):
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def format_score_quantile_table(h3_rows: list[dict[str, Any]]) -> str:
+    if not h3_rows:
+        return ""
+    lines: list[str] = [
+        "real p_ask quantiles (scored ticks that emitted a probability; "
+        "excludes the 0/1 escalation fallback)"
+    ]
+    header = (
+        f"{'gate':<22} {'n':>6} {'mean':>10} {'min':>10} {'median':>10} "
+        f"{'p90':>10} {'p95':>10} {'p99':>10} {'max':>10}"
+    )
+    lines.append(header)
+    lines.append("-" * len(header))
+    for row in h3_rows:
+        q = row.get("score_quantiles") or {}
+        lines.append(
+            f"{str(row.get('label')):<22} "
+            f"{_fmt_metric(q.get('n'), 6, 0)} "
+            f"{_fmt_metric(q.get('mean'), 10, 6)} "
+            f"{_fmt_metric(q.get('min'), 10, 6)} "
+            f"{_fmt_metric(q.get('median'), 10, 6)} "
+            f"{_fmt_metric(q.get('p90'), 10, 6)} "
+            f"{_fmt_metric(q.get('p95'), 10, 6)} "
+            f"{_fmt_metric(q.get('p99'), 10, 6)} "
+            f"{_fmt_metric(q.get('max'), 10, 6)}"
         )
     return "\n".join(lines)
 
@@ -1111,6 +1359,13 @@ def build_report(
         "oracle_headroom": headroom,
         "f1": f1_rows,
         "h3": h3,
+        "h3_headline_population": H3_HEADLINE_POPULATION,
+        "h3_populations": H3_POPULATIONS,
+        "h3_score_quantiles": {
+            row["label"]: row.get("score_quantiles")
+            for row in h3
+            if isinstance(row, dict) and row.get("label") is not None
+        },
         "headline_population": HEADLINE_POPULATION,
         "population_preamble": POPULATION_PREAMBLE,
         "population_notes": population_notes(arms),
@@ -1155,6 +1410,14 @@ def main(argv: list[str] | None = None) -> int:
         print(line)
     for line in report.get("population_disagreements_text") or []:
         print(line)
+    h3_table = format_h3_table(report.get("h3") or [])
+    if h3_table:
+        print()
+        print(h3_table)
+    q_table = format_score_quantile_table(report.get("h3") or [])
+    if q_table:
+        print()
+        print(q_table)
     if report.get("headline"):
         print(f"\nheadline: {report['headline']}")
     else:
