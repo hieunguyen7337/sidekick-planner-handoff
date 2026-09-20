@@ -309,7 +309,7 @@ def test_cmd_ok() -> str:
 
 
 def test_smoke_error_type() -> str:
-    """Any non-null branch_error_type FATALS; first three details are printed."""
+    """Infrastructure crash rows FATAL; first three details are printed."""
     rows = [
         _smoke_row(
             task_id=f"err_{i}",
@@ -331,7 +331,106 @@ def test_smoke_error_type() -> str:
     assert "smoke error_detail: HTTPStatusError: 404 row 2" in out
     assert "live_planner_calls_sum=" in out
     assert "branch_planner_calls_tick_sum=" in out
+    assert "crash=3" in out
     return out
+
+
+def test_smoke_limit_ok() -> str:
+    """Ordinary step-limit ending must not FATAL; count line shows limit=1."""
+    row = _smoke_row(branch_error_type="limit")
+    out = expect_ok(
+        "smoke_ok",
+        "limit=1",
+        out_root=make_smoke_outroot("smoke_limit", [row]),
+    )
+    assert "error_type_counts=" in out
+    return out
+
+
+def test_smoke_parse_error_ok() -> str:
+    """Ordinary unparseable executor turn must not FATAL."""
+    row = _smoke_row(branch_error_type="parse_error")
+    out = expect_ok(
+        "smoke_ok",
+        "parse_error=1",
+        out_root=make_smoke_outroot("smoke_parse_error", [row]),
+    )
+    return out
+
+
+def test_smoke_crash_fatal() -> str:
+    """A crash row FATALS and prints branch_error_detail."""
+    row = _smoke_row(
+        branch_error_type="crash",
+        branch_error_detail="HTTPStatusError: 404 The model 'sft_b' does not exist",
+    )
+    out = expect_fatal(
+        "smoke_error",
+        "FATAL: smoke gate: 1 rows with branch_error_type",
+        out_root=make_smoke_outroot("smoke_crash", [row]),
+    )
+    assert "smoke error_detail: HTTPStatusError: 404 The model 'sft_b' does not exist" in out
+    assert "crash=1" in out
+    return out
+
+
+def test_smoke_api_error_fatal() -> str:
+    """api_error is an infrastructure fault and FATALS."""
+    row = _smoke_row(
+        branch_error_type="api_error",
+        branch_error_detail="planner 429",
+    )
+    out = expect_fatal(
+        "smoke_error",
+        "FATAL: smoke gate: 1 rows with branch_error_type",
+        out_root=make_smoke_outroot("smoke_api_error", [row]),
+    )
+    assert "api_error=1" in out
+    return out
+
+
+def test_smoke_timeout_fatal() -> str:
+    """timeout is an infrastructure fault and FATALS."""
+    row = _smoke_row(
+        branch_error_type="timeout",
+        branch_error_detail="planner stall",
+    )
+    out = expect_fatal(
+        "smoke_error",
+        "FATAL: smoke gate: 1 rows with branch_error_type",
+        out_root=make_smoke_outroot("smoke_timeout", [row]),
+    )
+    assert "timeout=1" in out
+    return out
+
+
+def test_smoke_limit_plus_crash_fatal() -> str:
+    """Mixed ordinary + infrastructure: FATAL, and the count line shows both."""
+    rows = [
+        _smoke_row(task_id="lim", branch_error_type="limit"),
+        _smoke_row(
+            task_id="cr",
+            branch_error_type="crash",
+            branch_error_detail="boom",
+        ),
+    ]
+    out = expect_fatal(
+        "smoke_error",
+        "FATAL: smoke gate: 1 rows with branch_error_type",
+        out_root=make_smoke_outroot("smoke_limit_crash", rows),
+    )
+    assert "limit=1" in out
+    assert "crash=1" in out
+    assert "smoke error_detail: boom" in out
+    return out
+
+
+def test_fatal_set_named_once() -> None:
+    """Policy is one named list; both smoke Python snippets consume it as argv."""
+    pbs = PBS.read_text(encoding="utf-8")
+    assert pbs.count("B1_SMOKE_FATAL_ERROR_TYPES=(") == 1
+    assert "B1_SMOKE_FATAL_ERROR_TYPES=(crash api_error timeout)" in pbs
+    assert pbs.count('"${B1_SMOKE_FATAL_ERROR_TYPES[@]}"') == 2
 
 
 def test_smoke_no_live_step() -> str:
@@ -390,6 +489,101 @@ def test_port_pick() -> str:
     port = int(m.group(1))
     assert 20000 <= port < 40000, port
     return out
+
+
+_LORA_OK_BODY = json.dumps(
+    {
+        "object": "list",
+        "data": [
+            {"id": "ibm-granite/granite-4.2-8b"},
+            {"id": "sft_b"},
+        ],
+    }
+)
+_LORA_MISSING_BODY = json.dumps(
+    {
+        "object": "list",
+        "data": [
+            {"id": "ibm-granite/granite-4.2-8b"},
+            {"id": "sft_b_plus"},
+        ],
+    }
+)
+
+
+def test_lora_ids_ok() -> str:
+    """Well-formed /v1/models containing the required alias → succeeds and prints ids."""
+    out = expect_ok(
+        "lora_ids_ok",
+        "vllm /v1/models ids=",
+        extra_env={
+            "GUARD_LORA_BODY": _LORA_OK_BODY,
+            "GUARD_LORA_ALIASES": "sft_b",
+        },
+    )
+    assert "sft_b" in out, f"lora_ids_ok: required alias not printed\n{out}"
+    assert "required_aliases=['sft_b']" in out, (
+        f"lora_ids_ok: missing required_aliases print\n{out}"
+    )
+    assert "ibm-granite/granite-4.2-8b" in out, (
+        f"lora_ids_ok: base model id not printed\n{out}"
+    )
+    return out
+
+
+def test_lora_ids_missing() -> str:
+    """Well-formed body missing the required alias → FATAL naming the alias."""
+    out = expect_fatal(
+        "lora_ids_missing",
+        "FATAL: vllm /v1/models missing lora alias(es):",
+        extra_env={
+            "GUARD_LORA_BODY": _LORA_MISSING_BODY,
+            "GUARD_LORA_ALIASES": "sft_b",
+        },
+    )
+    assert "sft_b" in out, f"lora_ids_missing: missing alias not named\n{out}"
+    assert "empty body" not in out, f"lora_ids_missing: blamed empty body\n{out}"
+    return out
+
+
+def test_lora_ids_not_json() -> str:
+    """A body that is genuinely not JSON → FATAL with the parse message."""
+    out = expect_fatal(
+        "lora_ids_not_json",
+        "FATAL: /v1/models JSON did not parse:",
+        extra_env={
+            "GUARD_LORA_BODY": "<html><title>Error</title></html>",
+            "GUARD_LORA_ALIASES": "sft_b",
+        },
+    )
+    assert "empty body" not in out, (
+        f"lora_ids_not_json: non-JSON body reported as empty\n{out}"
+    )
+    return out
+
+
+def test_lora_ids_empty() -> str:
+    """Empty body → FATAL that names emptiness, not a JSON syntax error."""
+    out = expect_fatal(
+        "lora_ids_empty",
+        "FATAL: /v1/models body is empty",
+        extra_env={
+            "GUARD_LORA_BODY": "",
+            "GUARD_LORA_ALIASES": "sft_b",
+        },
+    )
+    assert "Expecting value" not in out, (
+        f"lora_ids_empty: blamed JSON parse instead of empty body\n{out}"
+    )
+    return out
+
+
+def test_lora_ids_pipe_does_not_use_heredoc() -> None:
+    """`python -` plus a heredoc steals stdin from the piped body (job 25558683)."""
+    pbs = PBS.read_text(encoding="utf-8")
+    assert '| "${PY}" - "$@"' not in pbs
+    assert "b1_vllm_require_lora_ids" in pbs
+    assert '"${PY}" -c' in pbs
 
 
 def test_c1_source_contract() -> None:
@@ -487,10 +681,22 @@ def main() -> int:
         ("cmd_schedule_live", test_cmd_schedule_live),
         ("cmd_ok", test_cmd_ok),
         ("smoke_error_type", test_smoke_error_type),
+        ("smoke_limit_ok", test_smoke_limit_ok),
+        ("smoke_parse_error_ok", test_smoke_parse_error_ok),
+        ("smoke_crash_fatal", test_smoke_crash_fatal),
+        ("smoke_api_error_fatal", test_smoke_api_error_fatal),
+        ("smoke_timeout_fatal", test_smoke_timeout_fatal),
+        ("smoke_limit_plus_crash_fatal", test_smoke_limit_plus_crash_fatal),
+        ("fatal_set_named_once", test_fatal_set_named_once),
         ("smoke_no_live_step", test_smoke_no_live_step),
         ("smoke_zero_tokens", test_smoke_zero_tokens),
         ("smoke_ok", test_smoke_ok),
         ("port_pick", test_port_pick),
+        ("lora_ids_ok", test_lora_ids_ok),
+        ("lora_ids_missing", test_lora_ids_missing),
+        ("lora_ids_not_json", test_lora_ids_not_json),
+        ("lora_ids_empty", test_lora_ids_empty),
+        ("lora_ids_pipe_does_not_use_heredoc", test_lora_ids_pipe_does_not_use_heredoc),
         ("c1_source_contract", test_c1_source_contract),
     ]
     for name, fn in tests:

@@ -40,6 +40,10 @@
 FORBIDDEN_HJ6_ROOT="/scratch/n12194778/sidekick/results/hj6_branches_train_20260917"
 B1_EXPECTED_BRANCHES=1600
 B1_EXPECTED_CAP=10000
+# Infrastructure faults FATAL the smoke. Ordinary episode outcomes
+# (limit, parse_error, None) must not. Passed into both smoke Python
+# snippets so the policy lives in this one named list.
+B1_SMOKE_FATAL_ERROR_TYPES=(crash api_error timeout)
 
 b1_canon() {
   local p="$1"
@@ -229,12 +233,15 @@ b1_pick_vllm_port () {
 
 print_smoke_spend () {
   local out_root="$1"
-  "${PY}" - "${out_root}" <<'PY'
+  "${PY}" - "${out_root}" "${B1_SMOKE_FATAL_ERROR_TYPES[@]}" <<'PY'
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 root = Path(sys.argv[1])
+# Policy: B1_SMOKE_FATAL_ERROR_TYPES in this PBS (the only named list).
+SMOKE_FATAL_ERROR_TYPES = frozenset(sys.argv[2:])
 path = root / "branch_runs.jsonl"
 rows = []
 if path.is_file():
@@ -253,13 +260,16 @@ token_sum = 0
 unknown_live = 0
 unknown_tick = 0
 error_rows = []
+error_type_counts = Counter()
 live_step = False
 for row in rows:
     if row.get("_unparseable"):
         unknown_live += 1
         unknown_tick += 1
         continue
-    if row.get("branch_error_type"):
+    et = row.get("branch_error_type")
+    error_type_counts["None" if et is None else str(et)] += 1
+    if et in SMOKE_FATAL_ERROR_TYPES:
         error_rows.append(row)
     live = row.get("branch_live_planner_calls") if "branch_live_planner_calls" in row else None
     if "branch_live_planner_calls" not in row or row.get("branch_live_planner_calls") is None:
@@ -282,10 +292,12 @@ for row in rows:
     except (TypeError, ValueError):
         pass
 
+counts_s = ",".join(f"{k}={v}" for k, v in sorted(error_type_counts.items()))
 print(
     f"[b1] smoke spend: n_rows={n} live_planner_calls_sum={live_sum} "
     f"branch_planner_calls_tick_sum={tick_sum} planner_tokens_sum={token_sum} "
-    f"unknown_live_call_rows={unknown_live} unknown_call_rows={unknown_tick} jsonl={path}"
+    f"unknown_live_call_rows={unknown_live} unknown_call_rows={unknown_tick} "
+    f"error_type_counts={counts_s} jsonl={path}"
 )
 
 failed = 0
@@ -312,12 +324,14 @@ PY
 
 b1_smoke_error_count () {
   local jsonl="$1"
-  "${PY}" - "${jsonl}" <<'PY'
+  "${PY}" - "${jsonl}" "${B1_SMOKE_FATAL_ERROR_TYPES[@]}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+# Policy: B1_SMOKE_FATAL_ERROR_TYPES in this PBS (the only named list).
+SMOKE_FATAL_ERROR_TYPES = frozenset(sys.argv[2:])
 n = 0
 if path.is_file():
     for raw in path.read_text(encoding="utf-8").splitlines():
@@ -327,7 +341,7 @@ if path.is_file():
             row = json.loads(raw)
         except json.JSONDecodeError:
             continue
-        if row.get("branch_error_type"):
+        if row.get("branch_error_type") in SMOKE_FATAL_ERROR_TYPES:
             n += 1
 print(n)
 PY

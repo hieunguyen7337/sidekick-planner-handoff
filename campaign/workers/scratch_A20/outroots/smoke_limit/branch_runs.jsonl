@@ -1,0 +1,1 @@
+{"branch_error_detail": null, "branch_error_type": "limit", "branch_gpr": 0.5, "branch_live_planner_calls": 2, "branch_planner_calls": 4, "branch_planner_tokens": 120, "branch_seed": 101, "branch_steps": 10, "campaign": "hj4_correction_train_20260917", "condition": "treated", "i": 0, "replay_k": 3, "seed": 1, "task_id": "smoke_task"}
