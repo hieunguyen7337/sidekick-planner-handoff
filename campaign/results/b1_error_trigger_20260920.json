@@ -1,0 +1,582 @@
+{
+  "analysis_id": "b1_error_trigger_20260920",
+  "n_branch_rows": 1600,
+  "n_intervention_points": 200,
+  "n_analysed": 200,
+  "n_excluded": 0,
+  "exclusions": {
+    "missing_gpr": [],
+    "missing_events": []
+  },
+  "delta_definition": "mean(branch_gpr | treated) - mean(branch_gpr | untreated)",
+  "help_threshold": 0.166,
+  "harm_threshold": -0.166,
+  "n_help": 17,
+  "n_harm": 19,
+  "n_neutral": 164,
+  "base_rate_help": 0.085,
+  "base_rate_harm": 0.095,
+  "mean_delta_all_analysed": 0.0048183333333333325,
+  "error_representation": {
+    "how": "Environment errors are not Event.error_type and not an observation payload field. They are the environment's observation text when a CODE action raised. The literal envelope is 'Execution failed. Traceback:' followed by a short traceback and usually a final Exception:/TypeError:/KeyError: line. Event.error_type is used only for system limit events at max_steps.",
+    "primary_marker": "Execution failed. Traceback:",
+    "citation": "/scratch/n12194778/sidekick/results/hj4_correction_train_20260917/fixed_k/2/2a163ab_3/events.jsonl:5",
+    "quoted_observation_text_head": "Execution failed. Traceback:\n  File \"<python-input>\", line 2, in <module>\n    print(apis.api_docs.show_api_doc(app_name=\"phone\", api_name=\"search_contact_relationships\"))\nException: Response status code is 422:",
+    "candidates_inspected": {
+      "Traceback (most recent call last)": "absent in all 4691 observations of the source campaign",
+      "observation.payload.error_type": "field never present",
+      "Event.error_type": "only 'limit' (36 events); not env errors",
+      "event_type==error": "system max_steps, not observations",
+      "Exception:": "785/1032 execution-failed observations",
+      "Error:": "231/1032 execution-failed observations (TypeError/KeyError etc.)",
+      "Execution failed. Traceback:": "1032/1032 execution-failed observations"
+    },
+    "source_campaign_observation_scan": {
+      "n_episode_files": 270,
+      "n_observations": 4691,
+      "n_with_execution_failed_traceback": 1032
+    }
+  },
+  "windows": {
+    "1": "observation events with step == intervention_step - 1",
+    "3": "observation events with step in {intervention_step-1, -2, -3}"
+  },
+  "results": {
+    "execution_failed_traceback": {
+      "definition": {
+        "id": "execution_failed_traceback",
+        "kind": "observation_text",
+        "marker": "Execution failed. Traceback:",
+        "primary": true,
+        "citation": "/scratch/n12194778/sidekick/results/hj4_correction_train_20260917/fixed_k/2/2a163ab_3/events.jsonl:5",
+        "quoted_fragment": "Execution failed. Traceback:\\n  File \"<python-input>\", line 2, in <module>"
+      },
+      "windows": {
+        "1": {
+          "window_preceding_steps": 1,
+          "help": {
+            "n": 200,
+            "n_flagged": 46,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 8,
+              "recent_error_otherwise": 38,
+              "no_recent_error_target": 9,
+              "no_recent_error_otherwise": 145
+            },
+            "precision": 0.17391304347826086,
+            "precision_wilson_95ci": [
+              0.09085791702246312,
+              0.3072335371637849
+            ],
+            "recall": 0.47058823529411764,
+            "base_rate": 0.085,
+            "lift_over_base": 2.046035805626598,
+            "precision_bootstrap_95ci": [
+              0.06818181818181818,
+              0.2916666666666667
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 46,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 5,
+              "recent_error_otherwise": 41,
+              "no_recent_error_target": 14,
+              "no_recent_error_otherwise": 140
+            },
+            "precision": 0.10869565217391304,
+            "precision_wilson_95ci": [
+              0.04733145858098943,
+              0.2303782864425083
+            ],
+            "recall": 0.2631578947368421,
+            "base_rate": 0.095,
+            "lift_over_base": 1.1441647597254003,
+            "precision_bootstrap_95ci": [
+              0.029411764705882353,
+              0.2127659574468085
+            ]
+          },
+          "mean_delta_flagged": 0.013222826086956525,
+          "mean_delta_unflagged": 0.0023079004329004307,
+          "mean_delta_diff": 0.010914925654056095,
+          "mean_delta_diff_bootstrap_95ci": [
+            -0.03831120499030432,
+            0.06030335210210202
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 0
+          }
+        },
+        "3": {
+          "window_preceding_steps": 3,
+          "help": {
+            "n": 200,
+            "n_flagged": 87,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 10,
+              "recent_error_otherwise": 77,
+              "no_recent_error_target": 7,
+              "no_recent_error_otherwise": 106
+            },
+            "precision": 0.11494252873563218,
+            "precision_wilson_95ci": [
+              0.06364547795653458,
+              0.19880582049468454
+            ],
+            "recall": 0.5882352941176471,
+            "base_rate": 0.085,
+            "lift_over_base": 1.352265043948614,
+            "precision_bootstrap_95ci": [
+              0.05061708860759494,
+              0.1839080459770115
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 87,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 8,
+              "recent_error_otherwise": 79,
+              "no_recent_error_target": 11,
+              "no_recent_error_otherwise": 102
+            },
+            "precision": 0.09195402298850575,
+            "precision_wilson_95ci": [
+              0.047332892255086745,
+              0.17108564789471262
+            ],
+            "recall": 0.42105263157894735,
+            "base_rate": 0.095,
+            "lift_over_base": 0.9679370840895342,
+            "precision_bootstrap_95ci": [
+              0.03896103896103896,
+              0.1600123456790123
+            ]
+          },
+          "mean_delta_flagged": 0.006596743295019157,
+          "mean_delta_unflagged": 0.003449115044247786,
+          "mean_delta_diff": 0.003147628250771371,
+          "mean_delta_diff_bootstrap_95ci": [
+            -0.032662810689352235,
+            0.038232867421201175
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 0
+          }
+        }
+      }
+    },
+    "exception_colon": {
+      "definition": {
+        "id": "exception_colon",
+        "kind": "observation_text",
+        "marker": "Exception:",
+        "primary": false,
+        "citation": "/scratch/n12194778/sidekick/results/hj4_correction_train_20260917/fixed_k/2/2a163ab_3/events.jsonl:5",
+        "quoted_fragment": "Exception: Response status code is 422:"
+      },
+      "windows": {
+        "1": {
+          "window_preceding_steps": 1,
+          "help": {
+            "n": 200,
+            "n_flagged": 34,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 7,
+              "recent_error_otherwise": 27,
+              "no_recent_error_target": 10,
+              "no_recent_error_otherwise": 156
+            },
+            "precision": 0.20588235294117646,
+            "precision_wilson_95ci": [
+              0.10349526899031913,
+              0.36798388051163594
+            ],
+            "recall": 0.4117647058823529,
+            "base_rate": 0.085,
+            "lift_over_base": 2.422145328719723,
+            "precision_bootstrap_95ci": [
+              0.07687500000000001,
+              0.35135135135135137
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 34,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 3,
+              "recent_error_otherwise": 31,
+              "no_recent_error_target": 16,
+              "no_recent_error_otherwise": 150
+            },
+            "precision": 0.08823529411764706,
+            "precision_wilson_95ci": [
+              0.030465943674648555,
+              0.22960486562808868
+            ],
+            "recall": 0.15789473684210525,
+            "base_rate": 0.095,
+            "lift_over_base": 0.9287925696594428,
+            "precision_bootstrap_95ci": [
+              0.0,
+              0.2
+            ]
+          },
+          "mean_delta_flagged": 0.02333823529411765,
+          "mean_delta_unflagged": 0.0010251004016064238,
+          "mean_delta_diff": 0.022313134892511226,
+          "mean_delta_diff_bootstrap_95ci": [
+            -0.03802596040586838,
+            0.08460775117297853
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 0
+          }
+        },
+        "3": {
+          "window_preceding_steps": 3,
+          "help": {
+            "n": 200,
+            "n_flagged": 65,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 7,
+              "recent_error_otherwise": 58,
+              "no_recent_error_target": 10,
+              "no_recent_error_otherwise": 125
+            },
+            "precision": 0.1076923076923077,
+            "precision_wilson_95ci": [
+              0.053154219531127755,
+              0.20601313581449843
+            ],
+            "recall": 0.4117647058823529,
+            "base_rate": 0.085,
+            "lift_over_base": 1.2669683257918551,
+            "precision_bootstrap_95ci": [
+              0.03569862155388471,
+              0.18840579710144928
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 65,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 5,
+              "recent_error_otherwise": 60,
+              "no_recent_error_target": 14,
+              "no_recent_error_otherwise": 121
+            },
+            "precision": 0.07692307692307693,
+            "precision_wilson_95ci": [
+              0.03330350149516352,
+              0.1677593327011
+            ],
+            "recall": 0.2631578947368421,
+            "base_rate": 0.095,
+            "lift_over_base": 0.8097165991902834,
+            "precision_bootstrap_95ci": [
+              0.017543859649122806,
+              0.15002358490566026
+            ]
+          },
+          "mean_delta_flagged": 0.005810256410256413,
+          "mean_delta_unflagged": 0.004340740740740738,
+          "mean_delta_diff": 0.001469515669515675,
+          "mean_delta_diff_bootstrap_95ci": [
+            -0.03644029916417324,
+            0.03856600453930058
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 0
+          }
+        }
+      }
+    },
+    "error_colon": {
+      "definition": {
+        "id": "error_colon",
+        "kind": "observation_text",
+        "marker": "Error:",
+        "primary": false,
+        "citation": "/scratch/n12194778/sidekick/results/hj4_correction_train_20260917/fixed_k/2/2a163ab_3/events.jsonl:11",
+        "quoted_fragment": "TypeError: list indices must be integers or slices, not str"
+      },
+      "windows": {
+        "1": {
+          "window_preceding_steps": 1,
+          "help": {
+            "n": 200,
+            "n_flagged": 10,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 0,
+              "recent_error_otherwise": 10,
+              "no_recent_error_target": 17,
+              "no_recent_error_otherwise": 173
+            },
+            "precision": 0.0,
+            "precision_wilson_95ci": [
+              0.0,
+              0.2775327998628892
+            ],
+            "recall": 0.0,
+            "base_rate": 0.085,
+            "lift_over_base": 0.0,
+            "precision_bootstrap_95ci": [
+              0.0,
+              0.0
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 10,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 2,
+              "recent_error_otherwise": 8,
+              "no_recent_error_target": 17,
+              "no_recent_error_otherwise": 173
+            },
+            "precision": 0.2,
+            "precision_wilson_95ci": [
+              0.05668215145437519,
+              0.5098375284633583
+            ],
+            "recall": 0.10526315789473684,
+            "base_rate": 0.095,
+            "lift_over_base": 2.1052631578947367,
+            "precision_bootstrap_95ci": [
+              0.0,
+              0.5
+            ]
+          },
+          "mean_delta_flagged": -0.043524999999999994,
+          "mean_delta_unflagged": 0.007362719298245612,
+          "mean_delta_diff": -0.05088771929824561,
+          "mean_delta_diff_bootstrap_95ci": [
+            -0.10384945112619913,
+            -0.007574056843497664
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 0
+          }
+        },
+        "3": {
+          "window_preceding_steps": 3,
+          "help": {
+            "n": 200,
+            "n_flagged": 24,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 2,
+              "recent_error_otherwise": 22,
+              "no_recent_error_target": 15,
+              "no_recent_error_otherwise": 161
+            },
+            "precision": 0.08333333333333333,
+            "precision_wilson_95ci": [
+              0.023158815297043306,
+              0.25848802193210685
+            ],
+            "recall": 0.11764705882352941,
+            "base_rate": 0.085,
+            "lift_over_base": 0.980392156862745,
+            "precision_bootstrap_95ci": [
+              0.0,
+              0.21052631578947367
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 24,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 4,
+              "recent_error_otherwise": 20,
+              "no_recent_error_target": 15,
+              "no_recent_error_otherwise": 161
+            },
+            "precision": 0.16666666666666666,
+            "precision_wilson_95ci": [
+              0.06678676328632951,
+              0.3585307064969906
+            ],
+            "recall": 0.21052631578947367,
+            "base_rate": 0.095,
+            "lift_over_base": 1.7543859649122806,
+            "precision_bootstrap_95ci": [
+              0.037003968253968254,
+              0.3333333333333333
+            ]
+          },
+          "mean_delta_flagged": -0.01308333333333333,
+          "mean_delta_unflagged": 0.007259469696969695,
+          "mean_delta_diff": -0.020342803030303024,
+          "mean_delta_diff_bootstrap_95ci": [
+            -0.06719016194508642,
+            0.03086335714285714
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 0
+          }
+        }
+      }
+    },
+    "event_error_type_nonnull": {
+      "definition": {
+        "id": "event_error_type_nonnull",
+        "kind": "event_error_type",
+        "marker": "event.error_type is not None",
+        "primary": false,
+        "citation": "/scratch/n12194778/sidekick/results/hj4_correction_train_20260917/fixed_k/2/2a163ab_3/events.jsonl:92",
+        "quoted_fragment": "error_type='limit' event_type=error (max_steps); not an environment observation"
+      },
+      "windows": {
+        "1": {
+          "window_preceding_steps": 1,
+          "help": {
+            "n": 200,
+            "n_flagged": 0,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 0,
+              "recent_error_otherwise": 0,
+              "no_recent_error_target": 17,
+              "no_recent_error_otherwise": 183
+            },
+            "precision": null,
+            "precision_wilson_95ci": [
+              null,
+              null
+            ],
+            "recall": 0.0,
+            "base_rate": 0.085,
+            "lift_over_base": null,
+            "precision_bootstrap_95ci": [
+              null,
+              null
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 0,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 0,
+              "recent_error_otherwise": 0,
+              "no_recent_error_target": 19,
+              "no_recent_error_otherwise": 181
+            },
+            "precision": null,
+            "precision_wilson_95ci": [
+              null,
+              null
+            ],
+            "recall": 0.0,
+            "base_rate": 0.095,
+            "lift_over_base": null,
+            "precision_bootstrap_95ci": [
+              null,
+              null
+            ]
+          },
+          "mean_delta_flagged": null,
+          "mean_delta_unflagged": 0.0048183333333333325,
+          "mean_delta_diff": null,
+          "mean_delta_diff_bootstrap_95ci": [
+            null,
+            null
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 2000
+          }
+        },
+        "3": {
+          "window_preceding_steps": 3,
+          "help": {
+            "n": 200,
+            "n_flagged": 0,
+            "n_target": 17,
+            "table": {
+              "recent_error_target": 0,
+              "recent_error_otherwise": 0,
+              "no_recent_error_target": 17,
+              "no_recent_error_otherwise": 183
+            },
+            "precision": null,
+            "precision_wilson_95ci": [
+              null,
+              null
+            ],
+            "recall": 0.0,
+            "base_rate": 0.085,
+            "lift_over_base": null,
+            "precision_bootstrap_95ci": [
+              null,
+              null
+            ]
+          },
+          "harm": {
+            "n": 200,
+            "n_flagged": 0,
+            "n_target": 19,
+            "table": {
+              "recent_error_target": 0,
+              "recent_error_otherwise": 0,
+              "no_recent_error_target": 19,
+              "no_recent_error_otherwise": 181
+            },
+            "precision": null,
+            "precision_wilson_95ci": [
+              null,
+              null
+            ],
+            "recall": 0.0,
+            "base_rate": 0.095,
+            "lift_over_base": null,
+            "precision_bootstrap_95ci": [
+              null,
+              null
+            ]
+          },
+          "mean_delta_flagged": null,
+          "mean_delta_unflagged": 0.0048183333333333325,
+          "mean_delta_diff": null,
+          "mean_delta_diff_bootstrap_95ci": [
+            null,
+            null
+          ],
+          "bootstrap": {
+            "n_resamples": 2000,
+            "seed": 0,
+            "n_skipped_empty_class": 2000
+          }
+        }
+      }
+    }
+  }
+}

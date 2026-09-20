@@ -886,5 +886,64 @@ The following legacy scripts retain node-wide `pkill` and/or hardcoded port 8000
 
 These scripts are frozen historical artifacts and are not being resubmitted. Any future resubmission or template reuse must incorporate the C1 port isolation and scoped shutdown contracts before submission.
 
+## 🔻 OPEN 2026-09-20 — the executor is evaluated on INTERVENTION: turns it was trained to never see
+
+The executor adapter is evaluated on an input class it was never trained on. This is a
+specification conflict, not a coding bug.
+
+**Training strips planner interventions from the context, at three enforcement layers:**
+
+- `src/sidekick/training/matched_sft.py:316`, `:532`, `:711`, `:748` — `strip_interventions:
+  bool = True` at every public entry point; `:255` is the inner renderer's required parameter.
+- `src/sidekick/training/matched_sft.py:262` —
+  `working = [m for m in working if not _sft._is_intervention_turn(m)]`
+- `src/sidekick/training/matched_sft.py:445-446` — an example whose rendered context still contains
+  the mark is discarded: `drop(task_id, seed, DROP_INTERVENTION_LEAK)`.
+- `src/sidekick/training/matched_sft.py:597-600` — the writer refuses to emit such a dataset at all:
+  `raise RuntimeError("combined dataset contains an INTERVENTION: turn; refusing to write")`
+- The mark is `INTERVENTION:` [`src/sidekick/training/sft_data.py:48`]; the drop reason is named
+  `intervention_in_context` [`src/sidekick/training/sft_data.py:46`].
+
+**The runtime injects exactly that turn at evaluation time:**
+
+- `src/sidekick/systems/loop.py:748` and `:775` —
+  `exec_turns.append({"role": "user", "content": f"INTERVENTION: {correction}"})`
+- The same applies to the reply to an executor ASK, `ANSWER: {answer}`
+  [`src/sidekick/systems/loop.py:856`], and to `ASK_IGNORED` [`src/sidekick/systems/loop.py:881`,
+  `:898`].
+
+**Consequence.** `sft_b_plus_granite8b` has seen essentially zero `INTERVENTION:` turns in context
+during training (a read of the built dataset found 1 preserved such context in 497 rows, and that
+one was an `ANSWER:` context, not an `INTERVENTION:`) [INFERRED], while every J8 escalation and
+every B1 treated branch places one in its context.
+
+The naming (`DROP_INTERVENTION_LEAK`, `intervention_in_context`) shows the exclusion is
+deliberate: corrections are distilled into the base policy so the executor acts correctly
+*unprompted*. That is coherent, and it is the likely reason `sft_plan` performs as well as it
+does. It is also incompatible with the mechanism H2b requires — a policy that benefits from live
+assistance. The training objective and the evaluation protocol optimise different things.
+
+**What this changes.** Every escalation-related measurement in this project was taken through this
+mismatch and measures an untrained model's reaction to an off-distribution token, not the value of
+planner assistance. The measurements remain correct of the system as built; what changes is what
+they are evidence *about*. The set is recorded in `campaign/RUNS.md` §11: J8's gated arms and the
+finding that no arm beats `sft_plan`; B1's counterfactual Δ and its perfect-oracle ceiling (a
+lower bound on the mechanism, not a ceiling on it, because the executor cannot exploit
+interventions); the H3 gate AUROCs; and the D2 error-trigger test, underpowered at 17 positives —
+compatible with chance, not shown to be chance.
+
+**The remedy, recorded but not performed.** `src/sidekick/training/matched_sft.py:806` already
+exposes the switch: `strip = not args.no_strip_interventions`. Rebuilding the correction dataset
+with interventions retained and training a variant adapter is the decisive experiment. Two
+conditions on that experiment:
+
+1. It must also measure unprompted plan-following, because stripping plausibly guarded against a
+   real failure — a model trained with interventions in context may learn to wait for them, which
+   is what "leak" implies the authors feared.
+2. The intervention-conditioned signal is thin: 267 correction episodes, 775 action targets, from
+   90 train tasks × 3 seeds [INFERRED].
+
+This has **not** been run and requires the user's approval because it is a training run.
+
 
 
