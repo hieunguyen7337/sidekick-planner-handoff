@@ -134,7 +134,62 @@ These probabilities serve as the explicit anchor against which the realised resu
 - **Threat**: For tasks that the planner solved in fewer than $m$ steps (where the planner issued `COMPLETE` at step $t \le m$), replaying $m$ steps replays the entire solved trajectory. The executor never receives a handoff and the episode automatically records the planner's outcome [INFERRED].
 - **Mitigation**: Alongside the all-episodes headline population, the study will explicitly compute and report metrics for the **`handoff_occurred` population** (restricting to episodes where actual executor execution occurred post-step $m$) [INFERRED].
 
-### 7.3 Rationale for Comparator Shift (Claim C2 vs Claim F1)
+### 7.3 The Step Budget Is Shared, and Truncation Is a Live Alternative Explanation
+
+**The decision, fixed here before any HJ-12 episode runs.** `limits.max_steps` stays at **40 for
+every arm**, and for a prefix arm that budget is **shared**: the $m$ replayed planner steps consume
+step indices $1 \ldots m$ and the executor runs from $m+1$ to at most 40. The prefix arms are
+therefore **not** given 40 live executor steps on top of the replayed prefix.
+
+**Rationale**: 40 is a budget on interactions with the environment, not on one actor's effort.
+Holding the total constant is what makes "planner does the opening" a claim about *allocation of a
+fixed budget* rather than a claim that gets to spend more. The hybrid is expected to gain precisely
+because a planner step accomplishes more than an executor step, and that gain must show up within
+the same envelope or it is not a gain [INFERRED].
+
+**Threat**: this makes step exhaustion a real alternative explanation for any decline at high $m$.
+It is not hypothetical. The `sft_plan` arm on the intervention-aware adapter already ends **18 of
+114** episodes with `error_type: "limit"` [OBSERVED
+/scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260921iaware/*/*/*/result.json, literal
+count of `"error_type": "limit"` = 18]. `max_tokens_per_episode` is 2,000,000 and non-binding, so
+`limit` here means the 40-step cap [OBSERVED configs/hj8_sft_plan_bplus.yaml, `limits` block and its
+comment]. At $m=9$ the executor has 31 live steps rather than 40.
+
+**Mitigation (required reporting, not optional)**: the per-arm `limit` rate is reported beside every
+quality number, for both populations. **If the `limit` rate rises monotonically with $m$ while
+quality falls, the decline is attributed to truncation and not to the handoff**, and that reading is
+registered here in advance so it cannot be chosen after the fact. Episode counts by termination
+reason (`success`, `limit`, `crash`, `timeout`, `parse_error`, `api_error`) are reported per arm.
+
+**Prefix-arm handoff rates, measured in advance from the source recordings** (executed planner
+actions per episode over the 114 dev recordings; mean 13.4, min 5, max 24) [OBSERVED
+/scratch/n12194778/sidekick/results/hj1b_planner_20260915/planner_alone/*/*/events.jsonl, literal
+count of `"event_type": "action"` per episode]:
+
+| $m$ | episodes that hand off | share |
+|---:|---:|---:|
+| 2 | 114 / 114 | 100% |
+| 4 | 114 / 114 | 100% |
+| 6 | 111 / 114 | 97% |
+| 9 | 83 / 114 | 73% |
+
+Mean planner actions (13.4) plus the single plan call reconciles with the independently measured
+14.4 planner calls per episode for `planner_alone`, which is a consistency check on both figures
+[INFERRED].
+
+### 7.4 The Prefix Arm and `sft_plan` Share Their Plan
+
+`sft_plan` replays its plan packet from `hj1b_planner_20260915` via `packet_source` with
+`on_missing: fail` [OBSERVED configs/hj8_sft_plan_bplus.yaml, `planner` block]. `planner_alone` sets
+`plan_first=True` and every source episode records exactly one `plan` event [OBSERVED
+src/sidekick/systems/planner_alone.py, `policy_defaults`]. The prefix arm's executor therefore
+receives **the same plan, for the same task and seed, from the same recording**, because
+`_history_from_events` reconstructs the packet from that event [OBSERVED
+src/sidekick/training/sft_data.py:201-206]. The prefix arm differs from `sft_plan` in exactly one
+respect: the first $m$ steps have already been executed. This is recorded because a missing plan
+would have been a second, silent difference between the arms [INFERRED].
+
+### 7.5 Rationale for Comparator Shift (Claim C2 vs Claim F1)
 - **Threat**: In Claim F1 (J9 freeze), the registered comparator was `fixed_k(k_matched)` [OBSERVED docs/prereg_j9_freeze_20260920.md:46-58]. In Claim C2, the primary comparator is changed to `planner_alone` [INFERRED].
 - **Rationale**: The scientific question investigated has fundamentally changed:
   - Claim F1 asked whether an executor could match periodic expert advice while using fewer calls [OBSERVED docs/prereg_j9_freeze_20260920.md:49-50].
