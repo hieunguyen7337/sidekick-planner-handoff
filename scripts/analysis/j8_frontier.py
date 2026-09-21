@@ -103,11 +103,23 @@ FIXED_K_LABEL = re.compile(
 )
 CRASH_ERROR_TYPE = "crash"
 HEADLINE_POPULATION = "all-episodes"
+HANDOFF_ONLY_POPULATION = "handoff-only"
+NO_HANDOFF_POPULATION = "no-handoff"
+HANDOFF_ONLY_ALIASES = {HANDOFF_ONLY_POPULATION, "handoff_only"}
+NO_HANDOFF_ALIASES = {NO_HANDOFF_POPULATION, "no_handoff", "complement"}
+# Gap at which the reference is described as far higher on no-handoff
+# than on handoff-only. Five points is inside the 7pp non-inferiority
+# margin; it is a reporting threshold, not a preregistered test.
+REFERENCE_FAR_HIGHER_PP = 5.0
 POPULATION_PREAMBLE = (
     "Headline quality contrast uses all-episodes for every metric "
     "(crashed episode scores 0). Survivor columns/contrasts use episodes "
     "with error_type != 'crash'; a paired survivor contrast drops a "
-    "(task_id, seed) pair if either side crashed."
+    "(task_id, seed) pair if either side crashed. "
+    "handoff-only restricts every arm in a contrast to the (task_id, seed) "
+    "keys where the comparison arm's report event has handoff_occurred "
+    "true (all-episodes scoring: crash = 0). no-handoff is the complement "
+    "(handoff_occurred false) on those same keys."
 )
 H3_HEADLINE_POPULATION = "scored"
 H3_POPULATIONS = (
@@ -401,6 +413,42 @@ def both_survived_subset(
     return left_ok, right_ok, n_dropped_crash, len(shared)
 
 
+def handoff_flag_keys(
+    cleaned: dict[tuple[str, int], dict[str, Any]],
+    occurred: bool,
+) -> set[tuple[str, int]]:
+    """Keys whose report payload has handoff_occurred is True/False.
+
+    Missing (None) is neither: it does not enter handoff-only or no-handoff.
+    """
+    want = bool(occurred)
+    return {
+        key
+        for key, row in cleaned.items()
+        if row.get("handoff_occurred") is want
+    }
+
+
+def restrict_to_defining_handoff(
+    defining: dict[tuple[str, int], dict[str, Any]],
+    others: list[dict[tuple[str, int], dict[str, Any]]],
+    occurred: bool,
+) -> tuple[set[tuple[str, int]], int, int]:
+    """Shared keys selected by the defining arm's handoff_occurred flag.
+
+    Pairing stays honest: the subset is defined on `defining`, then every
+    other map is restricted to that same (task_id, seed) set, never to
+    each arm's own handoff flag.
+    """
+    shared = set(defining)
+    for other in others:
+        shared &= set(other)
+    flag_keys = handoff_flag_keys(defining, occurred)
+    kept = shared & flag_keys
+    n_dropped_handoff = len(shared) - len(kept)
+    return kept, len(shared), n_dropped_handoff
+
+
 def total_planner_calls(
     cleaned: dict[tuple[str, int], dict[str, Any]],
 ) -> Optional[int]:
@@ -476,6 +524,18 @@ def population_notes(arms: dict[str, dict[str, Any]]) -> list[str]:
             notes.append(
                 f"{label}: 0 crashes; all-episodes and survivor populations coincide"
             )
+        if arm.get("handoff_only_coincides_with_all"):
+            notes.append(
+                f"{label}: every episode handed off; "
+                "handoff-only and all-episodes populations coincide"
+            )
+        else:
+            n_nh = int(arm.get("n_no_handoff") or 0)
+            if n_nh > 0:
+                notes.append(
+                    f"{label}: {n_nh} episodes did not hand off; "
+                    f"handoff-only n={int(arm.get('n_handoff_occurred') or 0)}"
+                )
         pct = arm.get("crash_per_call_pct")
         if pct is not None:
             rates.append((label, float(pct)))
@@ -800,6 +860,25 @@ def summarise_arm(
         or row.get("hash_ok") is not None
         or row.get("effective_m") is not None
     )
+    handoff_rows = [
+        row for row in cleaned_rows if row.get("handoff_occurred") is True
+    ]
+    no_handoff_rows = [
+        row for row in cleaned_rows if row.get("handoff_occurred") is False
+    ]
+    n_no_handoff = len(no_handoff_rows)
+    tgc_handoff_only = mean_quality(handoff_rows, "tgc", crash_as_zero=True)
+    tgc_no_handoff = mean_quality(no_handoff_rows, "tgc", crash_as_zero=True)
+    goal_pass_handoff_only = mean_quality(
+        handoff_rows, "goal_pass_rate", crash_as_zero=True
+    )
+    goal_pass_no_handoff = mean_quality(
+        no_handoff_rows, "goal_pass_rate", crash_as_zero=True
+    )
+    n_handoff_occurred = sum(
+        1 for row in cleaned_rows if row.get("handoff_occurred") is True
+    )
+    handoff_only_coincides_with_all = bool(n > 0 and n_handoff_occurred == n)
     return {
         "label": label,
         "n": n,
@@ -811,6 +890,12 @@ def summarise_arm(
         "tgc_survivors": tgc_survivors,
         "goal_pass_all": goal_pass_all,
         "goal_pass_survivors": goal_pass_survivors,
+        "tgc_handoff_only": tgc_handoff_only,
+        "tgc_no_handoff": tgc_no_handoff,
+        "goal_pass_handoff_only": goal_pass_handoff_only,
+        "goal_pass_no_handoff": goal_pass_no_handoff,
+        "n_no_handoff": n_no_handoff,
+        "handoff_only_coincides_with_all": handoff_only_coincides_with_all,
         "populations_coincide": populations_coincide,
         "planner_calls_total": calls_total,
         "crash_per_call": crash_per_call,
@@ -844,7 +929,7 @@ def summarise_arm(
         "effective_m_mean": mean_present(em_all),
         "effective_m_mean_all": mean_present(em_all),
         "effective_m_mean_survivors": mean_present(em_surv),
-        "n_handoff_occurred": sum(1 for row in cleaned_rows if row.get("handoff_occurred") is True),
+        "n_handoff_occurred": n_handoff_occurred,
         "n_hash_ok": sum(1 for row in cleaned_rows if row.get("hash_ok") is True),
         "n_with_handoff_record": n_handoff_record,
         "n_episodes_live_differs_from_replay": n_calls_differ,
@@ -876,11 +961,16 @@ def paired_contrast(
 
     population='all': every shared (task_id, seed); crashed quality scores 0.
     population='survivors': drop a pair if either side crashed, and count it.
+    population='handoff-only': shared keys where arm_a's handoff_occurred
+    is True; arm_b (and any later arm) is restricted to those same keys.
+    population='no-handoff': the complement (handoff_occurred is False).
+    Handoff subsets use all-episodes scoring (crash = 0).
     """
     left = arm_a["cleaned"]
     right = arm_b["cleaned"]
     n_shared = len(set(left) & set(right))
     n_dropped_crash = 0
+    n_dropped_handoff = 0
     if population in {"survivors", "survivor"}:
         left, right, n_dropped_crash, n_shared = both_survived_subset(left, right)
         pop_name = "survivors"
@@ -889,6 +979,19 @@ def paired_contrast(
             left = coerce_crash_quality(left, field)
             right = coerce_crash_quality(right, field)
         pop_name = "all-episodes"
+    elif population in HANDOFF_ONLY_ALIASES or population in NO_HANDOFF_ALIASES:
+        occurred = population in HANDOFF_ONLY_ALIASES
+        keep, n_shared, n_dropped_handoff = restrict_to_defining_handoff(
+            left, [right], occurred
+        )
+        left = {k: left[k] for k in keep}
+        right = {k: right[k] for k in keep}
+        if field in {"tgc", "goal_pass_rate"}:
+            left = coerce_crash_quality(left, field)
+            right = coerce_crash_quality(right, field)
+        pop_name = (
+            HANDOFF_ONLY_POPULATION if occurred else NO_HANDOFF_POPULATION
+        )
     else:
         raise ValueError(f"unknown population {population!r}")
     if field == "tgc":
@@ -912,6 +1015,10 @@ def paired_contrast(
     out["population"] = pop_name
     out["n_pairs_dropped_crash"] = n_dropped_crash
     out["n_pairs_shared"] = n_shared
+    if pop_name in {HANDOFF_ONLY_POPULATION, NO_HANDOFF_POPULATION}:
+        out["n_pairs_dropped_handoff"] = n_dropped_handoff
+        out["defining_arm"] = arm_a["label"]
+        out["handoff_keys_from"] = arm_a["label"]
     return out
 
 
@@ -1543,6 +1650,117 @@ NI_RULE = (
     "(equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). "
     "Primary metric goal_pass_rate; TGC always reported alongside."
 )
+NI_POPULATION_KEYS = (
+    "goal_pass_all",
+    "tgc_all",
+    "goal_pass_survivors",
+    "tgc_survivors",
+    "goal_pass_handoff_only",
+    "tgc_handoff_only",
+    "goal_pass_no_handoff",
+    "tgc_no_handoff",
+)
+
+
+def _attach_side_scores(
+    out: dict[str, Any],
+    arm: dict[str, Any],
+    reference: dict[str, Any],
+    field: str,
+    keys: set[tuple[str, int]],
+    floor: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Add arm/reference (and optional floor) means on the same key set."""
+    arm_rows = [arm["cleaned"][k] for k in keys if k in arm["cleaned"]]
+    ref_rows = [
+        reference["cleaned"][k] for k in keys if k in reference["cleaned"]
+    ]
+    out["arm_score"] = mean_quality(arm_rows, field, crash_as_zero=True)
+    out["reference_score"] = mean_quality(
+        ref_rows, field, crash_as_zero=True
+    )
+    out["n_score_keys"] = len(keys)
+    if floor is not None:
+        floor_rows = [
+            floor["cleaned"][k] for k in keys if k in floor["cleaned"]
+        ]
+        out["floor_score"] = mean_quality(
+            floor_rows, field, crash_as_zero=True
+        )
+    return out
+
+
+def handoff_reference_ease(
+    arm: dict[str, Any],
+    reference: dict[str, Any],
+) -> dict[str, Any]:
+    """Compare the reference on handoff-only vs no-handoff keys."""
+    fields: dict[str, Any] = {}
+    for field in ("goal_pass_rate", "tgc"):
+        ho, _, _ = restrict_to_defining_handoff(
+            arm["cleaned"], [reference["cleaned"]], True
+        )
+        nh, _, _ = restrict_to_defining_handoff(
+            arm["cleaned"], [reference["cleaned"]], False
+        )
+        ref_ho = mean_quality(
+            [reference["cleaned"][k] for k in ho], field, crash_as_zero=True
+        )
+        ref_nh = mean_quality(
+            [reference["cleaned"][k] for k in nh], field, crash_as_zero=True
+        )
+        arm_ho = mean_quality(
+            [arm["cleaned"][k] for k in ho], field, crash_as_zero=True
+        )
+        arm_nh = mean_quality(
+            [arm["cleaned"][k] for k in nh], field, crash_as_zero=True
+        )
+        gap = None if ref_ho is None or ref_nh is None else round(ref_nh - ref_ho, 6)
+        higher = None if gap is None else bool(gap > 0)
+        far = None if gap is None else bool(gap >= REFERENCE_FAR_HIGHER_PP / 100.0)
+        fields[field] = {
+            "n_handoff_only": len(ho),
+            "n_no_handoff": len(nh),
+            "arm_score_handoff_only": arm_ho,
+            "arm_score_no_handoff": arm_nh,
+            "reference_score_handoff_only": ref_ho,
+            "reference_score_no_handoff": ref_nh,
+            "reference_higher_on_no_handoff": higher,
+            "reference_gap_no_handoff_minus_handoff_only": gap,
+            "reference_far_higher_on_no_handoff": far,
+        }
+    gp = fields["goal_pass_rate"]
+    note = None
+    if gp.get("n_no_handoff", 0) == 0:
+        note = None
+    elif gp.get("reference_far_higher_on_no_handoff"):
+        gap_pp = None
+        if gp.get("reference_gap_no_handoff_minus_handoff_only") is not None:
+            gap_pp = round(
+                100.0 * float(gp["reference_gap_no_handoff_minus_handoff_only"]), 2
+            )
+        note = (
+            "reference scores far higher on no-handoff episodes than on "
+            f"handoff-only (gap {gap_pp} pp); no-handoff tasks look easier "
+            "for the reference, so the pooled all-episodes hybrid figure "
+            "mixes planner-like scores on easy tasks with hybrid scores "
+            "on the rest"
+        )
+    elif gp.get("reference_higher_on_no_handoff"):
+        gap_pp = round(
+            100.0 * float(gp["reference_gap_no_handoff_minus_handoff_only"]), 2
+        )
+        note = (
+            "reference scores higher on no-handoff episodes than on "
+            f"handoff-only (gap {gap_pp} pp)"
+        )
+    return {
+        "defining_arm": arm["label"],
+        "reference_arm": reference["label"],
+        "fields": fields,
+        "note": note,
+        "far_higher_threshold_pp": REFERENCE_FAR_HIGHER_PP,
+    }
 
 
 def noninferiority_row(
@@ -1565,6 +1783,13 @@ def noninferiority_row(
     out["deficit_ci_upper_pp"] = deficit_upper_pp
     out["rule"] = NI_RULE
     out["primary"] = field == "goal_pass_rate"
+    pop_name = out.get("population")
+    if pop_name in {HANDOFF_ONLY_POPULATION, NO_HANDOFF_POPULATION}:
+        occurred = pop_name == HANDOFF_ONLY_POPULATION
+        keys, _, _ = restrict_to_defining_handoff(
+            arm["cleaned"], [reference["cleaned"]], occurred
+        )
+        _attach_side_scores(out, arm, reference, field, keys)
     return out
 
 
@@ -1599,8 +1824,21 @@ def noninferiority_block(
             "goal_pass_survivors": noninferiority_row(
                 arm, reference, "goal_pass_rate", "survivors"
             ),
+            "goal_pass_handoff_only": noninferiority_row(
+                arm, reference, "goal_pass_rate", HANDOFF_ONLY_POPULATION
+            ),
+            "goal_pass_no_handoff": noninferiority_row(
+                arm, reference, "goal_pass_rate", NO_HANDOFF_POPULATION
+            ),
             "tgc_all": noninferiority_row(arm, reference, "tgc", "all"),
             "tgc_survivors": noninferiority_row(arm, reference, "tgc", "survivors"),
+            "tgc_handoff_only": noninferiority_row(
+                arm, reference, "tgc", HANDOFF_ONLY_POPULATION
+            ),
+            "tgc_no_handoff": noninferiority_row(
+                arm, reference, "tgc", NO_HANDOFF_POPULATION
+            ),
+            "handoff_ease": handoff_reference_ease(arm, reference),
         }
     return {
         "reference_arm": reference_label,
@@ -1629,6 +1867,7 @@ def chord_residual(
     mid = dict(floor["cleaned"])
     right = dict(reference["cleaned"])
     n_dropped_crash = 0
+    n_dropped_handoff = 0
     n_shared = len(set(left) & set(mid) & set(right))
     if population in {"survivors", "survivor"}:
         keys = set(left) & set(mid) & set(right)
@@ -1649,6 +1888,21 @@ def chord_residual(
             mid = coerce_crash_quality(mid, quality_field)
             right = coerce_crash_quality(right, quality_field)
         pop_name = "all-episodes"
+    elif population in HANDOFF_ONLY_ALIASES or population in NO_HANDOFF_ALIASES:
+        occurred = population in HANDOFF_ONLY_ALIASES
+        keep, n_shared, n_dropped_handoff = restrict_to_defining_handoff(
+            left, [mid, right], occurred
+        )
+        left = {k: left[k] for k in keep}
+        mid = {k: mid[k] for k in keep}
+        right = {k: right[k] for k in keep}
+        if quality_field in {"tgc", "goal_pass_rate"}:
+            left = coerce_crash_quality(left, quality_field)
+            mid = coerce_crash_quality(mid, quality_field)
+            right = coerce_crash_quality(right, quality_field)
+        pop_name = (
+            HANDOFF_ONLY_POPULATION if occurred else NO_HANDOFF_POPULATION
+        )
     else:
         raise ValueError(f"unknown population {population!r}")
     keys = sorted(set(left) & set(mid) & set(right))
@@ -1685,6 +1939,7 @@ def chord_residual(
         "n_pairs": 0,
         "n_pairs_dropped_crash": n_dropped_crash,
         "n_pairs_shared": n_shared,
+        "n_pairs_dropped_handoff": n_dropped_handoff,
         "pairs_dropped_missing_cost": missing_cost,
         "pairs_dropped_missing_quality": missing_quality,
         "diff": None,
@@ -1732,6 +1987,14 @@ def chord_residual(
     out["cost_reference"] = round(c_ref, 6)
     out["n_pairs_dropped_crash"] = n_dropped_crash
     out["n_pairs_shared"] = n_shared
+    if pop_name in {HANDOFF_ONLY_POPULATION, NO_HANDOFF_POPULATION}:
+        out["n_pairs_dropped_handoff"] = n_dropped_handoff
+        out["defining_arm"] = arm["label"]
+        out["handoff_keys_from"] = arm["label"]
+        score_keys = set(usable)
+        _attach_side_scores(
+            out, arm, reference, quality_field, score_keys, floor=floor
+        )
     out["pairs_dropped_missing_cost"] = missing_cost
     out["pairs_dropped_missing_quality"] = missing_quality
     out["positive_means_above_chord"] = (
@@ -1783,10 +2046,33 @@ def chord_block(
             "goal_pass_survivors": chord_residual(
                 arm, floor, reference, "goal_pass_rate", cost_key, "survivors"
             ),
+            "goal_pass_handoff_only": chord_residual(
+                arm,
+                floor,
+                reference,
+                "goal_pass_rate",
+                cost_key,
+                HANDOFF_ONLY_POPULATION,
+            ),
+            "goal_pass_no_handoff": chord_residual(
+                arm,
+                floor,
+                reference,
+                "goal_pass_rate",
+                cost_key,
+                NO_HANDOFF_POPULATION,
+            ),
             "tgc_all": chord_residual(arm, floor, reference, "tgc", cost_key, "all"),
             "tgc_survivors": chord_residual(
                 arm, floor, reference, "tgc", cost_key, "survivors"
             ),
+            "tgc_handoff_only": chord_residual(
+                arm, floor, reference, "tgc", cost_key, HANDOFF_ONLY_POPULATION
+            ),
+            "tgc_no_handoff": chord_residual(
+                arm, floor, reference, "tgc", cost_key, NO_HANDOFF_POPULATION
+            ),
+            "handoff_ease": handoff_reference_ease(arm, reference),
         }
     return {
         "reference_arm": reference_label,
@@ -1835,29 +2121,31 @@ def format_noninferiority_table(block: dict[str, Any] | None) -> str:
         NI_RULE,
     ]
     header = (
-        f"{'arm':<24} {'metric':<16} {'pop':<12} {'holds':>6} "
-        f"{'diff_pp':>8} {'ci95_pp':>18} {'def_up':>8}"
+        f"{'arm':<24} {'metric':<16} {'pop':<13} {'holds':>6} "
+        f"{'n':>5} {'diff_pp':>8} {'ci95_pp':>18} {'def_up':>8} "
+        f"{'arm_sc':>8} {'ref_sc':>8}"
     )
     lines.append(header)
     lines.append("-" * len(header))
     for label, rows in (block.get("arms") or {}).items():
-        for key in (
-            "goal_pass_all",
-            "tgc_all",
-            "goal_pass_survivors",
-            "tgc_survivors",
-        ):
+        for key in NI_POPULATION_KEYS:
             row = rows.get(key) or {}
             ci = row.get("ci95_pp")
             ci_txt = "NA" if not ci else f"[{ci[0]}, {ci[1]}]"
             lines.append(
                 f"{label:<24} {row.get('field', key):<16} "
-                f"{str(row.get('population') or ''):<12} "
+                f"{str(row.get('population') or ''):<13} "
                 f"{_fmt_metric(row.get('holds'), 6)} "
+                f"{_fmt_metric(row.get('n_pairs'), 5, 0)} "
                 f"{_fmt_metric(row.get('diff_pp'), 8, 2)} "
                 f"{ci_txt:>18} "
-                f"{_fmt_metric(row.get('deficit_ci_upper_pp'), 8, 2)}"
+                f"{_fmt_metric(row.get('deficit_ci_upper_pp'), 8, 2)} "
+                f"{_fmt_metric(row.get('arm_score'), 8)} "
+                f"{_fmt_metric(row.get('reference_score'), 8)}"
             )
+        ease = (rows.get("handoff_ease") or {}).get("note")
+        if ease:
+            lines.append(f"  note: {ease}")
     return "\n".join(lines)
 
 
@@ -1873,28 +2161,27 @@ def format_chord_table(block: dict[str, Any] | None) -> str:
         "(positive residual = above the chord)",
     ]
     header = (
-        f"{'arm':<24} {'metric':<16} {'pop':<12} {'frac':>8} "
-        f"{'diff_pp':>8} {'ci95_pp':>18} {'above':>6}"
+        f"{'arm':<24} {'metric':<16} {'pop':<13} {'frac':>8} "
+        f"{'n':>5} {'diff_pp':>8} {'ci95_pp':>18} {'above':>6} "
+        f"{'arm_sc':>8} {'ref_sc':>8}"
     )
     lines.append(header)
     lines.append("-" * len(header))
     for label, rows in (block.get("arms") or {}).items():
-        for key in (
-            "goal_pass_all",
-            "tgc_all",
-            "goal_pass_survivors",
-            "tgc_survivors",
-        ):
+        for key in NI_POPULATION_KEYS:
             row = rows.get(key) or {}
             ci = row.get("ci95_pp")
             ci_txt = "NA" if not ci else f"[{ci[0]}, {ci[1]}]"
             lines.append(
                 f"{label:<24} {row.get('field', key):<16} "
-                f"{str(row.get('population') or ''):<12} "
+                f"{str(row.get('population') or ''):<13} "
                 f"{_fmt_metric(row.get('cost_fraction'), 8)} "
+                f"{_fmt_metric(row.get('n_pairs'), 5, 0)} "
                 f"{_fmt_metric(row.get('diff_pp'), 8, 2)} "
                 f"{ci_txt:>18} "
-                f"{_fmt_metric(row.get('positive_means_above_chord'), 6)}"
+                f"{_fmt_metric(row.get('positive_means_above_chord'), 6)} "
+                f"{_fmt_metric(row.get('arm_score'), 8)} "
+                f"{_fmt_metric(row.get('reference_score'), 8)}"
             )
     return "\n".join(lines)
 
@@ -2088,7 +2375,12 @@ def build_report(
             "tgc_survivors and goal_pass_survivors average episodes with "
             "error_type != 'crash'. Headline contrast uses all-episodes for "
             "every quality metric. Survivor paired contrasts drop a "
-            "(task_id, seed) pair if either arm crashed."
+            "(task_id, seed) pair if either arm crashed. "
+            "handoff-only / no-handoff are additional populations on the "
+            "non-inferiority and chord tables: the comparison arm's "
+            "handoff_occurred flag selects the (task_id, seed) keys, then "
+            "every arm in the contrast is restricted to those same keys "
+            "(all-episodes scoring: crash = 0)."
         ),
     }
     code = 0 if headline_ok else 1

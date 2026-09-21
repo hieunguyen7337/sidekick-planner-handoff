@@ -787,3 +787,222 @@ def test_sft_plan_unmapped_source_stays_zero_and_is_understated(tmp_path: Path):
     assert costing["understatement"]["n_missing"] == 1
 
 
+def _handoff_events(task_id: str, seed: int, occurred: bool) -> list[dict]:
+    return [
+        {
+            "event_type": "report",
+            "task_id": task_id,
+            "seed": seed,
+            "payload": {"handoff_occurred": occurred},
+        }
+    ]
+
+
+def _all_keys() -> list[tuple[str, int]]:
+    return [(task_id, seed) for task_id in TASKS for seed in SEEDS]
+
+
+def write_arm_with_handoff(
+    root: Path,
+    system: str,
+    handoff_keys: set[tuple[str, int]],
+    *,
+    tgc_handoff: float,
+    gpr_handoff: float,
+    tgc_no: float,
+    gpr_no: float,
+    calls_handoff: int = 2,
+    calls_no: int = 2,
+    every_episode_handoff: bool = False,
+) -> Path:
+    for task_id in TASKS:
+        for seed in SEEDS:
+            key = (task_id, seed)
+            occurred = True if every_episode_handoff else key in handoff_keys
+            write_run(
+                root,
+                system,
+                seed,
+                task_id,
+                tgc=tgc_handoff if occurred else tgc_no,
+                n_planner_calls=calls_handoff if occurred else calls_no,
+                live_calls=calls_handoff if occurred else calls_no,
+                goal_pass_rate=gpr_handoff if occurred else gpr_no,
+                events=_handoff_events(task_id, seed, occurred),
+            )
+    return root
+
+
+def _handoff_pair(tmp_path: Path):
+    keys = _all_keys()
+    ho_keys = set(keys[:4])
+    prefix_dir = write_arm_with_handoff(
+        tmp_path / "prefix",
+        "prefix_handoff",
+        ho_keys,
+        tgc_handoff=0.0,
+        gpr_handoff=0.0,
+        tgc_no=1.0,
+        gpr_no=1.0,
+        calls_handoff=3,
+        calls_no=1,
+    )
+    # Reference has no handoff records. Quality still varies on the same keys
+    # so a dishonest per-arm subset would yield n_pairs=0.
+    ref_dir = tmp_path / "planner"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            ho = (task_id, seed) in ho_keys
+            write_run(
+                ref_dir,
+                "planner_alone",
+                seed,
+                task_id,
+                tgc=0.5 if ho else 1.0,
+                n_planner_calls=4,
+                live_calls=4,
+                goal_pass_rate=0.5 if ho else 1.0,
+            )
+    prefix = j8.summarise_arm(
+        "prefix_m9", j10.load_arm_tree(prefix_dir), list(SEEDS), root=prefix_dir
+    )
+    reference = j8.summarise_arm(
+        "planner_alone", j10.load_arm_tree(ref_dir), list(SEEDS), root=ref_dir
+    )
+    prefix["complete_n"] = True
+    reference["complete_n"] = True
+    return prefix, reference, ho_keys
+
+
+def test_handoff_only_uses_defining_arm_keys_and_restricts_reference(tmp_path: Path):
+    prefix, reference, ho_keys = _handoff_pair(tmp_path)
+    ho = j8.paired_contrast(prefix, reference, "tgc", "handoff-only")
+    all_c = j8.paired_contrast(prefix, reference, "tgc", "all")
+    assert ho["population"] == "handoff-only"
+    assert ho["n_pairs"] == len(ho_keys)
+    assert ho["n_pairs"] == 4
+    assert ho["n_pairs_shared"] == 8
+    assert ho["n_pairs_dropped_handoff"] == 4
+    assert ho["handoff_keys_from"] == "prefix_m9"
+    assert all_c["n_pairs"] == 8
+    assert ho["diff"] == pytest.approx(-0.5)
+    gp = j8.paired_contrast(prefix, reference, "goal_pass_rate", "handoff-only")
+    assert gp["n_pairs"] == 4
+    assert gp["diff"] == pytest.approx(-0.5)
+
+
+def test_full_handoff_population_matches_all_episodes(tmp_path: Path):
+    prefix_dir = write_arm_with_handoff(
+        tmp_path / "prefix",
+        "prefix_handoff",
+        set(),
+        tgc_handoff=1.0,
+        gpr_handoff=1.0,
+        tgc_no=0.0,
+        gpr_no=0.0,
+        every_episode_handoff=True,
+    )
+    ref_dir = tmp_path / "planner"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            write_run(
+                ref_dir,
+                "planner_alone",
+                seed,
+                task_id,
+                tgc=0.5,
+                n_planner_calls=4,
+                live_calls=4,
+                goal_pass_rate=0.5,
+            )
+    prefix = j8.summarise_arm(
+        "prefix_m2", j10.load_arm_tree(prefix_dir), list(SEEDS), root=prefix_dir
+    )
+    reference = j8.summarise_arm(
+        "planner_alone", j10.load_arm_tree(ref_dir), list(SEEDS), root=ref_dir
+    )
+    assert prefix["handoff_occurred_rate"] == pytest.approx(1.0)
+    assert prefix["handoff_only_coincides_with_all"] is True
+    assert prefix["tgc_handoff_only"] == prefix["tgc_all"]
+    assert prefix["goal_pass_handoff_only"] == prefix["goal_pass_all"]
+    ho = j8.paired_contrast(prefix, reference, "tgc", "handoff-only")
+    all_c = j8.paired_contrast(prefix, reference, "tgc", "all")
+    assert ho["n_pairs"] == all_c["n_pairs"] == 8
+    assert ho["diff"] == all_c["diff"]
+    assert ho["ci95"] == all_c["ci95"]
+    assert prefix["n_no_handoff"] == 0
+
+
+def test_no_handoff_complement_carries_reference_score(tmp_path: Path):
+    prefix, reference, ho_keys = _handoff_pair(tmp_path)
+    floor_dir = tmp_path / "sft"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            write_run(
+                floor_dir,
+                "sft_plan",
+                seed,
+                task_id,
+                tgc=0.25,
+                n_planner_calls=1,
+                live_calls=1,
+                goal_pass_rate=0.25,
+            )
+    floor = j8.summarise_arm(
+        "sft_plan", j10.load_arm_tree(floor_dir), list(SEEDS), root=floor_dir
+    )
+    prefix["complete_n"] = True
+    reference["complete_n"] = True
+    floor["complete_n"] = True
+    ni = j8.noninferiority_block(
+        {
+            "prefix_m9": prefix,
+            "planner_alone": reference,
+            "sft_plan": floor,
+        },
+        "planner_alone",
+    )
+    assert ni is not None
+    rows = ni["arms"]["prefix_m9"]
+    assert "goal_pass_all" in rows
+    assert "goal_pass_survivors" in rows
+    assert "goal_pass_handoff_only" in rows
+    assert "goal_pass_no_handoff" in rows
+    ho = rows["goal_pass_handoff_only"]
+    nh = rows["goal_pass_no_handoff"]
+    assert ho["n_pairs"] == 4
+    assert nh["n_pairs"] == 4
+    assert nh["population"] == "no-handoff"
+    assert nh["reference_score"] == pytest.approx(1.0)
+    assert nh["arm_score"] == pytest.approx(1.0)
+    assert ho["reference_score"] == pytest.approx(0.5)
+    assert ho["arm_score"] == pytest.approx(0.0)
+    ease = rows["handoff_ease"]
+    gp = ease["fields"]["goal_pass_rate"]
+    assert gp["reference_higher_on_no_handoff"] is True
+    assert gp["reference_far_higher_on_no_handoff"] is True
+    assert ease["note"] is not None
+    assert "far higher" in ease["note"]
+    chord = j8.chord_residual(
+        prefix,
+        floor,
+        reference,
+        "goal_pass_rate",
+        "planner_calls_live",
+        "handoff-only",
+    )
+    assert chord["n_pairs"] == 4
+    assert chord["population"] == "handoff-only"
+    assert chord["reference_score"] == pytest.approx(0.5)
+    chord_nh = j8.chord_residual(
+        prefix,
+        floor,
+        reference,
+        "goal_pass_rate",
+        "planner_calls_live",
+        "no-handoff",
+    )
+    assert chord_nh["n_pairs"] == 4
+    assert chord_nh["reference_score"] == pytest.approx(1.0)
+
+
