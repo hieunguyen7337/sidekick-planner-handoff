@@ -2372,3 +2372,55 @@ These results are correct measurements of the system as built. What changes is w
 2. The intervention-conditioned signal is thin: 267 correction episodes, 775 action targets, from 90 train tasks × 3 seeds [INFERRED].
 
 This has **not** been run and requires the user's approval because it is a training run.
+
+---
+
+## 12. The E-series: intervention-aware retrain
+
+### Provenance
+
+The facts below are all verified against `campaign/results/hj8_frontier_iaware_20260921.report.json` [OBSERVED campaign/results/hj8_frontier_iaware_20260921.report.json:1-15]. Every number is evaluated on dev, $n=114$ per arm across 57 tasks $\times$ 2 seeds, paired and task-clustered, with 10,000 bootstrap resamples [OBSERVED campaign/results/hj8_frontier_iaware_20260921.report.json:8-14].
+
+### The Defect and the Experiment
+
+Training historically stripped planner interventions from the executor's context at three enforcement layers, while the runtime injects exactly those `INTERVENTION:` turns at evaluation time [OBSERVED campaign/RUNS.md:2341-2356]. Consequently, every escalation result previously produced in the project was measuring an untrained model's reaction to an off-distribution token [INFERRED]. Section 11 recorded the finding; this section records the experiment that followed.
+
+Two adapters were evaluated, identical but for the training data: 497 rows and 479 sequences both, hyperparameters byte-identical, with 267 `INTERVENTION:` turns retained in `sft_b_plus_iaware` versus 0 in `sft_b_plus` [INFERRED].
+
+### Results
+
+Survivor `goal_pass` against planner calls per episode:
+
+| adapter | 1.0 calls | ~2.4 calls | ~6.8 calls |
+|---|---:|---:|---:|
+| stripped (`sft_b_plus`) | 0.700 | 0.662 | 0.605 |
+| retained (`sft_b_plus_iaware`) | 0.718 | 0.696 | 0.701 |
+
+[OBSERVED campaign/results/hj8_frontier_iaware_20260921.report.json: keys "arms" → "sft_plan_base", "fixed_k_10_base", "fixed_k_3_base", "sft_plan_iaware", "fixed_k_10_iaware", "fixed_k_3_iaware"].
+
+Same arm, new adapter minus old, survivors:
+
+| arm | metric | Δ (pp) | 95% CI | n |
+|---|---|---:|---|---:|
+| `fixed_k_3` | goal_pass | +10.18 | [+2.67, +17.43] | 97 |
+| `fixed_k_3` | TGC | +12.37 | [+1.05, +23.60] | 97 |
+| `fixed_k_10` | goal_pass | +3.83 | [−3.77, +11.38] | 111 |
+| `sft_plan` | goal_pass | +1.81 | [−3.28, +7.00] | 114 |
+
+[OBSERVED campaign/results/hj8_frontier_iaware_20260921.report.json: keys "contrasts"].
+
+Crashes fell from 17/114 to 0 at $k=3$ and 3/114 to 0 at $k=10$ [OBSERVED campaign/results/hj8_frontier_iaware_20260921.report.json: keys "arms" → "fixed_k_3_base", "fixed_k_3_iaware", "fixed_k_10_base", "fixed_k_10_iaware"]. Plan-following did not regress (`sft_plan` goal_pass +1.81 pp [−3.28, +7.00]), so the failure mode stripping was guarding against did not appear [INFERRED].
+
+### What Was Not Established
+
+Within the new adapter, plan-only remains nominally ahead of escalation on `goal_pass` (`sft_plan − fixed_k_3` = +1.70 pp [−4.36, +7.62]) and the oracle does not beat plan-only either (`oracle_escalation − sft_plan` = −0.86 pp [−6.61, +4.93]) [OBSERVED campaign/results/hj8_frontier_iaware_20260921.report.json: keys "contrasts"]. On TGC the sign flips (`fixed_k_3` ahead of `sft_plan` by 6.14 pp [−15.79, +2.63]) but the confidence interval still contains zero [OBSERVED campaign/results/hj8_frontier_iaware_20260921.report.json: keys "contrasts"].
+
+⚠ **The J9 freeze made `goal_pass` the primary metric, and `goal_pass` shows no benefit from escalation. TGC hints at one. Reaching for TGC now is exactly the researcher degree of freedom that freeze was written to prevent. It is written down here so that nobody later discovers it and assumes it went unnoticed. 114 pairs cannot resolve a 7 pp effect; the TGC interval is 18 points wide.** [INFERRED]
+
+### Commits
+
+- `0b47eca`: the dataset-writer flag that refused to emit the dataset.
+- `b6da3a6`: the action-review build.
+- `6b04ba9`: the retrained adapter.
+- `6556de6`: this analysis.
+

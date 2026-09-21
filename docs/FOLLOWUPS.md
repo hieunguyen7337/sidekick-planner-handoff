@@ -945,5 +945,66 @@ conditions on that experiment:
 
 This has **not** been run and requires the user's approval because it is a training run.
 
+## OPEN 2026-09-21 — the action-review gate is inert against the real planner
+
+`src/sidekick/systems/action_review_gate.py:53-61` decides approve-versus-replace by reading `resp.code` [OBSERVED src/sidekick/systems/action_review_gate.py:53-61], but `CodexExecPlanner.correct` (`src/sidekick/agents/planner.py:316-335`) returns prose and never sets `code` — its prompt says "Reply with concise correction text only" [OBSERVED src/sidekick/agents/planner.py:323]. Against the hosted planner, every review would return the verdict `approve` while still spending a call [INFERRED].
+
+The unit test passed because its stub sets `code` (`tests/unit/test_action_review.py:168`) [OBSERVED tests/unit/test_action_review.py:168]. The repair is assigned, and `planner.act` (`src/sidekick/agents/planner.py:337-352`) is the method that does return a parsed action [OBSERVED src/sidekick/agents/planner.py:337-352].
+
+## OPEN 2026-09-21 — the pivot: advice is worth nothing measurable; pivot protocol to action / handoff
+
+The advice channel has now been priced twice and is worth nothing measurable [INFERRED]. The B1
+counterfactual pilot ran 1,600 branches over 200 points, 195 complete, and its own point-level
+classification is [OBSERVED /scratch/n12194778/sidekick/results/b1_pilot_train_20260920/manifest.json,
+keys `n_needed`, `n_needed_strict`, `n_needless`, `n_harmful`, `n_ambiguous`, `needed_fraction`,
+`mean_delta_crn`]:
+
+| field | value |
+|---|---|
+| `n_needed` | 11 |
+| `n_needed_strict` | 2 |
+| `n_needless` | 9 |
+| `n_harmful` | 9 |
+| `n_ambiguous` | 175 |
+| `needed_fraction` | 0.0564, task-clustered CI [0.0270, 0.0874] |
+| `mean_delta_crn` | +0.004586, task-clustered CI [−0.01082, +0.02048] |
+
+**The mean-effect interval includes zero.** After the retrain removed the format mismatch, advice
+became neutral rather than useful [INFERRED].
+
+⚠ An earlier draft of this entry stated "127 branches helping against 219 harming" and tagged it
+`[OBSERVED manifest.json:37-53]`. That tally is not in the manifest; it was a recount at the branch
+level rather than the point level, and the line range does not contain it. Corrected here on the
+day it was written, and recorded rather than silently deleted, because a fabricated-looking citation
+in a confident register is the specific failure mode this project tags claims to catch.
+
+The campaign therefore changes the *protocol* (planner acts, or starts the episode and hands off)
+rather than the idea (a small executor specialised to one frozen planner) [INFERRED].
+
+## OPEN 2026-09-21 — deviation: the B1 pilot ran at δ = 0.2, not the frozen 0.166
+
+`docs/prereg_b1_pilot.md` §2 freezes the primary label band at **δ = 0.166**, citing the J6 train
+manifest ("The J6 train manifest stores `0.16599999999999993`; analysis treats that as 0.166")
+[OBSERVED docs/prereg_b1_pilot.md:44]. The pilot's own manifest records
+`delta_band_delta: 0.19999999999999998`, with `delta_band_rule: "75th percentile of
+|treated_gpr[101]-treated_gpr[102]| over train-split points with both treated replicates"` and
+`delta_band_frozen_on: "train"`
+[OBSERVED /scratch/n12194778/sidekick/results/b1_pilot_train_20260920/manifest.json, keys
+`delta_band_delta`, `delta_band_rule`, `delta_band_frozen_on`].
+
+So the *rule* was re-applied to this pilot's own data and produced 0.2, whereas the preregistration
+froze the *number* 0.166. This is a deviation from a frozen document.
+
+- **Affected**: the `needed` / `needless` / `ambiguous` label counts above, which are band-dependent.
+  A wider band moves points into `ambiguous`, so the 11 `needed` is a floor, not an estimate.
+- **Not affected**: `mean_delta_crn` and its CI, which are computed without reference to the band.
+
+Not resolved here. Flagged for the user; a frozen preregistration that turns out to have been
+departed from is evidence, not a document to fix. The manifest's own manipulation check is recorded
+alongside it: `factual_vs_treated.fraction_factual_outside_treated_range` = 0.1269 over 197 points,
+where a factual draw should lie inside the treated range [OBSERVED same manifest, key
+`factual_vs_treated`].
+
+
 
 

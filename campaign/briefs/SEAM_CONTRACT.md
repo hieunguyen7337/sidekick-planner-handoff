@@ -68,8 +68,8 @@ class Observation(BaseModel):
     error_type: Optional[str] = None
 
 EventType = Literal[
-    "run_start","plan","action","observation","intervention","ask",
-    "report","evaluate","error","run_end",
+    "run_start", "plan", "action", "observation", "intervention", "ask",
+    "report", "evaluate", "error", "run_end", "action_review",
 ]
 
 class Event(BaseModel):
@@ -136,8 +136,11 @@ class CostLedger:
     #   per_actor: {actor: {input_tokens, cached_input_tokens, output_tokens,
     #                       reasoning_output_tokens, n_calls, gpu_seconds, usd}}
     #   planner_tokens_total, planner_calls_total, executor_tokens_total,
-    #   gpu_seconds_total, usd_total
+    #   gpu_seconds_total, usd_total, replayed_planner_tokens
 ```
+`replayed_planner_tokens` sums a replayed prefix's planner usage **excluding `cached_input_tokens`**
+because cached tokens are re-sent context rather than new work.
+
 `configs/cost/prices_2026-09.yaml` (rates per 1M tokens, USD):
 `gpt-5.6-luna: {input: 0.20, cached_input: 0.02, output: 1.20}`;
 `local_gpu: {usd_per_gpu_hour: 2.50}` (amortised H100, documented as an assumption).
@@ -182,10 +185,28 @@ class System(Protocol):
     def run(self, env: BaseEnv, task_id: str, seed: int, log: EventLog,
             ledger: CostLedger) -> RunResult: ...
 ```
-Eight names, exactly: `planner_alone`, `executor_alone`, `prompt_only`, `fixed_k`,
-`sft_plan`, `router_seq`, `sidekick`, `oracle_escalation`.
+Ten names, exactly: `planner_alone`, `executor_alone`, `prompt_only`, `fixed_k`,
+`sft_plan`, `router_seq`, `sidekick`, `oracle_escalation`,
+`action_review` (built, E4, repair pending),
+`prefix_handoff` (being built now — the planner's first `m` recorded steps are replayed onto a fresh environment and the executor finishes the episode live).
+
+## Policy flags & configuration blocks
+
+Policy flags (recorded in `run_start` event payload `policy` dict):
+- `review_proposed_action: bool`
+- `takeover: bool`
+- `handoff_allowed: bool`
+
+Handoff configuration block (`handoff:` in system YAML configs):
+```yaml
+handoff:
+  source_campaign: str   # directory path containing recorded source prefix episodes
+  source_system: str     # source system name (e.g. planner_alone)
+  m: int                 # prefix step count to replay before executor handoff
+```
 
 ## Global run limits (every system, every arm)
 `max_steps=40`, `max_tokens_per_episode=32000`, `per_step_timeout_s=120`,
 `max_planner_calls=25`. Exceeding one ends the run with `error_type="limit"`, counted as a failure
 in the denominator.
+
