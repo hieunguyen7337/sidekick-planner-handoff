@@ -1,8 +1,8 @@
-# Brief X13 — a run does not record which code produced it
+# Brief X16 — a run does not record which code produced it
 
 Repo (absolute): `/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15`
 
-**Check before you start:** two GPU jobs, `25596786` and `25596787`, may be RUNNING. Run
+**Check before you start:** two GPU jobs, `25634800` and `25634820`, may be RUNNING. Run
 `timeout 30 qstat -u n12194778`. If either shows state `Q` (queued), **stop and write STATUS saying
 so without changing anything** — a queued job picks up whatever is on disk when it starts, and this
 edit must not reach a run that was validated against different code. If both are `R` or gone,
@@ -65,13 +65,13 @@ Any config, any `docs/prereg_*.md`, any `hj8_*` or `hj11_*` file, the episode lo
 
 - `aquarius01` is a **login node**: no interpreter, `pip`, `tar`, `rsync`, `ffmpeg` there. Suite via
   `timeout 1800 hpc -c 4 -m 16gb -t 00:20:00 bash -lc 'cd <repo> && OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=src:. /scratch/n12194778/sidekick/env/bin/python -m pytest tests -q --import-mode=importlib'`
-- The suite is at **498 passed, 1 skipped** and must not fall.
+- The suite is at **501 passed, 1 skipped** and must not fall.
 - `bash -n` both PBS scripts and paste the output.
 - `timeout` on every command. Dev only; never read `test_normal` or `test_challenge`.
 - **Do not commit.** I review and commit.
 
 ## Return contract
 
-`campaign/workers/STATUS_X13.md`, under 400 words: the `qstat` states you saw and whether you
+`campaign/workers/STATUS_X16.md`, under 400 words: the `qstat` states you saw and whether you
 proceeded, the two variable names, the manifest keys, the banner line, the test names, both `bash -n`
 results and the pasted suite line. Tag claims `[OBSERVED <path>:<line>]` or `[INFERRED]`.
