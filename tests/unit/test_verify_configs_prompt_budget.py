@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "setup"))
 
 from verify_configs import validate_prompt_budget  # noqa: E402
+from sidekick.runner import load_config
 
 
 def _errors(tmp_path: Path, cfg: dict) -> list[str]:
@@ -60,3 +61,19 @@ def test_allowlisted_frozen_pilot_with_misplaced_prompt_budget_fails(tmp_path):
         "configs/pilot_exec_8b.yaml",
     )
     assert any("misplaced" in error and "limits.max_prompt_tokens" in error for error in errors)
+
+
+def test_hj12_exception_pair_distinct_ids_one_key():
+    advise = load_config(str(ROOT / "configs/hj12_advise_exception.yaml"))
+    takeover = load_config(str(ROOT / "configs/hj12_takeover_exception.yaml"))
+    assert advise["campaign_id"] != takeover["campaign_id"]
+    advise_rest = {k: v for k, v in advise.items() if k != "campaign_id"}
+    takeover_rest = {k: v for k, v in takeover.items() if k != "campaign_id"}
+    differing = {
+        k
+        for k in set(advise_rest) | set(takeover_rest)
+        if advise_rest.get(k) != takeover_rest.get(k)
+    }
+    assert differing == {"takeover"}
+    assert "takeover" not in advise
+    assert takeover["takeover"] is True

@@ -1,0 +1,39 @@
+# HJ-12 exception pair (router_seq + rule_trigger on_exception). Matched with the
+# sibling hj12_*_exception.yaml. Executor, limits and prices copied from frozen
+# configs/hj11_action_review_exception.yaml. Launch with --system router_seq.
+env: appworld
+campaign_id: hj12_takeover_exception_20260923
+system: router_seq
+use_router: true
+takeover: true
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
+  on_missing: fail
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300
+  max_prompt_tokens: 30720
+verifier:
+  kind: rule_trigger
+  rules: [on_exception]
+  threshold: 0.5
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000
+  per_step_timeout_s: 300
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml
