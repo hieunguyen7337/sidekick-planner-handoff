@@ -1,6 +1,8 @@
-# HJ-12 takeover channel: fixed_k (k=10). Same executor/limits/prices as
-# configs/hj8_fixed_k_10.yaml (frozen; this file is a copy). takeover: true is
-# the only experimental difference from the advise arm.
+# HJ-12 context-matched advise control for Claim C1. Same executor/limits/prices
+# as configs/hj8_fixed_k_10.yaml (frozen; this file is a copy), differing only
+# in campaign_id and correct_context: full. Its purpose is to give the advising
+# planner the same transcript the takeover arm gets so a takeover win cannot
+# be explained by context.
 env: appworld
 campaign_id: hj12_advise_fixed_k_10_fullctx_20260923
 correct_context: full

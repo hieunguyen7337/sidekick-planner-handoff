@@ -2424,3 +2424,26 @@ Within the new adapter, plan-only remains nominally ahead of escalation on `goal
 - `6b04ba9`: the retrained adapter.
 - `6556de6`: this analysis.
 
+---
+
+## 13. The HJ-12 build wave — 2026-09-21
+
+### Overview and Code Changes
+
+This wave builds out the HJ-12 milestone infrastructure covering prefix handoff, the takeover channel, the context-matched advise control, and harness hardening. Key changes by commit:
+
+- **Commit `4bd6698`**: The takeover channel and the repair of the action-review gate. The gate had been inert against the hosted planner: it tested a response field that the planner's correction method never sets, so every review would have approved and spent a call doing so. It now calls the planner's act method, which does return a fenced action.
+- **Commit `e405ed3`**: The exception pair rebuilt. It previously shared one `campaign_id` across two arms and selected a path where the `takeover` flag is inert, making the two arms one policy.
+- **Commit `722e887`**: The context-matched advise control, and the policy field for the advise path's transcript window. Default 8 lines, unchanged for every existing arm.
+- **Commit `808d445`**: The live-arm harness, its between-arm spend ceiling, its post-smoke projection guard, and the removal of a swallowed type error in the cached planner.
+
+### Verification and Spending
+
+- **Test suite**: **498 passed, 1 skipped**, verified in an independent job.
+- **Hosted planner calls spent by this wave**: **zero**.
+
+### Submission Status
+
+- **Phase P1 (the four prefix arms)**: Submitted as PBS jobs `25596786` and `25596787`. Both jobs were still queued when this section was written, waiting on GPU availability. No empirical results, goal-pass figures, or gate verdicts exist yet.
+
+

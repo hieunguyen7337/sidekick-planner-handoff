@@ -274,3 +274,16 @@ already-understood arms at risk for no gain — the same call made for the
 **Statistics.** Same treatment as §3: paired, task-clustered, 10,000 resamples,
 `goal_pass_rate` primary, TGC reported beside it. No new test.
 
+**Shared executor ASK channel and attenuation.** Both C1 arms run the `fixed_k` system with
+`allow_executor_ask: true`, confirmed from the recorded policy of the arm already on disk [OBSERVED
+`/scratch/n12194778/sidekick/results/hj8_fixed_k_10_20260921iaware/fixed_k/1/0d8a4ee_1/events.jsonl`,
+the `run_start` event]. The `takeover` flag governs only the forced-review branch, so an
+executor-initiated ASK still returns planner **prose** in both arms.
+
+This is a shared component, not a confound: it is identical on both sides, so it does not bias the
+contrast, but it **attenuates** it, because part of each arm's planner contact is on the advice
+channel in both cases. The analysis is required to report per-arm ASK counts alongside the contrast
+so the size of any attenuation is visible rather than assumed away. If ASK events turn out to
+dominate planner contact, the C1 effect size is a lower bound on the channel difference [INFERRED].
+
+
