@@ -73,7 +73,13 @@ class PlannerClient(Protocol):
 
     def plan(self, task_id: str, goal: str, context: str) -> PlannerResponse: ...
     def correct(self, packet: DelegationPacket, transcript_delta: str) -> PlannerResponse: ...
-    def act(self, task_id: str, transcript: str) -> PlannerResponse: ...
+    def act(
+        self,
+        task_id: str,
+        transcript: str,
+        timeout_s: float | None = None,
+        allow_handoff: bool = False,
+    ) -> PlannerResponse: ...
     def close(self) -> None: ...
 
 
@@ -334,13 +340,23 @@ class CodexExecPlanner:
             thread_id=thread_id,
         )
 
-    def act(self, task_id: str, transcript: str, timeout_s: float | None = None) -> PlannerResponse:
+    def act(
+        self,
+        task_id: str,
+        transcript: str,
+        timeout_s: float | None = None,
+        allow_handoff: bool = False,
+    ) -> PlannerResponse:
         prompt = (
             "You are solving the task yourself. Output the next action as either a "
             "```python fenced block, a line ASK_PLANNER: reason, REPORT: message, or COMPLETE.\n"
-            f"task_id: {task_id}\n"
-            f"transcript:\n{transcript}\n"
         )
+        if allow_handoff:
+            prompt += (
+                "You may instead output a line HANDOFF meaning the remaining work is "
+                "routine enough for a smaller local executor to finish.\n"
+            )
+        prompt += f"task_id: {task_id}\ntranscript:\n{transcript}\n"
         text, usage, thread_id = self._invoke(prompt, schema_path=None, timeout_s=timeout_s)
         code = _maybe_python_fence(text)
         return PlannerResponse(
@@ -577,11 +593,25 @@ class MockPlanner:
             thread_id=f"mock-thread-{packet.task_id}",
         )
 
-    def act(self, task_id: str, transcript: str, timeout_s: float | None = None) -> PlannerResponse:
+    def act(
+        self,
+        task_id: str,
+        transcript: str,
+        timeout_s: float | None = None,
+        allow_handoff: bool = False,
+    ) -> PlannerResponse:
         self._maybe_timeout()
         canned = self._pop(task_id, "act")
         if canned is not None:
             return canned
+        if "PROPOSED_ACTION:" in (transcript or ""):
+            usage = _mock_usage(input_tokens=1800, cached=1200, output_tokens=60)
+            return PlannerResponse(
+                kind="ACTION",
+                raw_output="looks fine",
+                usage=usage,
+                thread_id=f"mock-thread-{task_id}",
+            )
         n = self._counts.get((task_id, "act-default"), 0)
         self._counts[(task_id, "act-default")] = n + 1
         usage = _mock_usage(input_tokens=1800, cached=1200, output_tokens=60)
@@ -779,8 +809,20 @@ class CachedPacketPlanner:
     ) -> PlannerResponse:
         return self.inner.correct(packet, self._prepended_context() + transcript_delta, timeout_s=timeout_s)
 
-    def act(self, task_id: str, transcript: str, timeout_s: float | None = None) -> PlannerResponse:
-        return self.inner.act(task_id, self._prepended_context() + transcript, timeout_s=timeout_s)
+    def act(
+        self,
+        task_id: str,
+        transcript: str,
+        timeout_s: float | None = None,
+        allow_handoff: bool = False,
+    ) -> PlannerResponse:
+        text = self._prepended_context() + transcript
+        try:
+            return self.inner.act(
+                task_id, text, timeout_s=timeout_s, allow_handoff=allow_handoff
+            )
+        except TypeError:
+            return self.inner.act(task_id, text, timeout_s=timeout_s)
 
     def close(self) -> None:
         self.inner.close()

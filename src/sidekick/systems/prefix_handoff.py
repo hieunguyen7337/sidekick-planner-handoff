@@ -147,10 +147,16 @@ class PrefixHandoff(ConfigurableSystem):
         ledger: Any,
         prefix: EpisodePrefix | None = None,
     ) -> RunResult:
-        # Unconfigured (no source_campaign): behave like sft_plan so SYSTEM_NAMES
-        # iteration tests still complete. A configured but missing path is broken.
+        # m == 0 with no source is a legitimate degenerate (SYSTEM_NAMES
+        # iteration). m > 0 with no source is always a misconfig: falling
+        # through to sft_plan would silently duplicate the 1-call arm.
         if not self.source_campaign:
-            return super().run(env, task_id, seed, log, ledger, prefix=prefix)
+            if self.m == 0:
+                return super().run(env, task_id, seed, log, ledger, prefix=prefix)
+            raise RuntimeError(
+                "prefix_handoff missing required key source_campaign "
+                f"(m={self.m}; a configured m with no source is always a mistake)"
+            )
 
         built = build_handoff_prefix(
             self.source_campaign,

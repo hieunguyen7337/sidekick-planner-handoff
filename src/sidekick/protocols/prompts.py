@@ -197,6 +197,8 @@ def format_executor_action(action: ExecutorAction) -> str:
         if action.message:
             return f"COMPLETE: {action.message}"
         return "COMPLETE"
+    if action.kind == "HANDOFF":
+        return "HANDOFF"
     raise ValueError(f"unknown executor action kind: {action.kind!r}")
 
 

@@ -64,7 +64,7 @@ class DelegationPacket(BaseModel):    # planner -> executor
 class ExecutorAction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    kind: Literal["CODE", "REPORT", "ASK_PLANNER", "COMPLETE"]
+    kind: Literal["CODE", "REPORT", "ASK_PLANNER", "COMPLETE", "HANDOFF"]
     code: Optional[str] = None         # required when kind == "CODE"
     message: Optional[str] = None      # REPORT/COMPLETE payload
     ask_reason: Optional[str] = None   # required when kind == "ASK_PLANNER"
@@ -105,7 +105,7 @@ class Observation(BaseModel):
 
 EventType = Literal[
     "run_start", "plan", "action", "observation", "intervention", "ask",
-    "report", "evaluate", "error", "run_end", "action_review",
+    "report", "evaluate", "error", "run_end", "action_review", "handoff",
 ]
 
 

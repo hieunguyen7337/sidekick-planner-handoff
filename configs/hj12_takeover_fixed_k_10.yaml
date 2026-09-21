@@ -1,0 +1,42 @@
+# HJ-12 takeover channel: fixed_k (k=10). Same executor/limits/prices as
+# configs/hj8_fixed_k_10.yaml (frozen; this file is a copy). takeover: true is
+# the only experimental difference from the advise arm.
+env: appworld
+campaign_id: hj12_takeover_fixed_k_10_20260923
+takeover: true
+fixed_k: 10         # review every 10 steps; ~4 reviews + 1 cached plan over a 40-step episode
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays HJ-1 packets: the up-front plan costs nothing, every episode sees the
+  # identical plan per task+seed, and only the reviews spend hosted calls.
+  # CachedPacketPlanner.correct forwards to the inner Codex planner.
+  packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
+  on_missing: fail
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 81 = 2·max_steps + 1. The inherited 25 cap ended 11 of 12 `limit` episodes
+  # in HJ-1; max_steps: 40 must be the binding cap.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

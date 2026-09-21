@@ -3,14 +3,17 @@
 #PBS -q gpu_inter
 #PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
 #PBS -l walltime=04:00:00
-# Shared #PBS -o/-e overwrite the previous job (X5 brief). The script still
-# execs a unique JOB_CID+jobid copy so a death after startup leaves a findable
-# log. Do NOT submit from a worker.
+# Output_Path is evaluated at qsub time and cannot interpolate ARMSET/DATE/CID
+# (those are computed below). A path with no filename makes PBS write unique
+# <job ID>.OU / .ER in this directory — two prefix jobs in parallel cannot
+# share a file. The script also execs a live JOB_CID+jobid copy so a job
+# that dies after startup still leaves a campaign-id log. Do not override -o/-e
+# with a shared filename. Do NOT submit from a worker.
 #   ARMS="hj12_prefix_m2 hj12_prefix_m4" DATE=20260922 SMOKE_ONLY=1
 #   qsub -v ARMS="${ARMS}",DATE=${DATE},SMOKE_ONLY=${SMOKE_ONLY} scripts/pbs/hj12_prefix.pbs
 #   SYSTEM=sft_plan overrides --system (harness check if prefix_handoff is missing).
-#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj12_prefix.out
-#PBS -e /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/hj12_prefix.err
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#PBS -e /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
 #
 # HJ-12 prefix-handoff: serve granite-4.2-8b with the intervention-aware
 # sft_b_plus LoRA (sft_b_plus_iaware_granite8b, alias sft_b_plus) and run

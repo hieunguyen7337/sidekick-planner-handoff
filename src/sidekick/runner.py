@@ -239,7 +239,7 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None
     kwargs: dict[str, Any] = {}
     if name == "fixed_k":
         kwargs["k"] = int(cfg.get("fixed_k", cfg.get("k", 5)))
-    if name in ("sft_plan", "router_seq", "sidekick", "oracle_escalation", "action_review"):
+    if name in ("sft_plan", "router_seq", "sidekick", "oracle_escalation", "action_review", "planner_handoff"):
         adapter = (cfg.get("executor") or {}).get("lora_name") or cfg.get("adapter_name")
         if adapter:
             kwargs["adapter_name"] = adapter
@@ -249,6 +249,11 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None
         vcfg = cfg.get("verifier") or {}
         if "threshold" in vcfg:
             kwargs["verifier_threshold"] = float(vcfg["threshold"])
+    if name in ("fixed_k", "sidekick", "router_seq", "oracle_escalation", "action_review", "planner_handoff"):
+        if "takeover" in cfg:
+            kwargs["takeover"] = bool(cfg["takeover"])
+        if "handoff_allowed" in cfg:
+            kwargs["handoff_allowed"] = bool(cfg["handoff_allowed"])
     if name == "oracle_escalation":
         labels = cfg.get("oracle_labels") or {}
         key = f"{task_id}/{seed}" if seed is not None else None

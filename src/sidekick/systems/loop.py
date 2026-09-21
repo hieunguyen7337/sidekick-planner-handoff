@@ -63,6 +63,8 @@ class SystemPolicy:
     adapter_name: str | None = None
     verifier_threshold: float = 0.5
     review_proposed_action: bool = False
+    takeover: bool = False
+    handoff_allowed: bool = False
 
 
 @dataclass
@@ -250,6 +252,9 @@ def run_episode(
     n_asks = 0
     n_interventions = 0
     n_planner_calls = 0
+    n_planner_actions = 0
+    handoff_step: int | None = None
+    driver_is_planner = policy.planner_drives
     episode_tokens = 0
     error_type: Optional[str] = None
     packet: Optional[DelegationPacket] = None
@@ -401,11 +406,15 @@ def run_episode(
         )
         return None
 
-    def action_from_planner(resp: PlannerResponse, step: int) -> ExecutorAction | None:
+    def action_from_planner(
+        resp: PlannerResponse, step: int, *, fatal_parse: bool = True
+    ) -> ExecutorAction | None:
         nonlocal error_type
-        if resp.code and resp.code.strip():
-            return ExecutorAction(kind="CODE", code=resp.code, raw_output=resp.raw_output or resp.code)
         raw = resp.raw_output or ""
+        if policy.handoff_allowed and any(line.strip() == "HANDOFF" for line in raw.splitlines()):
+            return ExecutorAction(kind="HANDOFF", raw_output=raw or "HANDOFF")
+        if resp.code and resp.code.strip():
+            return ExecutorAction(kind="CODE", code=resp.code, raw_output=raw or resp.code)
         try:
             return parse_executor_action(raw)
         except ActionParseError as exc:
@@ -417,7 +426,8 @@ def run_episode(
                 usage=resp.usage,
                 error="parse_error",
             )
-            error_type = "parse_error"
+            if fatal_parse:
+                error_type = "parse_error"
             return None
 
     def measure_p_ask() -> bool:
@@ -601,6 +611,10 @@ def run_episode(
         }
         if policy.review_proposed_action:
             run_start_payload["policy"]["review_proposed_action"] = True
+        if policy.takeover:
+            run_start_payload["policy"]["takeover"] = True
+        if policy.handoff_allowed:
+            run_start_payload["policy"]["handoff_allowed"] = True
         if prefix is not None:
             run_start_payload["prefix"] = {
                 "start_step": start_step,
@@ -684,6 +698,7 @@ def run_episode(
                 )
                 break
             steps_taken = step
+            forced_action: ExecutorAction | None = None
 
             if (
                 prefix is not None
@@ -751,48 +766,89 @@ def run_episode(
                 transcript.append(f"INTERVENTION: {correction}")
                 exec_turns.append({"role": "user", "content": f"INTERVENTION: {correction}"})
             elif force_review and packet is not None:
-                delta = "\n".join(transcript[-8:])
-                resp = call_planner(
-                    "correct",
-                    lambda: planner.correct(packet, delta, timeout_s=timeout_s),
-                    step,
-                )
-                if resp is None:
-                    break
-                n_interventions += 1
-                correction = resp.correction or resp.raw_output
-                live_payload: dict[str, Any] = {
-                    "n_interventions": n_interventions,
-                    "correction": correction,
-                    "forced": True,
-                }
-                if prefix is not None:
-                    live_payload["source"] = "live_policy"
-                emit(
-                    step=step,
-                    actor="planner",
-                    event_type="intervention",
-                    payload=live_payload,
-                    usage=resp.usage,
-                )
-                transcript.append(f"INTERVENTION: {correction}")
-                exec_turns.append({"role": "user", "content": f"INTERVENTION: {correction}"})
-                if over_token_limit():
-                    error_type = "limit"
+                if policy.takeover:
+                    joined = "\n".join(transcript)
+                    resp = call_planner(
+                        "act",
+                        lambda: planner.act(
+                            task_id,
+                            joined,
+                            timeout_s=timeout_s,
+                            allow_handoff=policy.handoff_allowed,
+                        ),
+                        step,
+                    )
+                    if resp is None:
+                        break
+                    forced_action = action_from_planner(resp, step, fatal_parse=False)
+                    if forced_action is not None:
+                        n_planner_actions += 1
+                        emit(
+                            step=step,
+                            actor="planner",
+                            event_type="action",
+                            payload=forced_action.model_dump(),
+                            usage=resp.usage,
+                            env_state_hash=env.snapshot_hash(),
+                        )
+                    if over_token_limit():
+                        error_type = "limit"
+                        emit(
+                            step=step,
+                            actor="system",
+                            event_type="error",
+                            payload={"limit": "max_tokens_per_episode", "episode_tokens": episode_tokens},
+                            error="limit",
+                        )
+                        break
+                else:
+                    delta = "\n".join(transcript[-8:])
+                    resp = call_planner(
+                        "correct",
+                        lambda: planner.correct(packet, delta, timeout_s=timeout_s),
+                        step,
+                    )
+                    if resp is None:
+                        break
+                    n_interventions += 1
+                    correction = resp.correction or resp.raw_output
+                    live_payload: dict[str, Any] = {
+                        "n_interventions": n_interventions,
+                        "correction": correction,
+                        "forced": True,
+                    }
+                    if prefix is not None:
+                        live_payload["source"] = "live_policy"
                     emit(
                         step=step,
-                        actor="system",
-                        event_type="error",
-                        payload={"limit": "max_tokens_per_episode", "episode_tokens": episode_tokens},
-                        error="limit",
+                        actor="planner",
+                        event_type="intervention",
+                        payload=live_payload,
+                        usage=resp.usage,
                     )
-                    break
+                    transcript.append(f"INTERVENTION: {correction}")
+                    exec_turns.append({"role": "user", "content": f"INTERVENTION: {correction}"})
+                    if over_token_limit():
+                        error_type = "limit"
+                        emit(
+                            step=step,
+                            actor="system",
+                            event_type="error",
+                            payload={"limit": "max_tokens_per_episode", "episode_tokens": episode_tokens},
+                            error="limit",
+                        )
+                        break
 
-            if policy.planner_drives:
+            if driver_is_planner:
                 joined = "\n".join(transcript)
                 resp = call_planner(
                     "act",
-                    lambda: planner.act(task_id, joined, timeout_s=timeout_s),
+                    lambda: planner.act(
+                        task_id,
+                        joined,
+                        timeout_s=timeout_s,
+                        allow_handoff=policy.handoff_allowed,
+                    ),
                     step,
                 )
                 if resp is None:
@@ -800,6 +856,21 @@ def run_episode(
                 action = action_from_planner(resp, step)
                 if action is None:
                     break
+                if action.kind == "HANDOFF":
+                    # The handoff consumes the step index — episodes average 14
+                    # steps against a 40 cap, so it costs nothing real, and the
+                    # alternative re-entrancy is not worth the complexity.
+                    handoff_step = step
+                    driver_is_planner = False
+                    emit(
+                        step=step,
+                        actor="planner",
+                        event_type="handoff",
+                        payload=action.model_dump(),
+                        usage=resp.usage,
+                        env_state_hash=env.snapshot_hash(),
+                    )
+                    continue
                 emit(
                     step=step,
                     actor="planner",
@@ -809,10 +880,10 @@ def run_episode(
                     env_state_hash=env.snapshot_hash(),
                 )
             else:
-                action = action_from_executor(step)
+                action = forced_action if forced_action is not None else action_from_executor(step)
                 if action is None:
                     break
-                if policy.review_proposed_action:
+                if policy.review_proposed_action and forced_action is None:
                     action = run_action_review(
                         action=action,
                         step=step,
@@ -825,6 +896,7 @@ def run_episode(
                         timeout_s=timeout_s,
                         call_planner=call_planner,
                         emit=emit,
+                        task_id=task_id,
                     )
                     if action is None:
                         break
@@ -1032,11 +1104,14 @@ def run_episode(
         error_type=error_type,
         totals=ledger.totals(),
     )
+    end_payload = result.model_dump()
+    end_payload["n_planner_actions"] = n_planner_actions
+    end_payload["handoff_step"] = handoff_step
     emit(
         step=steps_taken,
         actor="system",
         event_type="run_end",
-        payload=result.model_dump(),
+        payload=end_payload,
         env_state_hash=env.snapshot_hash() if not getattr(env, "_closed", False) else None,
         error=error_type,
     )

@@ -164,9 +164,9 @@ class _RecordingExecutor(MockExecutor):
 class _RecordingPlanner(MockPlanner):
     act_transcripts: list[str] = field(default_factory=list)
 
-    def act(self, task_id: str, transcript: str, timeout_s: float | None = None):
+    def act(self, task_id: str, transcript: str, timeout_s: float | None = None, allow_handoff: bool = False):
         self.act_transcripts.append(transcript)
-        return super().act(task_id, transcript, timeout_s=timeout_s)
+        return super().act(task_id, transcript, timeout_s=timeout_s, allow_handoff=allow_handoff)
 
 
 def _ledger() -> CostLedger:

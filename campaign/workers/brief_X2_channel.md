@@ -207,8 +207,8 @@ With `MockEnv` and stub planners:
 
 - `aquarius01` is a **login node**. No interpreter, `pip`, `tar`, `rsync`, `ffmpeg` there. Run the
   suite in PBS: `timeout 1800 hpc bash -c 'cd <repo> && OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 <pytest invocation>'`.
-- pytest needs `--import-mode=importlib`. The suite must stay at **≥ 462 passed, 0 failed** (it was
-  456 before this wave; the prefix unit added tests — check the current count first and never let it
+- pytest needs `--import-mode=importlib`. The suite is currently at **472 passed, 1 skipped, 0
+  failed** and must not fall below that (check the current count first and never let it
   fall).
 - `timeout` on every command.
 - **Do not `qsub` any GPU job, run any evaluation, or retrain.** No hosted planner is to be called:

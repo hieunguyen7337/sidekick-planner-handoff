@@ -162,11 +162,11 @@ def test_approval_executes_proposal(tmp_path: Path):
 def test_replacement_executes_replacement_not_proposal(tmp_path: Path):
     planner = MockPlanner(
         scripts={
-            ("copy_hello", "correct"): [
+            ("copy_hello", "act"): [
                 PlannerResponse(
-                    kind="CORRECTION",
+                    kind="ACTION",
                     code='write("outbox.txt", "hello world")',
-                    raw_output='write("outbox.txt", "hello world")',
+                    raw_output='```python\nwrite("outbox.txt", "hello world")\n```',
                     usage=_usage(),
                 )
             ]
@@ -191,6 +191,51 @@ def test_replacement_executes_replacement_not_proposal(tmp_path: Path):
     assert evals[-1].payload["report"]["deleted"] is False
     obs_texts = [e.payload.get("text") or "" for e in events if e.event_type == "observation"]
     assert not any("deleted all files" in t for t in obs_texts)
+
+
+def test_review_stub_mirrors_real_planner_prose_correct_fenced_act(tmp_path: Path):
+    """correct() returns prose with code=None; act() returns a fenced action.
+
+    A stub that is more capable than the hosted planner (correct() setting code)
+    is how the always-approve defect survived.
+    """
+    planner = MockPlanner(
+        scripts={
+            ("copy_hello", "correct"): [
+                PlannerResponse(
+                    kind="CORRECTION",
+                    correction="do not delete; write outbox instead",
+                    code=None,
+                    raw_output="do not delete; write outbox instead",
+                    usage=_usage(),
+                )
+            ],
+            ("copy_hello", "act"): [
+                PlannerResponse(
+                    kind="ACTION",
+                    code='write("outbox.txt", "hello world")',
+                    raw_output='```python\nwrite("outbox.txt", "hello world")\n```',
+                    usage=_usage(),
+                )
+            ],
+        }
+    )
+    result, events, _ledger = _run(
+        tmp_path,
+        planner=planner,
+        executor=MockExecutor(script=[DELETE, COMPLETE]),
+        verifier=RuleTriggerVerifier(rules=["on_irreversible"]),
+        run_id="ar_real_stub",
+    )
+    reviews = [e for e in events if e.event_type == "action_review"]
+    assert len(reviews) == 1
+    assert reviews[0].payload["verdict"] == "replace"
+    assert reviews[0].payload["replacement"]["code"] == 'write("outbox.txt", "hello world")'
+    assert result.success is True
+    assert result.error_type is None
+    evals = [e for e in events if e.event_type == "evaluate"]
+    assert evals[-1].payload["report"]["outbox"] == "hello world"
+    assert evals[-1].payload["report"]["deleted"] is False
 
 
 def test_review_increments_planner_call_count_by_exactly_one(tmp_path: Path):
