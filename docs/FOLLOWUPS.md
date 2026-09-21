@@ -1024,6 +1024,17 @@ deliberately strict and the prompt documents the contract, so this is a known ed
 but if `planner_handoff` shows an implausibly high handoff rate at step 1, this is the first thing
 to check. Recorded, not changed.
 
+## OPEN 2026-09-22 — m=9 prefix arm cannot be reported on all-episodes without handoff-only figure
+
+The $m=9$ prefix arm (`prefix_m9`) cannot be reported on the all-episodes population without the handoff-only figure beside it [INFERRED].
+
+At $m=9$, 32 of 114 episodes never handed off: the planner's recorded episode terminated before step 9, so those episodes are `planner_alone` replayed rather than a true hybrid [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:387, 426]. The report's `handoff_ease` diagnostic shows that the reference scores **0.8961** on those 32 episodes and **0.8020** on the remaining 82 episodes (a gap of 9.41 pp), establishing that no-handoff tasks are systematically **easier** [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:10850-10860].
+
+The pooled all-episodes contrast ($\text{prefix\_m9} - \text{planner\_alone} = -1.50\text{ pp}$ [−8.10, +5.62]) therefore mixes planner-identical scores on easy tasks with genuine hybrid scores on the rest [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:10584-10594]. On the honest handoff-only population ($n=82$), the difference is **−2.08 pp [−11.25, +7.51]**: still failing non-inferiority, with an interval too wide to support strong conclusions either way [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:10729-10741].
+
+Anyone quoting −1.50 pp without −2.08 pp alongside is quoting a contaminated number [INFERRED].
+
+
 
 
 

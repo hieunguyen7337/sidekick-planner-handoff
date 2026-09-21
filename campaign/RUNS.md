@@ -2444,6 +2444,94 @@ This wave builds out the HJ-12 milestone infrastructure covering prefix handoff,
 
 ### Submission Status
 
-- **Phase P1 (the four prefix arms)**: Submitted as PBS jobs `25596786` and `25596787`. Both jobs were still queued when this section was written, waiting on GPU availability. No empirical results, goal-pass figures, or gate verdicts exist yet.
+- **Phase P1 (the four prefix arms)**: Submitted as PBS jobs `25596786` and `25596787`. Completed; results and analysis recorded in §14 below.
+
+---
+
+## 14. Phase P1 prefix curve and Gate G1 verdict — 2026-09-22
+
+### Provenance
+
+- **Report**: `campaign/results/hj12_prefix_frontier_20260922.report.json` [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:1-15].
+- **HPC Jobs**: PBS jobs `25596786` and `25596787` [OBSERVED campaign/workers/brief_X13_p1_record.md:100-101].
+- **Hosted spend**: **Zero hosted planner calls spent** — the prefixes are replayed from archived recordings (`packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915`) [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:177, 248, 319, 390].
+- **Split & Sample**: Dev split, 114 pairs (57 tasks $\times$ 2 seeds). Resample unit: task-clustered paired percentile bootstrap (10,000 resamples, seed 20260915) [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:8-13, 445-470].
+- **Metric discipline**: `goal_pass_rate` primary, TGC secondary [OBSERVED docs/prereg_hj12_dev_20260922.md:54-55]. Zero crashes across every arm [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:20, 92, 163, 234, 305, 376].
+
+### The Arm Table
+
+Per-arm, all-episodes population ($n=114$). Cost is `planner_tokens_noncached` per episode (live + replayed planner input+output+reasoning, excluding cached input tokens), and percentage fraction is of `planner_alone`'s 684,453 tokens [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:43, 60, 115, 186, 257, 328, 399]:
+
+| arm | goal_pass | TGC | tokens/ep | % of planner | handoff rate |
+|---|---:|---:|---:|---:|---:|
+| `sft_plan` (floor) | 0.7181 | 0.3947 | 23,906 | 3.5% | — |
+| `prefix_m2` | 0.7187 | 0.4211 | 78,346 | 11.4% | 114/114 |
+| `prefix_m4` | 0.7340 | 0.4298 | 143,753 | 21.0% | 114/114 |
+| `prefix_m6` | 0.7145 | 0.4298 | 221,043 | 32.3% | 111/114 |
+| `prefix_m9` | 0.8134 | 0.5877 | 357,448 | 52.2% | 82/114 |
+| `planner_alone` (ceiling) | 0.8284 | 0.6842 | 684,453 | 100% | — |
+
+[OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: keys "arms"].
+
+### The Three Contrasts
+
+#### 1. Prefix minus the plan-only floor (`sft_plan`)
+
+`goal_pass`, positive means the prefix is better [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: keys "contrasts"]:
+
+| m | diff pp | CI95 pp | excludes zero |
+|---:|---:|---|---|
+| 2 | +0.06 | [−5.34, +5.58] | no |
+| 4 | +1.58 | [−3.50, +6.69] | no |
+| 6 | −0.37 | [−5.96, +5.05] | no |
+| 9 | **+9.53** | **[+5.37, +14.14]** | **yes** |
+
+Same against the floor on TGC: $m=2$ +2.63 pp [−7.02, +12.28]; $m=4$ +3.51 pp [−5.26, +12.28]; $m=6$ +3.51 pp [−4.39, +11.40], all with intervals containing zero; $m=9$ **+19.30 pp [+10.53, +28.07]**, excluding zero [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: keys "contrasts"].
+
+#### 2. Arm minus `planner_alone` (Non-inferiority margin −7 pp)
+
+`goal_pass`, pre-registered margin $\epsilon = -7.00\text{ pp}$ [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: keys "noninferiority"]:
+
+| arm | diff pp | CI95 pp | non-inferior |
+|---|---:|---|---|
+| `sft_plan` | −11.02 | [−17.88, −4.27] | no |
+| `prefix_m2` | −10.97 | [−18.53, −3.14] | no |
+| `prefix_m4` | −9.44 | [−17.46, −1.13] | no |
+| `prefix_m6` | −11.39 | [−19.08, −3.39] | no |
+| `prefix_m9` | −1.50 | [−8.10, +5.62] | **no — misses by 1.10 pp on the lower bound** |
+
+#### 3. Chord test (Allocation bowing)
+
+Arm minus the straight line between floor (`sft_plan`) and ceiling (`planner_alone`) at equal cost:
+- $m=2$: −0.85 pp [−6.13, +4.57] [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: key "chord" → "arms" → "prefix_m2"]
+- $m=4$: −0.42 pp [−5.63, +4.82] [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: key "chord" → "arms" → "prefix_m4"]
+- $m=6$: −3.66 pp [−9.22, +1.71] [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: key "chord" → "arms" → "prefix_m6"]
+- $m=9$: +3.96 pp [−0.49, +8.88] [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: key "chord" → "arms" → "prefix_m9"]
+
+No arm sits significantly above the chord [INFERRED].
+
+### The Contamination at m=9
+
+At $m=9$, 32 of 114 episodes never handed off: the planner's recorded episode ended before step 9, so those episodes are `planner_alone` replayed, not a hybrid [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:387, 426]. The report's `handoff_ease` diagnostic records that the reference scores 0.8961 on those 32 and 0.8020 on the other 82 (a gap of 9.41 pp), so the no-handoff episodes are the **easier** ones [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:10850-10860]. The pooled all-episodes figure therefore mixes planner-identical scores on easy tasks with genuine hybrid scores on the rest [INFERRED].
+
+On the honest handoff-only population ($n=82$), $\text{prefix\_m9} - \text{planner\_alone}$ is **−2.08 pp [−11.25, +7.51]**: still not non-inferior, and now too wide to conclude much either way [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:10729-10741].
+
+### The G1 Verdict — FAILED
+
+Gate G1, as pre-registered (`docs/prereg_hj12_dev_20260922.md` §5), passes if **either**:
+
+1. **Clause (a)**: some $m \le 6$ reaches non-inferiority to `planner_alone`. **It does not.** The three lower bounds are −18.53 pp ($m=2$), −17.46 pp ($m=4$), and −19.08 pp ($m=6$) against a −7.00 pp margin [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: keys "noninferiority"]. This is not a near miss [INFERRED].
+2. **Clause (b)**: the curve is monotone with $\text{prefix\_m6} - \text{sft\_plan} \ge +5\text{ pp}$ on `goal_pass`. **It is not.** That difference is **−0.37 pp** (95% CI [−5.96, +5.05]), and the curve is not monotone, since $m=4$ (+1.58 pp) scores above $m=6$ [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: keys "contrasts"].
+
+So **Gate G1 FAILED**, and the plan's flat-curve branch applies: the live phase shrinks to the channel arms, and tailoring becomes the central experiment rather than a refinement [INFERRED].
+
+### The Mechanism Claim (The Actual Finding)
+
+The failure-anatomy analysis established that executor failures begin early: the first environment error falls in the first third of the episode in 67.2% of plan-only failures (`sft_plan_iaware`, 41/61) and 73.3% of the periodic-review arm's (`fixed_k_10_iaware`, 44/60), at a median relative position of 0.2143 [OBSERVED campaign/results/failure_anatomy_dev_20260921.json:442, 464, 1287, 1309]. A prefix of 4 to 6 planner steps therefore **covers the region where executors first go wrong** [INFERRED]. It changes nothing: every interval against the floor contains zero at $m=2$, $4$, and $6$, on both metrics [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json: keys "contrasts"].
+
+The benefit appears only at $m=9$, and `planner_alone` episodes run a median of 12 actions [OBSERVED docs/prereg_hj12_dev_20260922.md:108], so $m=9$ means the planner has already done roughly three quarters of the median episode and the executor is finishing a tail [INFERRED].
+
+The honest conclusion is therefore: **a correct opening does not make this executor finish correctly** [INFERRED]. Its failures are not caused by a bad start and are not localised to the opening [INFERRED]. That is a substantive negative with a clear mechanism, it refutes the premise the protocol was designed around, and it strengthens the case that the remaining lever is the model rather than the protocol [INFERRED].
+
 
 

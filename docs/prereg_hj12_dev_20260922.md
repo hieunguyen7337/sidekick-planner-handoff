@@ -286,4 +286,57 @@ channel in both cases. The analysis is required to report per-arm ASK counts alo
 so the size of any attenuation is visible rather than assumed away. If ASK events turn out to
 dominate planner contact, the C1 effect size is a lower bound on the channel difference [INFERRED].
 
+---
+
+## Amendment 2026-09-22 — Phase P1 Prefix Curve Result and Gate G1 Verdict
+
+This dated amendment records the empirical outcome of Phase P1 evaluated on dev ($n=114$ pairs, 57 tasks $\times$ 2 seeds) and records the verdict against pre-registered Gate G1 (§5) [INFERRED].
+
+### Empirical Outcome against Gate G1
+
+1. **Clause (a) (Non-inferiority to `planner_alone` at some $m \le 6$ within $\epsilon = -7.00\text{ pp}$)**: **FAILED**.
+   - $m=2$: difference $-10.97\text{ pp}$, 95% CI $[-18.53, -3.14]$ [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:9294-9304].
+   - $m=4$: difference $-9.44\text{ pp}$, 95% CI $[-17.46, -1.13]$ [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:9724-9734].
+   - $m=6$: difference $-11.39\text{ pp}$, 95% CI $[-19.08, -3.39]$ [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:10154-10164].
+   - All three 95% bootstrap lower bounds ($-18.53$, $-17.46$, $-19.08\text{ pp}$) fail the $-7.00\text{ pp}$ margin decisively [INFERRED].
+
+2. **Clause (b) (Monotone curve with $\text{prefix\_m6} - \text{sft\_plan} \ge +5.00\text{ pp}$ on `goal_pass`)**: **FAILED**.
+   - Realised difference $\text{prefix\_m6} - \text{sft\_plan} = \mathbf{-0.37\text{ pp}}$ (95% CI $[-5.96, +5.05]$) [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:3309-3319].
+   - The curve is not monotone: $m=4$ ($+1.58\text{ pp}$) exceeds $m=6$ ($-0.37\text{ pp}$) [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:3094-3119].
+
+### Verdict and Consequence
+
+- **Verdict**: **Gate G1 FAILED** on both clauses [INFERRED].
+- **Consequence**: As specified in §5 Gate G1, the **flat-curve branch is in force** [INFERRED]. The live phase shrinks to the channel arms (Claim C1), and suffix tailoring (Claim C3) becomes the central experiment rather than a refinement [INFERRED].
+
+---
+
+## Amendment 2026-09-22 — exploratory prefix lengths 7, 8, 10, 11 after seeing the first grid
+
+This section does not rewrite §4.1, §5 Gate G1, or the P1 verdict amendment above. It records choices made **after** those results were seen.
+
+### These four lengths were chosen after seeing the data
+
+Configs `hj12_prefix_m{7,8,10,11}.yaml` (`campaign_id` `hj12_prefix_m{7,8,10,11}_20260922`, `handoff.m` = 7, 8, 10, 11) were added because the first grid (`m ∈ {2, 4, 6, 9}`) showed a jump between six and nine that was not anticipated, and nothing was measured there. First-grid `goal_pass_all` on dev ($n=114$): `sft_plan` 0.7181, `prefix_m2` 0.7187, `prefix_m4` 0.7340, `prefix_m6` 0.7145, `prefix_m9` 0.8134, `planner_alone` 0.8284 [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:97, :168, :239, :310, :381, :25]. Cost as a share of `planner_alone` non-cached tokens: m=2 11%, m=4 21%, m=6 32%, m=9 52% [OBSERVED campaign/workers/brief_X15_grid_extension.md:16-19]. Seven and eight were added to sit between six and nine (and, if quality plateaus before nine, to test whether C2's "about half the tokens" cost limb can still hold). Ten and eleven were added to see whether the rise continues past nine toward the ceiling.
+
+That selection used the P1 numbers. The four arms are therefore **exploratory, not confirmatory**. Their purpose is to locate where the threshold sits and whether quality plateaus before nine steps. **No claim is established by them alone.**
+
+### Gate G1 failed as registered
+
+Gate G1 (verbatim, §5) passes if either some $m \le 6$ reaches non-inferiority to `planner_alone`, or the curve is monotone with $\text{prefix\_m6} - \text{sft\_plan} \ge +5\text{ pp}$ `goal_pass`. **Both limbs failed. The gate failed.**
+
+- **Limb 1.** No arm at six steps or fewer approached the seven-point non-inferiority margin. Versus `planner_alone` on `goal_pass_rate`, all-episodes: m=2 $-10.97$ pp, CI95 $[-18.53, -3.14]$; m=4 $-9.44$ pp, $[-17.46, -1.13]$; m=6 $-11.39$ pp, $[-19.08, -3.39]$; `holds=false` on all three [OBSERVED campaign/results/hj12_prefix_frontier_20260922.report.json:7119-7139, :7648-7670, :8177-8199]. The closest lower bound is $-17.46$ against $-7.00$. That is not a near miss.
+- **Limb 2.** The curve is not monotone: m=6 scored 0.7145 against m=4's 0.7340 [OBSERVED :310, :239]. $\text{prefix\_m6} - \text{sft\_plan}$ is $-0.37$ pp, not $+5$ (stored contrast is `sft_plan` minus `prefix_m6` $= +0.37$ pp, CI95 $[-5.05, +5.96]$; negate both bounds) [OBSERVED :3557-3575]. The two-point paired difference $\text{prefix\_m4} - \text{prefix\_m6}$ is $+1.95$ pp, CI95 $[-3.42, +7.48]$, which contains zero [OBSERVED :5562-5581]. That interval is the reason the dip is most likely sampling noise. It is an explanation of the non-monotonicity. **It is not a reason to treat Gate G1 as passed.**
+
+The exploratory arms do not reopen G1. G1 was registered on $m \in \{2, 4, 6, 9\}$ and failed there.
+
+### Confirmatory claims need unused data
+
+Any confirmatory claim about an optimal prefix length must be re-registered, with the length chosen here treated as a hypothesis, and tested on data that was not used to choose it. That test would be on `test_normal` / `test_challenge`. This document does not authorise reading those splits [OBSERVED §1.2, §8.3]. Explicit authorisation has not been given. Until it is, the four new arms remain exploratory measurements on **dev**.
+
+### The honest population is handoff-only
+
+A prefix episode that never hands off is the planner's recorded trajectory replayed, not a hybrid. At nine steps, 32 of 114 episodes never handed off (`n_no_handoff=32`, `n_handoff_occurred=82`) and scored identically to the planner on those episodes (`goal_pass_no_handoff` 0.8961 on both arms) [OBSERVED :387, :426, :386, :9324]. The planner scores 0.8961 on those 32 against 0.8020 on the other 82 [OBSERVED :9323-9324]. The pooled all-episodes figure (0.8134) is therefore optimistic: it mixes planner-identical scores on the easier no-handoff tasks with hybrid scores on the rest [OBSERVED :9341]. The honest population for any prefix arm is **handoff-only**. The four new arms will be reported on that population as well as all-episodes; quoting a pooled number without the handoff-only number beside it repeats the m=9 contamination.
+
+
 
