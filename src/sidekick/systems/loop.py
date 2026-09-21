@@ -65,6 +65,9 @@ class SystemPolicy:
     review_proposed_action: bool = False
     takeover: bool = False
     handoff_allowed: bool = False
+    # None = whole transcript on the forced-review *advise* path only.
+    # An integer is that many trailing lines. Default 8 matches every existing arm.
+    correct_context_lines: int | None = 8
 
 
 @dataclass
@@ -205,7 +208,7 @@ class ConfigurableSystem:
         self.verifier = verifier
         self.limits = limits or RunLimits()
         base = policy or self.policy_defaults
-        overlay = {k: v for k, v in kwargs.items() if hasattr(base, k) and v is not None}
+        overlay = {k: v for k, v in kwargs.items() if hasattr(base, k) and (v is not None or k == "correct_context_lines")}
         self.policy = replace(base, **overlay)
 
     def run(
@@ -802,7 +805,14 @@ def run_episode(
                         )
                         break
                 else:
-                    delta = "\n".join(transcript[-8:])
+                    n_ctx = policy.correct_context_lines
+                    if n_ctx is None:
+                        delta_lines = transcript
+                    elif n_ctx == 0:
+                        delta_lines = []
+                    else:
+                        delta_lines = transcript[-n_ctx:]
+                    delta = "\n".join(delta_lines)
                     resp = call_planner(
                         "correct",
                         lambda: planner.correct(packet, delta, timeout_s=timeout_s),

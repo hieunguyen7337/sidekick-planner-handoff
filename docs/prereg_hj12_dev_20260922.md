@@ -228,3 +228,49 @@ would have been a second, silent difference between the arms [INFERRED].
 1. **Immutable Logs**: Raw execution event logs under `data/raw/` and `/scratch/` are append-only and will never be deleted, truncated, or modified [OBSERVED AGENTS.md: rules §7].
 2. **Deterministic Token Accounting**: Token usage for replayed prefixes is logged under `replayed_planner_tokens` and excludes `cached_input_tokens` [OBSERVED campaign/briefs/SEAM_CONTRACT.md:135-139].
 3. **Zero Peeking on Test**: All milestone HJ-12 explorations, adapter evaluations, and threshold choices are confined strictly to dev. No test split (`test_normal`, `test_challenge`) will be evaluated during this milestone [OBSERVED AGENTS.md: rules §5, §7].
+
+---
+
+## Amendment 2026-09-21 — C1 context-matched control
+
+P1 is already running against the text above. This section does not rewrite registered
+wording; it records a confound that was present when C1 was specified and the control
+arm that isolates it.
+
+**The confound.** Claim C1 asks whether, at the same trigger and call count, a planner
+that *acts* beats a planner that *advises*. As built, the arms also differ in context:
+takeover sends the whole transcript [OBSERVED src/sidekick/systems/loop.py:773], while
+the advise arm's forced-review path sent the last eight lines (now
+`SystemPolicy.correct_context_lines`, default `8`) [OBSERVED src/sidekick/systems/loop.py:808-815].
+A takeover win would therefore be explainable as extra context rather than as the
+channel. The default of eight is unchanged, so every already-registered advise arm is
+byte-for-byte the same.
+
+**C1 primary becomes** $\text{takeover\_fixed\_k\_10} - \text{advise\_fixed\_k\_10\_fullctx}$:
+channel isolated at matched trigger ($k=10$), matched call count, and matched (full)
+context. Config `configs/hj12_advise_fixed_k_10_fullctx.yaml`
+(`campaign_id: hj12_advise_fixed_k_10_fullctx_20260923`, `correct_context: full`, no
+`takeover` key).
+
+**C1 secondary, as deployed**, stays $\text{takeover\_fixed\_k\_10} - \text{fixed\_k\_10\_iaware}$,
+the arm that already exists. Gate G2 above still names this contrast; this amendment
+reports it as the as-deployed comparison rather than as the channel effect.
+
+**The context effect itself** is $\text{advise\_fixed\_k\_10\_fullctx} - \text{fixed\_k\_10\_iaware}$.
+It was never measured. It says whether the advice channel was simply starved.
+
+**Why takeover keeps the full transcript.** The full transcript is the right input for
+an acting planner: it matches `planner_alone` [OBSERVED src/sidekick/systems/loop.py:853]
+and is what a deployed acting system would do. The missing control is a full-context
+*advise* arm, not a starved takeover arm.
+
+**Why the executor-ASK path is unchanged.** The knob applies only on the forced-review
+advise path. The ASK join (`transcript[-8:] + ASK`) is left hardcoded
+[OBSERVED src/sidekick/systems/loop.py:949]. That trigger belongs to the `sidekick`
+arms, which are not in this phase. Changing them to chase symmetry would put
+already-understood arms at risk for no gain — the same call made for the
+`expect_planner` branch in commit 7564cc8.
+
+**Statistics.** Same treatment as §3: paired, task-clustered, 10,000 resamples,
+`goal_pass_rate` primary, TGC reported beside it. No new test.
+

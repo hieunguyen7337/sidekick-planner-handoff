@@ -235,6 +235,19 @@ def make_env(kind: str, experiment_name: str, cfg: dict[str, Any]) -> BaseEnv:
     return MockEnv()
 
 
+def parse_correct_context(value: Any) -> int | None:
+    """Map YAML `correct_context` to `SystemPolicy.correct_context_lines`.
+
+    `full` / `all` → None (whole transcript). A non-negative int maps to itself.
+    Anything else raises — a silently ignored key would duplicate the 8-line arm.
+    """
+    if isinstance(value, str) and value.lower() in ("full", "all"):
+        return None
+    if type(value) is int and value >= 0:
+        return value
+    raise ValueError(f"unrecognised correct_context: {value!r}")
+
+
 def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None = None) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
     if name == "fixed_k":
@@ -254,6 +267,8 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None
             kwargs["takeover"] = bool(cfg["takeover"])
         if "handoff_allowed" in cfg:
             kwargs["handoff_allowed"] = bool(cfg["handoff_allowed"])
+        if "correct_context" in cfg:
+            kwargs["correct_context_lines"] = parse_correct_context(cfg["correct_context"])
     if name == "oracle_escalation":
         labels = cfg.get("oracle_labels") or {}
         key = f"{task_id}/{seed}" if seed is not None else None
