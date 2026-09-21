@@ -140,6 +140,10 @@ def summarise(out_root: Path, campaign_id: str) -> dict:
         "errors": dict(errors),
         "n_broken": sum(errors[e] for e in BROKEN),
         "planner_calls_total": planner_calls,
+        # Ledger spend (CostLedger.totals), not the replay-inclusive event count above.
+        # Same split as j8_frontier.attach_ledger_fields (planner_calls_live vs
+        # planner_calls_replay_inclusive). Do not rename planner_calls_total.
+        "planner_calls_live_total": int(totals.get("planner_calls_total") or 0),
         "planner_calls_mean": round(planner_calls / len(rows), 2) if rows else None,
         "steps_mean": round(mean(steps), 2) if steps else None,
         "mean_goal_pass_rate": round(mean(goal_pass_rates), 4) if goal_pass_rates else None,
@@ -184,10 +188,14 @@ def gate(summary: dict, *, expect_planner: bool, expect_model: str | None) -> li
             if not models:
                 fails.append("no planner model id was recorded on any usage record")
     else:
-        if summary["planner_calls_total"] != 0:
+        # prefix_handoff: live==0 with replay-inclusive>0 is the normal correct state, not a leak.
+        live = int(summary.get("planner_calls_live_total") or 0)
+        replay_inclusive = int(summary.get("planner_calls_total") or 0)
+        if live != 0:
             fails.append(
-                f"expected zero planner calls but saw {summary['planner_calls_total']} "
-                f"(models={models}) -- this arm was supposed to be free"
+                f"expected zero live planner calls but saw {live} "
+                f"(replay-inclusive count {replay_inclusive}, models={models}) "
+                f"-- this arm was supposed to be free"
             )
     return fails
 

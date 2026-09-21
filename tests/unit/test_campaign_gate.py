@@ -75,7 +75,9 @@ def test_a_genuinely_wrong_model_is_still_caught(tmp_path):
     assert dict(cs._planner_models(tmp_path)) == {"gpt-5.6-luna": 1, "gpt-5.6-sol": 1}
 
 
-def _summary(models, planner_calls=934):
+def _summary(models, planner_calls=934, planner_calls_live_total=None):
+    if planner_calls_live_total is None:
+        planner_calls_live_total = planner_calls
     return {
         "n_runs": 114,
         "n_broken": 16,
@@ -83,6 +85,7 @@ def _summary(models, planner_calls=934):
         "steps_mean": 36.2,
         "planner_models": models,
         "planner_calls_total": planner_calls,
+        "planner_calls_live_total": planner_calls_live_total,
     }
 
 
@@ -111,3 +114,63 @@ def test_gate_still_fails_when_the_planner_was_never_invoked():
         expect_model="gpt-5.6-luna",
     )
     assert any("zero planner calls" in f for f in fails)
+
+
+def test_free_arm_prefix_handoff_replay_is_not_spend():
+    """prefix_handoff: 3 smoke eps × (2 replayed actions + 1 plan) at m=2 → 9 replay, 0 live."""
+    fails = cs.gate(
+        _summary({}, planner_calls=9, planner_calls_live_total=0),
+        expect_planner=False,
+        expect_model=None,
+    )
+    assert fails == []
+
+
+def test_free_arm_live_spend_fails_with_both_counts():
+    fails = cs.gate(
+        _summary({}, planner_calls=9, planner_calls_live_total=4),
+        expect_planner=False,
+        expect_model=None,
+    )
+    assert len(fails) == 1
+    msg = fails[0]
+    assert "expected zero live planner calls but saw 4" in msg
+    assert "replay-inclusive count 9" in msg
+    assert "models={}" in msg
+
+
+def test_non_free_arm_zero_calls_still_fails_expect_planner():
+    """Guards MockPlanner-fallback detection; ledger 0 must not change this branch."""
+    fails = cs.gate(
+        _summary({}, planner_calls=0, planner_calls_live_total=0),
+        expect_planner=True,
+        expect_model="gpt-5.6-luna",
+    )
+    assert any(
+        "zero planner calls recorded -- the planner was never invoked" in f
+        for f in fails
+    )
+
+
+def test_summary_keeps_replay_inclusive_planner_calls_total(tmp_path):
+    root = tmp_path / "campaign"
+    for i in range(3):
+        path = root / "prefix_handoff" / "1" / f"task_{i}" / "result.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "seed": 1,
+                    "success": True,
+                    "n_planner_calls": 3,
+                    "totals": {"planner_calls_total": 0, "planner_tokens_total": 0},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    summary = cs.summarise(tmp_path, "campaign")
+    assert summary["planner_calls_total"] == 9
+    assert summary["planner_calls_live_total"] == 0
+    assert summary["ledger_totals"]["planner_calls_total"] == 0.0
