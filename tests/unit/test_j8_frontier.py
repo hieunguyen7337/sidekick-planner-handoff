@@ -24,17 +24,31 @@ assert _J10_SPEC.loader is not None
 _J10_SPEC.loader.exec_module(j10)
 
 
-def _totals(planner_tokens: int, usd: float, calls: int) -> dict:
+def _totals(
+    planner_tokens: int,
+    usd: float,
+    calls: int,
+    *,
+    cached_input_tokens: int = 0,
+    output_tokens: int = 0,
+    reasoning_output_tokens: int = 0,
+) -> dict:
+    inclusive = (
+        planner_tokens
+        + cached_input_tokens
+        + output_tokens
+        + reasoning_output_tokens
+    )
     return {
-        "planner_tokens_total": planner_tokens,
+        "planner_tokens_total": inclusive,
         "planner_calls_total": calls,
         "usd_total": usd,
         "per_actor": {
             "planner": {
                 "input_tokens": planner_tokens,
-                "cached_input_tokens": 0,
-                "output_tokens": 0,
-                "reasoning_output_tokens": 0,
+                "cached_input_tokens": cached_input_tokens,
+                "output_tokens": output_tokens,
+                "reasoning_output_tokens": reasoning_output_tokens,
                 "n_calls": calls,
                 "usd": usd,
             }
@@ -59,6 +73,10 @@ def write_run(
     usd: float = 0.02,
     goal_pass_rate=None,
     events: list[dict] | None = None,
+    cached_input_tokens: int = 0,
+    output_tokens: int = 0,
+    reasoning_output_tokens: int = 0,
+    replayed_planner_tokens: float | None = None,
 ) -> Path:
     dest = root / system / str(seed) / task_id / "result.json"
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -78,11 +96,27 @@ def write_run(
         "n_asks": n_asks,
         "n_interventions": 0,
         "error_type": error_type,
-        "totals": _totals(planner_tokens, usd, live),
+        "totals": _totals(
+            planner_tokens,
+            usd,
+            live,
+            cached_input_tokens=cached_input_tokens,
+            output_tokens=output_tokens,
+            reasoning_output_tokens=reasoning_output_tokens,
+        ),
     }
     if goal_pass_rate is not None:
         row["goal_pass_rate"] = goal_pass_rate
     dest.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    if events is None and replayed_planner_tokens is not None:
+        events = [
+            {
+                "event_type": "run_start",
+                "task_id": task_id,
+                "seed": seed,
+                "payload": {"replayed_planner_tokens": replayed_planner_tokens},
+            }
+        ]
     if events is not None:
         (dest.parent / "events.jsonl").write_text(
             "".join(json.dumps(ev) + "\n" for ev in events),
@@ -553,5 +587,203 @@ def test_h3_score_quantile_table_on_known_distribution(tmp_path: Path):
     assert "sidekick_tau05" in table
     assert "0.250000" in table or "0.25" in table
     assert "0.370000" in table or "0.37" in table
+
+
+def _one_row_arm(
+    tmp_path: Path,
+    label: str,
+    system: str,
+    **kwargs,
+) -> dict:
+    root = tmp_path / label
+    write_run(root, system, 1, "task_a", tgc=1.0, n_planner_calls=1, **kwargs)
+    arm = j8.summarise_arm(
+        label,
+        j10.load_arm_tree(root),
+        [1],
+        root=root,
+        cost_key="planner_tokens_noncached",
+        packet_source=tmp_path / "no_such_packet_source",
+    )
+    return next(iter(arm["cleaned"].values()))
+
+
+def test_noncached_cost_excludes_cached_input_tokens(tmp_path: Path):
+    row = _one_row_arm(
+        tmp_path,
+        "live",
+        "planner_alone",
+        planner_tokens=100,
+        cached_input_tokens=40,
+        output_tokens=7,
+        reasoning_output_tokens=3,
+        live_calls=1,
+    )
+    assert row["planner_tokens_live"] == pytest.approx(150.0)
+    assert row["planner_tokens_noncached_live"] == pytest.approx(110.0)
+    assert row["cached_input_tokens"] == pytest.approx(40.0)
+    assert row["cached_share_of_inclusive_total"] == pytest.approx(40.0 / 150.0)
+    assert j8.episode_cost(row, "planner_tokens_noncached") == pytest.approx(110.0)
+    assert j8.episode_cost(row, "planner_tokens_live") == pytest.approx(150.0)
+
+
+def test_prefix_and_live_noncached_costs_are_on_the_same_scale(tmp_path: Path):
+    live = _one_row_arm(
+        tmp_path,
+        "planner_alone",
+        "planner_alone",
+        planner_tokens=80,
+        cached_input_tokens=50,
+        output_tokens=10,
+        reasoning_output_tokens=10,
+        live_calls=2,
+    )
+    prefix = _one_row_arm(
+        tmp_path,
+        "prefix_m2",
+        "prefix_handoff",
+        planner_tokens=0,
+        cached_input_tokens=0,
+        live_calls=0,
+        replayed_planner_tokens=100,
+    )
+    assert j8.episode_cost(live, "planner_tokens_noncached") == pytest.approx(100.0)
+    assert j8.episode_cost(prefix, "planner_tokens_noncached") == pytest.approx(100.0)
+    assert j8.episode_cost(live, "planner_tokens_live") == pytest.approx(150.0)
+    assert j8.episode_cost(prefix, "replayed_planner_tokens") == pytest.approx(100.0)
+
+
+def test_old_token_cost_keys_unchanged_when_cached_tokens_present(tmp_path: Path):
+    live = _one_row_arm(
+        tmp_path,
+        "planner_alone",
+        "planner_alone",
+        planner_tokens=100,
+        cached_input_tokens=50,
+        output_tokens=5,
+        reasoning_output_tokens=5,
+        live_calls=1,
+    )
+    prefix = _one_row_arm(
+        tmp_path,
+        "prefix_m2",
+        "prefix_handoff",
+        planner_tokens=0,
+        live_calls=0,
+        replayed_planner_tokens=42,
+    )
+    assert j8.episode_cost(live, "planner_tokens_live") == pytest.approx(160.0)
+    assert j8.episode_cost(live, "replayed_planner_tokens") == pytest.approx(160.0)
+    assert j8.episode_cost(prefix, "replayed_planner_tokens") == pytest.approx(42.0)
+    assert j8.episode_cost(prefix, "planner_tokens_live") == pytest.approx(0.0)
+    assert j8.episode_cost(live, "planner_tokens_noncached") == pytest.approx(110.0)
+
+
+def write_source_plan_event(
+    source_root: Path,
+    seed: int,
+    task_id: str,
+    *,
+    input_tokens: int,
+    cached_input_tokens: int,
+    output_tokens: int,
+    reasoning_output_tokens: int,
+) -> Path:
+    dest = source_root / "planner_alone" / str(seed) / task_id / "events.jsonl"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    events = [
+        {"event_type": "run_start", "task_id": task_id, "seed": seed, "payload": {}},
+        {
+            "event_type": "plan",
+            "actor": "planner",
+            "task_id": task_id,
+            "seed": seed,
+            "payload": {
+                "packet": {
+                    "packet_id": "p",
+                    "task_id": task_id,
+                    "goal": "g",
+                    "created_at": "t",
+                }
+            },
+            "usage": {
+                "input_tokens": input_tokens,
+                "cached_input_tokens": cached_input_tokens,
+                "output_tokens": output_tokens,
+                "reasoning_output_tokens": reasoning_output_tokens,
+            },
+        },
+    ]
+    dest.write_text("".join(json.dumps(ev) + "\n" for ev in events), encoding="utf-8")
+    return dest
+
+
+def test_sft_plan_noncached_cost_charges_source_plan_event(tmp_path: Path):
+    source = tmp_path / "hj1b"
+    write_source_plan_event(
+        source,
+        1,
+        "task_a",
+        input_tokens=200,
+        cached_input_tokens=80,
+        output_tokens=15,
+        reasoning_output_tokens=5,
+    )
+    sft_root = tmp_path / "sft"
+    write_run(
+        sft_root,
+        "sft_plan",
+        1,
+        "task_a",
+        tgc=1.0,
+        n_planner_calls=1,
+        live_calls=1,
+        planner_tokens=0,
+    )
+    arm = j8.summarise_arm(
+        "sft_plan",
+        j10.load_arm_tree(sft_root),
+        [1],
+        root=sft_root,
+        cost_key="planner_tokens_noncached",
+        packet_source=source,
+    )
+    row = next(iter(arm["cleaned"].values()))
+    assert row["sft_plan_replayed_plan_tokens"] == pytest.approx(220.0)
+    assert j8.episode_cost(row, "planner_tokens_noncached") == pytest.approx(220.0)
+    assert j8.episode_cost(row, "planner_tokens_live") == pytest.approx(0.0)
+    assert arm["sft_plan_floor_costing"]["applied"] is True
+    assert arm["sft_plan_floor_costing"]["route"] == "source_plan_event"
+    assert arm["sft_plan_source_plan_tokens_mean"] == pytest.approx(220.0)
+
+
+def test_sft_plan_unmapped_source_stays_zero_and_is_understated(tmp_path: Path):
+    sft_root = tmp_path / "sft"
+    write_run(
+        sft_root,
+        "sft_plan",
+        1,
+        "task_a",
+        tgc=1.0,
+        n_planner_calls=1,
+        live_calls=1,
+        planner_tokens=0,
+    )
+    arm = j8.summarise_arm(
+        "sft_plan",
+        j10.load_arm_tree(sft_root),
+        [1],
+        root=sft_root,
+        cost_key="planner_tokens_noncached",
+        packet_source=tmp_path / "empty_source",
+    )
+    row = next(iter(arm["cleaned"].values()))
+    assert row["sft_plan_replayed_plan_tokens"] is None
+    assert j8.episode_cost(row, "planner_tokens_noncached") == pytest.approx(0.0)
+    costing = arm["sft_plan_floor_costing"]
+    assert costing["applied"] is False
+    assert costing["route"] == "understatement"
+    assert costing["understatement"]["arm"] == "sft_plan"
+    assert costing["understatement"]["n_missing"] == 1
 
 

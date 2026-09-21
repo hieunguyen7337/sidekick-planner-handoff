@@ -41,6 +41,15 @@ j10 = importlib.util.module_from_spec(_J10_SPEC)
 assert _J10_SPEC.loader is not None
 _J10_SPEC.loader.exec_module(j10)
 
+_NC_SPEC = importlib.util.spec_from_file_location(
+    "j8_noncached_cost", Path(__file__).resolve().parent / "j8_noncached_cost.py"
+)
+_nc = importlib.util.module_from_spec(_NC_SPEC)
+assert _NC_SPEC.loader is not None
+_NC_SPEC.loader.exec_module(_nc)
+attach_sft_plan_source_plan_tokens = _nc.attach_sft_plan_source_plan_tokens
+noncached_episode_cost = _nc.noncached_episode_cost
+
 from scripts.setup.campaign_summarize import BROKEN  # noqa: E402
 from scripts.setup.hj1_gate import paired_diff  # noqa: E402
 
@@ -51,7 +60,30 @@ COST_KEYS = (
     "planner_calls_live",
     "planner_tokens_live",
     "replayed_planner_tokens",
+    "planner_tokens_noncached",
 )
+DEFAULT_SFT_PLAN_PACKET_SOURCE = Path(
+    "/scratch/n12194778/sidekick/results/hj1b_planner_20260915"
+)
+DEFAULT_SFT_PLAN_PACKET_SYSTEM = "planner_alone"
+COST_KEY_NOTES = {
+    "planner_calls_live": (
+        "planner_calls_live counts ledger totals.planner_calls_total per episode."
+    ),
+    "planner_tokens_live": (
+        "planner_tokens_live is ledger planner_tokens_total "
+        "(input + cached_input + output + reasoning)."
+    ),
+    "replayed_planner_tokens": (
+        "replayed_planner_tokens is the handoff payload sum excluding cached "
+        "input, else ledger planner_tokens_total which includes cached input."
+    ),
+    "planner_tokens_noncached": (
+        "planner_tokens_noncached is live planner input+output+reasoning plus "
+        "replayed_planner_tokens (and sft_plan's matched source plan-event "
+        "tokens); cached_input_tokens are excluded."
+    ),
+}
 HANDOFF_KEYS = (
     "effective_m",
     "handoff_occurred",
@@ -125,9 +157,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=list(COST_KEYS),
         help=(
             "Per-episode cost field for the frontier and chord axis. "
-            "Default planner_calls_live (unchanged). A recorded 0 is a valid "
-            "cost; arms are not dropped and crash/call is not divided by 0."
+            "Default planner_calls_live (unchanged). Use "
+            "planner_tokens_noncached for the prefix token axis (cached input "
+            "excluded on every arm). A recorded 0 is a valid cost; arms are "
+            "not dropped and crash/call is not divided by 0."
         ),
+    )
+    p.add_argument(
+        "--packet-source",
+        type=Path,
+        default=DEFAULT_SFT_PLAN_PACKET_SOURCE,
+        help=(
+            "Campaign tree sft_plan replays, keyed "
+            "<packet-source>/<packet-system>/<seed>/<task_id>/events.jsonl. "
+            "Used to charge sft_plan the non-cached plan-event tokens it "
+            "replays. Default is the HJ-1 planner_alone archive."
+        ),
+    )
+    p.add_argument(
+        "--packet-system",
+        default=DEFAULT_SFT_PLAN_PACKET_SYSTEM,
+        help="System subdirectory under --packet-source (default planner_alone).",
     )
     p.add_argument(
         "--reference-arm",
@@ -521,6 +571,26 @@ def attach_ledger_fields(
         row["calls_live_differs_from_replay"] = (
             live is not None and replay is not None and int(live) != int(replay)
         )
+        row["system"] = raw.get("system")
+        per_actor = totals.get("per_actor")
+        planner = per_actor.get("planner") if isinstance(per_actor, dict) else None
+        if isinstance(planner, dict):
+            inp = float(planner.get("input_tokens") or 0)
+            out = float(planner.get("output_tokens") or 0)
+            reas = float(planner.get("reasoning_output_tokens") or 0)
+            cached = float(planner.get("cached_input_tokens") or 0)
+            live_nc = inp + out + reas
+            inclusive = live_nc + cached
+            row["planner_tokens_noncached_live"] = live_nc
+            row["cached_input_tokens"] = cached
+            row["cached_share_of_inclusive_total"] = (
+                (cached / inclusive) if inclusive else None
+            )
+        else:
+            row["planner_tokens_noncached_live"] = None
+            row["cached_input_tokens"] = None
+            row["cached_share_of_inclusive_total"] = None
+        row.setdefault("sft_plan_replayed_plan_tokens", None)
 
 
 def _handoff_facts_from_events_text(text: str) -> dict[str, Any]:
@@ -626,6 +696,8 @@ def episode_cost(row: dict[str, Any], cost_key: str) -> Optional[float]:
     if cost_key == "planner_tokens_live":
         value = row.get("planner_tokens_live")
         return None if value is None else float(value)
+    if cost_key == "planner_tokens_noncached":
+        return noncached_episode_cost(row)
     value = row.get("replayed_planner_tokens")
     if value is not None:
         return float(value)
@@ -666,6 +738,8 @@ def summarise_arm(
     seeds: list[int],
     root: Path | None = None,
     cost_key: str = COST_KEY_DEFAULT,
+    packet_source: Path | None = DEFAULT_SFT_PLAN_PACKET_SOURCE,
+    packet_system: str = DEFAULT_SFT_PLAN_PACKET_SYSTEM,
 ) -> dict[str, Any]:
     runs: dict[tuple[str, int], dict[str, Any]] = loaded["runs"]
     n = len(runs)
@@ -673,6 +747,9 @@ def summarise_arm(
     inv = j10.inventory_arm(label, loaded, tasks, seeds)
     attach_ledger_fields(inv["cleaned"], runs)
     attach_handoff_fields(inv["cleaned"], root)
+    sft_plan_floor_costing = attach_sft_plan_source_plan_tokens(
+        inv["cleaned"], label, packet_source, packet_system
+    )
     n_broken = 0
     for row in runs.values():
         err = row.get("error_type")
@@ -706,6 +783,10 @@ def summarise_arm(
         row["cost_value"] = episode_cost(row, cost_key)
     cost_vals = [row.get("cost_value") for row in cleaned.values()]
     cost_vals_surv = [row.get("cost_value") for row in survivors]
+    cached_vals = [row.get("cached_input_tokens") for row in cleaned.values()]
+    cached_share_vals = [
+        row.get("cached_share_of_inclusive_total") for row in cleaned.values()
+    ]
     handoff_all = [_bool01(row.get("handoff_occurred")) for row in cleaned_rows]
     handoff_surv = [_bool01(row.get("handoff_occurred")) for row in survivors]
     hash_all = [_bool01(row.get("hash_ok")) for row in cleaned_rows]
@@ -745,6 +826,15 @@ def summarise_arm(
         "cost_per_episode": mean_or_none(cost_vals) if complete_n else None,
         "cost_per_episode_survivors": mean_present(cost_vals_surv),
         "cost_total": sum_or_none(cost_vals) if complete_n else None,
+        "cached_input_tokens_per_episode": mean_present(cached_vals),
+        "cached_share_of_inclusive_total": mean_present(cached_share_vals),
+        "sft_plan_source_plan_tokens_mean": (
+            sft_plan_floor_costing.get("mean_noncached_plan_tokens")
+            if sft_plan_floor_costing.get("applied")
+            else None
+        ),
+        "sft_plan_floor_costing": sft_plan_floor_costing,
+        "cost_key_note": COST_KEY_NOTES.get(cost_key),
         "handoff_occurred_rate": mean_present(handoff_all),
         "handoff_occurred_rate_all": mean_present(handoff_all),
         "handoff_occurred_rate_survivors": mean_present(handoff_surv),
@@ -905,6 +995,15 @@ def frontier_table(arms: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
                 ),
                 "cost_key": arm.get("cost_key"),
                 "cost_per_episode": arm.get("cost_per_episode"),
+                "cached_input_tokens_per_episode": arm.get(
+                    "cached_input_tokens_per_episode"
+                ),
+                "cached_share_of_inclusive_total": arm.get(
+                    "cached_share_of_inclusive_total"
+                ),
+                "sft_plan_source_plan_tokens_mean": arm.get(
+                    "sft_plan_source_plan_tokens_mean"
+                ),
                 "handoff_occurred_rate": arm.get("handoff_occurred_rate"),
                 "hash_ok_rate": arm.get("hash_ok_rate"),
                 "effective_m_mean": arm.get("effective_m_mean"),
@@ -1702,7 +1801,8 @@ def format_handoff_table(arms: dict[str, dict[str, Any]]) -> str:
         "handoff diagnostics (missing records stay NA; a recorded 0 is kept)"
     ]
     header = (
-        f"{'arm':<28} {'n':>5} {'n_crash':>8} {'cost/ep':>10} "
+        f"{'arm':<28} {'n':>5} {'n_crash':>8} {'cost/ep':>12} "
+        f"{'cached/ep':>12} {'cache%':>8} "
         f"{'hand_all':>8} {'hand_surv':>9} {'hash_all':>8} {'hash_surv':>9} "
         f"{'m_all':>7} {'m_surv':>7}"
     )
@@ -1711,7 +1811,9 @@ def format_handoff_table(arms: dict[str, dict[str, Any]]) -> str:
     for label, arm in arms.items():
         lines.append(
             f"{label:<28} {arm.get('n', 0):>5} {arm.get('n_crashed', 0):>8} "
-            f"{_fmt_metric(arm.get('cost_per_episode'), 10)} "
+            f"{_fmt_metric(arm.get('cost_per_episode'), 12)} "
+            f"{_fmt_metric(arm.get('cached_input_tokens_per_episode'), 12, 1)} "
+            f"{_fmt_metric(arm.get('cached_share_of_inclusive_total'), 8, 3)} "
             f"{_fmt_metric(arm.get('handoff_occurred_rate_all'), 8)} "
             f"{_fmt_metric(arm.get('handoff_occurred_rate_survivors'), 9)} "
             f"{_fmt_metric(arm.get('hash_ok_rate_all'), 8)} "
@@ -1805,6 +1907,8 @@ def build_report(
     cost_key: str = COST_KEY_DEFAULT,
     reference_arm: str | None = None,
     floor_arm: str | None = None,
+    packet_source: Path | None = DEFAULT_SFT_PLAN_PACKET_SOURCE,
+    packet_system: str = DEFAULT_SFT_PLAN_PACKET_SYSTEM,
 ) -> tuple[dict[str, Any], int]:
     for directory in arm_dirs.values():
         marker = j10.heldout_marker_in_path(directory)
@@ -1825,7 +1929,13 @@ def build_report(
     arms: dict[str, dict[str, Any]] = {}
     for label, loaded in loaded_by_arm.items():
         arm = summarise_arm(
-            label, loaded, seeds, root=arm_dirs[label], cost_key=cost_key
+            label,
+            loaded,
+            seeds,
+            root=arm_dirs[label],
+            cost_key=cost_key,
+            packet_source=packet_source,
+            packet_system=packet_system,
         )
         arm["root"] = arm_dirs[label]
         arms[label] = arm
@@ -1945,6 +2055,23 @@ def build_report(
             if isinstance(row, dict) and row.get("label") is not None
         },
         "cost_key": cost_key,
+        "cost_key_note": COST_KEY_NOTES.get(cost_key),
+        "known_cost_understatements": [
+            costing["understatement"]
+            for costing in (
+                (arm.get("sft_plan_floor_costing") or {})
+                for arm in arms.values()
+            )
+            if costing.get("understatement")
+        ],
+        "sft_plan_floor_costing": next(
+            (
+                arm.get("sft_plan_floor_costing")
+                for arm in arms.values()
+                if (arm.get("sft_plan_floor_costing") or {}).get("n_sft_plan_rows")
+            ),
+            None,
+        ),
         "reference_arm": reference_arm,
         "floor_arm": floor_arm,
         "noninferiority_margin_pp": F1_QUALITY_PP,
@@ -1991,6 +2118,8 @@ def main(argv: list[str] | None = None) -> int:
         cost_key=args.cost_key,
         reference_arm=args.reference_arm,
         floor_arm=args.floor_arm,
+        packet_source=args.packet_source,
+        packet_system=args.packet_system,
     )
     if report.get("refused") and "arms" not in report:
         print(report.get("reason") or "refused")
@@ -2003,6 +2132,21 @@ def main(argv: list[str] | None = None) -> int:
     print(table)
     print()
     print(format_handoff_table(report["arms"]))
+    if report.get("cost_key_note"):
+        print(report["cost_key_note"])
+    sft_costing = report.get("sft_plan_floor_costing") or {}
+    if sft_costing.get("applied"):
+        print(
+            "sft_plan floor route=source_plan_event "
+            f"mean_noncached_plan_tokens={sft_costing.get('mean_noncached_plan_tokens')} "
+            f"n={sft_costing.get('n_mapped')}"
+        )
+    for item in report.get("known_cost_understatements") or []:
+        print(
+            "known_cost_understatement "
+            f"arm={item.get('arm')} reason={item.get('reason')} "
+            f"estimated_mean={item.get('estimated_mean_noncached_plan_tokens')}"
+        )
     ni_table = format_noninferiority_table(report.get("noninferiority"))
     if ni_table:
         print()
