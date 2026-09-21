@@ -3,6 +3,7 @@ from sidekick.systems.executor_alone import ExecutorAlone
 from sidekick.systems.fixed_k import FixedK
 from sidekick.systems.oracle_escalation import OracleEscalation
 from sidekick.systems.planner_alone import PlannerAlone
+from sidekick.systems.prefix_handoff import PrefixHandoff
 from sidekick.systems.prompt_only import PromptOnly
 from sidekick.systems.router_seq import RouterSeq
 from sidekick.systems.sidekick import Sidekick
@@ -10,7 +11,7 @@ from sidekick.systems.sft_plan import SftPlan
 
 # Seam contract lists eight names. action_review is an additional experimental
 # system (E4). Keep the original eight first so existing exact-tuple tests stay
-# a prefix; append the ninth.
+# a prefix; append extras (action_review, then prefix_handoff).
 SYSTEM_NAMES = (
     "planner_alone",
     "executor_alone",
@@ -21,6 +22,7 @@ SYSTEM_NAMES = (
     "sidekick",
     "oracle_escalation",
     "action_review",
+    "prefix_handoff",
 )
 
 SYSTEMS = {
@@ -33,6 +35,7 @@ SYSTEMS = {
     "sidekick": Sidekick,
     "oracle_escalation": OracleEscalation,
     "action_review": ActionReview,
+    "prefix_handoff": PrefixHandoff,
 }
 
 
@@ -57,4 +60,5 @@ __all__ = [
     "Sidekick",
     "OracleEscalation",
     "ActionReview",
+    "PrefixHandoff",
 ]

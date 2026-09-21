@@ -259,6 +259,15 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None
         else:
             steps = cfg.get("oracle_steps") or []
         kwargs["oracle_steps"] = [int(s) for s in steps]
+    if name == "prefix_handoff":
+        h = cfg.get("handoff") or {}
+        if h.get("source_campaign"):
+            kwargs["source_campaign"] = str(h["source_campaign"])
+        kwargs["source_system"] = str(h.get("source_system", "planner_alone"))
+        kwargs["m"] = int(h.get("m", 0))
+        adapter = (cfg.get("executor") or {}).get("lora_name") or cfg.get("adapter_name")
+        if adapter:
+            kwargs["adapter_name"] = adapter
     return kwargs
 
 

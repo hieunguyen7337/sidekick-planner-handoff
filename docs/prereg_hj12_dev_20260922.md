@@ -67,8 +67,33 @@ $$\epsilon = 7.00\text{ percentage points}$$
 - **Random Seed**: Fixed at `SEED = 20260915` [OBSERVED scripts/setup/hj1_gate.py:29].
 
 ### 3.4 Evaluated Populations
-1. **All-Episodes (Headline)**: All initialized episodes ($n=114$). Any run ending in `crash`, `timeout`, `limit`, `parse_error`, or `api_error` scores $0.0$ on both `goal_pass_rate` and TGC [OBSERVED docs/prereg_j9_freeze_20260920.md:231-232].
-2. **Survivors**: Contrast computed over pairs where neither run encountered an unrecoverable system crash [OBSERVED campaign/RUNS.md:2238].
+
+**Corrected before any HJ-12 episode ran.** An earlier draft of this section stated that runs ending
+in `crash`, `timeout`, `limit`, `parse_error` or `api_error` all score $0.0$. That is **not** what
+the analysis code does, and it is not what any previously published number in this campaign used.
+The code is authoritative and is left unchanged; this document is corrected to match it, because
+re-defining the population now would make every HJ-12 number incomparable with the J8 and E-series
+results it must be read against [INFERRED].
+
+1. **All-Episodes (Headline)**: all initialised episodes ($n=114$). Only `error_type == "crash"` is
+   coerced to $0.0$ on `goal_pass_rate` and TGC [OBSERVED scripts/analysis/j8_frontier.py:295-296,
+   317-327]. Episodes ending `limit`, `timeout`, `parse_error` or `api_error` keep the partial
+   credit they earned. `limit` in particular is a real outcome and not a broken run
+   [OBSERVED scripts/setup/campaign_summarize.py:33].
+2. **Survivors**: pairs where neither run crashed [OBSERVED campaign/RUNS.md:2238].
+
+**Required reporting so a stricter reader can recompute**: per-arm counts of every `error_type` are
+reported for both populations (§7.3), so anyone preferring the all-broken-score-zero convention can
+derive it from the published table without re-running anything [INFERRED].
+
+**Replay divergence is scored as a crash, deliberately.** A prefix episode whose replayed state hash
+does not match the recording is recorded with `error_type: "crash"`, which means it scores $0.0$ in
+all-episodes and is excluded from survivors. This is the conservative direction: a measurement
+failure counts against the prefix arm in the headline rather than being quietly dropped, while the
+survivor view shows what the policy did when the replay was sound. **Both are reported, and the
+divergence rate is reported beside them.** If divergence exceeds 1% of episodes for any arm, the
+curve for that arm is re-cut on the matching subset and the rate is stated in the headline, because
+at that point the arm is measuring the replay harness as much as the policy [INFERRED].
 
 ---
 

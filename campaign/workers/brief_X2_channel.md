@@ -34,9 +34,54 @@ Create:
 - `configs/hj12_takeover_fixed_k_10.yaml`, `hj12_takeover_fixed_k_3.yaml`,
   `hj12_takeover_exception.yaml`, `hj12_advise_exception.yaml`, `hj12_planner_handoff.yaml`
 
-**Do not touch** `src/sidekick/prefix_source.py`, `src/sidekick/systems/prefix_handoff.py`,
-`scripts/`, or any `configs/hj12_prefix_*.yaml` — another unit owns those and they are already
-committed.
+**Do not touch** `src/sidekick/prefix_source.py`, `scripts/`, or any `configs/hj12_prefix_*.yaml` —
+another unit owns those and they are already committed.
+
+### One exception, and it is your first task — harden `src/sidekick/systems/prefix_handoff.py`
+
+That file currently contains:
+
+```python
+# Unconfigured (no source_campaign): behave like sft_plan so SYSTEM_NAMES
+# iteration tests still complete. A configured but missing path is broken.
+if not self.source_campaign:
+    return super().run(env, task_id, seed, log, ledger, prefix=prefix)
+```
+
+**This is a silent-failure hazard and must not reach a GPU run.** If a config misspells the
+`handoff:` block, or the runner stops forwarding `source_campaign`, every prefix arm degrades
+quietly into `sft_plan` and the experiment produces four plausible, mutually consistent copies of
+the 1-call arm. Nothing in the output would look wrong. This project has already lost one whole
+campaign to a silent substitution of exactly this shape.
+
+Change it to: fall through to `sft_plan` behaviour **only when `self.m == 0`**, and otherwise raise
+a `RuntimeError` naming the missing key, before any episode runs. `m == 0` with no source is a
+legitimate degenerate configuration; `m > 0` with no source is always a mistake. Add a test that a
+configured `m` with no `source_campaign` raises rather than scoring.
+
+Touch nothing else in that file.
+
+### Second exception — fix two `#PBS` lines in `scripts/pbs/hj12_prefix.pbs`
+
+That script currently has:
+
+```
+#PBS -o /mnt/.../campaign/workers/logs/hj12_prefix.out
+#PBS -e /mnt/.../campaign/workers/logs/hj12_prefix.err
+```
+
+Those are fixed paths, and the prefix phase submits **two jobs in parallel**, so the second job
+clobbers the first job's stdout. Change both to the **directory** form that
+`scripts/pbs/hj8_frontier.pbs:15` uses, so PBS writes a unique `<jobid>.OU` / `.ER` per job:
+
+```
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#PBS -e /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+```
+
+Update the adjacent comment, which currently explains the shared-path choice, to say the opposite
+and why. Run `bash -n` on the script afterwards. Change nothing else in it — the port derivation,
+alias verification, adapter checks and the live-planner guard are all correct and are not yours.
 
 ## Defect to repair first — `action_review_gate.py`
 

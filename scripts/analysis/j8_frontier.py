@@ -46,6 +46,19 @@ from scripts.setup.hj1_gate import paired_diff  # noqa: E402
 
 MIN_ROWS = 114
 F1_QUALITY_PP = 7.0
+COST_KEY_DEFAULT = "planner_calls_live"
+COST_KEYS = (
+    "planner_calls_live",
+    "planner_tokens_live",
+    "replayed_planner_tokens",
+)
+HANDOFF_KEYS = (
+    "effective_m",
+    "handoff_occurred",
+    "hash_ok",
+    "replayed_planner_tokens",
+    "n_source_actions",
+)
 FIXED_K_REFERENCE = 5
 DEFAULT_SEEDS = "1,2"
 DEFAULT_ORACLE_LABELS = Path(
@@ -105,6 +118,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=DEFAULT_ORACLE_LABELS,
         help="Path to oracle_labels.json (H3 calibration). Read-only.",
+    )
+    p.add_argument(
+        "--cost-key",
+        default=COST_KEY_DEFAULT,
+        choices=list(COST_KEYS),
+        help=(
+            "Per-episode cost field for the frontier and chord axis. "
+            "Default planner_calls_live (unchanged). A recorded 0 is a valid "
+            "cost; arms are not dropped and crash/call is not divided by 0."
+        ),
+    )
+    p.add_argument(
+        "--reference-arm",
+        default=None,
+        help="Arm label for non-inferiority (and chord). Omit to skip.",
+    )
+    p.add_argument(
+        "--floor-arm",
+        default=None,
+        help="Floor arm label for the chord test (typically sft_plan).",
     )
     return p.parse_args(argv)
 
@@ -490,6 +523,135 @@ def attach_ledger_fields(
         )
 
 
+def _handoff_facts_from_events_text(text: str) -> dict[str, Any]:
+    facts: dict[str, Any] = {key: None for key in HANDOFF_KEYS}
+    events: list[dict[str, Any]] = []
+    last_start = 0
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(ev, dict):
+            continue
+        events.append(ev)
+        if ev.get("event_type") == "run_start":
+            last_start = len(events) - 1
+    for ev in events[last_start:]:
+        payload = ev.get("payload") or {}
+        if not isinstance(payload, dict):
+            continue
+        for key in HANDOFF_KEYS:
+            if key in payload and payload[key] is not None:
+                facts[key] = payload[key]
+    if facts["effective_m"] is not None:
+        try:
+            facts["effective_m"] = int(facts["effective_m"])
+        except (TypeError, ValueError):
+            facts["effective_m"] = None
+    if facts["n_source_actions"] is not None:
+        try:
+            facts["n_source_actions"] = int(facts["n_source_actions"])
+        except (TypeError, ValueError):
+            facts["n_source_actions"] = None
+    if facts["replayed_planner_tokens"] is not None:
+        try:
+            facts["replayed_planner_tokens"] = float(facts["replayed_planner_tokens"])
+        except (TypeError, ValueError):
+            facts["replayed_planner_tokens"] = None
+    if facts["handoff_occurred"] is not None:
+        facts["handoff_occurred"] = bool(facts["handoff_occurred"])
+    if facts["hash_ok"] is not None:
+        facts["hash_ok"] = bool(facts["hash_ok"])
+    return facts
+
+
+def attach_handoff_fields(
+    cleaned: dict[tuple[str, int], dict[str, Any]],
+    root: Path | None,
+) -> None:
+    """Copy handoff payload fields onto cleaned rows. Missing stays None."""
+    for row in cleaned.values():
+        for key in HANDOFF_KEYS:
+            row.setdefault(key, None)
+    if root is None or not Path(root).exists():
+        return
+    for path in sorted(Path(root).rglob("events.jsonl")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        facts = _handoff_facts_from_events_text(text)
+        task_id = None
+        seed = None
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(ev, dict):
+                continue
+            if ev.get("task_id") is not None:
+                task_id = str(ev["task_id"])
+            if ev.get("seed") is not None:
+                try:
+                    seed = int(ev["seed"])
+                except (TypeError, ValueError):
+                    seed = None
+            if task_id is not None and seed is not None:
+                break
+        if task_id is None or seed is None:
+            continue
+        row = cleaned.get((task_id, seed))
+        if row is None:
+            continue
+        for key, value in facts.items():
+            if value is not None:
+                row[key] = value
+
+
+def episode_cost(row: dict[str, Any], cost_key: str) -> Optional[float]:
+    """Per-episode cost. A recorded 0 is kept; missing stays None."""
+    if cost_key not in COST_KEYS:
+        raise ValueError(f"unknown cost-key {cost_key!r}")
+    if cost_key == "planner_calls_live":
+        value = row.get("planner_calls_live")
+        return None if value is None else float(value)
+    if cost_key == "planner_tokens_live":
+        value = row.get("planner_tokens_live")
+        return None if value is None else float(value)
+    value = row.get("replayed_planner_tokens")
+    if value is not None:
+        return float(value)
+    live_tokens = row.get("planner_tokens_live")
+    return None if live_tokens is None else float(live_tokens)
+
+
+def _bool01(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    return 1.0 if value else 0.0
+
+
+def mean_present(values: list[Any]) -> Optional[float]:
+    present = [float(v) for v in values if v is not None]
+    if not present:
+        return None
+    return round(statistics.fmean(present), 6)
+
+
+def sum_or_none(values: list[Any]) -> Optional[float]:
+    if not values or any(v is None for v in values):
+        return None
+    return float(sum(float(v) for v in values))
+
+
 def mean_or_none(values: list[Any]) -> Optional[float]:
     present = [float(v) for v in values if v is not None]
     missing = sum(1 for v in values if v is None)
@@ -502,12 +664,15 @@ def summarise_arm(
     label: str,
     loaded: dict[str, Any],
     seeds: list[int],
+    root: Path | None = None,
+    cost_key: str = COST_KEY_DEFAULT,
 ) -> dict[str, Any]:
     runs: dict[tuple[str, int], dict[str, Any]] = loaded["runs"]
     n = len(runs)
     tasks = sorted({task_id for task_id, seed in runs if seed in set(seeds)})
     inv = j10.inventory_arm(label, loaded, tasks, seeds)
     attach_ledger_fields(inv["cleaned"], runs)
+    attach_handoff_fields(inv["cleaned"], root)
     n_broken = 0
     for row in runs.values():
         err = row.get("error_type")
@@ -537,6 +702,23 @@ def summarise_arm(
         crash_per_call_pct = round(100.0 * crash_per_call, 2)
     complete_n = n >= MIN_ROWS
     populations_coincide = n_crashed == 0
+    for row in cleaned.values():
+        row["cost_value"] = episode_cost(row, cost_key)
+    cost_vals = [row.get("cost_value") for row in cleaned.values()]
+    cost_vals_surv = [row.get("cost_value") for row in survivors]
+    handoff_all = [_bool01(row.get("handoff_occurred")) for row in cleaned_rows]
+    handoff_surv = [_bool01(row.get("handoff_occurred")) for row in survivors]
+    hash_all = [_bool01(row.get("hash_ok")) for row in cleaned_rows]
+    hash_surv = [_bool01(row.get("hash_ok")) for row in survivors]
+    em_all = [row.get("effective_m") for row in cleaned_rows]
+    em_surv = [row.get("effective_m") for row in survivors]
+    n_handoff_record = sum(
+        1
+        for row in cleaned_rows
+        if row.get("handoff_occurred") is not None
+        or row.get("hash_ok") is not None
+        or row.get("effective_m") is not None
+    )
     return {
         "label": label,
         "n": n,
@@ -559,6 +741,22 @@ def summarise_arm(
         if complete_n
         else None,
         "planner_tokens_per_episode": mean_or_none(token_vals) if complete_n else None,
+        "cost_key": cost_key,
+        "cost_per_episode": mean_or_none(cost_vals) if complete_n else None,
+        "cost_per_episode_survivors": mean_present(cost_vals_surv),
+        "cost_total": sum_or_none(cost_vals) if complete_n else None,
+        "handoff_occurred_rate": mean_present(handoff_all),
+        "handoff_occurred_rate_all": mean_present(handoff_all),
+        "handoff_occurred_rate_survivors": mean_present(handoff_surv),
+        "hash_ok_rate": mean_present(hash_all),
+        "hash_ok_rate_all": mean_present(hash_all),
+        "hash_ok_rate_survivors": mean_present(hash_surv),
+        "effective_m_mean": mean_present(em_all),
+        "effective_m_mean_all": mean_present(em_all),
+        "effective_m_mean_survivors": mean_present(em_surv),
+        "n_handoff_occurred": sum(1 for row in cleaned_rows if row.get("handoff_occurred") is True),
+        "n_hash_ok": sum(1 for row in cleaned_rows if row.get("hash_ok") is True),
+        "n_with_handoff_record": n_handoff_record,
         "n_episodes_live_differs_from_replay": n_calls_differ,
         "k": k_from_label(label),
         "gated": is_gated_label(label),
@@ -705,6 +903,11 @@ def frontier_table(arms: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
                 "planner_calls_replay_inclusive_per_episode": arm.get(
                     "planner_calls_replay_inclusive_per_episode"
                 ),
+                "cost_key": arm.get("cost_key"),
+                "cost_per_episode": arm.get("cost_per_episode"),
+                "handoff_occurred_rate": arm.get("handoff_occurred_rate"),
+                "hash_ok_rate": arm.get("hash_ok_rate"),
+                "effective_m_mean": arm.get("effective_m_mean"),
                 "n": arm.get("n"),
             }
         )
@@ -1235,10 +1438,373 @@ def format_score_quantile_table(h3_rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+
+NI_RULE = (
+    "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 "
+    "(equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). "
+    "Primary metric goal_pass_rate; TGC always reported alongside."
+)
+
+
+def noninferiority_row(
+    arm: dict[str, Any],
+    reference: dict[str, Any],
+    field: str,
+    population: str = "all",
+) -> dict[str, Any]:
+    """Paired task-clustered non-inferiority vs the reference arm."""
+    contrast = paired_contrast(arm, reference, field, population)
+    ci = contrast.get("ci95_pp")
+    holds = None
+    deficit_upper_pp = None
+    if isinstance(ci, (list, tuple)) and len(ci) >= 2 and ci[0] is not None:
+        deficit_upper_pp = round(-float(ci[0]), 6)
+        holds = bool(float(ci[0]) >= -F1_QUALITY_PP)
+    out = dict(contrast)
+    out["holds"] = holds
+    out["margin_pp"] = F1_QUALITY_PP
+    out["deficit_ci_upper_pp"] = deficit_upper_pp
+    out["rule"] = NI_RULE
+    out["primary"] = field == "goal_pass_rate"
+    return out
+
+
+def noninferiority_block(
+    arms: dict[str, dict[str, Any]],
+    reference_label: str | None,
+) -> dict[str, Any] | None:
+    if not reference_label:
+        return None
+    if reference_label not in arms:
+        return {
+            "error": f"--reference-arm {reference_label!r} is not among named arms",
+            "reference_arm": reference_label,
+        }
+    reference = arms[reference_label]
+    if not reference.get("complete_n"):
+        return {
+            "error": (
+                f"--reference-arm {reference_label!r} has "
+                f"{reference.get('n')} rows (need {MIN_ROWS})"
+            ),
+            "reference_arm": reference_label,
+        }
+    rows: dict[str, Any] = {}
+    for label, arm in arms.items():
+        if label == reference_label or not arm.get("complete_n"):
+            continue
+        rows[label] = {
+            "goal_pass_all": noninferiority_row(
+                arm, reference, "goal_pass_rate", "all"
+            ),
+            "goal_pass_survivors": noninferiority_row(
+                arm, reference, "goal_pass_rate", "survivors"
+            ),
+            "tgc_all": noninferiority_row(arm, reference, "tgc", "all"),
+            "tgc_survivors": noninferiority_row(arm, reference, "tgc", "survivors"),
+        }
+    return {
+        "reference_arm": reference_label,
+        "margin_pp": F1_QUALITY_PP,
+        "primary_metric": "goal_pass_rate",
+        "secondary_metric": "tgc",
+        "rule": NI_RULE,
+        "arms": rows,
+    }
+
+
+def chord_residual(
+    arm: dict[str, Any],
+    floor: dict[str, Any],
+    reference: dict[str, Any],
+    quality_field: str,
+    cost_key: str,
+    population: str = "all",
+) -> dict[str, Any]:
+    """Quality minus the floor-reference chord at this arm's cost fraction.
+
+    Reuses paired_diff (task-clustered). The cost fraction is a plug-in from
+    the paired mean costs so this is not a second bootstrap.
+    """
+    left = dict(arm["cleaned"])
+    mid = dict(floor["cleaned"])
+    right = dict(reference["cleaned"])
+    n_dropped_crash = 0
+    n_shared = len(set(left) & set(mid) & set(right))
+    if population in {"survivors", "survivor"}:
+        keys = set(left) & set(mid) & set(right)
+        kept: list[tuple[str, int]] = []
+        for key in keys:
+            if is_crashed(left[key]) or is_crashed(mid[key]) or is_crashed(right[key]):
+                n_dropped_crash += 1
+                continue
+            kept.append(key)
+        left = {k: left[k] for k in kept}
+        mid = {k: mid[k] for k in kept}
+        right = {k: right[k] for k in kept}
+        pop_name = "survivors"
+        n_shared = len(keys)
+    elif population in {"all", "all-episodes"}:
+        if quality_field in {"tgc", "goal_pass_rate"}:
+            left = coerce_crash_quality(left, quality_field)
+            mid = coerce_crash_quality(mid, quality_field)
+            right = coerce_crash_quality(right, quality_field)
+        pop_name = "all-episodes"
+    else:
+        raise ValueError(f"unknown population {population!r}")
+    keys = sorted(set(left) & set(mid) & set(right))
+    costs_arm: list[float] = []
+    costs_floor: list[float] = []
+    costs_ref: list[float] = []
+    usable: list[tuple[str, int]] = []
+    missing_cost = 0
+    missing_quality = 0
+    for key in keys:
+        ca = episode_cost(left[key], cost_key)
+        cf = episode_cost(mid[key], cost_key)
+        cr = episode_cost(right[key], cost_key)
+        qa = left[key].get(quality_field)
+        qf = mid[key].get(quality_field)
+        qr = right[key].get(quality_field)
+        if ca is None or cf is None or cr is None:
+            missing_cost += 1
+            continue
+        if qa is None or qf is None or qr is None:
+            missing_quality += 1
+            continue
+        costs_arm.append(float(ca))
+        costs_floor.append(float(cf))
+        costs_ref.append(float(cr))
+        usable.append(key)
+    empty = {
+        "field": quality_field,
+        "population": pop_name,
+        "left": arm["label"],
+        "floor": floor["label"],
+        "reference": reference["label"],
+        "cost_key": cost_key,
+        "n_pairs": 0,
+        "n_pairs_dropped_crash": n_dropped_crash,
+        "n_pairs_shared": n_shared,
+        "pairs_dropped_missing_cost": missing_cost,
+        "pairs_dropped_missing_quality": missing_quality,
+        "diff": None,
+        "ci95": None,
+        "ci95_pp": None,
+        "cost_fraction": None,
+        "note": "no overlapping triples with recorded quality and cost",
+    }
+    if not usable:
+        return empty
+    c_arm = statistics.fmean(costs_arm)
+    c_floor = statistics.fmean(costs_floor)
+    c_ref = statistics.fmean(costs_ref)
+    denom = c_ref - c_floor
+    if denom == 0:
+        empty["note"] = (
+            "floor and reference have identical mean cost; chord fraction undefined"
+        )
+        empty["cost_arm"] = c_arm
+        empty["cost_floor"] = c_floor
+        empty["cost_reference"] = c_ref
+        return empty
+    fraction = (c_arm - c_floor) / denom
+    residual_left: dict[tuple[str, int], dict[str, Any]] = {}
+    residual_right: dict[tuple[str, int], dict[str, Any]] = {}
+    for key in usable:
+        qa = float(left[key][quality_field])
+        qf = float(mid[key][quality_field])
+        qr = float(right[key][quality_field])
+        residual = qa - (qf + fraction * (qr - qf))
+        residual_left[key] = {"chord_residual": residual}
+        residual_right[key] = {"chord_residual": 0.0}
+    out = j10.native_from_paired_diff(
+        paired_diff(residual_left, residual_right, "chord_residual", resample="task")
+    )
+    out["field"] = quality_field
+    out["population"] = pop_name
+    out["left"] = arm["label"]
+    out["floor"] = floor["label"]
+    out["reference"] = reference["label"]
+    out["cost_key"] = cost_key
+    out["cost_fraction"] = round(fraction, 6)
+    out["cost_arm"] = round(c_arm, 6)
+    out["cost_floor"] = round(c_floor, 6)
+    out["cost_reference"] = round(c_ref, 6)
+    out["n_pairs_dropped_crash"] = n_dropped_crash
+    out["n_pairs_shared"] = n_shared
+    out["pairs_dropped_missing_cost"] = missing_cost
+    out["pairs_dropped_missing_quality"] = missing_quality
+    out["positive_means_above_chord"] = (
+        None if out.get("diff") is None else bool(float(out["diff"]) > 0)
+    )
+    return out
+
+
+def chord_block(
+    arms: dict[str, dict[str, Any]],
+    reference_label: str | None,
+    floor_label: str | None,
+    cost_key: str,
+) -> dict[str, Any] | None:
+    if not reference_label or not floor_label:
+        return None
+    missing = [
+        name
+        for name, label in (
+            ("reference", reference_label),
+            ("floor", floor_label),
+        )
+        if label not in arms
+    ]
+    if missing:
+        return {
+            "error": f"chord missing named arms: {missing}",
+            "reference_arm": reference_label,
+            "floor_arm": floor_label,
+            "cost_key": cost_key,
+        }
+    reference = arms[reference_label]
+    floor = arms[floor_label]
+    if not reference.get("complete_n") or not floor.get("complete_n"):
+        return {
+            "error": "chord requires complete reference and floor arms",
+            "reference_arm": reference_label,
+            "floor_arm": floor_label,
+            "cost_key": cost_key,
+        }
+    rows: dict[str, Any] = {}
+    for label, arm in arms.items():
+        if label in {reference_label, floor_label} or not arm.get("complete_n"):
+            continue
+        rows[label] = {
+            "goal_pass_all": chord_residual(
+                arm, floor, reference, "goal_pass_rate", cost_key, "all"
+            ),
+            "goal_pass_survivors": chord_residual(
+                arm, floor, reference, "goal_pass_rate", cost_key, "survivors"
+            ),
+            "tgc_all": chord_residual(arm, floor, reference, "tgc", cost_key, "all"),
+            "tgc_survivors": chord_residual(
+                arm, floor, reference, "tgc", cost_key, "survivors"
+            ),
+        }
+    return {
+        "reference_arm": reference_label,
+        "floor_arm": floor_label,
+        "cost_key": cost_key,
+        "arms": rows,
+    }
+
+
+def format_handoff_table(arms: dict[str, dict[str, Any]]) -> str:
+    lines = [
+        "handoff diagnostics (missing records stay NA; a recorded 0 is kept)"
+    ]
+    header = (
+        f"{'arm':<28} {'n':>5} {'n_crash':>8} {'cost/ep':>10} "
+        f"{'hand_all':>8} {'hand_surv':>9} {'hash_all':>8} {'hash_surv':>9} "
+        f"{'m_all':>7} {'m_surv':>7}"
+    )
+    lines.append(header)
+    lines.append("-" * len(header))
+    for label, arm in arms.items():
+        lines.append(
+            f"{label:<28} {arm.get('n', 0):>5} {arm.get('n_crashed', 0):>8} "
+            f"{_fmt_metric(arm.get('cost_per_episode'), 10)} "
+            f"{_fmt_metric(arm.get('handoff_occurred_rate_all'), 8)} "
+            f"{_fmt_metric(arm.get('handoff_occurred_rate_survivors'), 9)} "
+            f"{_fmt_metric(arm.get('hash_ok_rate_all'), 8)} "
+            f"{_fmt_metric(arm.get('hash_ok_rate_survivors'), 9)} "
+            f"{_fmt_metric(arm.get('effective_m_mean_all'), 7, 2)} "
+            f"{_fmt_metric(arm.get('effective_m_mean_survivors'), 7, 2)}"
+        )
+    return "\n".join(lines)
+
+
+def format_noninferiority_table(block: dict[str, Any] | None) -> str:
+    if not block:
+        return ""
+    if block.get("error"):
+        return f"non-inferiority: {block['error']}"
+    lines = [
+        f"non-inferiority vs {block.get('reference_arm')} "
+        f"(margin {block.get('margin_pp')} pp; primary {block.get('primary_metric')})",
+        NI_RULE,
+    ]
+    header = (
+        f"{'arm':<24} {'metric':<16} {'pop':<12} {'holds':>6} "
+        f"{'diff_pp':>8} {'ci95_pp':>18} {'def_up':>8}"
+    )
+    lines.append(header)
+    lines.append("-" * len(header))
+    for label, rows in (block.get("arms") or {}).items():
+        for key in (
+            "goal_pass_all",
+            "tgc_all",
+            "goal_pass_survivors",
+            "tgc_survivors",
+        ):
+            row = rows.get(key) or {}
+            ci = row.get("ci95_pp")
+            ci_txt = "NA" if not ci else f"[{ci[0]}, {ci[1]}]"
+            lines.append(
+                f"{label:<24} {row.get('field', key):<16} "
+                f"{str(row.get('population') or ''):<12} "
+                f"{_fmt_metric(row.get('holds'), 6)} "
+                f"{_fmt_metric(row.get('diff_pp'), 8, 2)} "
+                f"{ci_txt:>18} "
+                f"{_fmt_metric(row.get('deficit_ci_upper_pp'), 8, 2)}"
+            )
+    return "\n".join(lines)
+
+
+def format_chord_table(block: dict[str, Any] | None) -> str:
+    if not block:
+        return ""
+    if block.get("error"):
+        return f"chord: {block['error']}"
+    lines = [
+        f"chord test vs floor={block.get('floor_arm')} "
+        f"reference={block.get('reference_arm')} "
+        f"cost_key={block.get('cost_key')} "
+        "(positive residual = above the chord)",
+    ]
+    header = (
+        f"{'arm':<24} {'metric':<16} {'pop':<12} {'frac':>8} "
+        f"{'diff_pp':>8} {'ci95_pp':>18} {'above':>6}"
+    )
+    lines.append(header)
+    lines.append("-" * len(header))
+    for label, rows in (block.get("arms") or {}).items():
+        for key in (
+            "goal_pass_all",
+            "tgc_all",
+            "goal_pass_survivors",
+            "tgc_survivors",
+        ):
+            row = rows.get(key) or {}
+            ci = row.get("ci95_pp")
+            ci_txt = "NA" if not ci else f"[{ci[0]}, {ci[1]}]"
+            lines.append(
+                f"{label:<24} {row.get('field', key):<16} "
+                f"{str(row.get('population') or ''):<12} "
+                f"{_fmt_metric(row.get('cost_fraction'), 8)} "
+                f"{_fmt_metric(row.get('diff_pp'), 8, 2)} "
+                f"{ci_txt:>18} "
+                f"{_fmt_metric(row.get('positive_means_above_chord'), 6)}"
+            )
+    return "\n".join(lines)
+
+
 def build_report(
     arm_dirs: dict[str, Path],
     seeds: list[int],
     oracle_labels: Path | None,
+    *,
+    cost_key: str = COST_KEY_DEFAULT,
+    reference_arm: str | None = None,
+    floor_arm: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     for directory in arm_dirs.values():
         marker = j10.heldout_marker_in_path(directory)
@@ -1258,12 +1824,22 @@ def build_report(
     loaded_by_arm = {label: j10.load_arm_tree(path) for label, path in arm_dirs.items()}
     arms: dict[str, dict[str, Any]] = {}
     for label, loaded in loaded_by_arm.items():
-        arm = summarise_arm(label, loaded, seeds)
+        arm = summarise_arm(
+            label, loaded, seeds, root=arm_dirs[label], cost_key=cost_key
+        )
         arm["root"] = arm_dirs[label]
         arms[label] = arm
 
     arm_n = {label: arm["n"] for label, arm in arms.items()}
     refusals = refuse_partial_arms(arm_n)
+    if reference_arm and reference_arm not in arms:
+        refusals.append(
+            f"REFUSE headline: --reference-arm {reference_arm!r} is not among named arms"
+        )
+    if floor_arm and floor_arm not in arms:
+        refusals.append(
+            f"REFUSE headline: --floor-arm {floor_arm!r} is not among named arms"
+        )
     headline_ok = not refusals
     headline = None
     if headline_ok:
@@ -1336,6 +1912,8 @@ def build_report(
         f1_rows[label] = row
 
     h3 = h3_calibration(arms, oracle_labels)
+    ni = noninferiority_block(complete, reference_arm)
+    chord = chord_block(complete, reference_arm, floor_arm, cost_key)
 
     report: dict[str, Any] = {
         "headline": headline,
@@ -1366,6 +1944,12 @@ def build_report(
             for row in h3
             if isinstance(row, dict) and row.get("label") is not None
         },
+        "cost_key": cost_key,
+        "reference_arm": reference_arm,
+        "floor_arm": floor_arm,
+        "noninferiority_margin_pp": F1_QUALITY_PP,
+        "noninferiority": ni,
+        "chord": chord,
         "headline_population": HEADLINE_POPULATION,
         "population_preamble": POPULATION_PREAMBLE,
         "population_notes": population_notes(arms),
@@ -1400,10 +1984,33 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(json.dumps({"refused": True, "reason": str(exc)}))
         return 2
-    report, code = build_report(arm_dirs, seeds, args.oracle_labels)
+    report, code = build_report(
+        arm_dirs,
+        seeds,
+        args.oracle_labels,
+        cost_key=args.cost_key,
+        reference_arm=args.reference_arm,
+        floor_arm=args.floor_arm,
+    )
+    if report.get("refused") and "arms" not in report:
+        print(report.get("reason") or "refused")
+        text = json.dumps(report, indent=2, default=str) + "\n"
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(text, encoding="utf-8")
+        return code
     table = format_table(report["arms"], report.get("refusals") or [])
     print(report.get("oracle_semantics") or "")
     print(table)
+    print()
+    print(format_handoff_table(report["arms"]))
+    ni_table = format_noninferiority_table(report.get("noninferiority"))
+    if ni_table:
+        print()
+        print(ni_table)
+    chord_table = format_chord_table(report.get("chord"))
+    if chord_table:
+        print()
+        print(chord_table)
     for line in report.get("population_notes") or []:
         print(line)
     for line in report.get("contrast_accounting") or []:

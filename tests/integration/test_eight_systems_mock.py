@@ -16,6 +16,7 @@ def test_all_eight_systems_complete_on_mock(run_system) -> None:
         "sidekick",
         "oracle_escalation",
         "action_review",
+        "prefix_handoff",
     )
     for name in SYSTEM_NAMES:
         extra = {}
