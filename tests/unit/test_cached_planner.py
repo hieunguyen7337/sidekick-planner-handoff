@@ -108,7 +108,7 @@ class RecordingInner:
             usage=Usage(model="gpt-5.6-luna", provider="codex", input_tokens=10, output_tokens=2, n_calls=1),
         )
 
-    def act(self, task_id: str, transcript: str, timeout_s=None) -> PlannerResponse:
+    def act(self, task_id: str, transcript: str, timeout_s=None, allow_handoff: bool = False) -> PlannerResponse:
         self.act_prompts.append(transcript)
         return PlannerResponse(
             kind="ACTION",
@@ -275,3 +275,22 @@ def test_consuming_arm_system_name_does_not_select_cached_subtree(tmp_path):
         system_name="sft_plan",
     )
     assert planner.system == "planner_alone"
+
+
+def test_act_propagates_inner_typeerror_without_dropping_allow_handoff(tmp_path):
+    class Inner:
+        def __init__(self) -> None:
+            self.calls: list[bool] = []
+
+        def act(self, task_id, transcript, timeout_s=None, allow_handoff=False):
+            self.calls.append(allow_handoff)
+            raise TypeError("unrelated boom from inside act")
+
+        def close(self) -> None:
+            return None
+
+    inner = Inner()
+    planner = CachedPacketPlanner(inner, tmp_path, seed=1)
+    with pytest.raises(TypeError, match="unrelated boom from inside act"):
+        planner.act("copy_hello", "transcript", allow_handoff=True)
+    assert inner.calls == [True]

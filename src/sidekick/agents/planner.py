@@ -817,12 +817,9 @@ class CachedPacketPlanner:
         allow_handoff: bool = False,
     ) -> PlannerResponse:
         text = self._prepended_context() + transcript
-        try:
-            return self.inner.act(
-                task_id, text, timeout_s=timeout_s, allow_handoff=allow_handoff
-            )
-        except TypeError:
-            return self.inner.act(task_id, text, timeout_s=timeout_s)
+        return self.inner.act(
+            task_id, text, timeout_s=timeout_s, allow_handoff=allow_handoff
+        )
 
     def close(self) -> None:
         self.inner.close()

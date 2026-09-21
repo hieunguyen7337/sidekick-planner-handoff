@@ -1005,6 +1005,26 @@ alongside it: `factual_vs_treated.fraction_factual_outside_treated_range` = 0.12
 where a factual draw should lie inside the treated range [OBSERVED same manifest, key
 `factual_vs_treated`].
 
+## OPEN 2026-09-21 — the action-review gate will almost always replace
+
+`run_action_review` now calls `planner.act` with `PROPOSED_ACTION: <text>` appended to the
+transcript [OBSERVED src/sidekick/systems/action_review_gate.py:59], but the `act` prompt never
+explains what that line means [OBSERVED src/sidekick/agents/planner.py:350-359]. The planner will
+mostly emit its own next action, which differs from the proposal, so the `approve` verdict is close
+to dead and the gate behaves as takeover-at-trigger rather than as a discriminating review. No
+planned HJ-12 arm uses this path. Anyone who revives `action_review` as a *review* must write a
+review-specific prompt first. Recorded, not changed.
+
+## OPEN 2026-09-21 — `HANDOFF` is matched as a whole line anywhere in the planner's output
+
+`action_from_planner` treats a line whose stripped text is exactly `HANDOFF` as a handoff, and that
+check runs *before* `resp.code` [OBSERVED src/sidekick/systems/loop.py:414-416]. A planner that
+writes a fenced action and also puts the bare word on its own line loses the action. The match is
+deliberately strict and the prompt documents the contract, so this is a known edge, not a defect —
+but if `planner_handoff` shows an implausibly high handoff rate at step 1, this is the first thing
+to check. Recorded, not changed.
+
+
 
 
 

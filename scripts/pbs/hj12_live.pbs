@@ -1,0 +1,1166 @@
+#!/bin/bash
+#PBS -N hj12-live
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:mem=64gb
+#PBS -l walltime=04:00:00
+# Output_Path is evaluated at qsub time and cannot interpolate ARMSET/DATE/CID
+# (those are computed below). A path with no filename makes PBS write unique
+# <job ID>.OU / .ER in this directory — two live jobs in parallel cannot
+# share a file. The script also execs a live JOB_CID+jobid copy so a job
+# that dies after startup still leaves a campaign-id log. Do not override -o/-e
+# with a shared filename. Do NOT submit from a worker.
+#   ARMS="hj12_takeover_fixed_k_10 hj12_planner_handoff" DATE=20260923 SMOKE_ONLY=1
+#   qsub -v ARMS="${ARMS}",DATE=${DATE},SMOKE_ONLY=${SMOKE_ONLY},MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS} scripts/pbs/hj12_live.pbs
+#   SYSTEM=sft_plan overrides --system (harness check only).
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#PBS -e /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#
+# HJ-12 live channel: serve granite-4.2-8b with the intervention-aware
+# sft_b_plus LoRA (sft_b_plus_iaware_granite8b, alias sft_b_plus) and run
+# six hosted-planner arms. Every arm must resolve to type:codex /
+# model:gpt-5.6-luna before any episode. ARMS="<stem> <stem>" overrides
+# the full set. Never pattern-kill another job's vLLM server.
+# Alias launched via --lora-modules MUST equal executor.lora_name or requests
+# silently hit the base model.
+# Spend ceiling: MAX_PLANNER_CALLS (default 3780) reads
+# ledger_totals.planner_calls_total from each arm summary and aborts
+# before the next arm if the running total exceeds it. After each arm's
+# 3-task smoke, a projected-spend check FATALs before the full 57×2 run
+# when running + ceil(smoke_cpe × 57 × 2 × SAFETY) exceeds the ceiling.
+#
+# Queue sizing copied from hj8_frontier.pbs (ncpus=12:ngpus=1:mem=64gb).
+#   A non-interactive `qsub -q gpu_inter` is remapped to gpu_batch_exec
+#   regardless of -q [OBSERVED docs/FOLLOWUPS.md:35-38,
+#   docs/feasibility/m0_gates.md:30-35]. Tonight's train-sft submission
+#   `qsub -q gpu_inter -l select=1:ncpus=12:ngpus=1:mem=64gb` landed on
+#   gpu_batch_exec [OBSERVED qstat -fx 25449628.aqua Submit_arguments / queue].
+#   Do NOT add qlist=gpu_inter_exec to select — that Can Never Run against
+#   the hook's Resource_List.qlist=gpu_batch_exec
+#   [OBSERVED docs/feasibility/m0_gates.md:35].
+#   Closest finished analog (granite-4.2-8b + LoRA + smoke + 57×2 workers-6):
+#     hj3-eval 25401780  RSS 12352792kb  cpupercent 130  requested 16/128gb
+#     hj4b-dev 25404924  RSS 12477120kb  cpupercent 175  requested 16/128gb
+#     [OBSERVED qstat -fx resources_used.mem / Resource_List.select]
+#   Peak RSS ≈ 12 GB, so 64gb is ~5× headroom; 12 ncpus matches the working
+#   granite eval/serve size (hj1a/hj15/G3) and tonight's train-sft request.
+#   Walltime 04:00:00. Completed arms are skipped on resume.
+#
+# Job variables (override at qsub time):
+#   ARMSET (live|all), ARMS (space-separated cid stems; overrides ARMSET),
+#   DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS, SYSTEM (default from arm spec)
+#   MAX_PLANNER_CALLS (default 3780): abort before the next arm when the
+#   cumulative ledger live-planner call count exceeds this. Also abort
+#   after smoke before that arm's full run if the smoke projection would
+#   push the running total over the ceiling.
+#   SMOKE_ONLY=1 (default 0): each pending arm runs its 3-task smoke and
+#   gate, then stops before the 57×2 campaign. Prints the escalation table.
+#   Job rc is the first failed smoke/gate. Unset or 0 leaves the full run unchanged.
+# Do NOT add reasoning-parser flags (G3); they parked generations in
+# reasoning_content and looked like parse_error.
+
+set -uo pipefail
+# JOB_CID is not available at qsub. Compute it first and exec a live CID-named
+# log so an early death still leaves a findable file. PBS's own Output_Path is
+# the unique <job ID>.OU under campaign/workers/logs/ (see #PBS -o above).
+ARMSET="${ARMSET:-live}"
+DATE="${DATE:-$(date -u +%Y%m%d)}"
+SMOKE_ONLY="${SMOKE_ONLY:-0}"
+SYSTEM="${SYSTEM:-}"
+# High-end table sum is 280+280+780+170+170+900=2580 hosted calls. Default 3780
+# is the prior 3500 ceiling plus the new fullctx arm (~280 calls), with
+# headroom for variance (and cached-plan ledger ticks).
+MAX_PLANNER_CALLS="${MAX_PLANNER_CALLS:-3780}"
+JOB_CID="hj12_live_${ARMSET}_${DATE}"
+JOBTAG="${PBS_JOBID:-nopbs}"
+PBS_LOGDIR="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs"
+CID_OUT="${PBS_LOGDIR}/${JOB_CID}.${JOBTAG}.out"
+if [[ "${HJ12_GUARD_SELFTEST:-0}" != "1" ]]; then
+  mkdir -p "${PBS_LOGDIR}"
+  exec >> "${CID_OUT}" 2>&1
+fi
+echo "[hj12] job_cid=${JOB_CID} armset=${ARMSET} arms=${ARMS:-} date=${DATE} smoke_only=${SMOKE_ONLY} system=${SYSTEM:-} max_planner_calls=${MAX_PLANNER_CALLS} job=${JOBTAG} cid_out=${CID_OUT}"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/src:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json and the
+# per-thread session transcripts. Repointing it at an empty dir strands credentials.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+echo "[u9] ulimit -n soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+if [[ "${HJ12_GUARD_SELFTEST:-0}" != "1" ]]; then
+  export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+else
+  export SIDEKICK_START_COMMIT="${SIDEKICK_START_COMMIT:-unknown}"
+fi
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+PY="${PY:-${SIDEKICK_VENV}/bin/python}"
+SUM="${REPO}/scripts/setup/campaign_summarize.py"
+MODEL=ibm-granite/granite-4.2-8b
+VLOG="${LOGDIR}/${JOB_CID}.${JOBTAG}_vllm.log"
+echo "[hj12] vlog=${VLOG}"
+
+# ---- LoRA aliases: MUST equal executor.lora_name in each eval config ---------
+# Default is the intervention-aware adapter. Getting the older
+# sft_b_plus_granite8b path here invalidates the experiment.
+# loadable PEFT dir (adapter_config.json + weights), not merely a directory.
+ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
+ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b}"
+MAX_LORAS=4
+
+N_SMOKE_TASKS=3
+N_FULL_TASKS=57
+N_FULL_SEEDS=2
+N_PLANNED=$((N_FULL_TASKS * N_FULL_SEEDS))
+# Three smoke episodes are a noisy estimator. The within-arm check only
+# has to catch an order-of-magnitude overrun (planner never hands off →
+# ~40 calls/ep × 114), not a precise budget. SAFETY=1.2 is mid-range in
+# 1.1–1.3: 20% pad against a lucky-low smoke without treating this as a
+# tight allocation. Biases toward stopping.
+SAFETY="${SAFETY:-1.2}"
+
+cd "${REPO}" || exit 1
+if [[ "${HJ12_GUARD_SELFTEST:-0}" != "1" ]]; then
+  mkdir -p "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
+fi
+
+# ---- config gate. Named in the failure line so a reader knows why we stopped.
+# Another unit owns verify_configs.py; it may still exit non-zero. Wire it anyway.
+if [[ "${HJ12_GUARD_SELFTEST:-0}" != "1" ]]; then
+  echo "[hj12] ---- scripts/setup/verify_configs.py ----"
+  timeout 300 "${PY}" "${REPO}/scripts/setup/verify_configs.py"
+  VERIFY_RC=$?
+  if [[ "${VERIFY_RC}" -ne 0 ]]; then
+    echo "[hj12] FATAL: scripts/setup/verify_configs.py exited ${VERIFY_RC}; not starting vLLM"
+    exit "${VERIFY_RC}"
+  fi
+fi
+
+# system|config|cid_stem   — cid is ${cid_stem}_${DATE}. Each (arm, τ) is its own cid.
+LIVE_ARMS=(
+  "fixed_k|${REPO}/configs/hj12_takeover_fixed_k_10.yaml|hj12_takeover_fixed_k_10"
+  "fixed_k|${REPO}/configs/hj12_advise_fixed_k_10_fullctx.yaml|hj12_advise_fixed_k_10_fullctx"
+  "fixed_k|${REPO}/configs/hj12_takeover_fixed_k_3.yaml|hj12_takeover_fixed_k_3"
+  "router_seq|${REPO}/configs/hj12_takeover_exception.yaml|hj12_takeover_exception"
+  "router_seq|${REPO}/configs/hj12_advise_exception.yaml|hj12_advise_exception"
+  "planner_handoff|${REPO}/configs/hj12_planner_handoff.yaml|hj12_planner_handoff"
+)
+
+hj12_select_arms () {
+  SELECTED_ARMS=()
+  local all_specs valid_stems spec sys cfg s matches
+  local -a given=()
+  all_specs=("${LIVE_ARMS[@]}")
+  valid_stems=()
+  for spec in "${all_specs[@]}"; do
+    IFS='|' read -r sys cfg s <<<"${spec}"
+    valid_stems+=("${s}")
+  done
+  if [[ -n "${ARMS:-}" ]]; then
+    read -r -a given <<< "${ARMS}"
+    local g
+    for g in "${given[@]}"; do
+      [[ -z "${g}" ]] && continue
+      matches=()
+      for spec in "${all_specs[@]}"; do
+        IFS='|' read -r sys cfg s <<<"${spec}"
+        if [[ "${s}" == "${g}" ]]; then
+          matches+=("${spec}")
+        fi
+      done
+      if [[ "${#matches[@]}" -eq 0 ]]; then
+        echo "[hj12] FATAL: unknown ARMS stem ${g}; valid stems: ${valid_stems[*]}"
+        exit 2
+      fi
+      if [[ "${#matches[@]}" -ne 1 ]]; then
+        echo "[hj12] FATAL: ARMS stem ${g} matched ${#matches[@]} entries (need exactly one); valid stems: ${valid_stems[*]}"
+        exit 2
+      fi
+      SELECTED_ARMS+=("${matches[0]}")
+    done
+    if [[ "${#SELECTED_ARMS[@]}" -eq 0 ]]; then
+      echo "[hj12] FATAL: ARMS is set but no stems were parsed from: ${ARMS}; valid stems: ${valid_stems[*]}"
+      exit 2
+    fi
+    echo "[hj12] ARMS override: ${#SELECTED_ARMS[@]} arms: ${given[*]}"
+    return 0
+  fi
+  case "${ARMSET}" in
+    live|all) SELECTED_ARMS=("${LIVE_ARMS[@]}");;
+    free)
+      echo "[hj12] FATAL: ARMSET=free is not valid for hj12_live (all six arms spend hosted calls); use ARMS=... or ARMSET=live|all"
+      exit 2
+      ;;
+    *)
+      echo "[hj12] FATAL: ARMSET must be live|all, got ${ARMSET}"
+      exit 2
+      ;;
+  esac
+}
+
+# hj12_select_arms is invoked after helper functions / selftest dispatch below.
+
+hj12_assert_selected_configs_exist () {
+  local cfg_missing=0
+  local spec _system cfg _stem
+  for spec in "${SELECTED_ARMS[@]}"; do
+    IFS='|' read -r _system cfg _stem <<<"${spec}"
+    if [[ ! -f "${cfg}" ]]; then
+      echo "[hj12] eval config absent: ${cfg}"
+      cfg_missing=1
+    fi
+  done
+  if [[ "${cfg_missing}" -ne 0 ]]; then
+    echo "[hj12] not starting vLLM. Static LoRA line that will be used:"
+    echo "[hj12] --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}"
+    echo "[hj12] alias source: ALIAS_SFT_B_PLUS, which must equal executor.lora_name"
+    exit 2
+  fi
+}
+
+# Inverse of the prefix free-set guard. Does not import sidekick; reads YAML.
+# make_planner treats type=="codex" as CodexExecPlanner and anything else as
+# MockPlanner [OBSERVED src/sidekick/runner.py:102-114]. Default model is
+# gpt-5.6-luna [OBSERVED src/sidekick/agents/planner.py:23, runner.py:114].
+# packet_source is allowed: takeover/advise arms replay the HJ-1 plan and spend
+# on reviews. A mock or non-luna model is fatal before any episode.
+assert_live_configs_are_hosted_codex () {
+  local configs=()
+  local spec cfg
+  for spec in "${SELECTED_ARMS[@]}"; do
+    IFS='|' read -r _system cfg _stem <<<"${spec}"
+    configs+=("${cfg}")
+  done
+  echo "[hj12] ---- live-set hosted-planner guard (${#configs[@]} configs) ----"
+  timeout 120 "${PY}" - "${configs[@]}" <<'PY'
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("[hj12] FATAL: PyYAML missing; cannot inspect planner keys independently")
+    sys.exit(2)
+
+failed = 0
+for raw in sys.argv[1:]:
+    path = Path(raw)
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        print(f"[hj12] FATAL: {path} is not a mapping")
+        failed = 1
+        continue
+    planner = data.get("planner") or {}
+    if not isinstance(planner, dict):
+        planner = {}
+    kind = str(planner.get("type") or data.get("planner_type") or "mock")
+    model = planner.get("model")
+    if model is None or (isinstance(model, str) and not str(model).strip()):
+        model = "gpt-5.6-luna"
+        model_src = "default"
+    else:
+        model = str(model).strip()
+        model_src = "yaml"
+    packet_source = planner.get("packet_source")
+    if isinstance(packet_source, str):
+        packet_source = packet_source.strip() or None
+    print(
+        f"[hj12] guard {path.name}: planner.type={kind!r} model={model!r} "
+        f"({model_src}) packet_source={'set' if packet_source else 'absent'}"
+    )
+    if kind != "codex":
+        print(
+            f"[hj12] FATAL: {path} does not resolve to a live type:codex planner "
+            f"(type={kind!r}) — a mock/cached fallback would measure nothing"
+        )
+        failed = 1
+        continue
+    if model != "gpt-5.6-luna":
+        print(
+            f"[hj12] FATAL: {path} planner.model={model!r} (need gpt-5.6-luna)"
+        )
+        failed = 1
+sys.exit(failed)
+PY
+}
+
+# n_runs / n_broken over <OUT>/<cid>/**/result.json. BROKEN matches
+# campaign_summarize.BROKEN [OBSERVED scripts/setup/campaign_summarize.py:33].
+campaign_stats () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+broken = {"api_error", "timeout", "crash", "parse_error"}
+n = 0
+nb = 0
+if root.is_dir():
+    for path in root.rglob("result.json"):
+        n += 1
+        try:
+            data = json.loads(path.read_text(encoding="utf-8") or "{}")
+        except (OSError, json.JSONDecodeError):
+            nb += 1
+            continue
+        if (data.get("error_type") or "") in broken:
+            nb += 1
+print(f"{n} {nb}")
+PY
+}
+
+arm_is_complete () {
+  local cid="$1"
+  local n_runs n_broken stats
+  if [[ ! -f "${OUT}/results/${cid}/manifest.json" ]]; then
+    return 1
+  fi
+  stats="$(campaign_stats "${cid}" || true)"
+  read -r n_runs n_broken <<<"${stats:-0 0}"
+  n_runs="${n_runs:-0}"
+  n_broken="${n_broken:-0}"
+  [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_broken}" -eq 0 ]]
+}
+
+LORA_MODULES=()
+register_lora () {
+  local alias="$1"
+  local path="$2"
+  if [[ -z "${path}" ]]; then
+    return 0
+  fi
+  if [[ ! -d "${path}" ]]; then
+    echo "[hj12] FATAL: adapter path for alias ${alias} is not a directory: ${path}" >&2
+    exit 2
+  fi
+  # vLLM 0.29 LoRAModel.from_local_checkpoint (non-tensorizer) requires a PEFT
+  # layout: adapter_config.json plus one of adapter_model.safetensors /
+  # adapter_model.bin / adapter_model.pt. PEFT's own save names are the first
+  # two; vLLM also accepts .pt. A trainer output directory exists from step 0
+  # with only trainer_state/ — do not treat "is a directory" as loadable.
+  if [[ ! -f "${path}/adapter_config.json" ]]; then
+    echo "[hj12] FATAL: adapter for alias ${alias} missing adapter_config.json: ${path}" >&2
+    exit 2
+  fi
+  if [[ ! -f "${path}/adapter_model.safetensors" && ! -f "${path}/adapter_model.bin" && ! -f "${path}/adapter_model.pt" ]]; then
+    echo "[hj12] FATAL: adapter for alias ${alias} missing weights file (need adapter_model.safetensors, adapter_model.bin, or adapter_model.pt): ${path}" >&2
+    exit 2
+  fi
+  LORA_MODULES+=("${alias}=${path}")
+  echo "[hj12] lora-module ${alias}=${path}"
+}
+
+VLLM_PID=""
+SMOKE_TREES=()
+
+kill_vllm () {
+  if [[ "${HJ12_GUARD_SELFTEST:-0}" == "1" ]]; then
+    echo "[hj12] selftest: kill_vllm skipped (pid=${VLLM_PID:-})"
+    return 0
+  fi
+  if [[ -n "${VLLM_PID}" ]]; then
+    kill -TERM -- -"${VLLM_PID}" 2>/dev/null || true
+    local _
+    for _ in $(seq 1 12); do
+      kill -0 "${VLLM_PID}" 2>/dev/null || break
+      sleep 5
+    done
+    kill -KILL -- -"${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+  sleep 5
+  echo "[hj12] GPU after shutdown:"
+  nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+}
+if [[ "${HJ12_GUARD_SELFTEST:-0}" != "1" ]]; then
+  trap kill_vllm EXIT
+fi
+
+hj12_vllm_fatal () {
+  echo "[hj12] FATAL: $*"
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]]; then
+    echo "[hj12] vllm log tail:"
+    tail -n 60 "${VLOG}" || true
+  fi
+  kill_vllm
+  exit 1
+}
+
+hj12_port_listening () {
+  local p="$1"
+  ss -ltn 2>/dev/null | awk -v want="$p" '
+    $1 == "LISTEN" {
+      n = split($4, a, ":")
+      if (n > 0 && a[n] == want) found = 1
+    }
+    END { exit found ? 0 : 1 }
+  '
+}
+
+hj12_choose_vllm_port () {
+  local raw jobnum tries
+  raw="${PBS_JOBID%%.*}"
+  jobnum="${raw//[^0-9]/}"
+  if [[ -z "${jobnum}" ]]; then
+    jobnum="$$"
+  fi
+  VLLM_PORT=$(( 20000 + jobnum % 20000 ))
+  tries=0
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "[hj12] WARN: ss not available; using derived VLLM_PORT=${VLLM_PORT} without LISTEN probe"
+  else
+    while hj12_port_listening "${VLLM_PORT}"; do
+      tries=$((tries + 1))
+      if [[ "${tries}" -ge 50 ]]; then
+        echo "[hj12] FATAL: no free vLLM port after 50 tries (last=${VLLM_PORT})"
+        exit 1
+      fi
+      VLLM_PORT=$((VLLM_PORT + 1))
+      if [[ "${VLLM_PORT}" -ge 40000 ]]; then
+        VLLM_PORT=20000
+      fi
+    done
+  fi
+  export VLLM_PORT
+  export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"
+  echo "[hj12] vllm_port=${VLLM_PORT} base_url=${SIDEKICK_VLLM_BASE_URL}"
+}
+
+hj12_vllm_identity_check () {
+  local body ids_file alias spec missing have ss_line listen_pid listen_pgid
+  body=$(curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models") || hj12_vllm_fatal "/v1/models failed after the port answered"
+  ids_file="$(mktemp)"
+  printf '%s' "${body}" | "${PY}" -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    body = json.loads(raw or "null")
+except json.JSONDecodeError as exc:
+    sys.stderr.write(f"[hj12] FATAL: /v1/models body is not JSON: {exc}\n")
+    sys.exit(2)
+ids = []
+if isinstance(body, dict):
+    data = body.get("data")
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and item.get("id") is not None:
+                ids.append(str(item["id"]))
+    if body.get("id") is not None:
+        ids.append(str(body["id"]))
+print("\n".join(ids))
+' > "${ids_file}" || hj12_vllm_fatal "/v1/models body is not JSON"
+  missing=()
+  have="$(tr '\n' ' ' < "${ids_file}")"
+  for spec in "${LORA_MODULES[@]}"; do
+    alias="${spec%%=*}"
+    if ! grep -Fxq "${alias}" "${ids_file}"; then
+      missing+=("${alias}")
+    fi
+  done
+  rm -f "${ids_file}"
+  if [[ "${#missing[@]}" -ne 0 ]]; then
+    hj12_vllm_fatal "vLLM /v1/models missing LoRA alias(es): ${missing[*]} (have: ${have})"
+  fi
+  echo "[hj12] vllm identity: all LoRA aliases present in /v1/models (${LORA_MODULES[*]%%=*})"
+
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "[hj12] WARN: ss unavailable; skipping pgid identity check"
+  else
+    ss_line="$(ss -ltnp 2>/dev/null | awk -v p="${VLLM_PORT}" '
+      $1 == "LISTEN" {
+        n = split($4, a, ":")
+        if (n > 0 && a[n] == p) { print; exit }
+      }
+    ')"
+    if [[ -z "${ss_line}" ]]; then
+      echo "[hj12] WARN: ss did not show a LISTEN on ${VLLM_PORT}; skipping pgid identity check"
+    else
+      listen_pid=""
+      if [[ "${ss_line}" =~ pid=([0-9]+) ]]; then
+        listen_pid="${BASH_REMATCH[1]}"
+      fi
+      if [[ -z "${listen_pid}" ]]; then
+        echo "[hj12] WARN: ss LISTEN line for ${VLLM_PORT} has no pid=; skipping pgid identity check"
+      else
+        listen_pgid="$(ps -o pgid= -p "${listen_pid}" 2>/dev/null | tr -d '[:space:]')"
+        if [[ "${listen_pgid}" != "${VLLM_PID}" ]]; then
+          hj12_vllm_fatal "vLLM port ${VLLM_PORT} is held by pid=${listen_pid} pgid=${listen_pgid}, expected pgid=${VLLM_PID}"
+        fi
+        echo "[hj12] vllm identity: listen pid=${listen_pid} pgid=${listen_pgid} matches VLLM_PID"
+      fi
+    fi
+  fi
+
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]] && grep -Eq 'port .* is used by process' "${VLOG}"; then
+    hj12_vllm_fatal "vLLM log reports port is used by process"
+  fi
+}
+
+# Ledger live-call count: summarise ledger_totals.planner_calls_total, which
+# is the sum of result.json totals.planner_calls_total (CostLedger), not the
+# replay-inclusive planner_calls_total [OBSERVED scripts/setup/campaign_summarize.py:119-152].
+hj12_ledger_planner_calls () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${SUM}" "${OUT}" "${cid}" <<'PY'
+import importlib.util
+import sys
+from pathlib import Path
+
+sum_path, out_root, cid = sys.argv[1], sys.argv[2], sys.argv[3]
+spec = importlib.util.spec_from_file_location("campaign_summarize", sum_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+summary = mod.summarise(Path(out_root), cid)
+live = (summary.get("ledger_totals") or {}).get("planner_calls_total", 0)
+print(int(live or 0))
+PY
+}
+
+hj12_print_arm_escalation () {
+  local stem="$1"
+  local cid="$2"
+  local label="${3:-arm}"
+  echo "[hj12] ---- ${label} escalation (${stem} cid=${cid}) ----"
+  echo "arm | n_episodes | live_planner_calls | calls_per_episode | planner_authored_actions | handoff_min | handoff_median | handoff_max | never_handed_off"
+  if [[ ! -d "${OUT}/${cid}" ]]; then
+    echo "${stem} | 0 | 0 | NA | 0 | NA | NA | NA | 0"
+    echo "[hj12] no tree at ${OUT}/${cid}"
+    return 0
+  fi
+  timeout 120 "${PY}" - "${SUM}" "${OUT}" "${cid}" "${stem}" <<'PY'
+import importlib.util
+import json
+import sys
+from pathlib import Path
+from statistics import median
+
+sum_path, out_root, cid, stem = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+spec = importlib.util.spec_from_file_location("campaign_summarize", sum_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+summary = mod.summarise(Path(out_root), cid)
+n_episodes = int(summary.get("n_runs") or 0)
+live = int((summary.get("ledger_totals") or {}).get("planner_calls_total") or 0)
+cpe = round(live / n_episodes, 2) if n_episodes else "NA"
+root = Path(out_root) / cid
+n_planner_actions = 0
+handoffs = []
+n_run_end = 0
+for path in root.rglob("events.jsonl"):
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        continue
+    last_start = -1
+    events = []
+    for raw in lines:
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            ev = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(ev, dict):
+            continue
+        events.append(ev)
+        if ev.get("event_type") == "run_start":
+            last_start = len(events) - 1
+    for ev in events[last_start + 1 :]:
+        if ev.get("event_type") == "action" and ev.get("actor") == "planner":
+            n_planner_actions += 1
+        if ev.get("event_type") == "run_end":
+            n_run_end += 1
+            payload = ev.get("payload") or {}
+            hs = payload.get("handoff_step") if isinstance(payload, dict) else None
+            if hs is None:
+                continue
+            try:
+                handoffs.append(int(hs))
+            except (TypeError, ValueError):
+                pass
+never = n_episodes - len(handoffs)
+if n_run_end and n_episodes == 0:
+    never = n_run_end - len(handoffs)
+hmin = min(handoffs) if handoffs else "NA"
+hmed = median(handoffs) if handoffs else "NA"
+hmax = max(handoffs) if handoffs else "NA"
+print(
+    f"{stem} | {n_episodes} | {live} | {cpe} | {n_planner_actions} | "
+    f"{hmin} | {hmed} | {hmax} | {never}"
+)
+PY
+}
+
+hj12_print_smoke_escalation_table () {
+  echo "[hj12] ---- smoke live-channel table ----"
+  if [[ "${#SMOKE_TREES[@]}" -eq 0 ]]; then
+    echo "[hj12] no smoke trees this pass"
+    return 0
+  fi
+  local entry system stem scid
+  for entry in "${SMOKE_TREES[@]}"; do
+    IFS='|' read -r system stem scid <<<"${entry}"
+    hj12_print_arm_escalation "${stem}" "${scid}" "smoke"
+  done
+}
+
+RUNNING_PLANNER_CALLS=0
+
+hj12_add_spend_and_maybe_stop () {
+  local stem="$1"
+  local cid="$2"
+  local kind="${3:-}"
+  local have_next="${4:-1}"
+  local live=0
+  if [[ -d "${OUT}/${cid}" ]]; then
+    live="$(hj12_ledger_planner_calls "${cid}" || echo 0)"
+  fi
+  live="${live:-0}"
+  RUNNING_PLANNER_CALLS=$((RUNNING_PLANNER_CALLS + live))
+  echo "[hj12] spend ${stem}: ledger_totals.planner_calls_total=${live} running=${RUNNING_PLANNER_CALLS} ceiling=${MAX_PLANNER_CALLS}"
+  if [[ "${RUNNING_PLANNER_CALLS}" -gt "${MAX_PLANNER_CALLS}" ]]; then
+    echo "[hj12] FATAL: running live planner calls ${RUNNING_PLANNER_CALLS} exceed MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS} (key ledger_totals.planner_calls_total)"
+    if [[ "${have_next}" == "1" ]]; then
+      echo "[hj12] stopping before the next arm"
+    fi
+    exit 1
+  fi
+}
+
+# Smoke n=3 is noisy; this is an order-of-magnitude brake, not a budget.
+# Key: ledger_totals.planner_calls_total (CostLedger), never the
+# replay-inclusive planner_calls_total.
+hj12_projected_spend_from_smoke () {
+  local scid="$1"
+  timeout 120 "${PY}" - "${SUM}" "${OUT}" "${scid}" "${N_FULL_TASKS}" "${N_FULL_SEEDS}" "${SAFETY}" <<'PY'
+import importlib.util
+import math
+import sys
+from pathlib import Path
+
+sum_path, out_root, cid = sys.argv[1], sys.argv[2], sys.argv[3]
+n_full, n_seeds, safety = int(sys.argv[4]), int(sys.argv[5]), float(sys.argv[6])
+spec = importlib.util.spec_from_file_location("campaign_summarize", sum_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+summary = mod.summarise(Path(out_root), cid)
+n_episodes = int(summary.get("n_runs") or 0)
+live = int((summary.get("ledger_totals") or {}).get("planner_calls_total") or 0)
+if n_episodes <= 0:
+    sys.exit(2)
+cpe = live / n_episodes
+proj = math.ceil(cpe * n_full * n_seeds * safety)
+print(f"{live} {n_episodes} {cpe:.2f} {int(proj)}")
+PY
+}
+
+hj12_project_full_from_smoke () {
+  local stem="$1"
+  local scid="$2"
+  local launching_full="${3:-1}"
+  local raw live n_ep cpe proj
+  if [[ ! -d "${OUT}/${scid}" ]]; then
+    echo "[hj12] FATAL: smoke tree missing for ${stem} (${scid}); cannot project spend"
+    exit 1
+  fi
+  raw="$(hj12_projected_spend_from_smoke "${scid}")" || {
+    echo "[hj12] FATAL: arm ${stem} could not read smoke ledger_totals.planner_calls_total for projection (${scid})"
+    exit 1
+  }
+  read -r live n_ep cpe proj <<<"${raw}"
+  if [[ -z "${proj}" || "${proj}" == *[!0-9]* ]]; then
+    echo "[hj12] FATAL: arm ${stem} smoke projection was not an integer (${raw})"
+    exit 1
+  fi
+  echo "[hj12] project ${stem}: smoke_key=ledger_totals.planner_calls_total smoke_live=${live} n_episodes=${n_ep} calls_per_episode=${cpe} n_full_tasks=${N_FULL_TASKS} n_seeds=${N_FULL_SEEDS} safety=${SAFETY} projection=${proj} running=${RUNNING_PLANNER_CALLS} ceiling=${MAX_PLANNER_CALLS}"
+  if [[ "${launching_full}" == "1" && $((RUNNING_PLANNER_CALLS + proj)) -gt "${MAX_PLANNER_CALLS}" ]]; then
+    echo "[hj12] FATAL: arm ${stem} projected ${proj} live planner calls (${cpe} calls/ep from smoke) plus running ${RUNNING_PLANNER_CALLS} exceed MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS}; not launching the full run"
+    exit 1
+  fi
+}
+
+hj12_planner_authored_actions () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+n = 0
+if root.is_dir():
+    for path in root.rglob("events.jsonl"):
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        last_start = -1
+        events = []
+        for raw in lines:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                ev = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(ev, dict):
+                continue
+            events.append(ev)
+            if ev.get("event_type") == "run_start":
+                last_start = len(events) - 1
+        for ev in events[last_start + 1 :]:
+            if ev.get("event_type") == "action" and ev.get("actor") == "planner":
+                n += 1
+print(n)
+PY
+}
+
+hj12_smoke_gate_could_trigger () {
+  local cid="$1"
+  local system="$2"
+  local cfg="${3:-}"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" "${system}" "${cfg}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+system = sys.argv[3]
+cfg = Path(sys.argv[4]) if sys.argv[4] else None
+marker = "Execution failed. Traceback:"
+k = None
+if cfg is not None and cfg.is_file():
+    for line in cfg.read_text(encoding="utf-8").splitlines():
+        if line.startswith("fixed_k:"):
+            try:
+                k = int(line.split(":", 1)[1].strip().split()[0])
+            except (TypeError, ValueError):
+                k = None
+            break
+is_fixed = system == "fixed_k" or k is not None
+is_exc = system == "router_seq"
+if is_fixed and k is None:
+    print(1)
+    raise SystemExit(0)
+if not is_fixed and not is_exc:
+    print(1)
+    raise SystemExit(0)
+could = False
+for result in root.rglob("result.json"):
+    run_dir = result.parent
+    if is_fixed:
+        try:
+            row = json.loads(result.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if int(row.get("steps") or 0) >= k:
+            could = True
+            break
+    elif is_exc:
+        events = run_dir / "events.jsonl"
+        try:
+            text = events.read_text(encoding="utf-8") if events.is_file() else ""
+        except OSError:
+            text = ""
+        if marker in text:
+            could = True
+            break
+print(1 if could else 0)
+PY
+}
+
+hj12_warn_or_void_takeover () {
+  local stem="$1"
+  local cid="$2"
+  local phase="$3"
+  local system="${4:-}"
+  local cfg="${5:-}"
+  local n_act=0
+  local could=0
+  local reason="gate"
+  n_act="$(hj12_planner_authored_actions "${cid}" || echo 0)"
+  n_act="${n_act:-0}"
+  if [[ "${n_act}" -ne 0 ]]; then
+    return 0
+  fi
+  if [[ "${system}" == "fixed_k" ]]; then
+    reason="fixed_k steps>=k"
+  elif [[ "${system}" == "router_seq" ]]; then
+    reason="exception marker"
+  fi
+  if [[ "${phase}" == "smoke" || "${SMOKE_ONLY}" == "1" ]]; then
+    could="$(hj12_smoke_gate_could_trigger "${cid}" "${system}" "${cfg}")" || could=1
+    could="${could:-0}"
+    if [[ "${could}" -eq 1 ]]; then
+      echo "[hj12] FATAL: takeover arm ${stem} has 0 planner-authored action events on smoke and at least one episode could have triggered the ${reason} gate; ran the advise path; not launching the full run"
+      exit 1
+    fi
+    echo "[hj12] WARN: takeover arm ${stem} has 0 planner-authored action events on smoke — smoke was uninformative (no episode reached the ${reason} gate)"
+    return 0
+  fi
+  echo "[hj12] FATAL: takeover arm ${stem} has 0 planner-authored action events — ran the advise path; result is void"
+  exit 1
+}
+
+hj12_run_guard_selftest () {
+  if [[ -n "${HJ8_STUB_DIR:-}" ]]; then
+    export PATH="${HJ8_STUB_DIR}:${PATH}"
+  fi
+  case "${GUARD_CASE:?}" in
+    arms_unknown)
+      ARMS="${ARMS_STEM:-not_a_real_stem}"
+      hj12_select_arms
+      echo "[hj12] UNREACHABLE: arms_unknown should have been FATAL"
+      exit 99
+      ;;
+    health_missing_alias)
+      export VLLM_PORT="${VLLM_PORT:-21001}"
+      export VLLM_PID="${VLLM_PID:-12345}"
+      VLOG="$(mktemp)"
+      : > "${VLOG}"
+      LORA_MODULES=("sft_b_plus=/tmp/r1_missing_alias")
+      hj12_vllm_identity_check
+      echo "[hj12] UNREACHABLE: health_missing_alias should have been FATAL"
+      exit 99
+      ;;
+    health_foreign_pgid)
+      export VLLM_PORT="${VLLM_PORT:-21002}"
+      export VLLM_PID="${VLLM_PID:-11111}"
+      VLOG="$(mktemp)"
+      : > "${VLOG}"
+      LORA_MODULES=("sft_b_plus=/tmp/r1_foreign_pgid")
+      hj12_vllm_identity_check
+      echo "[hj12] UNREACHABLE: health_foreign_pgid should have been FATAL"
+      exit 99
+      ;;
+    project_over)
+      OUT="${GUARD_OUT:?}"
+      RUNNING_PLANNER_CALLS="${GUARD_RUNNING:-0}"
+      hj12_project_full_from_smoke "${GUARD_STEM:-arm}" "${GUARD_CID:?}" 1
+      echo "[hj12] UNREACHABLE: project_over should have been FATAL"
+      exit 99
+      ;;
+    project_ok)
+      OUT="${GUARD_OUT:?}"
+      RUNNING_PLANNER_CALLS="${GUARD_RUNNING:-0}"
+      hj12_project_full_from_smoke "${GUARD_STEM:-arm}" "${GUARD_CID:?}" 1
+      echo "[hj12] project_ok reached"
+      ;;
+    takeover_smoke_fatal)
+      OUT="${GUARD_OUT:?}"
+      hj12_warn_or_void_takeover "${GUARD_STEM:-hj12_takeover_fixed_k_10}" "${GUARD_CID:?}" "smoke" "${GUARD_SYSTEM:-fixed_k}" "${GUARD_CFG:-}"
+      echo "[hj12] UNREACHABLE: takeover_smoke_fatal should have been FATAL"
+      exit 99
+      ;;
+    takeover_smoke_uninformative)
+      OUT="${GUARD_OUT:?}"
+      hj12_warn_or_void_takeover "${GUARD_STEM:-hj12_takeover_fixed_k_10}" "${GUARD_CID:?}" "smoke" "${GUARD_SYSTEM:-fixed_k}" "${GUARD_CFG:-}"
+      echo "[hj12] takeover_smoke_uninformative reached"
+      ;;
+    takeover_smoke_exception_fatal)
+      OUT="${GUARD_OUT:?}"
+      hj12_warn_or_void_takeover "${GUARD_STEM:-hj12_takeover_exception}" "${GUARD_CID:?}" "smoke" "${GUARD_SYSTEM:-router_seq}" "${GUARD_CFG:-}"
+      echo "[hj12] UNREACHABLE: takeover_smoke_exception_fatal should have been FATAL"
+      exit 99
+      ;;
+    takeover_smoke_exception_uninformative)
+      OUT="${GUARD_OUT:?}"
+      hj12_warn_or_void_takeover "${GUARD_STEM:-hj12_takeover_exception}" "${GUARD_CID:?}" "smoke" "${GUARD_SYSTEM:-router_seq}" "${GUARD_CFG:-}"
+      echo "[hj12] takeover_smoke_exception_uninformative reached"
+      ;;
+    *)
+      echo "[hj12] FATAL: unknown GUARD_CASE=${GUARD_CASE}"
+      exit 2
+      ;;
+  esac
+}
+
+if [[ "${HJ12_GUARD_SELFTEST:-0}" == "1" ]]; then
+  hj12_run_guard_selftest
+  exit 0
+fi
+
+hj12_select_arms
+hj12_assert_selected_configs_exist
+assert_live_configs_are_hosted_codex || exit $?
+
+# Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
+# SMOKE_ONLY=1 returns after smoke+gate (scid is kept until the table prints).
+# Does not --purge-broken or write a manifest on the real cid, so a later full
+# run still sees n_runs=0 and will smoke itself. Live arms always pass
+# --expect-planner --expect-model gpt-5.6-luna: a silent mock would produce a
+# full set of plausible numbers measuring nothing.
+run_arm () {
+  local system="$1"
+  local cfg="$2"
+  local cid="$3"
+  local stem="${4:-}"
+  local scid="${cid}_smoke"
+  local smoke_rc=0
+  local gate_rc=0
+  local camp_rc=0
+  local sum_rc=0
+  local n_runs=0
+  local n_broken=0
+  local stats=""
+  local launching_full=1
+  local gate_cmd=(--gate)
+  if [[ -n "${SYSTEM:-}" ]]; then
+    echo "[hj12] SYSTEM override ${system} -> ${SYSTEM}"
+    system="${SYSTEM}"
+  fi
+  if [[ -z "${stem}" ]]; then
+    stem="${cid%_${DATE}}"
+  fi
+  gate_cmd+=(--expect-planner --expect-model gpt-5.6-luna)
+
+  echo "[hj12] ---- arm ${cid} system=${system} ----"
+  if arm_is_complete "${cid}"; then
+    echo "[hj12] resume: ${cid} already complete (${N_PLANNED} result.json, 0 broken, manifest present); skipped"
+    return 0
+  fi
+
+  if [[ "${SMOKE_ONLY}" == "1" ]]; then
+    echo "[hj12] smoke_only: not purging ${cid} (will not touch a real campaign tree)"
+  else
+    echo "[hj12] ---- purge broken runs from earlier attempts ----"
+    timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -2
+  fi
+
+  stats="$(campaign_stats "${cid}" || true)"
+  read -r n_runs n_broken <<<"${stats:-0 0}"
+  n_runs="${n_runs:-0}"
+  n_broken="${n_broken:-0}"
+  echo "[hj12] resume: ${cid} n_runs=${n_runs} n_broken=${n_broken} n_planned=${N_PLANNED}"
+  if [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_broken}" -eq 0 ]]; then
+    if [[ "${SMOKE_ONLY}" == "1" ]]; then
+      echo "[hj12] smoke_only: ${cid} has a full clean tree; smoke skipped; not writing manifest"
+      return 0
+    fi
+    echo "[hj12] resume: ${cid} has a full clean tree; writing missing manifest"
+    timeout 300 "${PY}" "${SUM}" \
+      --out "${OUT}" --campaign-id "${cid}" \
+      --config "${cfg}" \
+      --manifest "${OUT}/results/${cid}/manifest.json" \
+      "${gate_cmd[@]}" --repo "${REPO}"
+    return $?
+  fi
+
+  if [[ "${n_runs}" -eq 0 ]]; then
+    rm -rf "${OUT:?}/${scid:?}"
+    echo "[hj12] ---- smoke gate (${scid}) ----"
+    timeout 1800 "${PY}" -m sidekick.runner \
+      --system "${system}" --split dev --tasks "${N_SMOKE_TASKS}" --seeds 1 \
+      --env appworld --workers 3 \
+      --config "${cfg}" --campaign-id "${scid}" --out "${OUT}"
+    smoke_rc=$?
+    if [[ "${SMOKE_ONLY}" == "1" ]]; then
+      SMOKE_TREES+=("${system}|${stem}|${scid}")
+    fi
+    if [[ "${smoke_rc}" -ne 0 ]]; then
+      echo "[hj12] FATAL: smoke runner exited ${smoke_rc} (${cid})"
+      return "${smoke_rc}"
+    fi
+    timeout 180 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${scid}" \
+      --config "${cfg}" --repo "${REPO}" \
+      "${gate_cmd[@]}"
+    gate_rc=$?
+    if [[ "${gate_rc}" -ne 0 ]]; then
+      echo "[hj12] FATAL: smoke gate failed (rc=${gate_rc}) (${cid})"
+      return "${gate_rc}"
+    fi
+    launching_full=1
+    if [[ "${SMOKE_ONLY}" == "1" ]]; then
+      launching_full=0
+    fi
+    hj12_project_full_from_smoke "${stem}" "${scid}" "${launching_full}"
+    if [[ "${stem}" == *takeover* ]]; then
+      hj12_warn_or_void_takeover "${stem}" "${scid}" "smoke" "${system}" "${cfg}"
+    fi
+    if [[ "${SMOKE_ONLY}" != "1" ]]; then
+      rm -rf "${OUT:?}/${scid:?}"
+    fi
+  else
+    echo "[hj12] resume: ${cid} already has ${n_runs} result.json; smoke skipped"
+  fi
+
+  if [[ "${SMOKE_ONLY}" == "1" ]]; then
+    echo "[hj12] smoke_only: ${cid} stopping before full campaign"
+    return 0
+  fi
+
+  echo "[hj12] ---- full campaign (${cid}) ----"
+  timeout 10800 "${PY}" -m sidekick.runner \
+    --system "${system}" --split dev --tasks "${N_FULL_TASKS}" --seeds 1,2 \
+    --env appworld --workers 6 \
+    --config "${cfg}" --out "${OUT}" --campaign-id "${cid}"
+  camp_rc=$?
+
+  echo "[hj12] ---- summary + manifest (${cid}) ----"
+  timeout 300 "${PY}" "${SUM}" \
+    --out "${OUT}" --campaign-id "${cid}" \
+    --config "${cfg}" \
+    --manifest "${OUT}/results/${cid}/manifest.json" \
+    "${gate_cmd[@]}" --repo "${REPO}"
+  sum_rc=$?
+  echo "[hj12] ${cid} manifest/gate rc=${sum_rc} campaign_rc=${camp_rc}"
+  if [[ "${camp_rc}" -ne 0 ]]; then
+    return "${camp_rc}"
+  fi
+  return "${sum_rc}"
+}
+
+PENDING_ARMS=()
+PENDING_LIVE=0
+echo "[hj12] ---- resume scan ----"
+for spec in "${SELECTED_ARMS[@]}"; do
+  IFS='|' read -r system cfg stem <<<"${spec}"
+  cid="${stem}_${DATE}"
+  if arm_is_complete "${cid}"; then
+    echo "[hj12] resume: ${cid} complete; will not occupy the GPU for this arm"
+    hj12_print_arm_escalation "${stem}" "${cid}" "complete"
+    if [[ "${stem}" == *takeover* ]]; then
+      hj12_warn_or_void_takeover "${stem}" "${cid}" "complete" "${system}" "${cfg}"
+    fi
+    hj12_add_spend_and_maybe_stop "${stem}" "${cid}" "" "1"
+    continue
+  fi
+  PENDING_ARMS+=("${spec}")
+  PENDING_LIVE=1
+done
+if [[ "${#PENDING_ARMS[@]}" -eq 0 ]]; then
+  echo "[hj12] all ${ARMSET} arms already complete for DATE=${DATE}; not starting vLLM"
+  echo "[hj12] done=$(date -Iseconds) pending=0 running_planner_calls=${RUNNING_PLANNER_CALLS}"
+  exit 0
+fi
+echo "[hj12] pending_arms=${#PENDING_ARMS[@]} pending_live=${PENDING_LIVE} running_planner_calls=${RUNNING_PLANNER_CALLS}"
+
+echo "[hj12] resolved adapter path=${ADAPTER_SFT_B_PLUS} alias=${ALIAS_SFT_B_PLUS}"
+register_lora "${ALIAS_SFT_B_PLUS}" "${ADAPTER_SFT_B_PLUS}"
+if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
+  echo "[hj12] FATAL: no LoRA modules registered; set ADAPTER_SFT_B_PLUS" >&2
+  exit 2
+fi
+if [[ "${#LORA_MODULES[@]}" -gt "${MAX_LORAS}" ]]; then
+  echo "[hj12] FATAL: ${#LORA_MODULES[@]} LoRA modules exceeds --max-loras ${MAX_LORAS}: ${LORA_MODULES[*]}" >&2
+  exit 2
+fi
+echo "[hj12] lora count ${#LORA_MODULES[@]} <= max-loras ${MAX_LORAS}"
+
+# ---- preflight: live planner before a GPU is held. Skipped for ARMSET=free
+# (and for all/live when the only remaining work is already complete, above).
+if [[ "${PENDING_LIVE}" -eq 1 ]]; then
+  echo "[hj12] ---- preflight (live planner) ----"
+  if ! command -v codex >/dev/null 2>&1; then
+    echo "[hj12] FATAL: codex not on PATH"; exit 1
+  fi
+  if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+    echo "[hj12] FATAL: ~/.codex/auth.json missing or empty -- planner cannot authenticate"
+    exit 1
+  fi
+  echo "[hj12] codex $(codex --version 2>/dev/null || echo '?')"
+  echo "[hj12] auth.json present (contents never printed)"
+else
+  echo "[hj12] ---- preflight skipped (no pending live arm; free set must not call the planner) ----"
+fi
+
+# ---- vLLM: LoRA registered statically at launch --------------------------------
+kill_vllm
+hj12_choose_vllm_port
+# The --lora-modules line. Alias comes from ALIAS_SFT_B_PLUS / executor.lora_name, not the directory name.
+setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+  --served-model-name "${MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len 32768 \
+  --host 127.0.0.1 --port "${VLLM_PORT}" \
+  --gpu-memory-utilization 0.85 \
+  --enable-lora \
+  --max-loras "${MAX_LORAS}" \
+  --max-lora-rank 64 \
+  --lora-modules "${LORA_MODULES[@]}" \
+  > "${VLOG}" 2>&1 &
+VLLM_PID=$!
+echo "[hj12] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+while (( $(date +%s) < deadline )); do
+  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+    echo "[hj12] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+  fi
+  if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
+    echo "[hj12] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  fi
+  sleep 5
+done
+if [[ "${healthy}" -ne 1 ]]; then
+  echo "[hj12] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
+fi
+hj12_vllm_identity_check
+
+# A gate that can pass or fail on cached results is not a gate. Separate _smoke
+# campaign id, purge, then full run + manifest. Continue after an arm failure so
+# a later arm still gets walltime; the first non-zero rc is the job exit.
+job_rc=0
+n_pending="${#PENDING_ARMS[@]}"
+arm_i=0
+for spec in "${PENDING_ARMS[@]}"; do
+  IFS='|' read -r system cfg stem <<<"${spec}"
+  cid="${stem}_${DATE}"
+  arm_i=$((arm_i + 1))
+  arm_rc=125
+  run_arm "${system}" "${cfg}" "${cid}" "${stem}"
+  arm_rc=$?
+  echo "[hj12] arm (${cid}) rc=${arm_rc}"
+  if [[ "${arm_rc}" -ne 0 && "${job_rc}" -eq 0 ]]; then
+    job_rc="${arm_rc}"
+  fi
+  table_cid="${cid}"
+  phase="full"
+  if [[ "${SMOKE_ONLY}" == "1" ]]; then
+    table_cid="${cid}_smoke"
+    phase="smoke"
+    if [[ ! -d "${OUT}/${table_cid}" ]]; then
+      table_cid="${cid}"
+      phase="existing"
+    fi
+  fi
+  hj12_print_arm_escalation "${stem}" "${table_cid}" "${phase}"
+  if [[ "${stem}" == *takeover* && "${phase}" != "smoke" ]]; then
+    hj12_warn_or_void_takeover "${stem}" "${table_cid}" "${phase}" "${system}" "${cfg}"
+  fi
+  have_next=0
+  if [[ "${arm_i}" -lt "${n_pending}" ]]; then
+    have_next=1
+  fi
+  hj12_add_spend_and_maybe_stop "${stem}" "${table_cid}" "" "${have_next}"
+done
+
+if [[ "${SMOKE_ONLY}" == "1" ]]; then
+  hj12_print_smoke_escalation_table
+  for entry in "${SMOKE_TREES[@]}"; do
+    IFS='|' read -r _system _stem scid <<<"${entry}"
+    rm -rf "${OUT:?}/${scid:?}"
+  done
+fi
+
+kill_vllm
+echo "[hj12] done=$(date -Iseconds) job_rc=${job_rc} job_cid=${JOB_CID} pending_was=${#PENDING_ARMS[@]} running_planner_calls=${RUNNING_PLANNER_CALLS} max_planner_calls=${MAX_PLANNER_CALLS}"
+exit "${job_rc}"
