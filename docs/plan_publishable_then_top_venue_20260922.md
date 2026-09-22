@@ -326,3 +326,71 @@ cap-81 arms, the narrated curve at m6/m11, and the two narrated with-observation
 
 Not started: X16 run provenance, the D5 preprint draft. H5 and H7 remain unrequested; H7 additionally
 needs the J9 §8.1 authorisation.
+
+---
+
+## 9. Outcome record — 2026-09-22, 20:40: the narrated control selects the branch
+
+### 9.1 The prefix conveys information, not state
+
+The X38 narrated arms are complete on both receivers at n = 114. They render the planner's first nine
+recorded actions as **text** and run the executor from step 0 in a **fresh environment** — same
+information, no carried state. Executed minus narrated at m = 9:
+
+| receiver | metric | diff | scenario 95 % CI | task 95 % CI |
+|---|---|---|---|---|
+| tailored | `goal_pass` | +1.84 pp | [−2.67, +6.76] | [−3.70, +7.75] |
+| tailored | TGC | +3.51 pp | [−5.26, +11.40] | [−4.39, +11.40] |
+| untailored | `goal_pass` | +1.69 pp | [−4.16, +7.11] | [−3.70, +7.38] |
+| untailored | TGC | +6.14 pp | [−2.63, +14.91] | [−1.75, +14.91] |
+
+**All eight intervals include zero.** The environment state a replayed prefix leaves behind contributes
+nothing resolvable at this sample size once the same information reaches the executor as text. State
+this as "cannot distinguish at n = 114", never as "narration is as good as execution" — the TGC point
+estimates are consistently positive, which is the direction expected if state helps a little.
+
+### 9.2 What text alone buys
+
+Narrated minus the one-plan floor: untailored `goal_pass` **+47.92 pp [+38.67, +56.27]**, untailored TGC
+**+43.86 pp [+30.70, +56.14]**, tailored TGC **+13.16 pp [+5.26, +21.93]** — three intervals excluding
+zero. ⚠ The fourth does not: tailored `goal_pass` is **+4.86 pp [−0.56, +10.61]**, so on the tailored
+receiver the narrated gain is established on TGC and **not** on `goal_pass`.
+
+As a share of what execution achieves over the same floor: untailored **97 %** of the `goal_pass` gain
+and **88 %** of TGC; tailored **73 %** and **79 %**. The receiver with more headroom gets proportionally
+more from text, which is TAILOR-07 seen from a different angle.
+
+### 9.3 The claim this sharpens, and the branch it selects
+
+Put beside CHAN-C1-02 — prose advice at matched trigger and full context loses by 6.69 pp — the
+mechanism claim becomes **content, not channel and not state**: concrete executable action sequences are
+what the executor needs, whether or not they were ever executed in its environment, and prose *about*
+what to do does not substitute.
+
+Per the plan's §3 decision rule, narrated ≈ executed makes **H2 mandatory rather than optional**.
+`hj13_advise_fixed_k_1_fullctx` (PBS 25701766) prices advice at the prefix's own token budget and is
+already running, pre-registered in `docs/prereg_h2_advice_at_price_20260923.md` with an explicit
+withdrawal condition. H3 (the live handoff) is **not** selected by this branch.
+
+### 9.4 Also landed since §8
+
+Cost is now priced in three currencies. On the matched pair the action channel **strictly dominates** —
+cheaper on non-cached tokens, provider dollars and hosted calls simultaneously, while scoring 6.69 pp
+higher — so the channel claim needs no "at a price" qualifier against its matched comparator (COST-01).
+The single ordering flip involves the *starved* advice arm, off the critical path (COST-02).
+Non-inferiority to the cap-81 ceiling is **currency-invariant**: the same two arms pass under all three
+axes (COST-03).
+
+The Qwen floor arms completed and are **degenerate** — both score 0.2481 with TGC exactly zero and zero
+successes across 228 episodes, and a full plan moved the outcome in **no episode at all**. The number is
+a constant of the task set, not a property of the model. The prefix arms are healthy and rise
+monotonically through m = 11 on all five quantities, so the second-family claim survives in the
+within-prefix form only (QWEN-03, QWEN-04).
+
+Ledger 90 → 96 rows. Suite 578 passed. HEAD `f9909ad`.
+
+### 9.5 Still running
+
+H2 advice-at-price; the six cap-81 arms; the narrated curve at m6/m11; the two narrated
+with-observations variants. Not started: X16 run provenance. H5 and H7 remain unrequested, and H7 needs
+the J9 §8.1 authorisation.
