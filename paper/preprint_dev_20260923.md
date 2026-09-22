@@ -109,6 +109,8 @@ of a frozen prereg. A reader who declines that judgement should treat P2 as unte
 budget and rely on Section 4, which establishes the same channel ordering at **matched trigger and matched
 context**, where no budget question arises.
 
+**Figure F8** places all four arms on cost and quality axes: the advice arms sit at the bottom of the quality range at both ends of the cost range, while the action prefixes sit above them in between.
+
 By the prereg's own decision rule, P1 and P2 both holding establishes the channel claim at matched budget:
 **advice does not reach the action channel's quality even when priced at or above it; the difference is the
 channel, not the budget.**
@@ -256,6 +258,8 @@ gaining +0.10 pp to $m = 11$ ([−5.14, +4.75]). The tailored one does not: +6.8
 ([+4.91, +16.34]) — all excluding zero. The practical corollary from the untailored receiver holds here
 too: tailored narration at $m = 11$ beats tailored *execution* at $m = 6$ by +8.12 pp ([+3.18, +13.67]).
 
+**Figure F7** plots these six contrasts with their scenario-clustered intervals and the zero line.
+
 The natural reading is that **receiver tailoring is what allows a description of the planner's actions to
 substitute for having executed them**: a receiver trained on the planner's own trajectories reconstructs
 from text what an untrained one cannot, and the untrained receiver stops extracting additional value from
@@ -268,6 +272,33 @@ interval in our analysis. What is measured is that the two receivers differ in *
 and in whether the narrated curve saturates; a DiD contrast is the test that would settle whether the
 interaction itself is real. The receiver × depth grid was planned in advance, but this reading was formed
 after seeing it, so we treat it as exploratory.
+
+---
+
+### 6.2 Observations Add Nothing the Actions Did Not Already Carry
+
+The narrated packet renders the planner's *actions* as text. A natural follow-up is whether the
+planner's *observations* — what those actions returned — carry part of the benefit, since a prefix
+plausibly helps by handing over discovered facts (account identifiers, API shapes) rather than a
+sequence of moves. We ran the actions+observations variant at $m = 9$ on both receivers (NARR-05).
+
+| Receiver | actions only | + observations | plain − obs, `goal_pass` | TGC |
+|---|---|---|---|---|
+| Untailored | 0.7676 | 0.7841 | −1.64 [−6.46, +2.97] | −1.75 [−9.65, +5.26] |
+| Tailored | 0.7667 | 0.7401 | +2.67 [−1.62, +7.49] | +2.63 [−5.26, +12.28] |
+
+All eight intervals include zero, and the point estimates run in **opposite directions** on the two
+receivers: observations nominally help the untailored receiver and nominally hurt the tailored one.
+Opposite-signed unresolved effects of this size are what noise looks like, so we report the null:
+observation text adds nothing detectable at $n = 114$. What the prefix conveys is the planner's
+**sequence of actions**, not the facts those actions returned.
+
+We flag one asymmetry without overclaiming it. Against the 7.00 pp non-inferiority margin, untailored
+actions+observations narration *is* non-inferior to execution at $m = 9$ (−0.04 pp, scenario
+[−5.12, +5.11]), whereas plain untailored narration at the same depth is not (−1.69 pp, scenario
+[−7.10, +4.16], whose lower bound falls just outside the margin). That is a difference in which
+non-inferiority statements are licensed, not evidence that observations helped: the direct contrast
+between the two narrated variants is the −1.64 pp interval above, which includes zero.
 
 ---
 

@@ -243,5 +243,79 @@
       }
     ],
     "skipped_reason": null
+  },
+  {
+    "figure_id": "F7",
+    "file_pdf": "paper/figures/f7_narrated_minus_executed.pdf",
+    "file_png": "paper/figures/f7_narrated_minus_executed.png",
+    "width_in": 4.8,
+    "column": "two-column",
+    "caption": "Narrated minus executed goal-pass rate in percentage points across prefix depths $m=6, 9, 11$, with scenario-clustered 95% confidence intervals. Values below zero mean execution beat narration. The only contrast whose interval excludes zero is the untailored receiver at $m=11$. The difference between the two series is not tested here: six paired contrasts are not a difference-in-differences.",
+    "series": [
+      {
+        "label": "Tailored receiver (sft_b_plus)",
+        "report_path": "campaign/results/hj16_narrated_curve_bplus_20260923.report.json",
+        "json_keys": [
+          "contrasts.goal_pass_all_narrated_t_m6_minus_executed_t_m6.diff_pp",
+          "contrasts.goal_pass_all_narrated_t_m6_minus_executed_t_m6.ci95_pp_scenario",
+          "contrasts.goal_pass_all_narrated_t_m9_minus_executed_t_m9.diff_pp",
+          "contrasts.goal_pass_all_narrated_t_m9_minus_executed_t_m9.ci95_pp_scenario",
+          "contrasts.goal_pass_all_narrated_t_m11_minus_executed_t_m11.diff_pp",
+          "contrasts.goal_pass_all_narrated_t_m11_minus_executed_t_m11.ci95_pp_scenario"
+        ],
+        "n_points": 3
+      },
+      {
+        "label": "Untailored receiver (granite zero-shot)",
+        "report_path": "campaign/results/hj16_narrated_curve_zs_20260923.report.json",
+        "json_keys": [
+          "contrasts.goal_pass_all_narrated_m6_minus_executed_m6.diff_pp",
+          "contrasts.goal_pass_all_narrated_m6_minus_executed_m6.ci95_pp_scenario",
+          "contrasts.goal_pass_all_narrated_m9_minus_executed_m9.diff_pp",
+          "contrasts.goal_pass_all_narrated_m9_minus_executed_m9.ci95_pp_scenario",
+          "contrasts.goal_pass_all_narrated_m11_minus_executed_m11.diff_pp",
+          "contrasts.goal_pass_all_narrated_m11_minus_executed_m11.ci95_pp_scenario"
+        ],
+        "n_points": 3
+      }
+    ],
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F8",
+    "file_pdf": "paper/figures/f8_advice_cost_quality.pdf",
+    "file_png": "paper/figures/f8_advice_cost_quality.png",
+    "width_in": 7.2,
+    "column": "two-column",
+    "caption": "Cost/quality scatter for advice and action-prefix arms. Advice reviewed at every step spends 3.2\u00d7 the tokens and 1.7\u00d7 the hosted calls of $\\mathit{prefix\\_m11}$ and still scores 14.68 pp lower; this was the registered H2 test (docs/prereg_h2_advice_at_price_20260923.md).",
+    "series": [
+      {
+        "label": "Advice arms",
+        "report_path": "campaign/results/hj13_advice_at_price_20260923.report.json; campaign/results/hj13_advice_at_price_cost_20260923.report.json",
+        "json_keys": [
+          "hj13_advice_at_price_20260923.report.json:arms.advise_k10_fullctx.goal_pass_all",
+          "hj13_advice_at_price_20260923.report.json:arms.advise_k1_fullctx.goal_pass_all",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.advise_k10_fullctx.noncached_tokens_per_episode",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.advise_k10_fullctx.hosted_calls_per_episode",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.advise_k1_fullctx.noncached_tokens_per_episode",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.advise_k1_fullctx.hosted_calls_per_episode"
+        ],
+        "n_points": 2
+      },
+      {
+        "label": "Action-prefix arms",
+        "report_path": "campaign/results/hj13_advice_at_price_20260923.report.json; campaign/results/hj13_advice_at_price_cost_20260923.report.json",
+        "json_keys": [
+          "hj13_advice_at_price_20260923.report.json:arms.prefix_m9.goal_pass_all",
+          "hj13_advice_at_price_20260923.report.json:arms.prefix_m11.goal_pass_all",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.prefix_m9.noncached_tokens_per_episode",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.prefix_m9.hosted_calls_per_episode",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.prefix_m11.noncached_tokens_per_episode",
+          "hj13_advice_at_price_cost_20260923.report.json:arms.prefix_m11.hosted_calls_per_episode"
+        ],
+        "n_points": 2
+      }
+    ],
+    "skipped_reason": null
   }
 ]

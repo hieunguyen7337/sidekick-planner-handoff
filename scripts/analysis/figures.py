@@ -12,6 +12,8 @@ Figures:
   F4: Mechanism two-panel (M1 API novelty front-loading + M3 rise decomposition).
   F5: Second family within-prefix depth curve (Qwen3-8B zero-shot).
   F6: Mechanism two-panel (Narrated vs executed prefix actions across receivers).
+  F7: Narrated-minus-executed goal-pass contrast across receivers.
+  F8: Advice and action-prefix cost/quality scatter.
 """
 from __future__ import annotations
 
@@ -1190,6 +1192,253 @@ def generate_f6_narrated_vs_executed(
     return manifest_entry
 
 
+def generate_f7_narrated_minus_executed(
+    results_dir: Path,
+    out_dir: Path,
+    dpi: int = 200,
+) -> dict[str, Any]:
+    """F7 · Narrated minus executed goal-pass contrast by receiver and depth."""
+    fig_id = "F7"
+    apply_style()
+
+    m_list = [6, 9, 11]
+    receiver_specs = [
+        (
+            "Tailored receiver (sft_b_plus)",
+            PALETTE["tailored"],
+            results_dir / "hj16_narrated_curve_bplus_20260923.report.json",
+            "goal_pass_all_narrated_t_m{m}_minus_executed_t_m{m}",
+        ),
+        (
+            "Untailored receiver (granite zero-shot)",
+            PALETTE["zeroshot"],
+            results_dir / "hj16_narrated_curve_zs_20260923.report.json",
+            "goal_pass_all_narrated_m{m}_minus_executed_m{m}",
+        ),
+    ]
+
+    fig, ax = plt.subplots(figsize=(4.8, 3.8))
+    manifest_series: list[dict[str, Any]] = []
+
+    for label, style, report_path, contrast_template in receiver_specs:
+        report_data = load_report_json(report_path, fig_id)
+        values: list[float] = []
+        ci_lowers: list[float] = []
+        ci_uppers: list[float] = []
+        json_keys: list[str] = []
+
+        for m in m_list:
+            contrast_key = f"contrasts.{contrast_template.format(m=m)}"
+            diff_key = f"{contrast_key}.diff_pp"
+            ci_key = f"{contrast_key}.ci95_pp_scenario"
+            diff_pp = float(get_nested_key(report_data, diff_key, report_path, fig_id))
+            ci95_pp = get_nested_key(report_data, ci_key, report_path, fig_id)
+            values.append(diff_pp)
+            ci_lowers.append(float(ci95_pp[0]))
+            ci_uppers.append(float(ci95_pp[1]))
+            json_keys.extend([diff_key, ci_key])
+
+        if not values:
+            raise SystemExit(f"Fatal [{fig_id}]: empty series for {label}")
+
+        yerr_lower = [value - lower for value, lower in zip(values, ci_lowers)]
+        yerr_upper = [upper - value for value, upper in zip(values, ci_uppers)]
+        ax.errorbar(
+            m_list,
+            values,
+            yerr=[yerr_lower, yerr_upper],
+            color=style["color"],
+            ecolor=style["color"],
+            fmt=style["marker"],
+            linestyle=style["linestyle"],
+            linewidth=1.5,
+            elinewidth=1.5,
+            capsize=4,
+            capthick=1.2,
+            markersize=6,
+            label=label,
+            zorder=4,
+        )
+        manifest_series.append({
+            "label": label,
+            "report_path": str(report_path),
+            "json_keys": json_keys,
+            "n_points": len(values),
+        })
+
+    ax.axhline(0, color="#444444", linestyle="--", linewidth=1.0, zorder=2)
+    ax.set_xlabel("Prefix depth $m$")
+    ax.set_ylabel("Narrated $-$ executed goal pass (pp)")
+    ax.set_xticks(m_list)
+    ax.set_xlim(5.0, 12.0)
+    ax.set_ylim(-15.5, 6.0)
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+        frameon=True,
+        facecolor="white",
+        edgecolor="#cccccc",
+        fontsize=8,
+    )
+
+    pdf_path, png_path = save_figure(fig, out_dir, "f7_narrated_minus_executed", dpi=dpi)
+
+    caption = (
+        "Narrated minus executed goal-pass rate in percentage points across prefix depths $m=6, 9, 11$, "
+        "with scenario-clustered 95% confidence intervals. Values below zero mean execution beat narration. "
+        "The only contrast whose interval excludes zero is the untailored receiver at $m=11$. "
+        "The difference between the two series is not tested here: six paired contrasts are not a "
+        "difference-in-differences."
+    )
+
+    return {
+        "figure_id": fig_id,
+        "file_pdf": str(pdf_path),
+        "file_png": str(png_path),
+        "width_in": 4.8,
+        "column": "two-column",
+        "caption": caption,
+        "series": manifest_series,
+        "skipped_reason": None,
+    }
+
+
+def generate_f8_advice_cost_quality(
+    results_dir: Path,
+    out_dir: Path,
+    dpi: int = 200,
+) -> dict[str, Any]:
+    """F8 · Cost/quality scatter for advice and action-prefix arms."""
+    fig_id = "F8"
+    apply_style()
+
+    quality_path = results_dir / "hj13_advice_at_price_20260923.report.json"
+    cost_path = results_dir / "hj13_advice_at_price_cost_20260923.report.json"
+    quality_data = load_report_json(quality_path, fig_id)
+    cost_data = load_report_json(cost_path, fig_id)
+
+    arm_specs = [
+        ("advise_k10_fullctx", "advice", (8, 8)),
+        ("advise_k1_fullctx", "advice", (8, -18)),
+        ("prefix_m9", "prefix", (8, -16)),
+        ("prefix_m11", "prefix", (8, 8)),
+    ]
+    arm_values: list[tuple[str, str, float, float, float, tuple[int, int]]] = []
+    for arm, group, offset in arm_specs:
+        quality_key = f"arms.{arm}.goal_pass_all"
+        tokens_key = f"arms.{arm}.noncached_tokens_per_episode"
+        calls_key = f"arms.{arm}.hosted_calls_per_episode"
+        quality = float(get_nested_key(quality_data, quality_key, quality_path, fig_id))
+        tokens = float(get_nested_key(cost_data, tokens_key, cost_path, fig_id))
+        calls = float(get_nested_key(cost_data, calls_key, cost_path, fig_id))
+        arm_values.append((arm, group, quality, tokens, calls, offset))
+
+    if not arm_values:
+        raise SystemExit(f"Fatal [{fig_id}]: empty series for advice cost/quality scatter")
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    group_styles = {
+        "advice": (PALETTE["advice"], "Advice arms"),
+        "prefix": (PALETTE["tailored"], "Action-prefix arms"),
+    }
+    seen_groups: set[str] = set()
+    for arm, group, quality, tokens, calls, offset in arm_values:
+        style, group_label = group_styles[group]
+        ax.scatter(
+            [tokens],
+            [quality],
+            color=style["color"],
+            marker=style["marker"],
+            s=62,
+            edgecolor="#333333",
+            linewidth=0.8,
+            label=group_label if group not in seen_groups else None,
+            zorder=5,
+        )
+        seen_groups.add(group)
+        ax.annotate(
+            f"{arm}\n{calls:.2f} calls/ep",
+            (tokens, quality),
+            textcoords="offset points",
+            xytext=offset,
+            ha="left",
+            va="center",
+            fontsize=8,
+            color=style["color"],
+        )
+
+    tokens_values = [tokens for _, _, _, tokens, _, _ in arm_values]
+    quality_values = [quality for _, _, quality, _, _, _ in arm_values]
+    ax.set_xscale("log")
+    ax.set_xlim(min(tokens_values) / 1.8, max(tokens_values) * 2.0)
+    ax.set_ylim(min(quality_values) - 0.04, max(quality_values) + 0.04)
+    ax.set_xlabel("Non-cached planner tokens per episode (log scale)")
+    ax.set_ylabel("Goal pass rate")
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+        frameon=True,
+        facecolor="white",
+        edgecolor="#cccccc",
+    )
+
+    pdf_path, png_path = save_figure(fig, out_dir, "f8_advice_cost_quality", dpi=dpi)
+
+    quality_keys = [f"arms.{arm}.goal_pass_all" for arm, group, *_ in arm_values]
+    cost_keys = [
+        key
+        for arm, group, *_ in arm_values
+        for key in (
+            f"arms.{arm}.noncached_tokens_per_episode",
+            f"arms.{arm}.hosted_calls_per_episode",
+        )
+    ]
+    values_by_arm = {arm: (quality, tokens, calls) for arm, group, quality, tokens, calls, _ in arm_values}
+    advice_quality, advice_tokens, advice_calls = values_by_arm["advise_k1_fullctx"]
+    prefix_quality, prefix_tokens, prefix_calls = values_by_arm["prefix_m11"]
+    token_ratio = advice_tokens / prefix_tokens
+    calls_ratio = advice_calls / prefix_calls
+    score_gap_pp = (prefix_quality - advice_quality) * 100.0
+    caption = (
+        "Cost/quality scatter for advice and action-prefix arms. Advice reviewed at every step spends "
+        f"{token_ratio:.1f}× the tokens and {calls_ratio:.1f}× the hosted calls of $\\mathit{{prefix\\_m11}}$ "
+        f"and still scores {score_gap_pp:.2f} pp lower; this was the registered H2 test "
+        "(docs/prereg_h2_advice_at_price_20260923.md)."
+    )
+
+    return {
+        "figure_id": fig_id,
+        "file_pdf": str(pdf_path),
+        "file_png": str(png_path),
+        "width_in": 7.2,
+        "column": "two-column",
+        "caption": caption,
+        "series": [
+            {
+                "label": "Advice arms",
+                "report_path": f"{quality_path}; {cost_path}",
+                "json_keys": [
+                    f"{quality_path.name}:{key}" for key in quality_keys if "advise_" in key
+                ] + [
+                    f"{cost_path.name}:{key}" for key in cost_keys if "advise_" in key
+                ],
+                "n_points": 2,
+            },
+            {
+                "label": "Action-prefix arms",
+                "report_path": f"{quality_path}; {cost_path}",
+                "json_keys": [
+                    f"{quality_path.name}:{key}" for key in quality_keys if "prefix_" in key
+                ] + [
+                    f"{cost_path.name}:{key}" for key in cost_keys if "prefix_" in key
+                ],
+                "n_points": 2,
+            },
+        ],
+        "skipped_reason": None,
+    }
+
+
 def run_figures(
     results_dir: Path,
     out_dir: Path,
@@ -1210,6 +1459,8 @@ def run_figures(
         "F4": generate_f4_mechanism,
         "F5": generate_f5_second_family,
         "F6": generate_f6_narrated_vs_executed,
+        "F7": generate_f7_narrated_minus_executed,
+        "F8": generate_f8_advice_cost_quality,
     }
 
     manifest_entries = []

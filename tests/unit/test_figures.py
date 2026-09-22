@@ -22,6 +22,8 @@ from scripts.analysis.figures import (
     generate_f4_mechanism,
     generate_f5_second_family,
     generate_f6_narrated_vs_executed,
+    generate_f7_narrated_minus_executed,
+    generate_f8_advice_cost_quality,
     get_nested_key,
     load_report_json,
     run_figures,
@@ -178,6 +180,43 @@ def _make_minimal_narrated_untailored_report() -> dict:
     }
 
 
+def _make_minimal_narrated_curve_report(tailored: bool) -> dict:
+    if tailored:
+        values = [(-2.51, [-8.68, 3.41]), (-1.84, [-6.76, 2.68]), (-0.49, [-4.10, 3.21])]
+        prefix = "goal_pass_all_narrated_t_m{m}_minus_executed_t_m{m}"
+    else:
+        values = [(-6.96, [-13.67, 0.63]), (-1.69, [-7.10, 4.16]), (-6.58, [-9.98, -3.64])]
+        prefix = "goal_pass_all_narrated_m{m}_minus_executed_m{m}"
+    return {
+        "contrasts": {
+            prefix.format(m=m): {"diff_pp": diff, "ci95_pp_scenario": ci}
+            for m, (diff, ci) in zip((6, 9, 11), values)
+        }
+    }
+
+
+def _make_minimal_advice_at_price_report() -> dict:
+    return {
+        "arms": {
+            "advise_k10_fullctx": {"goal_pass_all": 0.7339},
+            "advise_k1_fullctx": {"goal_pass_all": 0.6630},
+            "prefix_m9": {"goal_pass_all": 0.7852},
+            "prefix_m11": {"goal_pass_all": 0.8098},
+        }
+    }
+
+
+def _make_minimal_advice_at_price_cost_report() -> dict:
+    return {
+        "arms": {
+            "advise_k10_fullctx": {"noncached_tokens_per_episode": 49819, "hosted_calls_per_episode": 2.46},
+            "advise_k1_fullctx": {"noncached_tokens_per_episode": 1414410, "hosted_calls_per_episode": 19.02},
+            "prefix_m9": {"noncached_tokens_per_episode": 357448, "hosted_calls_per_episode": 9.77},
+            "prefix_m11": {"noncached_tokens_per_episode": 443361, "hosted_calls_per_episode": 11.25},
+        }
+    }
+
+
 def _populate_all_standard_fixtures(results_dir: Path) -> None:
     results_dir.mkdir(parents=True, exist_ok=True)
     with open(results_dir / "hj13_shape_post_guard_bands_20260923.report.json", "w") as f:
@@ -203,6 +242,14 @@ def _populate_all_standard_fixtures(results_dir: Path) -> None:
         json.dump(_make_minimal_narrated_tailored_report(), f)
     with open(results_dir / "hj16_narrated_untailored_complete_20260923.report.json", "w") as f:
         json.dump(_make_minimal_narrated_untailored_report(), f)
+    with open(results_dir / "hj16_narrated_curve_zs_20260923.report.json", "w") as f:
+        json.dump(_make_minimal_narrated_curve_report(tailored=False), f)
+    with open(results_dir / "hj16_narrated_curve_bplus_20260923.report.json", "w") as f:
+        json.dump(_make_minimal_narrated_curve_report(tailored=True), f)
+    with open(results_dir / "hj13_advice_at_price_20260923.report.json", "w") as f:
+        json.dump(_make_minimal_advice_at_price_report(), f)
+    with open(results_dir / "hj13_advice_at_price_cost_20260923.report.json", "w") as f:
+        json.dump(_make_minimal_advice_at_price_cost_report(), f)
 
 
 def test_missing_report_file_is_fatal(tmp_path: Path) -> None:
@@ -280,6 +327,8 @@ def test_manifest_lists_every_generated_figure_and_its_keys(tmp_path: Path) -> N
     assert "F4" in fig_ids
     assert "F5" in fig_ids
     assert "F6" in fig_ids
+    assert "F7" in fig_ids
+    assert "F8" in fig_ids
 
     # Check F1 entry structure
     f1_entry = next(e for e in manifest if e["figure_id"] == "F1")
@@ -297,6 +346,12 @@ def test_manifest_lists_every_generated_figure_and_its_keys(tmp_path: Path) -> N
     assert Path(f6_entry["file_pdf"]).is_file()
     assert Path(f6_entry["file_png"]).is_file()
     assert len(f6_entry["series"]) == 2
+
+    for figure_id in ("F7", "F8"):
+        entry = next(e for e in manifest if e["figure_id"] == figure_id)
+        assert Path(entry["file_pdf"]).is_file()
+        assert Path(entry["file_png"]).is_file()
+        assert entry["skipped_reason"] is None
 
 
 def test_f5_no_floor_series_drawn(tmp_path: Path) -> None:
@@ -393,6 +448,35 @@ def test_f6_narrated_vs_executed_generation_and_manifest(tmp_path: Path) -> None
     for s in entry["series"]:
         assert s["n_points"] == 3
         assert len(s["json_keys"]) > 0
+
+
+def test_f7_narrated_minus_executed_generation_and_manifest(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_all_standard_fixtures(results_dir)
+
+    entry = generate_f7_narrated_minus_executed(results_dir, out_dir)
+    assert entry["figure_id"] == "F7"
+    assert Path(entry["file_pdf"]).is_file()
+    assert Path(entry["file_png"]).is_file()
+    assert len(entry["series"]) == 2
+    assert all(series["n_points"] == 3 for series in entry["series"])
+    assert "below zero mean execution beat narration" in entry["caption"]
+    assert "not a difference-in-differences" in entry["caption"]
+
+
+def test_f8_advice_cost_quality_generation_and_manifest(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_all_standard_fixtures(results_dir)
+
+    entry = generate_f8_advice_cost_quality(results_dir, out_dir)
+    assert entry["figure_id"] == "F8"
+    assert Path(entry["file_pdf"]).is_file()
+    assert Path(entry["file_png"]).is_file()
+    assert [series["n_points"] for series in entry["series"]] == [2, 2]
+    assert "3.2× the tokens" in entry["caption"]
+    assert "registered H2 test" in entry["caption"]
 
 
 def test_validate_output_path_refuses_forbidden_locations() -> None:
@@ -498,4 +582,3 @@ def test_f6_legend_placed_outside_axes(tmp_path: Path) -> None:
     _, kwargs = legend_calls[0]
     assert "bbox_to_anchor" in kwargs
     assert kwargs["bbox_to_anchor"][0] > 1.0
-
