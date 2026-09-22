@@ -159,6 +159,14 @@ Across all eight comparisons in Table 2, **every confidence interval includes ze
 
 Evaluating narration against the single-plan floor demonstrates that text alone in a fresh environment captures nearly the entire gain of prefix execution (NARR-02). For the untailored receiver, plain-text narration provides **+47.92 pp** in `goal_pass` (scenario [+38.67, +56.27]) and **+43.86 pp** in TGC (scenario [+30.70, +56.14]) over the base floor (0.2885 `goal_pass` / 0.0526 TGC), capturing **97%** of the `goal_pass` gain and **88%** of the TGC gain achieved by physical execution. For the tailored receiver, narration provides **+13.16 pp** on TGC ([+5.26, +21.93]) over the plan floor, capturing **79%** of the execution TGC gain (the tailored `goal_pass` difference over floor is +4.86 pp [−0.56, +10.61], including zero).
 
+```
+Figure F6: Narrated versus executed prefix at m = 9, both receivers, on goal pass rate and TGC,
+each against the one-plan floor with 95 percent bootstrap intervals. Asterisks mark lift over the
+floor whose interval excludes zero; the tailored goal-pass narrated point carries none, because its
+interval includes zero. The narrated and executed intervals overlap across both metrics and both
+receivers, which is the finding of this section.
+```
+
 This establishes the central informational mechanism of this work: **the prefix operates as concrete, executable programming instructions rather than as an environment mutator.** Prose critique fails (CHAN-C1-02, −6.69 pp), but the exact same actions delivered as text in a fresh environment succeed.
 
 ---
@@ -240,6 +248,12 @@ Across depths $m \in \{6, 9, 11\}$, Qwen3-8B displays clean, monotonic scaling a
 
 
 Paired scenario- and task-clustered intervals for the span (QWEN-05; note the stored keys are signed `m_lower minus m11`, so these are their negation): m = 6 to m = 11 gives **+28.15 pp** on `goal_pass`, scenario [+19.63, +38.47], task [+20.96, +35.72], and **+34.21 pp** on TGC, scenario [+24.56, +44.74], task [+24.56, +43.86]; both exclude zero. The shorter m = 9 to m = 11 step excludes zero on TGC at **+11.40 pp** ([+3.51, +19.30]) but includes zero on `goal_pass` at **+2.90 pp** ([-7.03, +1.61]). TGC is therefore the more sensitive metric for this family, which is what the floor defect below predicts: `goal_pass` carries per-task partial credit that is invariant to whether the model completes anything, and TGC does not. As with the Granite curve, the effect is reported as a rise across a span and never as a jump at a named depth.
+
+```
+Figure F5: Within-prefix depth curve for Qwen3-8B zero-shot at m = 6, 9 and 11. No floor is drawn:
+both Qwen floor arms score identically and complete no tasks, so no floor-relative lift is
+measurable, and the figure generator refuses to render the curve without that annotation.
+```
 
 ### 9.1 Crucial Methodological Limitation: The Qwen Floor Defect
 
