@@ -19,6 +19,10 @@ planner:
   scratch_parent: /scratch/n12194778/sidekick/codex_scratch
 executor:
   type: mock          # never called by planner_alone; must not be vllm
+  # Required by scripts/setup/verify_configs.py for every non-exempt config; the
+  # frozen-pilot source escapes that check, so the copy inherited a gap it never
+  # had. The mock executor never generates, so this bound is inert here.
+  max_prompt_tokens: 30720
 limits:
   max_steps: 40
   max_tokens_per_episode: 2000000   # non-binding: max_planner_calls=25 is the real limit.
