@@ -114,3 +114,33 @@ It does not touch `test_normal` or `test_challenge`. Its dev results decide whic
 registers on test as P7 (plan §3, R6); that registration is a separate document the user freezes.
 
 *Pre-registration ends. Amendments below this line, dated, append-only.*
+
+### Amendment 1, 2026-09-23 ~08:55 AEST — how Holm and the interval rules combine (appended before any B2 episode)
+
+Appended while jobs 25724312 and 25724313 were still queued: no `b1_*` or `b2_*` campaign directory existed
+under the results root, and no B2 episode had been run. It fills a gap in §3–§4 without changing any arm,
+contrast or rule. §3 applies Holm across D1–D4, and §4 phrases every rule as an interval condition, but
+neither says how the two combine. The same gap was found in amendment A1 by review, and is resolved here the
+same way (A1 r2 §5.3).
+
+1. **p-values.** For each of D1–D4 on `goal_pass`, p is the two-sided-equivalent percentile-bootstrap p at 0,
+   taken from the same scenario-clustered bootstrap as the interval: 2 × the share of resampled means on the
+   far side of zero (`scripts/analysis/j10_report.py::bootstrap_pvalue`). Holm step-down is applied at
+   family-wise α = 0.05 across D1–D4. D0 is not in the family; it is reported as an extension of C1.
+2. **"> 0 with CI excluding zero"** (D1 in outcome 2, D2 in outcome 3, D3 in outcome 1) holds only if the
+   unadjusted 95% scenario interval excludes zero on the positive side **and** the Holm-adjusted p ≤ 0.05.
+3. **"CI includes zero"** (D4 in outcome 1, D1 in outcome 3) is evaluated on the **unadjusted** 95% scenario
+   interval. A Holm adjustment would make a non-rejection *easier*, and hence make the prompt-artefact and
+   content-not-execution readings easier to reach. Evaluating it unadjusted is the conservative direction for
+   both.
+4. **Boundary.** When POOL-04 reports a decision-bearing bound as *on the boundary*, that contrast satisfies
+   neither "excludes zero" nor "includes zero". Any outcome that needs it cannot fire, and evaluation falls
+   through to the next outcome, ending at *unresolved*.
+5. **Pooling.** The 171 pairs per arm are the union, keyed by `(task_id, seed)`, of:
+   - T: `hj12_takeover_fixed_k_10_20260923` (seeds 1–2) and `b1_takeover_fixed_k_10_s3_20260923` (seed 3);
+   - A: `hj12_advise_fixed_k_10_fullctx_20260923` (seeds 1–2) and `b1_advise_fixed_k_10_fullctx_s3_20260923`
+     (seed 3);
+   - S: `b2_show_fixed_k_10_20260923` and `b2_show_fixed_k_10_s3_20260923`;
+   - N: `b2_advise_neutral_fixed_k_10_fullctx_20260923` and `b2_advise_neutral_fixed_k_10_fullctx_s3_20260923`.
+
+   A key present in more than one campaign of an arm is an error, not a choice.
