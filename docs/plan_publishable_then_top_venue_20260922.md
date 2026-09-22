@@ -463,3 +463,59 @@ Blocked, needing the user: the tailored **Qwen adapter** training (plan §6.3, f
 the `qsub` was refused by the permission layer. The Qwen floor defect makes this materially more
 valuable than when the plan was written, since a tailored Qwen would have the action format trained in
 and would give the second family a real floor.
+
+---
+
+## 11. Status at 2026-09-22 22:05 — what landed tonight, and two judgement calls
+
+### 11.1 Landed
+
+| result | what it says | ledger |
+|---|---|---|
+| **H2, registered primary** | Advice reviewed every step spends **1,414,410 non-cached tokens** and **19.02 hosted calls** per episode — 3.2× the tokens and 1.7× the calls of `prefix_m11` — and still scores **−14.68 pp** `goal_pass`, scenario [−22.09, −7.04]. P1, P2 and P3 held. Attack 4 is closed. | CHAN-PRICE-01 |
+| **H2 cost prediction failed** | P4 predicted [300k, 700k] tokens; observed 1.41M. Recorded as a failure, see §11.2. | CHAN-PRICE-02 |
+| **Narrated control completed on the tailored receiver** | All six same-depth contrasts include zero (`goal_pass` −2.51, −1.84, −0.49 pp). Non-inferior to execution at m = 9 and m = 11 against the 7.00 pp margin. The untailored receiver loses 6.58 pp at m = 11 and its narrated curve saturates after m = 9 (+0.10 pp) while the tailored one keeps climbing (+3.81 pp, excluding zero). | NARR-04 |
+| **Abstract and contribution list rescoped** | Both asserted the superseded NARR-01 equivalence and the demoted TAILOR-07 substitutability. Corrected; H2 added as a fourth finding. | — |
+| **`pytest tests/` had been aborting at collection since 2026-09-16** | `tests/unit` and `tests/integration` both held `test_limits_and_policy.py` and, with no `__init__.py`, the second import collided. Every "588 passed" this session was `tests/unit` alone. Renamed; the whole tree now runs: **625 passed, 1 skipped**. | — |
+| **Trainer pinned to H100** | The A100/H100 coin flip killed two dry runs (granite 25690327, Qwen 25708421). `gpu_id=H100` moved into `scripts/pbs/train_sft.pbs`. | — |
+| **Preprint number audit moved into the repo** | It lived only in a job temp directory that dies with the job, and it is the only thing that caught X46's three fabricated values. Now `scripts/analysis/preprint_number_audit.sh`. | QUAL-03 |
+
+### 11.2 Judgement call 1 — a frozen prereg's remedy that did not fit its own failure
+
+P4 failed, but **upward**: the arm spent 2× the top of the predicted range, not below the bottom of
+it. The remedy attached to a P4 failure is written for under-pricing (*"P2 must be reported as not
+tested"*), because the hazard being guarded against is declaring a channel win that is really a
+budget win. That hazard is excluded a fortiori when advice is bought at 3.2× the action channel's
+budget and still loses. P2 is therefore reported as **tested and supported**, the deviation is
+recorded in CHAN-PRICE-02 and stated in the paper, and a reader who declines the judgement is
+pointed at COST-01, which settles the same ordering at matched trigger with no budget question.
+The frozen text is not edited.
+
+### 11.3 Judgement call 2 — H3 is largely redundant and is not recommended
+
+Wave 2 offered H3 (`planner_handoff` live, ~900–1,300 hosted calls) as the deployability arm. It is
+now mostly redundant: **CHAN-C1-03 already establishes** that a live takeover loop calling the
+planner online is statistically indistinguishable from replayed oracle prefixes at both m = 9
+(+1.55 pp, scenario [−3.46, +7.04]) and m = 11 (−0.91 pp, [−6.74, +5.94]). Spending ~1,200 calls to
+re-derive live-versus-replay equivalence buys little that the paper does not already have. **Not
+recommended** unless the deployable loop is wanted as a headline artifact rather than as evidence.
+
+### 11.4 Hosted spend against tier B (~5,000 approved)
+
+H0 ≈ 1,650 + H1 ≈ 280 + H4 ≈ 550 + **H2 ≈ 2,168** (19.02 × 114, well over the ~1,600 estimated)
+≈ **4,650 of ~5,000**. The user's 2026-09-22 instruction covers luna spend from the subscription, so
+the constraint that bites is plan *quota*, not cost — hence the standing rule that hosted arms and
+luna workers never run in the same window.
+
+### 11.5 In flight
+
+- `25710038` Qwen tailored adapter training, H100 `gpu1n007`, ~6 h. Then the Qwen tailored floor and
+  prefix m6/m9/m11, which give the second family the non-degenerate floor QWEN-03 denied it.
+- `25698250` untailored narrated ± observations, then the observation contrasts on both receivers.
+- X49 (luna) drawing F7 (the narrated receiver × depth interaction) and F8 (advice at price).
+
+### 11.6 Still unrequested
+
+H5 (~820 hosted, seed 3 at cap 81) and H7 (the J10 test split, 8–12k hosted) remain unstarted. H7
+additionally requires the explicit §8.1 authorisation in `docs/prereg_j9_freeze_20260920.md` and a
+committed prereg amendment before any test-split file is read.
