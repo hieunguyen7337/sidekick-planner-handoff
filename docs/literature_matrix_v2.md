@@ -184,7 +184,7 @@
     - "[OBSERVED https://arxiv.org/abs/2512.12716] Demonstrates robust multi-hop reasoning in long-horizon settings where unified single-context agents degrade severely."
 
 - key: granite_4_2_ibm_2026
-  title: "Granite 4.2 Language Models: Dense Text-Only Foundation Models for Enterprise Agentic Workflows"
+  title: "Granite-4.2-8B"
   venue_or_arxiv: "Hugging Face / IBM Technical Report"
   year: 2026
   url: "https://huggingface.co/ibm-granite/granite-4.2-8b"
@@ -198,10 +198,10 @@
     - "[OBSERVED https://huggingface.co/ibm-granite/granite-4.2-8b] Benchmarks: BFCL v4 52.39, tau3-bench 58.06, SWE-bench Verified 47.67, Terminal-Bench 2.1 20.56, LiveCodeBench v6 73.24, IFBench 79.33, MMLU-Pro 74.04."
 
 - key: gpt_oss_openai_2025
-  title: "GPT-OSS: Open-Weight Models for Advanced Reasoning and Agentic Workflows"
-  venue_or_arxiv: "OpenAI Technical Announcement"
+  title: "gpt-oss-120b & gpt-oss-20b Model Card"
+  venue_or_arxiv: "OpenAI Technical Announcement / arXiv:2508.10925"
   year: 2025
-  url: "https://openai.com"
+  url: "https://arxiv.org/abs/2508.10925"
   what_it_does: |
     Releases open-weight MoE reasoning models (gpt-oss-20b, gpt-oss-120b) under Apache 2.0 with MXFP4 experts.
     Optimized for multi-step reasoning and function calling.
@@ -212,10 +212,10 @@
     - "[OBSERVED OpenAI / AppWorld Leaderboard JSON] gpt-oss-20b achieves 76.2% TGC on AppWorld test_normal."
 
 - key: gpt_5_6_luna_2026
-  title: "GPT-5.6 Luna Benchmark Anchor on AppWorld"
+  title: "kecaipan capybara"
   venue_or_arxiv: "AppWorld Official Leaderboard / OpenAI API"
   year: 2026
-  url: "https://appworld.dev/"
+  url: "https://appworld.dev/appworld/leaderboard"
   what_it_does: |
     Evaluates GPT-5.6 Luna with standard interactive scaffolding on the AppWorld benchmark suite.
   relation_to_us: |
@@ -266,7 +266,7 @@
     - "[OBSERVED https://arxiv.org/abs/2607.04763] ReOPD achieves zero tool calls during student training with >= 4x faster training per rollout."
 
 - key: guided_opd_2026
-  title: "On-Policy Distillation with Curriculum Turn-level Guidance"
+  title: "On-Policy Distillation with Curriculum Turn-level Guidance for Multi-turn Agents"
   venue_or_arxiv: "arXiv:2606.15912"
   year: 2026
   url: "https://arxiv.org/abs/2606.15912"
@@ -292,7 +292,7 @@
     - "[OBSERVED https://arxiv.org/abs/2305.17390] Outperforms SayCan, ReAct, and Reflexion on ScienceWorld 30 complex interactive tasks."
 
 - key: early_exit_lu_2025
-  title: "Runaway is Ashamed, But Helpful: On the Early-Exit Behavior of LLM-based Agents in Embodied Environments"
+  title: "Runaway is Ashamed, But Helpful: On the Early-Exit Behavior of Large Language Model-based Agents in Embodied Environments"
   venue_or_arxiv: "EMNLP 2025 Findings / arXiv:2505.17616"
   year: 2025
   url: "https://arxiv.org/abs/2505.17616"
@@ -304,8 +304,8 @@
     - "[OBSERVED https://arxiv.org/abs/2505.17616] Stronger assistant agent takes over after early-exit, achieving higher performance at matched total step budgets across 4 LLMs x 5 embodied environments."
 
 - key: isp_2024
-  title: "Interactive Speculative Planning"
-  venue_or_arxiv: "ICLR 2025 / arXiv:2410.00079"
+  title: "Interactive Speculative Planning: Enhance Agent Efficiency through Co-design of System and User Interface"
+  venue_or_arxiv: "arXiv:2410.00079"
   year: 2024
   url: "https://arxiv.org/abs/2410.00079"
   what_it_does: |
@@ -316,7 +316,7 @@
     - "[OBSERVED https://arxiv.org/abs/2410.00079] Reduces wall-clock planning latency while maintaining target model execution fidelity."
 
 - key: dsp_guan_2025
-  title: "Dynamic Speculative Planning"
+  title: "Dynamic Speculative Agent Planning"
   venue_or_arxiv: "arXiv:2509.01920"
   year: 2025
   url: "https://arxiv.org/abs/2509.01920"
@@ -439,7 +439,7 @@
 - key: llms_cannot_self_correct_huang_2024
   title: "Large Language Models Cannot Self-Correct Reasoning Yet"
   venue_or_arxiv: "ICLR 2024 / arXiv:2310.01798"
-  year: 2024
+  year: 2023
   url: "https://arxiv.org/abs/2310.01798"
   what_it_does: |
     Demonstrates that LLMs fail to self-correct reasoning without external feedback and that prompt-based self-correction often degrades accuracy.
@@ -533,21 +533,21 @@
     - "[OBSERVED https://arxiv.org/abs/1812.03381] Solves hard-exploration Atari games from a single demonstration via backward start-state curricula."
 
 - key: rfcl_2024
-  title: "Reverse Forward Curriculum Learning for Extreme Goal-Reaching"
-  venue_or_arxiv: "ICLR 2024 / OpenReview"
+  title: "Reverse Forward Curriculum Learning for Extreme Sample and Demonstration Efficiency in Reinforcement Learning"
+  venue_or_arxiv: "arXiv:2405.03379"
   year: 2024
-  url: "https://openreview.net/forum?id=rfcl2024"
+  url: "https://arxiv.org/abs/2405.03379"
   what_it_does: |
     Formalizes bidirectional reverse-forward curriculum learning from goal demonstrations in complex control environments.
   relation_to_us: |
     Demonstrates modern continuation of reverse curriculum theory.
   numbers_we_cite:
-    - "[OBSERVED https://openreview.net/forum?id=rfcl2024] Outperforms unidirectional exploration on extreme goal-reaching tasks."
+    - "[OBSERVED https://arxiv.org/abs/2405.03379] Outperforms unidirectional exploration on extreme goal-reaching tasks."
 
 - key: ace_2026
-  title: "Agentic Context Engineering: Evolving Context Playbooks for LLM Agents"
+  title: "Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models"
   venue_or_arxiv: "ICLR 2026 / arXiv:2510.04618"
-  year: 2026
+  year: 2025
   url: "https://arxiv.org/abs/2510.04618"
   what_it_does: |
     Evolves structured context playbooks across agent runs, enabling DeepSeek-V3.1 to match IBM CUGA with GPT-4.1 on AppWorld.
@@ -559,7 +559,7 @@
 - key: early_experience_2026
   title: "Agent Learning via Early Experience"
   venue_or_arxiv: "ICML 2026 / arXiv:2510.08558"
-  year: 2026
+  year: 2025
   url: "https://arxiv.org/abs/2510.08558"
   what_it_does: |
     Investigates early experience buffering for Llama-3.2-3B, Qwen-2.5-7B, and Llama-3.1-8B across 8 environments.
@@ -569,7 +569,7 @@
     - "[OBSERVED https://arxiv.org/abs/2510.08558] Evaluates 3B–8B open models across 8 interactive tool-use environments."
 
 - key: appworld_ul_2026
-  title: "AppWorld-UL: User-in-the-Loop Benchmark for Interactive Coding Agents"
+  title: "AppWorld-UL: Benchmarking Diverse Agent-User Interactions for Tool-Use"
   venue_or_arxiv: "ICML 2026 / arXiv:2607.20536"
   year: 2026
   url: "https://arxiv.org/abs/2607.20536"
@@ -607,7 +607,7 @@
 - key: speculative_decoding_leviathan_2023
   title: "Fast Inference from Transformers via Speculative Decoding"
   venue_or_arxiv: "ICML 2023 / arXiv:2211.17192"
-  year: 2023
+  year: 2022
   url: "https://arxiv.org/abs/2211.17192"
   what_it_does: |
     Proposes speculative decoding using a small draft model and parallel target model verification with modified rejection sampling.
@@ -641,7 +641,7 @@
     - "[OBSERVED https://arxiv.org/abs/2310.05915] Demonstrates fine-tuning smaller open models on teacher ReAct traces yields substantial efficiency gains over prompt-only baselines."
 
 - key: agentflan_chen_2024
-  title: "Agent-FLAN: Designing Data and Methods for Effective Agent Tuning"
+  title: "Agent-FLAN: Designing Data and Methods of Effective Agent Tuning for Large Language Models"
   venue_or_arxiv: "ACL 2024 / arXiv:2403.12881"
   year: 2024
   url: "https://arxiv.org/abs/2403.12881"

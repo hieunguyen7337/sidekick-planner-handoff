@@ -49,6 +49,6 @@ Verification: both `bash -n` commands exited 0. [INFERRED] Both configs directly
 
 The required compute-side YAML parse could not run: both permitted `hpc` attempts returned `qsub: cannot connect to server aqua (errno=15008)` before issuing a job ID; no YAML-aware login-node binary was available. [INFERRED] No full Python suite ran because compute was unavailable and Python is forbidden on the login node. [INFERRED]
 
-The read-only `find /scratch/n12194778/sidekick/results -maxdepth 1 -type d -name 'hj13_*'` check returned `NO_HJ13_RESULTS_DIRECTORIES`. [INFERRED]
+Collision status changed during this unit: initial read-only checks returned no `hj13_*` directory, but the final check found `/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923`, mtime `2026-09-22 14:33:36 +1000`, containing `planner_alone/1/`. The fixed planner-alone ID now collides and requires owner review before use. [OBSERVED /scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923:directory]
 
 I did not submit any job. [INFERRED]

@@ -76,7 +76,7 @@ Li et al. develop Guided-OPD, an on-policy distillation framework for multi-turn
 ## 5. Agentic Routing: The Harness-Native Data Flywheel
 
 - **Date**: 2026-07-13 `[OBSERVED https://arxiv.org/abs/2607.11399]`
-- **Authors**: TokenRhythm Technologies `[OBSERVED https://arxiv.org/abs/2607.11399]`
+- **Authors**: Xinchen Liu et al. (TokenRhythm Technologies) `[OBSERVED https://arxiv.org/abs/2607.11399]`
 - **Identifier**: arXiv:2607.11399 `[OBSERVED https://arxiv.org/abs/2607.11399]`
 
 ### Summary
@@ -92,7 +92,7 @@ TokenRhythm proposes harness-native step-level routing for LLM agent execution o
 ## 6. MTRouter: Cost-Aware Multi-Turn LLM Routing with History–Model Joint Embeddings
 
 - **Date**: 2026-04 `[OBSERVED https://arxiv.org/abs/2604.23530]`
-- **Authors**: MTRouter Contributors `[OBSERVED https://arxiv.org/abs/2604.23530]`
+- **Authors**: Yiqun Zhang et al. `[OBSERVED https://arxiv.org/abs/2604.23530]`
 - **Identifier**: arXiv:2604.23530 `[OBSERVED https://arxiv.org/abs/2604.23530]`
 
 ### Summary
@@ -107,7 +107,7 @@ MTRouter formulates turn-level routing in multi-turn conversational and agent ta
 ## 7. Explore More, Drift Less: Outcome-Only Reinforcement Learning Can Suffice for Long-Horizon Interactive Agents (CANOPY)
 
 - **Date**: 2026-09-01 `[OBSERVED https://arxiv.org/abs/2609.01245]`
-- **Authors**: CANOPY Contributors `[OBSERVED https://arxiv.org/abs/2609.01245]`
+- **Authors**: Liming Pu et al. `[OBSERVED https://arxiv.org/abs/2609.01245]`
 - **Identifier**: arXiv:2609.01245 `[OBSERVED https://arxiv.org/abs/2609.01245]`
 
 ### Summary
