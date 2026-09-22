@@ -17,7 +17,8 @@
 # has twice taken a job on this box that needed an 80 GB card and died at load; the fix
 # belongs in the file that trips it.
 #
-# ⚠ The planner serves on port 8001, NOT 8000. planner_alone never constructs an executor,
+# ⚠ The planner port is picked per job (20000 + job number, probed) and handed to the runner
+# through SIDEKICK_PLANNER_BASE_URL -- never a fixed 8000/8001. planner_alone never constructs an executor,
 # but the prefix-replay arms that consume this campaign run an executor server on 8000 at
 # the same time, and a port collision between them would be silent until the wrong model
 # answered.
@@ -42,8 +43,37 @@ export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export HF_HOME="${HF_HOME:-${HOME}/.cache/huggingface}"
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 
+# CUDA toolchain for vLLM's JIT kernels, copied from hj12_prefix.pbs. Without it the engine
+# loads the weights, captures CUDA graphs, then dies with "Could not find nvcc and default
+# cuda_home='/usr/local/cuda' doesn't exist" -- exactly how LP-1's first submission
+# (25724202, 2026-09-23) failed after 1m53s. The nvcc that works here is the one bundled
+# in the venv's nvidia/cu13 wheel; the node has no system CUDA.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+else
+  echo "[lp1] FATAL: no nvcc at ${CU13}/bin/nvcc; vLLM's JIT kernels cannot build"; exit 1
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+mkdir -p "${FLASHINFER_CACHE_DIR}" "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}"
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || true
+
 MODEL="${MODEL:-Qwen/Qwen3-8B}"
-PORT="${PORT:-8001}"
+# Port: derived from the job number and probed, as hj12_prefix.pbs does for the executor,
+# because two jobs can share a node. The runner reads it through SIDEKICK_PLANNER_BASE_URL,
+# so the config's base_url is only a default.
+_jobnum="${PBS_JOBID%%.*}"; _jobnum="${_jobnum//[^0-9]/}"; _jobnum="${_jobnum:-$$}"
+PORT="${PORT:-$(( 20000 + _jobnum % 20000 ))}"
+for _ in $(seq 1 50); do
+  curl -sf "http://127.0.0.1:${PORT}/v1/models" >/dev/null 2>&1 || break
+  PORT=$(( PORT + 1 ))
+done
+export SIDEKICK_PLANNER_BASE_URL="http://127.0.0.1:${PORT}/v1"
 CFG="${CFG:-${REPO}/configs/lp1_planner_alone_cap81_qwen8b.yaml}"
 DATE="${DATE:-20260923}"
 CID="${CID:-lp1_planner_alone_cap81_qwen8b_${DATE}}"

@@ -138,7 +138,7 @@ def make_planner(
         # lane can run while a hosted quota window is being spent elsewhere.
         planner = VllmPlanner(
             model=str(planner_cfg["model"]),
-            base_url=str(planner_cfg.get("base_url", "http://127.0.0.1:8001/v1")),
+            base_url=resolve_planner_base_url(planner_cfg),
             temperature=float(planner_cfg.get("temperature", 0.7)),
             max_tokens=int(planner_cfg.get("max_tokens", 2048)),
             timeout_s=float(planner_cfg.get("timeout_s", 300)),
@@ -197,6 +197,19 @@ def resolve_executor_base_url(exec_cfg: dict[str, Any] | None = None) -> str:
         return env_url
     cfg = exec_cfg or {}
     return str(cfg.get("base_url", "http://127.0.0.1:8000"))
+
+
+def resolve_planner_base_url(planner_cfg: dict[str, Any] | None = None) -> str:
+    """Effective local-planner URL: SIDEKICK_PLANNER_BASE_URL > yaml planner.base_url > default.
+
+    The planner's twin of resolve_executor_base_url. A PBS job picks a free port at run time
+    (two jobs can share a node), and that deployment fact must not require a config edit.
+    """
+    env_url = str(os.environ.get("SIDEKICK_PLANNER_BASE_URL") or "").strip()
+    if env_url:
+        return env_url
+    cfg = planner_cfg or {}
+    return str(cfg.get("base_url", "http://127.0.0.1:8001/v1"))
 
 
 def make_executor(cfg: dict[str, Any]) -> Any:

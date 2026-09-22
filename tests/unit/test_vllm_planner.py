@@ -275,3 +275,16 @@ def test_make_planner_still_defaults_to_mock() -> None:
     from sidekick.runner import make_planner
 
     assert isinstance(make_planner({}), MockPlanner)
+
+
+def test_planner_base_url_env_override_wins(monkeypatch) -> None:
+    # A PBS job picks a free port at run time; the config's port is only the default.
+    from sidekick.runner import make_planner, resolve_planner_base_url
+
+    cfg = {"base_url": "http://127.0.0.1:8002/v1"}
+    monkeypatch.delenv("SIDEKICK_PLANNER_BASE_URL", raising=False)
+    assert resolve_planner_base_url(cfg) == "http://127.0.0.1:8002/v1"
+    monkeypatch.setenv("SIDEKICK_PLANNER_BASE_URL", "http://127.0.0.1:23456/v1")
+    assert resolve_planner_base_url(cfg) == "http://127.0.0.1:23456/v1"
+    planner = make_planner({"planner": {"type": "vllm", "model": "m", **cfg}})
+    assert planner.base_url == "http://127.0.0.1:23456/v1"

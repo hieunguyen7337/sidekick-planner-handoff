@@ -20,8 +20,11 @@
 # skip it. A fresh HF_HOME sidesteps both. (Qwen3-32B in the same cache is a different failure:
 # 512-byte LFS pointer stubs.)
 #
-# Exit 0 only if (1) every blob is >= 99% allocated and (2) every file listed in the repo's
+# Exit 0 only if (1) at least half the apparent bytes are allocated (a screen for the sparse
+# failure; per-blob counts are not exact on this mount) and (2) every file listed in the repo's
 # crc32.txt matches its CRC32. A chained job (-W depend=afterok) therefore cannot start on bad bytes.
+#
+# VERIFY_ONLY=1 skips the download and re-runs both checks on what is already in HF_HOME.
 set -uo pipefail
 
 SIDEKICK_VENV=/scratch/n12194778/sidekick/env
@@ -32,11 +35,15 @@ mkdir -p "${HF_HOME}"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 
 echo "[dl] repo=${REPO_ID} HF_HOME=${HF_HOME} host=$(hostname) start=$(date -Is)"
-timeout 13800 "${SIDEKICK_VENV}/bin/hf" download "${REPO_ID}"
-rc=$?
-echo "[dl] hf download rc=${rc} end=$(date -Is)"
-if [[ "${rc}" -ne 0 ]]; then
-  echo "[dl] FATAL: download failed"; exit "${rc}"
+if [[ "${VERIFY_ONLY:-0}" == "1" ]]; then
+  echo "[dl] VERIFY_ONLY=1: skipping the download, checking the existing cache"
+else
+  timeout 13800 "${SIDEKICK_VENV}/bin/hf" download "${REPO_ID}"
+  rc=$?
+  echo "[dl] hf download rc=${rc} end=$(date -Is)"
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "[dl] FATAL: download failed"; exit "${rc}"
+  fi
 fi
 
 MODEL_DIR="${HF_HOME}/hub/models--${REPO_ID//\//--}"
@@ -46,14 +53,19 @@ if [[ -z "${SNAP}" ]]; then
 fi
 echo "[dl] snapshot=${SNAP}"
 
-# (1) Allocation check: apparent size vs allocated blocks for every blob.
-echo "[dl] allocation check:"
+# (1) Allocation check: a coarse screen, not the verdict. Measured 2026-09-23 on this Lustre
+# mount: a genuinely complete download showed 30.80 of 30.89 GB allocated, yet 7 blobs sat
+# below 99% (89-98% for weight shards, and a 3.35 MB tokenizer.json at 512 B) -- block
+# counts here are not exact per file. The broken home-cache copy it guards against showed
+# 0.02 of 30.9 GB (0.06%). So: per-blob shortfalls are reported for the record, and only a
+# TOTAL below 50% is fatal. The CRC32 check below is what decides.
+echo "[dl] allocation check (screen):"
 ( cd "${MODEL_DIR}/blobs" && for b in *; do stat -c '%s %b %B %n' "$b"; done ) \
-  | awk '{app+=$1; alloc+=$2*$3; n++; if ($1 > 1048576 && $2*$3 < 0.99*$1) {bad++; print "[dl]   SPARSE " $4 " apparent=" $1 " allocated=" $2*$3}}
-         END {printf "[dl]   blobs=%d apparent=%.2fGB allocated=%.2fGB sparse=%d\n", n, app/1e9, alloc/1e9, bad+0; exit (bad>0)}'
+  | awk '{app+=$1; alloc+=$2*$3; n++; if ($1 > 1048576 && $2*$3 < 0.99*$1) {low++; print "[dl]   info: under-allocated " $4 " apparent=" $1 " allocated=" $2*$3}}
+         END {printf "[dl]   blobs=%d apparent=%.2fGB allocated=%.2fGB under_allocated=%d\n", n, app/1e9, alloc/1e9, low+0; exit (app > 0 && alloc < 0.5*app)}'
 alloc_rc=$?
 if [[ "${alloc_rc}" -ne 0 ]]; then
-  echo "[dl] FATAL: sparse blobs present; the bytes are not real"; exit 2
+  echo "[dl] FATAL: under half the bytes are allocated; the files are sparse, not real"; exit 2
 fi
 
 # (2) Content check: CRC32 of every file listed in the repo's own crc32.txt.
