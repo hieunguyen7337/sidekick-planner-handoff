@@ -394,3 +394,72 @@ Ledger 90 → 96 rows. Suite 578 passed. HEAD `f9909ad`.
 H2 advice-at-price; the six cap-81 arms; the narrated curve at m6/m11; the two narrated
 with-observations variants. Not started: X16 run provenance. H5 and H7 remain unrequested, and H7 needs
 the J9 §8.1 authorisation.
+
+---
+
+## 10. Outcome record — 2026-09-22, 21:30: the narrated claim corrected, and a second planner sample
+
+### 10.1 The correction, which matters more than the original result
+
+§9 recorded narrated ≈ executed at m = 9 and used it to select the H2 branch. The rest of the narrated
+curve has now landed and **m = 9 is the one depth at which the two curves cross.**
+
+| m | `goal_pass` narrated − executed | scenario CI | TGC narrated − executed | scenario CI |
+|---|---|---|---|---|
+| 6 | −6.96 pp | [−13.67, +0.63] | **−13.16 pp** | **[−21.05, −5.26]** |
+| 9 | −1.69 pp | [−7.10, +4.16] | −6.14 pp | [−14.91, +2.63] |
+| 11 | **−6.58 pp** | **[−9.98, −3.64]** | **−11.40 pp** | **[−22.81, −2.63]** |
+
+Execution beats narration **significantly at both outer depths**, on both clusterings. The claim
+"the prefix works by what it tells, not the state it leaves behind" is **withdrawn as a general
+statement**. What survives: *information carries the prefix benefit at moderate depth, and past
+m ≈ 9 the executed environment state contributes something text does not.*
+
+The mechanism behind the crossing is visible in the curves themselves. **Narration saturates**: the
+narrated curve gains **+0.10 pp** from m = 9 to m = 11, scenario [−4.75, +5.14], while the executed
+curve climbs 0.7845 → 0.8345. All of narration's rise is in m = 6 → m = 9 (+15.48 pp [+8.49, +22.59]).
+
+One corollary survives at every depth measured and is the practically useful one: **narration at
+m = 9 and m = 11 beats *execution* at m = 6** (+8.52 pp [+2.32, +14.75] and +8.62 pp [+2.24, +15.02]).
+Deeper narration is worth more than shallower execution, and narration needs no environment setup.
+
+**The H2 branch selection stands.** The information-level framing is still the right one at the depth
+the channel arms operate at, so pricing advice at the prefix's token budget remains the decisive
+control. H2 is at 72/114 and healthy.
+
+### 10.2 The single-sample objection is answered
+
+Six arms replay the **cap-81** planner trajectories rather than the cap-25 ones every other prefix arm
+uses; the untailored three are complete. Curve 0.7201 / 0.7650 / 0.7932 at m = 6/9/11. Span m = 6 → 11
+**+7.31 pp** [+2.07, +12.80] on `goal_pass` and **+9.65 pp** [+2.63, +16.67] on TGC, both excluding
+zero, and — as MULT-01 requires of the original curve — **no single step individually significant**.
+
+The endpoint is the result: at m = 11 the two samples' prefixes differ by **−4.13 pp**, scenario
+[−8.84, +0.50], **including zero**, although the cap-81 planner itself scores 6.47 pp below the cap-25
+planner. A materially weaker planner run yields a prefix of indistinguishable value at depth 11.
+⚠ The curve is **compressed, not translated** — higher at m = 6, lower at m = 11, span 7.31 against
+15.20 pp — so this replicates the *effect*, not the *curve*.
+
+### 10.3 A worker invented three numbers and reported that it had not
+
+The preprint draft's cost table had 3 of 11 TGC values wrong, and **every wrong one was a value absent
+from the ledger** while the whole `goal_pass` column was right. One was a verbatim fill-down of the row
+above. The brief had said to write `[TODO:` wherever the ledger had no number; the returned status
+reported zero such markers and zero unsourced claims. **That instruction is not self-enforcing** — a
+model that does not know it is guessing cannot comply with it. A **set-difference audit** (every numeric
+literal in the draft must appear in the cited source) found all three in one command. That audit now runs
+on the preprint after every edit and is the reason the later additions are clean. QUAL-03.
+
+### 10.4 State
+
+Ledger **101 rows**. Suite **581 passed**. Preprint drafted at ~5,300 words with F1–F6 referenced, every
+`pp` figure ledger-sourced. HEAD `23ee9db`.
+
+Still running: H2 (72/114); the tailored cap-81 arms; the tailored narrated curve at m6/m11; the two
+narrated ±observation variants; and one worker adding per-arm bootstrap intervals so F1 can finally have
+confidence bands.
+
+Blocked, needing the user: the tailored **Qwen adapter** training (plan §6.3, free GPU, recommended) —
+the `qsub` was refused by the permission layer. The Qwen floor defect makes this materially more
+valuable than when the plan was written, since a tailored Qwen would have the action format trained in
+and would give the second family a real floor.
