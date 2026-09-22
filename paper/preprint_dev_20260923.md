@@ -14,7 +14,7 @@ Autonomous language agents in digital environments must navigate long horizons, 
 
 This tension motivates hybrid systems pairing a small local executor with a strong hosted planner. The core question is: **through which communication channel, and at what depth of intervention, should the hosted budget be spent?** Existing approaches typically configure the hosted model as an asynchronous critic or upfront planner emitting natural-language advice or stepwise plans.
 
-In this work, we demonstrate that natural-language advice is fundamentally the wrong medium for steering local executors. Across extensive paired evaluations on the AppWorld benchmark, spending hosted budget as concrete, executable **action prefixes** strictly dominates natural-language critique in task quality, token consumption, provider expenditure, and latency.
+In this work, we demonstrate that natural-language advice is fundamentally the wrong medium for steering local executors. Across extensive paired evaluations on the AppWorld benchmark, spending hosted budget as concrete, executable **action prefixes** strictly dominates natural-language critique in task quality, token consumption, provider expenditure, and hosted call count. We do not measure wall-clock latency and make no claim about it.
 
 Our contributions are grounded in an exact pre-registered claims ledger (`docs/claims_ledger.md`):
 
@@ -22,9 +22,9 @@ Our contributions are grounded in an exact pre-registered claims ledger (`docs/c
 - **Advice Does Not Catch Up When Bought Above the Action Channel's Price (CHAN-PRICE-01):** In a pre-registered test (`docs/prereg_h2_advice_at_price_20260923.md`), prose advice reviewed at every step with full context spends 1,414,410 non-cached planner tokens and 19.02 hosted calls per episode — 3.2$\times$ the tokens and 1.7$\times$ the calls of the deepest action prefix — and still scores 14.68 pp lower on `goal_pass` (scenario [−22.09, −7.04], task [−21.56, −7.79]). Ten times the review frequency does not buy quality. The difference is the channel, not the budget.
 - **Equivalence of Live Takeover and Oracle Replay (CHAN-C1-03):** A live takeover loop calling the planner online is statistically indistinguishable at $n = 114$ from replayed oracle prefix trajectories at depth $m = 9$ (+1.55 pp, scenario [−3.46, +7.04], task [−4.41, +8.01]) and $m = 11$ (−0.91 pp, scenario [−6.74, +5.94], task [−6.90, +5.16]).
 - **Span-Based Scaling without Stepwise Discontinuities (MULT-01, F1-RESULT-01..04, SHAPE-10):** Handoff quality increases with prefix depth (+10.21 pp `goal_pass` [+2.60, +18.20] scenario; +16.67 pp TGC [+5.26, +28.07] scenario from $m = 6$ to $m = 9$ zero-shot). However, Holm correction yields adjusted $p = 1.0$ across all eight adjacent transitions, and segmented regression yields $\tau = 8$ with CI [4, 9] (failing registered threshold test S3), confirming a continuous gain across spans rather than a discrete threshold jump.
-- **Informational Mechanism, Bounded by the Receiver (NARR-03, NARR-04):** Replaying the planner's actions as plain text into a fresh environment matches physical execution at $m = 6, 9, 11$ on the tailored receiver (−2.51, −1.84, −0.49 pp, every interval including zero; non-inferior at $m \ge 9$ against the registered 7.00 pp margin). On the untailored receiver the substitution breaks down with depth: execution wins by 6.58 pp at $m = 11$ (scenario [−9.98, −3.64]) and the narrated curve gains only +0.10 pp from $m = 9$ to $m = 11$ while the tailored one gains +3.81 pp ([+0.79, +6.97]). We do not test the interaction itself, and say so.
+- **Informational Mechanism, Bounded by the Receiver (NARR-03, NARR-04):** Replaying the planner's actions as plain text into a fresh environment matches physical execution at $m = 6, 9, 11$ on the tailored receiver (−2.51, −1.84, −0.49 pp, every interval including zero; non-inferior at $m \ge 9$ against the registered 7.00 pp margin). On the untailored receiver the substitution breaks down with depth: execution wins by 6.58 pp at $m = 11$ (scenario [−9.98, −3.64]) and the narrated curve gains only +0.10 pp from $m = 9$ to $m = 11$ while the tailored one gains +3.81 pp ([+0.79, +6.97]). A per-episode difference-in-differences resolves the interaction at $m = 11$ (**+6.09 pp**, scenario [+1.56, +11.00], task [+0.63, +11.85]; TGC +12.28 pp [+0.88, +26.32]) and at neither $m = 6$ nor $m = 9$; with three depths examined we report this as resolved at one depth, not as a general interaction.
 - **A Substitutability Pattern That Does Not Replicate (TAILOR-07, C81-02, HF-02):** On the first planner sample the untailored-minus-tailored receiver gap moves monotonically with depth (−4.12, −0.06, +2.46 pp at $m = 6, 9, 11$), suggesting depth substitutes for fine-tuning. On an independent planner sample the same gap runs −2.76, +0.31, −1.80 pp: non-monotone, ending with the tailored receiver ahead rather than behind. No individual receiver gap is resolved on either sample, so we report this as an observation made on one sample and not reproduced on a second, rather than as a finding.
-- **Second-Family Replication (QWEN-04, QWEN-03):** The monotonic depth effect replicates within zero-shot `Qwen/Qwen3-8B` prefix arms (`goal_pass` 0.4491 at $m = 6$ to 0.7306 at $m = 11$, TGC 0.1491 to 0.4912), while format censuses establish that its baseline floor (0.2481) reflects terminal token non-emission rather than task competence.
+- **Depth Replicates in a Second Family; the Fine-Tuning Recipe Does Not (QWEN-04, QWEN-03, QWEN-06):** The monotonic depth effect replicates within zero-shot `Qwen/Qwen3-8B` prefix arms (`goal_pass` 0.4491 at $m = 6$ to 0.7306 at $m = 11$, TGC 0.1491 to 0.4912), while format censuses establish that its baseline floor (0.2481) reflects terminal token non-emission rather than task competence. Training Qwen with the identical dataset and recipe that lifts Granite's one-plan floor by ~43 pp moves Qwen's by ~1 pp, because the terminal convention is 2.44% of the supervised targets and Qwen does not acquire it at that rate (0–0.07% of its actions) while Granite reproduces it almost exactly (3.00%). Depth transfers across families; this fine-tuning recipe does not.
 
 ---
 
@@ -275,13 +275,36 @@ substitute for having executed them**: a receiver trained on the planner's own t
 from text what an untrained one cannot, and the untrained receiver stops extracting additional value from
 deeper narration past $m = 9$.
 
-⚠ **We do not claim the interaction is established.** These are six independent paired contrasts, not a
-difference-in-differences. "No resolved gap on the tailored receiver" is a weaker statement than "a
-significantly smaller gap than on the untailored receiver", and the DiD (+6.09 pp at $m = 11$) carries no
-interval in our analysis. What is measured is that the two receivers differ in *which* contrasts resolve
-and in whether the narrated curve saturates; a DiD contrast is the test that would settle whether the
-interaction itself is real. The receiver × depth grid was planned in advance, but this reading was formed
-after seeing it, so we treat it as exploratory.
+**The interaction is now measured, and it resolves at the deep end only** (DID-01). Comparing *which* of
+six contrasts happens to exclude zero is not a test of an interaction: two contrasts can differ in
+significance while the difference between them is indistinguishable from zero. We therefore form the
+difference-in-differences
+
+$$\mathrm{DiD}(m) = \big(\text{narrated} - \text{executed}\big)_{\text{tailored}} - \big(\text{narrated} - \text{executed}\big)_{\text{untailored}}$$
+
+**per episode**, and bootstrap clusters of that single derived series (10,000 resamples, seed 20260924,
+$n = 114$ paired episodes, no episode dropped). Forming it per episode matters: all four arms replay the
+same $(\text{task}, \text{seed})$ episodes, so subtracting two separately bootstrapped gaps would discard
+the episode-level pairing the replay design buys and widen the interval enough to hide a real effect.
+
+Table 2c: DiD by depth, `goal_pass`, scenario-clustered 95% CI (task-clustered in parentheses).
+
+| $m$ | DiD | scenario CI | task CI |
+|---|---|---|---|
+| 6 | +4.45 | [−6.71, +14.25] | [−5.07, +13.98] |
+| 9 | −0.16 | [−8.36, +7.11] | [−8.51, +8.04] |
+| 11 | **+6.09** | **[+1.56, +11.00]** | **[+0.63, +11.85]** |
+
+At $m = 11$ the interval excludes zero on **both** clusterings, and TGC agrees at **+12.28 pp** (scenario
+[+0.88, +26.32], task [+2.63, +22.81]). So the stronger statement is now available at that depth: the
+tailored receiver closes the narration-execution gap significantly more than the untailored one, +6.09 pp
+of gap closed, from −0.49 pp against −6.58 pp. At $m = 6$ the point estimate has the same sign but the
+interval spans zero, and at $m = 9$ the DiD sits on zero.
+
+⚠ **Three depths and two metrics were tested and only $m = 11$ resolves, so this is exploratory, not
+confirmatory.** The correct sentence is "the interaction is resolved at $m = 11$", never "the interaction
+holds". The receiver × depth grid was planned in advance, but this reading was formed after seeing it. We
+report the two unresolved depths beside the resolved one for exactly that reason.
 
 ---
 
@@ -414,6 +437,27 @@ While Qwen3-8B scales robustly with prefix depth, **no floor-relative lift may b
 
 Action event auditing confirms that Qwen3-8B emits the terminal completion action (`COMPLETE`) exactly **0 times in 114 executor-alone episodes and 0 times in 80 prompt-only episodes**, but emits it 32 times at $m = 6$ and 37 times at $m = 9$ (QWEN-02). Under identical prompt templates and byte-identical stop tokens, Granite completes 53 of 114 plan episodes. Qwen3-8B fails to emit the completion action until it observes format demonstrations in-context. Consequently, the 0.2481 baseline score is invariant to the plan and accompanies zero completed tasks. We did not audit the scorer, so we do not assert what produces it. The depth effect replicates cleanly *within prefix arms* (where format demonstrations are common to all arms and difference out), but comparisons against the zero-shot floor are uninterpretable.
 
+
+### 9.2 Tailoring Does Not Transfer to the Second Family, and the Reason Is Measurable
+
+The second family was also evaluated *tailored*, using an adapter trained on the identical 497-row dataset (`sha256 f2f439d9…`), the identical recipe, and the identical hyperparameters as the Granite adapter. That arm does **not** give the second family the floor it was run to provide, and the reason is specific enough to state (QWEN-06).
+
+The tailored Qwen one-plan floor scores **0.2583** `goal_pass` / **0.0088** TGC, against the zero-shot Qwen floor's 0.2481 — a gain of about one percentage point, where the same recipe lifts Granite's one-plan floor by roughly **43 pp**. It ends **105 of 114 episodes on the step limit**.
+
+Three candidate explanations were tested; two are excluded by measurement.
+
+1. **The adapter was not applied.** False. `run_start` records `adapter_name: sft_b_plus_qwen8b`, and the tailored and zero-shot `prefix_m6` arms are *not* per-episode identical — 67/114 share a step count, 78/114 a `goal_pass` — with arm means 0.4803 against 0.4491. The adapter is loaded and it changes behaviour.
+2. **A train/serve prompt mismatch.** Real, but not the cause (QWEN-07). Training renders conversations with `apply_chat_template(..., add_generation_prompt=False)` and passes no `enable_thinking` (`src/sidekick/training/sft_data.py:349`, `:489`), while Qwen3's template appends `<think>\n\n</think>\n\n` to the generation prompt exactly when `enable_thinking` is defined and false — which the eval configs pass. The adapter was therefore trained to act at position 0 of the assistant turn and served being asked to continue after a scaffold it never saw, a shift landing precisely where the decision to stop is made. Granite's template defaults the variable instead, so the two families are not affected alike. We ran the A/B: the same adapter, served with `chat_template_kwargs` removed so the prompt is byte-identical to training. It changes nothing that matters — 108/114 episodes still exhaust the step limit, `goal_pass` moves to **0.2484**, and terminal actions rise only from 0/4,385 to **3/4,431**. The defect is worth repairing; repairing it would not have rescued the arm.
+3. **The training signal for termination is thin, and acquiring it is family-dependent.** This is what survives. Across the 497 rows there are 6,767 assistant targets, of which only **165 — 2.44% — are the terminal action**, appearing in 33.2% of rows; masking is sound (`n_dropped_fully_masked_before_truncation: 0`). Granite acquires the convention at almost exactly the rate it is taught, emitting the terminal action in **64 of 2,130** executor actions (**3.00%**) against a 2.44% training rate. Qwen emits it in **0 of 4,385** (0%), and 3 of 4,431 (0.07%) once the template is corrected.
+
+This sharpens rather than contradicts §9.1. That section observed that Qwen emits the terminal action only after seeing format demonstrations in context. The tailored arm shows that **supervised fine-tuning at this data scale does not substitute for those demonstrations in this family**: the convention is acquired in-context and not by fine-tuning, while the same fine-tuning teaches it to Granite.
+
+The $m = 11$ half of the A/B measures that contrast directly, and it is the sharpest evidence we have for it. The same adapter under the same corrected prompt scores 0.7367 with a prefix, statistically indistinguishable from the 0.7370 of its scaffolded counterpart — so the template again makes no difference. But the *action mix* does: with a replayed prefix in context the model emits the terminal action **13 times in 891 executor actions (1.46%)**, against 0.07% on the bare floor. A twenty-fold change in the rate of the very behaviour fine-tuning failed to install, produced by nothing but an in-context demonstration. Where the two channels differ is itself a result, and it is consistent with the paper's larger finding that what the prefix supplies is information the receiver can act on immediately.
+
+Two consequences follow, and we hold to both. First, the tailored Qwen floor measures step-limit exhaustion rather than task competence, exactly as QWEN-02 and QWEN-03 record for the zero-shot floor, so **no floor-relative tailoring claim may use it as a denominator**. Second, the tailored Qwen depth curve — 0.4803, 0.6437, 0.7370 at $m = 6, 9, 11$ against the zero-shot 0.4491, 0.7017, 0.7306 — has a receiver gap that is non-monotone and *negative* at $m = 9$, and we report it as confounded by the termination failure rather than as a second-family tailoring result. Enriching the terminal-action share of the training set would plausibly fix this, but it would change the recipe and so destroy the like-for-like comparison with Granite that is the entire purpose of the second family. We record it as future work and do not claim it.
+
+What does survive from this family is the claim §9 actually makes: the **depth** effect replicates in a second executor family, within prefix arms where format demonstrations are common to every arm and difference out. Tailoring does not transfer; depth does.
+
 ---
 
 ## 10. Related Work and External Benchmark Comparison
@@ -436,19 +480,25 @@ We document the boundary conditions of our study and the analytical defects iden
 
 1. **Development Split Scope:** Experiments were executed exclusively on the 57-task AppWorld development split ($n = 114$ paired episodes). Test splits (`test_normal`, `test_challenge`) remain untouched (`docs/prereg_j9_freeze_20260920.md`).
 2. **Single Planner Family:** Handoff trajectories and advice critiques were generated exclusively with `gpt-5.6-luna` at `medium` reasoning effort. Cross-planner transferability remains unmeasured.
-3. **Cap-81 Ceiling Inversion (CEIL-01, CEIL-04):** Extending planner call cap from 25 to 81 calls resulted in lower performance: `ceiling_cap81` scored **0.7637 `goal_pass` / 0.5702 TGC** vs. **0.8284 / 0.6842** for `ceiling_cap25` (paired difference **−6.47 pp `goal_pass`**, scenario [−11.68, −1.37], task [−12.48, −0.46]; TGC **−11.4 pp** [−21.05, −1.75]). Cap-81 episodes averaged 16.35 actions (max 40) vs. 13.42 for cap-25 (max 24), demonstrating that unconstrained budget allows over-acting in the tail, corrupting environment state.
-4. **Qwen Floor Format Confound:** Zero-shot Qwen3-8B fails to emit termination tokens without in-context demonstrations, invalidating floor-relative lift claims (QWEN-02, QWEN-03).
-5. **Receiver Interaction Not Tested (NARR-04):** Our central mechanism reading — that receiver
-   tailoring is what permits narration to substitute for execution — rests on comparing *which*
-   paired contrasts resolve on each receiver, not on a difference-in-differences. The DiD carries no
-   interval in our analysis. "No resolved gap on the tailored receiver" is a weaker statement than
-   "a significantly smaller gap than on the untailored receiver", and we do not make the stronger one.
-6. **Substitutability Not Reproduced Across Planner Samples (C81-02):** The monotone decay of the
+3. **Cap-81 Ceiling Inversion (CEIL-01, CEIL-04):** Extending planner call cap from 25 to 81 calls resulted in lower performance: `ceiling_cap81` scored **0.7637 `goal_pass` / 0.5702 TGC** vs. **0.8284 / 0.6842** for `ceiling_cap25` (paired difference **−6.47 pp `goal_pass`**, scenario [−11.68, −1.37], task [−12.48, −0.46]; TGC **−11.4 pp** [−21.05, −1.75]). Cap-81 episodes averaged 16.35 actions (max 40) vs. 13.42 for cap-25 (max 24), demonstrating that unconstrained budget allows over-acting in the tail, corrupting environment state. A third cap-81 planner sample (CEIL-06) closes the "one unlucky draw" reading: per-seed `goal_pass` is 0.8253 and 0.8315 at cap 25 against 0.7700, 0.7574 and 0.7819 at cap 81, so **the lowest cap-25 sample exceeds the highest cap-81 sample by 4.34 pp and the two families do not overlap across five samples**, with a within-cap spread of 0.62 pp and 2.45 pp respectively. Two and three samples are a spread across what we have, not a variance estimate.
+4. **Qwen Floor Format Confound, Zero-Shot *and* Tailored:** Zero-shot Qwen3-8B fails to emit termination tokens without in-context demonstrations, invalidating floor-relative lift claims (QWEN-02, QWEN-03). The tailored Qwen floor is confounded the same way and for a reason we can name (QWEN-06, §9.2): the terminal action is only 165 of 6,767 supervised targets (2.44%), Granite acquires the convention at 3.00% of its actions while Qwen emits it at 0–0.07%, and 105 of 114 tailored episodes end on the step limit. Neither Qwen floor may serve as a denominator, and the tailored Qwen depth curve is reported as confounded rather than as a second-family tailoring result.
+5. **Receiver Interaction Resolved at One Depth Only (DID-01, NARR-04):** Our central mechanism
+   reading — that receiver tailoring is what permits narration to substitute for execution — is now
+   tested as a difference-in-differences with an interval rather than by comparing which paired
+   contrasts resolve (§6.1). It resolves at $m = 11$ (+6.09 pp, scenario [+1.56, +11.00], task
+   [+0.63, +11.85]; TGC +12.28 pp [+0.88, +26.32]) and at neither $m = 6$ (+4.45, spans zero) nor
+   $m = 9$ (−0.16). Three depths and two metrics were examined and one cell resolves, so the claim
+   we make is "the interaction is resolved at $m = 11$", not "the interaction holds"; it is
+   exploratory rather than confirmatory, and a confirmatory read would need to register that single
+   depth in advance.
+6. **Tailoring × Depth Is Unresolved, Not Absent (DID-02, C81-02):** The monotone decay of the
    receiver gap with depth, on which the depth-substitutes-for-tailoring reading rests, does not
    reproduce on an independent planner sample, where the sequence is non-monotone and ends with the
-   opposite ordering. No individual within-depth receiver gap is resolved on either sample. We report
-   this as a one-sample observation, and note it is equally not evidence *against* substitutability:
-   the intervals are too wide to resolve the effects at issue.
+   opposite ordering. The corresponding difference-in-differences is now measured on both samples and
+   resolves on neither: cap-25 **−2.53 pp** (scenario [−7.66, +2.53]) against cap-81 **+2.10 pp**
+   ([−4.71, +9.01]) — opposite in sign, both spanning zero. The honest statement is that an effect of
+   this size is **unmeasurable at $n = 114$**, not that it is absent, and the paper does not explain
+   the crossover it cannot resolve.
 7. **Deviation from a Frozen Pre-Registration (CHAN-PRICE-02):** H2's cost prediction P4 specified
    non-cached planner tokens in [300k, 700k]; the arm spent 1,414,410. The remedy attached to a P4
    failure is written for the opposite case, an arm priced *below* the action channel's budget, in
@@ -477,6 +527,8 @@ We document the boundary conditions of our study and the analytical defects iden
 
 ## 12. Conclusion
 
-When pairing a strong hosted planner with a small local executor on complex interactive environments, communication bandwidth is best spent as concrete action prefixes rather than natural-language advice. Action execution strictly dominates prose critique in performance, token cost, and financial expenditure. The benefits of prefix handoffs accumulate continuously across depth spans by relieving the local model of exploratory API discovery and compounding error traps, operating primarily through informational demonstration rather than environment mutation.
+When pairing a strong hosted planner with a small local executor on complex interactive environments, communication bandwidth is best spent as concrete action prefixes rather than natural-language advice. At a matched trigger and matched context, action execution dominates prose critique on quality and on all three cost axes simultaneously, and prose does not catch up when bought at 3.2× the token budget. The benefit of a prefix accumulates across a span of depths rather than at a threshold, and it operates primarily through informational demonstration rather than environment mutation: narrating the planner's actions into a fresh environment recovers most of the effect, and at $m = 11$ how much it recovers depends measurably on whether the receiver was trained on that planner's trajectories.
+
+Two boundaries are worth stating beside the result. The depth effect replicates in a second executor family, but the fine-tuning recipe does not — the second family never acquires the harness's terminal convention from a training set in which it is 2.44% of the targets, while the first acquires it at the rate it is taught. And every number here is one environment, one planner model, and the development split; the confirmatory read is registered and not yet run.
 
 ---
