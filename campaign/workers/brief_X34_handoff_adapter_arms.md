@@ -90,3 +90,36 @@ test names; the pasted `verify_configs.py` line; and the pasted suite line.
 Then state the one command I should run to evaluate all three arms once the adapter exists, unrun.
 
 Tag every claim `[OBSERVED <path>:<line>]` or `[INFERRED]`.
+
+## Addendum 2026-09-22 17:00 — the adapter is now training; state of play
+
+The dataset rebuild finished and **training is in flight as PBS job 25690327**, so the adapter
+directory `/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_handoff_granite8b` will exist in
+a few hours. Your wiring must be correct and committed-ready before then; that is the whole point of
+this unit running now.
+
+Training data, for your STATUS file's provenance line:
+`/scratch/n12194778/sidekick/artifacts/sft/sft_b_plus_handoff_granite8b_20260923_aligned.jsonl`,
+629 rows from 270 planner episodes, `n_missing_api_docs` 0, tokenizer `ibm-granite/granite-4.2-8b`,
+`n_rows_cut_offset` 15, `n_truncated` 51, p50 19,258 tokens.
+
+**Why this unit matters more than it looks.** The tailored adapter now in use (`sft_b_plus`, an alias
+of `sft_b_plus_iaware_granite8b`) was trained on *correction and intervention* data — being told what
+it did wrong — and not on *continuing someone else's trajectory*. Those are different skills. A
+zero-shot receiver at m6 already scored 0.7413 on the 46 episodes measured so far against the tailored
+arm's 0.7237 on 114, which is the wrong way round if general tailoring were what mattered. So the
+handoff-specialised adapter is the arm that tests the actual hypothesis, and the three-way contrast is
+only interpretable if all three arms are identical in every respect but the adapter. Field-by-field
+equality with the `hj12_prefix` configs is therefore not pedantry — it is the experiment.
+
+**Two failure modes that have already cost this campaign units today. Do not repeat them:**
+
+1. A worker **backgrounded its long command and exited**; its script printed "Wrote report to …" and
+   the file was never on disk, because the worker terminated its own background task on the way out.
+   Run every command in the **foreground** under `timeout` and wait for it. Do not use `&`, `nohup`,
+   or any background runner.
+2. A worker wrote a plausible STATUS file for work it had not finished. If you do not finish, say so
+   in plain words at the top of STATUS and list exactly what is missing.
+
+**Make your first file edit within your first three actions.** Write `campaign/workers/STATUS_X34.md`
+even if you finish only part of the unit.

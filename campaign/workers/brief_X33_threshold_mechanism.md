@@ -128,3 +128,65 @@ is the finding, and it reframes the thesis rather than sinking it — the system
 real and still the deployable claim. What must not happen is a rise reported as a handoff effect when
 it is a population-mix effect. Equally, do not overcorrect: if the rise does survive on the controlled
 set with intervals that exclude zero, say that plainly too.
+
+## Addendum 2026-09-22 17:05 — the previous attempt left a broken script; here is the exact defect
+
+A previous worker wrote `scripts/analysis/j13_mechanism.py` (659 lines, untracked) and then **exited
+while its own analysis was still running in the background**, so `campaign/results/hj13_mechanism_20260923.report.json`
+was never written. Its log printed "Wrote report to …" for a run whose output never reached disk.
+**Run every command in the FOREGROUND under `timeout` and wait for it.** No `&`, no `nohup`.
+
+**The script as it stands does not run.** Submitted as-is it dies in 40s:
+
+```
+File "scripts/analysis/j13_mechanism.py", line 171, in load_source_planner
+    seed, task_id = int(d.name), d.parent.name
+ValueError: invalid literal for int() with base 10: '0d8a4ee_1'
+```
+
+`load_source_planner` has the directory layout backwards, and its `if not d.parent.name.startswith("planner_alone")`
+branch is dead code that cannot fix it because the `int()` on the line above throws first.
+
+**The verified layout** is `<root>/<seed>/<task_id>/result.json` — seed is the *parent*, task id the
+*leaf*: `/scratch/n12194778/sidekick/results/hj1b_planner_20260915/planner_alone/1/0d8a4ee_1/result.json`,
+with seed directories `1` and `2` [OBSERVED by listing that tree]. So for `root.glob("*/*/result.json")`,
+`seed = int(d.parent.name)` and `task_id = d.name`. Prefer the `task_id`/`seed` fields inside
+`result.json` when present and use the path only as the fallback. Add a unit test on a scripted fixture
+directory that would fail against the current ordering.
+
+`SOURCE_PLANNER_DIR = hj1b_planner_20260915/planner_alone` is **correct** — confirmed against
+`configs/hj12_prefix_m10.yaml:7-8`, `handoff.source_campaign` / `source_system`. Do not change it.
+
+Also stale in the script: it records m11 as "smoke (6 episodes, excluded from primary)". **m10 is now
+complete at 114/114 and m11 is finishing.** Check the episode count of every arm at run time and
+include any arm that has 114; do not hard-code which arms are usable.
+
+## Numbers I have already measured independently — your output must reconcile with these
+
+If your report disagrees with any of these, do not quietly publish a different number: say so
+explicitly in STATUS and show the derivation. These are exact counts over the post-guard arms.
+
+Silenced episodes (executor never acted), post-guard, from `totals.per_actor.executor.n_calls == 0`:
+m2 **0**, m4 **0**, m6 **3**, m7 **8**, m8 **20**, m9 **31**, m10 **41** (of 114).
+
+All-episodes `goal_pass_rate`, post-guard: m2 0.6856, m4 0.7190, m6 0.7237, m7 0.7544, m8 0.7627,
+m9 0.7852, m10 0.8065. This curve is monotone increasing; the pre-guard one was not.
+
+**Pinned to m10's 73 genuine-handoff episodes** (the largest completed m, so the sets are nested):
+m2 0.7017, m4 0.6927, m6 0.6974, m7 0.7012, m8 0.6891, m9 0.7174, m10 0.7506. Flat through m8 within
+1.26 pp, then +6.15 pp to m10. **This is the number that needs confidence intervals — task- and
+scenario-clustered, on each adjacent contrast. That is the gap my pass has and your main deliverable.**
+
+The decomposition of the +12.09 pp all-episodes rise m2→m10, which you should reproduce and then
+extend to m11: on m10's 73 handoff episodes 0.7017→0.7506 (+4.89 pp, weight 0.6404, contributes
++3.13 pp); on the 41 episodes the m10 prefix completes alone 0.6568→0.9059 (+24.91 pp, weight 0.3596,
+contributes +8.96 pp); the two sum to +12.09 pp. So 74% of the headline rise is the prefix finishing
+the task itself and 26% is the executor finishing better. Give this arithmetic explicitly in the report
+for the largest completed m.
+
+Still required and not yet done at all: the **arm-independent key set** (item 2 of the first addendum)
+— episodes whose source planner trajectory required more executed actions than the largest m in the
+grid, derived from the source campaign rather than from any arm's outcome — and M1 and M2.
+
+**Write `campaign/workers/STATUS_X33.md` even if you finish only part, and say plainly at the top what
+is missing.** Do not write a STATUS that implies work you did not finish.
