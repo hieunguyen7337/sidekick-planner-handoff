@@ -144,3 +144,31 @@ same way (A1 r2 §5.3).
    - N: `b2_advise_neutral_fixed_k_10_fullctx_20260923` and `b2_advise_neutral_fixed_k_10_fullctx_s3_20260923`.
 
    A key present in more than one campaign of an arm is an error, not a choice.
+
+### Amendment 2, 2026-09-23 ~09:30 AEST — how the analysis script reads what the text leaves open (appended before any B2 episode)
+
+Appended while job 25724312 was still queued and job 25724313 held: none of the six Wave B campaign
+directories named in Amendment 1 §5 existed under the results root. The analysis is
+`scripts/analysis/b2_decomposition.py`, committed alongside this amendment. No arm, contrast, rule or order changes.
+Each item below is a point the text above leaves open. The script's reading is recorded here so it is fixed before any data.
+
+1. **Side of the p-value.** Amendment 1 §1's "far side of zero" names no side. Every rule that uses a
+   Holm-adjusted p is a "> 0" claim, so p = 2 × the share of scenario-bootstrap means ≤ 0
+   (`bootstrap_pvalue(..., "greater")`, the form A1 uses for P6). The two-sided p (2 × the smaller tail) is reported beside it.
+   The two agree whenever the point estimate is positive. When a contrast is negative, this reading ranks it last in
+   the Holm order rather than first, which is the conservative direction for the other three.
+2. **Decision-bearing bounds under POOL-04.** D1 and D4 are read both as "excludes" and as "includes" zero,
+   so both of their bounds are decision-bearing. For D2 and D3 only the lower bound is. D0 is outside the
+   family: its bounds are re-checked for information only.
+3. **"> 0 with CI excluding zero"** requires all three: point > 0, unadjusted scenario lower bound > 0, and
+   Holm-adjusted p ≤ 0.05.
+4. **Incomplete family.** If any of D1–D4 lacks 171 non-crashed pairs, Holm is not computed on the partial
+   family, and no outcome is decided (§3). The complete contrasts' intervals are still reported.
+5. **Duplicates.** A `(task_id, seed)` key that appears twice within one campaign is an error, as a key that appears across two
+   campaigns of one arm already is (Amendment 1 §5).
+6. **Sign-flip sensitivity.** The p-value uses 10,000 Monte Carlo sign patterns over the 19 scenario clusters, the
+   same routine A1 uses, not exact enumeration.
+7. **Copy rate (exploratory).** The denominator is every `shown_action` intervention in non-crashed S episodes,
+   counting only events after the last `run_start`. The executor's next action is its first `action` event
+   before the next intervention. Both texts have whitespace runs collapsed before they are compared, through
+   `format_executor_action`.
