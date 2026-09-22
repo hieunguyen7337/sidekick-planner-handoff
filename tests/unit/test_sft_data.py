@@ -258,7 +258,7 @@ def _dead_attempt_events(task_id: str = "copy_hello") -> list[dict]:
 @pytest.fixture
 def no_heldout(monkeypatch):
     monkeypatch.setattr("sidekick.training.sft_data._heldout_task_ids", lambda: ["held_out_task"])
-    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda: None)
+    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda *_a, **_k: None)
     monkeypatch.setattr("sidekick.training.sft_data._api_docs_from_appworld", lambda task_id: "")
 
 
@@ -365,7 +365,7 @@ def test_not_in_split_is_dropped(tmp_path, no_heldout):
 
 def test_leakage_raises_unconditionally(tmp_path, monkeypatch):
     monkeypatch.setattr("sidekick.training.sft_data._heldout_task_ids", lambda: ["copy_hello"])
-    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda: None)
+    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda *_a, **_k: None)
     monkeypatch.setattr("sidekick.training.sft_data._api_docs_from_appworld", lambda task_id: "")
     root = tmp_path / "camp"
     _write_run(root, task_id="copy_hello", seed=1, success=True, events=_live_attempt_events())

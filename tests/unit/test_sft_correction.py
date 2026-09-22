@@ -283,7 +283,7 @@ def _write_teacher_run(root: Path, task_id: str = "copy_hello") -> None:
 @pytest.fixture
 def no_heldout(monkeypatch):
     monkeypatch.setattr("sidekick.training.sft_data._heldout_task_ids", lambda: ["held_out_task"])
-    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda: None)
+    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda *_a, **_k: None)
     monkeypatch.setattr("sidekick.training.sft_data._api_docs_from_appworld", lambda task_id: "")
 
 
@@ -387,7 +387,7 @@ def test_label_mask_covers_only_target_assistant_turn(tmp_path, no_heldout):
 def test_leakage_passes_and_fails_when_given_a_dev_id(tmp_path, monkeypatch):
     heldout = ["dev_task", "test_task"]
     monkeypatch.setattr("sidekick.training.sft_data._heldout_task_ids", lambda: list(heldout))
-    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda: None)
+    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda *_a, **_k: None)
     monkeypatch.setattr("sidekick.training.sft_data._api_docs_from_appworld", lambda task_id: "")
     train_ids = ["copy_hello"]
     assert_no_leakage(train_ids, heldout)
