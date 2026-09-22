@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cost axes analysis (Brief X40 Unit A): noncached tokens, provider USD, hosted calls.
+"""Cost axes analysis (Brief X40 Unit A / X44): noncached tokens, provider USD, hosted calls.
 
 Evaluates whether the ordering of arms and non-inferiority conclusions survive
 under three distinct cost currencies:
@@ -203,6 +203,8 @@ def price_usage_record(
     If cached_input_tokens is not distinguished (missing/None), it is counted as fresh input
     and n_usage_without_cache_split is incremented.
     """
+    if usage.get("provider") == "mock":
+        return 0.0
     model = str(usage.get("model") or "gpt-5.6-luna")
     rates = models_prices.get(
         model,
@@ -255,11 +257,7 @@ def extract_events_usages(events_path: Path) -> list[dict[str, Any]]:
 
     for ev in raw_events[last_start:]:
         u = ev.get("usage")
-        if isinstance(u, dict) and (
-            ev.get("actor") == "planner"
-            or ev.get("event_type") in ("plan", "intervention", "action_review")
-            or "input_tokens" in u
-        ):
+        if isinstance(u, dict) and ev.get("actor") == "planner":
             usages.append(u)
     return usages
 
@@ -339,10 +337,6 @@ def price_arm_episodes(
         ep_dir = arm_dir / str(seed) / str(task_id) if arm_dir else None
         events_path = ep_dir / "events.jsonl" if ep_dir else None
 
-        # 1. Non-cached tokens axis
-        nc_tokens = noncached_episode_cost(row)
-        row["noncached_tokens_per_episode"] = nc_tokens
-
         # 2. Hosted calls axis
         calls = row.get("planner_calls_replay_inclusive")
         if calls is None:
@@ -350,6 +344,12 @@ def price_arm_episodes(
         if calls is None:
             calls = row.get("planner_calls_live")
         row["hosted_calls_per_episode"] = float(calls) if calls is not None else None
+
+        # 1. Non-cached tokens axis
+        nc_tokens = noncached_episode_cost(row)
+        if nc_tokens is None and (calls is not None and calls == 0):
+            nc_tokens = 0.0
+        row["noncached_tokens_per_episode"] = nc_tokens
 
         # 3. Provider USD axis
         # Collect all usage records contributing to this episode
@@ -376,18 +376,32 @@ def price_arm_episodes(
             usage_records.extend(prefix_usages)
 
         # Fallback to result.json totals if no live usage was found in events.jsonl
-        if not usage_records:
-            live_nc = row.get("planner_tokens_noncached_live")
-            cached = row.get("cached_input_tokens")
-            if live_nc is not None or cached is not None:
-                # Synthesize usage dict from ledger totals
+        if not usage_records and (calls is None or calls > 0):
+            totals = (row.get("totals") or {}) if isinstance(row.get("totals"), dict) else {}
+            per_actor = (totals.get("per_actor") or {}) if isinstance(totals.get("per_actor"), dict) else {}
+            planner_bucket = per_actor.get("planner")
+            if isinstance(planner_bucket, dict) and any(planner_bucket.get(k) for k in ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens")):
+                cached = float(planner_bucket.get("cached_input_tokens") or 0)
+                inp = float(planner_bucket.get("input_tokens") or 0)
                 usage_records.append({
                     "model": "gpt-5.6-luna",
-                    "input_tokens": (live_nc or 0.0) + (cached or 0.0),
+                    "input_tokens": inp + cached,
                     "cached_input_tokens": cached,
-                    "output_tokens": 0.0,
-                    "reasoning_output_tokens": 0.0,
+                    "output_tokens": float(planner_bucket.get("output_tokens") or 0),
+                    "reasoning_output_tokens": float(planner_bucket.get("reasoning_output_tokens") or 0),
                 })
+            else:
+                live_nc = row.get("planner_tokens_noncached_live")
+                cached = row.get("cached_input_tokens")
+                if live_nc is not None or cached is not None:
+                    # Synthesize usage dict from ledger totals
+                    usage_records.append({
+                        "model": "gpt-5.6-luna",
+                        "input_tokens": (live_nc or 0.0) + (cached or 0.0),
+                        "cached_input_tokens": cached,
+                        "output_tokens": 0.0,
+                        "reasoning_output_tokens": 0.0,
+                    })
 
         # Calculate USD cost
         if usage_records:
@@ -396,7 +410,7 @@ def price_arm_episodes(
             )
             row["usd_per_episode"] = total_usd
             diagnostics["n_episodes_priced"] += 1
-        elif nc_tokens is not None and nc_tokens == 0:
+        elif (calls is not None and calls == 0) or (nc_tokens is not None and nc_tokens == 0):
             row["usd_per_episode"] = 0.0
             diagnostics["n_episodes_priced"] += 1
         else:
@@ -453,13 +467,18 @@ def price_arm_episodes(
 
 
 def compute_rankings_and_flips(
-    arm_summaries: list[dict[str, Any]],
+    arm_summaries: list[dict[str, Any]] | dict[str, dict[str, Any]],
 ) -> tuple[dict[str, list[str]], bool, list[dict[str, Any]]]:
     """Rank arms on each cost axis (lowest cost first) and detect ordering flips."""
     ordering_by_axis: dict[str, list[str]] = {}
+    summaries_list = (
+        list(arm_summaries.values())
+        if isinstance(arm_summaries, dict)
+        else list(arm_summaries)
+    )
 
     for axis in COST_AXES:
-        valid_arms = [a for a in arm_summaries if a.get(axis) is not None]
+        valid_arms = [a for a in summaries_list if a.get(axis) is not None]
         sorted_arms = sorted(valid_arms, key=lambda a: (float(a[axis]), a["label"]))
         ordering_by_axis[axis] = [a["label"] for a in sorted_arms]
 
@@ -470,7 +489,7 @@ def compute_rankings_and_flips(
 
     # Find pairwise rank flips
     flips: list[dict[str, Any]] = []
-    labels = [a["label"] for a in arm_summaries]
+    labels = [a["label"] for a in summaries_list]
 
     for ax1, ax2 in combinations(COST_AXES, 2):
         order1 = ordering_by_axis[ax1]
@@ -579,7 +598,12 @@ def generate_markdown_report(report: dict[str, Any]) -> str:
     lines.append("")
     lines.append("| Arm | Non-cached Tokens | Provider USD ($) | Hosted Calls | Local GPU USD (Assump.) |")
     lines.append("| --- | ---: | ---: | ---: | ---: |")
-    for a in report["arms"]:
+    arms_iterable = (
+        report["arms"].values()
+        if isinstance(report["arms"], dict)
+        else report["arms"]
+    )
+    for a in arms_iterable:
         tok = f"{a['noncached_tokens_per_episode']:.1f}" if a['noncached_tokens_per_episode'] is not None else "n/a"
         usd = f"${a['usd_per_episode']:.4f}" if a['usd_per_episode'] is not None else "n/a"
         calls = f"{a['hosted_calls_per_episode']:.2f}" if a['hosted_calls_per_episode'] is not None else "n/a"
@@ -659,7 +683,7 @@ def main(argv: list[str] | None = None) -> int:
         "n_usage_without_cache_split": sum(
             a["diagnostics"]["n_usage_without_cache_split"] for a in arm_summaries
         ),
-        "arms": arm_summaries,
+        "arms": {a["label"]: a for a in arm_summaries},
         "ordering_by_axis": ordering_by_axis,
         "ordering_is_stable_across_axes": is_stable,
         "ordering_flips": flips,

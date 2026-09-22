@@ -252,3 +252,77 @@ than fatal.
 
 Not started: F7 external comparison table, X16 run provenance, the D5 preprint draft. H5 and H7 remain
 unrequested and need explicit authorisation, H7 also the J9 §8.1 clause.
+
+---
+
+## 8. Outcome record — 2026-09-22, 20:15: the channel claim is established
+
+### 8.1 C1, the contrast the prereg names as primary, is positive
+
+`takeover_fixed_k_10` minus `advise_fixed_k_10_fullctx` on `goal_pass`: **+6.69 pp**, scenario-clustered
+**[+1.29, +13.48]**, task-clustered **[+1.47, +12.35]**. Both exclude zero. Arms 0.8007 vs 0.7339, n = 114
+paired, 0 crash. The two configs differ in exactly one field and **both pass the planner the whole
+transcript** (verified in code, CHAN-C1-00), so this is not a context or trigger asymmetry.
+
+**Red-team attack 4 is closed.** "Channel, not budget" is licensed **at matched trigger**. It is not yet
+licensed at matched *token budget* — that is H2 (`advise_fixed_k_1_fullctx`, PBS 25701766), pre-registered
+in `docs/prereg_h2_advice_at_price_20260923.md` with an explicit withdrawal condition, now running.
+
+Supporting, same report: advice minus plan-only floor **+1.57 pp [−2.91, +5.91]** (advice buys nothing
+over one plan even with full context); takeover minus plan-only **+8.26 pp [+3.84, +13.11]**; advice minus
+`prefix_m11` **−7.60 pp [−12.56, −2.68]**.
+
+### 8.2 The live arm matches the oracle prefix (attack 8 largely answered)
+
+Takeover minus `prefix_m9` **+1.55 pp [−3.46, +7.04]**; minus `prefix_m11` **−0.91 pp [−6.74, +5.94]**.
+A *live* arm, calling the planner during the episode, is indistinguishable at n = 114 from arms replaying
+a recorded trajectory. State as "cannot distinguish", never "equal": the intervals would not exclude a
+real 5 pp difference. The cost asymmetry remains and belongs in F2.
+
+### 8.3 C3 answered: handoff-suffix training does not move the threshold
+
+Three receivers on identical prefixes — untailored / standard adapter / handoff adapter: m=6 0.6825 /
+0.7237 / **0.7480**; m=9 0.7845 / 0.7852 / 0.7840; m=11 **0.8345** / 0.8098 / 0.8033. All nine within-depth
+intervals include zero, so no gap is individually resolved; the **pattern** is what matters. The trained
+receivers lead at m=6, all three converge to within 0.12 pp at m=9 (tightest interval in the set, ±3.1 pp),
+and the untailored receiver leads at m=11. Curve spans over m=6→11: untailored 15.20 pp, standard 8.61,
+handoff 5.53. **Depth, tailoring and suffix training are partially substitutable and do not stack.**
+
+### 8.4 An honest negative that constrains every claim: no single depth step is significant
+
+Holm over the family of 8 adjacent-m contrasts gives **adjusted p = 1.0 for all eight**, every adjusted
+interval spanning zero. The raw intervals already all spanned zero, so correction is not what kills them:
+**no individual step was ever significant.** Segmented fit: τ = 4 post-guard, CI [4, 8], verdict "no
+threshold established". The depth effect must therefore be reported as a rise **across a span** (m=6→m=9
+is +6.15 pp tailored, +10.21 pp untailored) and never as a jump at a named depth. The figure generator
+enforces this with a regression test that fails if a breakpoint marker is drawn.
+
+### 8.5 A confound caught before it reached a claim
+
+Qwen3-8B emits the harness's terminal action **0 times in 114 executor-alone and 0 times in 80 plan-only
+episodes**, but 32–37 times once a replayed trajectory has demonstrated the format; granite under the
+identical harness and byte-identical stop tokens completes 53 of 114 plan-only episodes. So the Qwen
+**floor** mixes format acquisition with competence, and floor-relative lift claims for the second family
+are unsupported. The m6→m9 depth contrast (+25.25 pp [+16.46, +35.16]) is unaffected because both arms
+carry a demonstration. F5 must be stated as *"the depth effect replicates in a second family within
+prefix arms"*. The figure generator refused to plot the Qwen curve at all with its floor missing.
+
+### 8.6 Four analysis defects found today, all of one family
+
+Each returned believable numbers rather than crashing: the handoff flag read from a file that does not
+carry it (every mechanism population empty); the error scan filtered on the wrong actor (0.00 % error
+rate everywhere while a third of episodes failed); an adapter-build mismatch in my own first contrast
+(inflating advice-over-plan from 1.57 to 3.39 pp); and the cost script's usage filter matching **local
+executor** tokens and pricing GPU work at the hosted rate, which inverted the dollar ordering so that
+684k tokens appeared to cost less than zero calls. All four are fixed, each with a regression test, and
+each has a ledger row. The fatal-guard added after the first fired correctly on its first run.
+
+### 8.7 State
+
+`docs/claims_ledger.md` 90 rows. Four of five paper figures generated from report JSON by key, with a
+manifest tracing every mark to a key; the fifth correctly skipped. External comparison table written with
+37 of 38 rows fetched and spot-checked by me against arXiv. Still running: H2, the Qwen m11 arm, the six
+cap-81 arms, the narrated curve at m6/m11, and the two narrated with-observations variants.
+
+Not started: X16 run provenance, the D5 preprint draft. H5 and H7 remain unrequested; H7 additionally
+needs the J9 §8.1 authorisation.

@@ -1,0 +1,1482 @@
+{
+  "prices_source": "configs/cost/prices_2026-09.yaml",
+  "cluster": "scenario",
+  "n_boot": 10000,
+  "seed": 20260915,
+  "seeds_filter": [
+    1,
+    2
+  ],
+  "n_usage_without_cache_split": 0,
+  "arms": {
+    "executor_alone": {
+      "label": "executor_alone",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 0.0,
+      "usd_per_episode": 0.0,
+      "hosted_calls_per_episode": 0.0,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "plan_only": {
+      "label": "plan_only",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 23905.587719,
+      "usd_per_episode": 0.003015,
+      "hosted_calls_per_episode": 1.0,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "advise_k10_starved": {
+      "label": "advise_k10_starved",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 43823.385965,
+      "usd_per_episode": 0.004386,
+      "hosted_calls_per_episode": 2.421053,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "advise_k3_starved": {
+      "label": "advise_k3_starved",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 204499.763158,
+      "usd_per_episode": 0.012203,
+      "hosted_calls_per_episode": 6.824561,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "advise_k10_fullctx": {
+      "label": "advise_k10_fullctx",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 49819.359649,
+      "usd_per_episode": 0.005494,
+      "hosted_calls_per_episode": 2.464912,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "takeover_k10": {
+      "label": "takeover_k10",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 41463.675439,
+      "usd_per_episode": 0.00482,
+      "hosted_calls_per_episode": 2.315789,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "prefix_m6": {
+      "label": "prefix_m6",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 221043.061404,
+      "usd_per_episode": 0.016268,
+      "hosted_calls_per_episode": 6.982456,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "prefix_m9": {
+      "label": "prefix_m9",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 357448.359649,
+      "usd_per_episode": 0.02274,
+      "hosted_calls_per_episode": 9.77193,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "prefix_m11": {
+      "label": "prefix_m11",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 443361.412281,
+      "usd_per_episode": 0.026475,
+      "hosted_calls_per_episode": 11.254386,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "ceiling_cap25": {
+      "label": "ceiling_cap25",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 684453.263158,
+      "usd_per_episode": 0.035479,
+      "hosted_calls_per_episode": 14.429825,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "ceiling_cap81": {
+      "label": "ceiling_cap81",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 1160215.149123,
+      "usd_per_episode": 0.048208,
+      "hosted_calls_per_episode": 17.350877,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    }
+  },
+  "ordering_by_axis": {
+    "noncached_tokens_per_episode": [
+      "executor_alone",
+      "plan_only",
+      "takeover_k10",
+      "advise_k10_starved",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ],
+    "usd_per_episode": [
+      "executor_alone",
+      "plan_only",
+      "advise_k10_starved",
+      "takeover_k10",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ],
+    "hosted_calls_per_episode": [
+      "executor_alone",
+      "plan_only",
+      "takeover_k10",
+      "advise_k10_starved",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ]
+  },
+  "ordering_is_stable_across_axes": false,
+  "ordering_flips": [
+    {
+      "pair": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ],
+      "order_in_axis_b": [
+        "takeover_k10",
+        "advise_k10_starved"
+      ]
+    }
+  ],
+  "non_inferiority": {
+    "evaluated": true,
+    "ceiling_arm": "ceiling_cap81",
+    "ni_unchanged_across_axes": true,
+    "comparisons": {
+      "executor_alone": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -43.86,
+          "ci95_pp": [
+            -58.77,
+            -29.82
+          ],
+          "bootstrap": 10000,
+          "diff": -0.4386,
+          "ci95": [
+            -0.5877,
+            -0.2982
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -43.86,
+            "ci95_pp": [
+              -53.51,
+              -35.09
+            ],
+            "bootstrap": 10000,
+            "diff": -0.4386,
+            "ci95": [
+              -0.5351,
+              -0.3509
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "executor_alone",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -43.86,
+          "ci95_pp_scenario": [
+            -58.77,
+            -29.82
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.4386,
+          "ci95_scenario": [
+            -0.5877,
+            -0.2982
+          ],
+          "diff_pp_task": -43.86,
+          "ci95_pp_task": [
+            -54.39,
+            -33.33
+          ],
+          "diff_task": -0.4386,
+          "ci95_task": [
+            -0.5439,
+            -0.3333
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -1160215.1491,
+            "ci95": [
+              -1763539.6053,
+              -728326.2105
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.0482,
+            "ci95": [
+              -0.066,
+              -0.0354
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -17.3509,
+            "ci95": [
+              -20.6667,
+              -14.4298
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "plan_only": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -17.54,
+          "ci95_pp": [
+            -27.19,
+            -7.89
+          ],
+          "bootstrap": 10000,
+          "diff": -0.1754,
+          "ci95": [
+            -0.2719,
+            -0.0789
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -17.54,
+            "ci95_pp": [
+              -27.19,
+              -7.89
+            ],
+            "bootstrap": 10000,
+            "diff": -0.1754,
+            "ci95": [
+              -0.2719,
+              -0.0789
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "plan_only",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -17.54,
+          "ci95_pp_scenario": [
+            -27.19,
+            -7.89
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.1754,
+          "ci95_scenario": [
+            -0.2719,
+            -0.0789
+          ],
+          "diff_pp_task": -17.54,
+          "ci95_pp_task": [
+            -27.19,
+            -7.89
+          ],
+          "diff_task": -0.1754,
+          "ci95_task": [
+            -0.2719,
+            -0.0789
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -1136309.5614,
+            "ci95": [
+              -1739694.9386,
+              -704475.4035
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.0452,
+            "ci95": [
+              -0.0626,
+              -0.0327
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -16.3509,
+            "ci95": [
+              -19.6667,
+              -13.4298
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "advise_k10_starved": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -15.79,
+          "ci95_pp": [
+            -28.07,
+            -3.51
+          ],
+          "bootstrap": 10000,
+          "diff": -0.1579,
+          "ci95": [
+            -0.2807,
+            -0.0351
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -15.79,
+            "ci95_pp": [
+              -25.44,
+              -6.14
+            ],
+            "bootstrap": 10000,
+            "diff": -0.1579,
+            "ci95": [
+              -0.2544,
+              -0.0614
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "advise_k10_starved",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -15.79,
+          "ci95_pp_scenario": [
+            -28.07,
+            -3.51
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.1579,
+          "ci95_scenario": [
+            -0.2807,
+            -0.0351
+          ],
+          "diff_pp_task": -15.79,
+          "ci95_pp_task": [
+            -27.19,
+            -5.26
+          ],
+          "diff_task": -0.1579,
+          "ci95_task": [
+            -0.2719,
+            -0.0526
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -1116391.7632,
+            "ci95": [
+              -1715321.0088,
+              -687576.0439
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.0438,
+            "ci95": [
+              -0.0615,
+              -0.0313
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -14.9298,
+            "ci95": [
+              -18.1842,
+              -12.0175
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "advise_k3_starved": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -11.4,
+          "ci95_pp": [
+            -23.68,
+            1.75
+          ],
+          "bootstrap": 10000,
+          "diff": -0.114,
+          "ci95": [
+            -0.2368,
+            0.0175
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -11.4,
+            "ci95_pp": [
+              -21.93,
+              -0.88
+            ],
+            "bootstrap": 10000,
+            "diff": -0.114,
+            "ci95": [
+              -0.2193,
+              -0.0088
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "advise_k3_starved",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -11.4,
+          "ci95_pp_scenario": [
+            -23.68,
+            1.75
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.114,
+          "ci95_scenario": [
+            -0.2368,
+            0.0175
+          ],
+          "diff_pp_task": -11.4,
+          "ci95_pp_task": [
+            -21.93,
+            -0.88
+          ],
+          "diff_task": -0.114,
+          "ci95_task": [
+            -0.2193,
+            -0.0088
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -955715.386,
+            "ci95": [
+              -1564758.2368,
+              -517880.5088
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.036,
+            "ci95": [
+              -0.0542,
+              -0.0228
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -10.5263,
+            "ci95": [
+              -14.114,
+              -7.3596
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "advise_k10_fullctx": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -13.16,
+          "ci95_pp": [
+            -25.44,
+            -0.88
+          ],
+          "bootstrap": 10000,
+          "diff": -0.1316,
+          "ci95": [
+            -0.2544,
+            -0.0088
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -13.16,
+            "ci95_pp": [
+              -22.81,
+              -3.51
+            ],
+            "bootstrap": 10000,
+            "diff": -0.1316,
+            "ci95": [
+              -0.2281,
+              -0.0351
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "advise_k10_fullctx",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -13.16,
+          "ci95_pp_scenario": [
+            -25.44,
+            -0.88
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.1316,
+          "ci95_scenario": [
+            -0.2544,
+            -0.0088
+          ],
+          "diff_pp_task": -13.16,
+          "ci95_pp_task": [
+            -22.81,
+            -3.51
+          ],
+          "diff_task": -0.1316,
+          "ci95_task": [
+            -0.2281,
+            -0.0351
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -1110395.7895,
+            "ci95": [
+              -1704627.9474,
+              -683289.3947
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.0427,
+            "ci95": [
+              -0.0597,
+              -0.0304
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -14.886,
+            "ci95": [
+              -18.0614,
+              -12.0702
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "takeover_k10": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -5.26,
+          "ci95_pp": [
+            -15.79,
+            6.14
+          ],
+          "bootstrap": 10000,
+          "diff": -0.0526,
+          "ci95": [
+            -0.1579,
+            0.0614
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -5.26,
+            "ci95_pp": [
+              -14.91,
+              4.39
+            ],
+            "bootstrap": 10000,
+            "diff": -0.0526,
+            "ci95": [
+              -0.1491,
+              0.0439
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "takeover_k10",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -5.26,
+          "ci95_pp_scenario": [
+            -15.79,
+            6.14
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.0526,
+          "ci95_scenario": [
+            -0.1579,
+            0.0614
+          ],
+          "diff_pp_task": -5.26,
+          "ci95_pp_task": [
+            -15.79,
+            5.26
+          ],
+          "diff_task": -0.0526,
+          "ci95_task": [
+            -0.1579,
+            0.0526
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -1118751.4737,
+            "ci95": [
+              -1713640.0,
+              -689275.5175
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.0434,
+            "ci95": [
+              -0.0606,
+              -0.0309
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -15.0351,
+            "ci95": [
+              -18.2193,
+              -12.2018
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "prefix_m6": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -14.04,
+          "ci95_pp": [
+            -26.32,
+            -2.63
+          ],
+          "bootstrap": 10000,
+          "diff": -0.1404,
+          "ci95": [
+            -0.2632,
+            -0.0263
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -14.04,
+            "ci95_pp": [
+              -24.56,
+              -3.51
+            ],
+            "bootstrap": 10000,
+            "diff": -0.1404,
+            "ci95": [
+              -0.2456,
+              -0.0351
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "prefix_m6",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -14.04,
+          "ci95_pp_scenario": [
+            -26.32,
+            -2.63
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.1404,
+          "ci95_scenario": [
+            -0.2632,
+            -0.0263
+          ],
+          "diff_pp_task": -14.04,
+          "ci95_pp_task": [
+            -24.56,
+            -4.39
+          ],
+          "diff_task": -0.1404,
+          "ci95_task": [
+            -0.2456,
+            -0.0439
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -939172.0877,
+            "ci95": [
+              -1544227.5263,
+              -506236.0263
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.0319,
+            "ci95": [
+              -0.0497,
+              -0.0191
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -10.3684,
+            "ci95": [
+              -13.6842,
+              -7.4561
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "prefix_m9": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": -0.88,
+          "ci95_pp": [
+            -9.65,
+            7.89
+          ],
+          "bootstrap": 10000,
+          "diff": -0.0088,
+          "ci95": [
+            -0.0965,
+            0.0789
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": -0.88,
+            "ci95_pp": [
+              -10.53,
+              8.77
+            ],
+            "bootstrap": 10000,
+            "diff": -0.0088,
+            "ci95": [
+              -0.1053,
+              0.0877
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "prefix_m9",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": -0.88,
+          "ci95_pp_scenario": [
+            -9.65,
+            7.89
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": -0.0088,
+          "ci95_scenario": [
+            -0.0965,
+            0.0789
+          ],
+          "diff_pp_task": -0.88,
+          "ci95_pp_task": [
+            -9.65,
+            7.89
+          ],
+          "diff_task": -0.0088,
+          "ci95_task": [
+            -0.0965,
+            0.0789
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": false,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -802766.7895,
+            "ci95": [
+              -1404700.8158,
+              -372401.2456
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "usd_per_episode": {
+            "diff": -0.0255,
+            "ci95": [
+              -0.0431,
+              -0.0128
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "hosted_calls_per_episode": {
+            "diff": -7.5789,
+            "ci95": [
+              -10.8246,
+              -4.7193
+            ],
+            "cost_reduced": true,
+            "holds": false
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "prefix_m11": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 3.51,
+          "ci95_pp": [
+            -6.14,
+            13.16
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0351,
+          "ci95": [
+            -0.0614,
+            0.1316
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 3.51,
+            "ci95_pp": [
+              -6.14,
+              13.16
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0351,
+            "ci95": [
+              -0.0614,
+              0.1316
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "prefix_m11",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": 3.51,
+          "ci95_pp_scenario": [
+            -6.14,
+            13.16
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0351,
+          "ci95_scenario": [
+            -0.0614,
+            0.1316
+          ],
+          "diff_pp_task": 3.51,
+          "ci95_pp_task": [
+            -5.26,
+            12.28
+          ],
+          "diff_task": 0.0351,
+          "ci95_task": [
+            -0.0526,
+            0.1228
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": true,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -716853.7368,
+            "ci95": [
+              -1314867.8596,
+              -292751.0614
+            ],
+            "cost_reduced": true,
+            "holds": true
+          },
+          "usd_per_episode": {
+            "diff": -0.0217,
+            "ci95": [
+              -0.039,
+              -0.0094
+            ],
+            "cost_reduced": true,
+            "holds": true
+          },
+          "hosted_calls_per_episode": {
+            "diff": -6.0965,
+            "ci95": [
+              -9.2456,
+              -3.3421
+            ],
+            "cost_reduced": true,
+            "holds": true
+          }
+        },
+        "consistent_across_axes": true
+      },
+      "ceiling_cap25": {
+        "quality_tgc_contrast": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 11.4,
+          "ci95_pp": [
+            1.75,
+            21.05
+          ],
+          "bootstrap": 10000,
+          "diff": 0.114,
+          "ci95": [
+            0.0175,
+            0.2105
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 11.4,
+            "ci95_pp": [
+              1.75,
+              21.05
+            ],
+            "bootstrap": 10000,
+            "diff": 0.114,
+            "ci95": [
+              0.0175,
+              0.2105
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "ceiling_cap25",
+          "right": "ceiling_cap81",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": 11.4,
+          "ci95_pp_scenario": [
+            1.75,
+            21.05
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.114,
+          "ci95_scenario": [
+            0.0175,
+            0.2105
+          ],
+          "diff_pp_task": 11.4,
+          "ci95_pp_task": [
+            1.75,
+            21.05
+          ],
+          "diff_task": 0.114,
+          "ci95_task": [
+            0.0175,
+            0.2105
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task"
+        },
+        "quality_within_7pp": true,
+        "axes": {
+          "noncached_tokens_per_episode": {
+            "diff": -475761.886,
+            "ci95": [
+              -973973.7632,
+              -110598.693
+            ],
+            "cost_reduced": true,
+            "holds": true
+          },
+          "usd_per_episode": {
+            "diff": -0.0127,
+            "ci95": [
+              -0.0266,
+              -0.0026
+            ],
+            "cost_reduced": true,
+            "holds": true
+          },
+          "hosted_calls_per_episode": {
+            "diff": -2.9211,
+            "ci95": [
+              -5.2193,
+              -0.9035
+            ],
+            "cost_reduced": true,
+            "holds": true
+          }
+        },
+        "consistent_across_axes": true
+      }
+    }
+  },
+  "ni_unchanged_across_axes": true
+}

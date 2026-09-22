@@ -1,0 +1,262 @@
+{
+  "prices_source": "configs/cost/prices_2026-09.yaml",
+  "cluster": "scenario",
+  "n_boot": 10000,
+  "seed": 20260915,
+  "seeds_filter": [
+    1,
+    2
+  ],
+  "n_usage_without_cache_split": 0,
+  "arms": {
+    "executor_alone": {
+      "label": "executor_alone",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 0.0,
+      "usd_per_episode": 0.0,
+      "hosted_calls_per_episode": 0.0,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "plan_only": {
+      "label": "plan_only",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 23905.587719,
+      "usd_per_episode": 0.003015,
+      "hosted_calls_per_episode": 1.0,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "advise_k10_starved": {
+      "label": "advise_k10_starved",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 43823.385965,
+      "usd_per_episode": 0.004386,
+      "hosted_calls_per_episode": 2.421053,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "advise_k3_starved": {
+      "label": "advise_k3_starved",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 204499.763158,
+      "usd_per_episode": 0.012203,
+      "hosted_calls_per_episode": 6.824561,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "advise_k10_fullctx": {
+      "label": "advise_k10_fullctx",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 49819.359649,
+      "usd_per_episode": 0.005494,
+      "hosted_calls_per_episode": 2.464912,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "takeover_k10": {
+      "label": "takeover_k10",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 41463.675439,
+      "usd_per_episode": 0.00482,
+      "hosted_calls_per_episode": 2.315789,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "prefix_m6": {
+      "label": "prefix_m6",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 221043.061404,
+      "usd_per_episode": 0.016268,
+      "hosted_calls_per_episode": 6.982456,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "prefix_m9": {
+      "label": "prefix_m9",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 357448.359649,
+      "usd_per_episode": 0.02274,
+      "hosted_calls_per_episode": 9.77193,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "prefix_m11": {
+      "label": "prefix_m11",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 443361.412281,
+      "usd_per_episode": 0.026475,
+      "hosted_calls_per_episode": 11.254386,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "ceiling_cap25": {
+      "label": "ceiling_cap25",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 684453.263158,
+      "usd_per_episode": 0.035479,
+      "hosted_calls_per_episode": 14.429825,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    "ceiling_cap81": {
+      "label": "ceiling_cap81",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 1160215.149123,
+      "usd_per_episode": 0.048208,
+      "hosted_calls_per_episode": 17.350877,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    }
+  },
+  "ordering_by_axis": {
+    "noncached_tokens_per_episode": [
+      "executor_alone",
+      "plan_only",
+      "takeover_k10",
+      "advise_k10_starved",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ],
+    "usd_per_episode": [
+      "executor_alone",
+      "plan_only",
+      "advise_k10_starved",
+      "takeover_k10",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ],
+    "hosted_calls_per_episode": [
+      "executor_alone",
+      "plan_only",
+      "takeover_k10",
+      "advise_k10_starved",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ]
+  },
+  "ordering_is_stable_across_axes": false,
+  "ordering_flips": [
+    {
+      "pair": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "takeover_k10"
+      ],
+      "order_in_axis_b": [
+        "takeover_k10",
+        "advise_k10_starved"
+      ]
+    }
+  ],
+  "non_inferiority": {
+    "evaluated": false,
+    "ceiling_arm": "",
+    "reason": "ceiling arm '' not in loaded arms (['advise_k10_fullctx', 'advise_k10_starved', 'advise_k3_starved', 'ceiling_cap25', 'ceiling_cap81', 'executor_alone', 'plan_only', 'prefix_m11', 'prefix_m6', 'prefix_m9', 'takeover_k10'])",
+    "ni_unchanged_across_axes": null,
+    "comparisons": {}
+  },
+  "ni_unchanged_across_axes": null
+}

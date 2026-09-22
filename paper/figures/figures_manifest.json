@@ -1,0 +1,176 @@
+[
+  {
+    "figure_id": "F1",
+    "file_pdf": "paper/figures/f1_depth_curve.pdf",
+    "file_png": "paper/figures/f1_depth_curve.png",
+    "width_in": 7.0,
+    "column": "two-column",
+    "caption": "Goal pass rate against prefix handoff depth $m$ for tailored and untailored receivers, compared against the cap-25 (0.8284) and cap-81 (0.7637) planner ceilings, plan-only floor (0.7181), and executor-alone floor (0.5289). Quality is flat below a breakpoint and rises above it; the breakpoint point estimate is $m=8$ on handoff-only populations but its 95% interval spans [4, 9], so the registered threshold test S3 does not pass and no threshold location is claimed (F1-RESULT-04).",
+    "series": [
+      {
+        "label": "Tailored receiver (sft_b_plus)",
+        "report_path": "campaign/results/hj13_shape_post_guard_20260923.report.json",
+        "json_keys": [
+          "arms.prefix_m2.goal_pass_all",
+          "arms.prefix_m4.goal_pass_all",
+          "arms.prefix_m6.goal_pass_all",
+          "arms.prefix_m7.goal_pass_all",
+          "arms.prefix_m8.goal_pass_all",
+          "arms.prefix_m9.goal_pass_all",
+          "arms.prefix_m10.goal_pass_all",
+          "arms.prefix_m11.goal_pass_all"
+        ],
+        "n_points": 8
+      },
+      {
+        "label": "Untailored receiver (granite zero-shot)",
+        "report_path": "campaign/results/hj13_zeroshot_depth_m6_m9_20260923.report.json; campaign/results/hj13_zeroshot_depth_m9_m11_20260923.report.json",
+        "json_keys": [
+          "hj13_zeroshot_depth_m6_m9_20260923.report.json:arms.zs_m6.goal_pass_all",
+          "hj13_zeroshot_depth_m6_m9_20260923.report.json:arms.zs_m9.goal_pass_all",
+          "hj13_zeroshot_depth_m9_m11_20260923.report.json:arms.zs_m11.goal_pass_all"
+        ],
+        "n_points": 3
+      },
+      {
+        "label": "Reference ceilings and floors",
+        "report_path": "campaign/results/hj13_ceiling_cap25_vs_cap81_20260923.report.json; campaign/results/hj12_unified_frontier_scenario_20260923.report.json",
+        "json_keys": [
+          "hj13_ceiling_cap25_vs_cap81_20260923.report.json:arms.ceiling_cap25.goal_pass_all",
+          "hj13_ceiling_cap25_vs_cap81_20260923.report.json:arms.ceiling_cap81.goal_pass_all",
+          "hj12_unified_frontier_scenario_20260923.report.json:arms.sft_plan.goal_pass_all",
+          "hj12_unified_frontier_scenario_20260923.report.json:arms.executor_alone.goal_pass_all"
+        ],
+        "n_points": 4
+      }
+    ],
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F2",
+    "file_pdf": "paper/figures/f2_channel_matched_budget.pdf",
+    "file_png": "paper/figures/f2_channel_matched_budget.png",
+    "width_in": 7.0,
+    "column": "two-column",
+    "caption": "Goal pass rate against non-cached planner tokens per episode across advice and action prefix channels. Every advice arm is visibly priced against the prefix curve at the same token expenditure; advice remains indistinguishable from the plan-only floor under both starved and full reviewer context.",
+    "series": [
+      {
+        "label": "Action prefix curve",
+        "report_path": "campaign/results/hj12_unified_frontier_scenario_20260923.report.json",
+        "json_keys": [
+          "arms.prefix_m2.cost_per_episode",
+          "arms.prefix_m2.goal_pass_all",
+          "arms.prefix_m4.cost_per_episode",
+          "arms.prefix_m4.goal_pass_all",
+          "arms.prefix_m6.cost_per_episode",
+          "arms.prefix_m6.goal_pass_all",
+          "arms.prefix_m7.cost_per_episode",
+          "arms.prefix_m7.goal_pass_all",
+          "arms.prefix_m8.cost_per_episode",
+          "arms.prefix_m8.goal_pass_all",
+          "arms.prefix_m9.cost_per_episode",
+          "arms.prefix_m9.goal_pass_all",
+          "arms.prefix_m10.cost_per_episode",
+          "arms.prefix_m10.goal_pass_all",
+          "arms.prefix_m11.cost_per_episode",
+          "arms.prefix_m11.goal_pass_all"
+        ],
+        "n_points": 8
+      },
+      {
+        "label": "Advice arms",
+        "report_path": "campaign/results/hj12_unified_frontier_scenario_20260923.report.json; campaign/results/hj13_advice_fullctx_matched_20260923.report.json",
+        "json_keys": [
+          "hj12_unified_frontier_scenario_20260923.report.json:arms.advise_fixed_k_3.cost_per_episode",
+          "hj12_unified_frontier_scenario_20260923.report.json:arms.advise_fixed_k_3.goal_pass_all",
+          "hj12_unified_frontier_scenario_20260923.report.json:arms.advise_fixed_k_10.cost_per_episode",
+          "hj12_unified_frontier_scenario_20260923.report.json:arms.advise_fixed_k_10.goal_pass_all",
+          "hj13_advice_fullctx_matched_20260923.report.json:arms.advice_fullctx_k10.planner_tokens_per_episode",
+          "hj13_advice_fullctx_matched_20260923.report.json:arms.advice_fullctx_k10.goal_pass_all"
+        ],
+        "n_points": 3
+      }
+    ],
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F3",
+    "file_pdf": "paper/figures/f3_tailoring_gap.pdf",
+    "file_png": "paper/figures/f3_tailoring_gap.png",
+    "width_in": 3.4,
+    "column": "single-column",
+    "caption": "Receiver gap (untailored granite zero-shot minus tailored sft_b_plus) across handoff depths $m=6, 9, 11$, with scenario-clustered 95% bootstrap confidence intervals. The gap decays to zero with depth (\u22124.12 pp at $m=6$, \u22120.06 pp at $m=9$, +2.46 pp at $m=11$), establishing that deep handoffs remove the need for receiver specialization (TAILOR-01/04/07).",
+    "series": [
+      {
+        "label": "Untailored minus tailored gap",
+        "report_path": "campaign/results/hj13_receiver_contrast_m6_20260923.report.json; campaign/results/hj13_receiver_contrast_m9_20260923.report.json; campaign/results/hj13_receiver_contrast_m11_20260923.report.json",
+        "json_keys": [
+          "hj13_receiver_contrast_m6_20260923.report.json:contrasts.goal_pass_all_prefix_m6_zeroshot_minus_prefix_m6_tailored",
+          "hj13_receiver_contrast_m9_20260923.report.json:contrasts.goal_pass_all_prefix_m9_zeroshot_minus_prefix_m9_tailored",
+          "hj13_receiver_contrast_m11_20260923.report.json:contrasts.goal_pass_all_prefix_m11_zeroshot_minus_prefix_m11_tailored"
+        ],
+        "n_points": 3
+      }
+    ],
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F4",
+    "file_pdf": "paper/figures/f4_mechanism.pdf",
+    "file_png": "paper/figures/f4_mechanism.png",
+    "width_in": 7.0,
+    "column": "two-column",
+    "caption": "Mechanism decomposition across two panels. Left (M1): cumulative share of the planner's first API uses by action position, showing that >78% of API discovery occurs before $m=9$. Right (M3): decomposition of zero-shot depth rises ($m6\\rightarrow 9$ and $m6\\rightarrow 11$) into handoff-earned and silenced-episode contributions, establishing that 83.8% of the $m6\\rightarrow 9$ rise is earned on episodes where the executor took over and completed the task (MECH-01, MECH-03).",
+    "series": [
+      {
+        "label": "M1 API novelty cumulative share",
+        "report_path": "campaign/results/hj13_mechanism_zeroshot_20260923c.report.json",
+        "json_keys": [
+          "m1_api_novelty.cumulative_by_position.1.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.2.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.3.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.4.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.5.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.6.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.7.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.8.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.9.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.10.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.11.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.12.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.13.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.14.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.15.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.16.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.17.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.18.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.19.cum_first_uses_share",
+          "m1_api_novelty.cumulative_by_position.20.cum_first_uses_share"
+        ],
+        "n_points": 20
+      },
+      {
+        "label": "M3 Rise decomposition",
+        "report_path": "campaign/results/hj13_mechanism_zeroshot_20260923c.report.json",
+        "json_keys": [
+          "m3_prefix_exhausted.primary.decompositions.m6_to_m9.contribution_handoff_subset_pp",
+          "m3_prefix_exhausted.primary.decompositions.m6_to_m9.contribution_silenced_subset_pp",
+          "m3_prefix_exhausted.primary.decompositions.m6_to_m11.contribution_handoff_subset_pp",
+          "m3_prefix_exhausted.primary.decompositions.m6_to_m11.contribution_silenced_subset_pp"
+        ],
+        "n_points": 2
+      }
+    ],
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F5",
+    "file_pdf": null,
+    "file_png": null,
+    "width_in": 3.4,
+    "column": "single-column",
+    "caption": "Qwen3-8B zero-shot against granite zero-shot over depth, each against its own floor (pending floor reports).",
+    "series": [],
+    "skipped_reason": "Skipped: Qwen floor reports (hj15_executor_alone_zsq / hj15_prompt_only_zsq) are absent on disk. The Qwen rise must never be drawn without its floor."
+  }
+]
