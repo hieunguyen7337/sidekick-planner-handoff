@@ -1393,7 +1393,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main_v1(argv: Optional[list[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         arm_dirs = parse_arm_specs(args.arm)
@@ -1424,6 +1424,1155 @@ def main(argv: Optional[list[str]] = None) -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
     return code
+
+
+# ===========================================================================
+# A1 protocol -- docs/prereg_j10_amendment_20260924.md §5-§6 (the J10 default).
+#
+# Everything above this line is the prereg_v1 (J9-era, H1-H4) analysis. It is
+# kept verbatim because j8_frontier / hj12_shape / j12_cost_axes import its
+# loaders and contrast helpers, and is reachable as `--protocol v1`. A1
+# supersedes that arm list and those hypotheses [A1 §2]; `main()` now runs A1
+# unless `--protocol v1` is passed.
+#
+# Registered here, before the read:
+#   * paired on (task_id, seed); a pair missing or crashed on either side is
+#     dropped from that contrast and counted [A1 §5.1];
+#   * percentile cluster bootstrap, B = 10,000, seed 20260924; scenario
+#     clustering is PRIMARY and governs every decision, task clustering is
+#     reported beside it [A1 §5.2];
+#   * the resampling algorithm is hj1_gate.paired_diff / j8_frontier.
+#     paired_diff_scenario draw-for-draw (same RNG consumption, same percentile
+#     indices), with the seed exposed -- j8_frontier hard-codes hj1_gate.SEED =
+#     20260915, which is the seed every A1 dev number was computed under;
+#   * predictions are DATA (A1_PREDICTIONS); decision rules are a small table
+#     (A1_RULES) the data refers to by name, so P7 is a list entry;
+#   * Holm across every registered goal_pass prediction (holm_family=True);
+#   * POOL-04 boundary-stability rule; a cluster sign-flip permutation p is
+#     reported beside each verdict and is not decision-bearing.
+# ===========================================================================
+
+import bisect  # noqa: E402
+import importlib.util  # noqa: E402
+import random  # noqa: E402
+
+from scripts.setup.hj1_gate import scenario_of  # noqa: E402
+
+A1_PREREG = "docs/prereg_j10_amendment_20260924.md"
+A1_DEV_BASIS = "campaign/results/j10_a1_registered_dev_basis_20260924.report.json"
+A1_BOOTSTRAP_N = 10_000
+A1_BOOTSTRAP_SEED = 20260924
+DEV_BASIS_BOOTSTRAP_SEED = SEED  # 20260915 [scripts/setup/hj1_gate.py:29]
+A1_ALPHA = 0.05
+A1_SPLIT_N_TASKS = {"dev": 57, "test_normal": 168}
+A1_DEFAULT_SEEDS = "1,2"
+POOL04_WINDOW_PP = 1.00
+POOL04_SEEDS = (20260924, 1, 2, 3, 7, 101, 999)
+PERMUTATION_N = 10_000
+CLUSTER_INFERENCE_PATH = Path(__file__).resolve().parent / "cluster_inference.py"
+RAW_RESULTS_ROOT = Path("/scratch/n12194778/sidekick/results")
+
+# Registered arms [A1 §4] plus takeover_k10, which P6 needs. The value is the
+# config that produces the arm (None: no J10 config exists yet).
+A1_ARMS: dict[str, Optional[str]] = {
+    "executor_alone": "configs/j10_executor_alone.yaml",
+    "sft_plan": "configs/j10_sft_plan.yaml",
+    "planner_alone_cap81": "configs/j10_planner_alone_cap81.yaml",
+    "prefix_m9": "configs/j10_prefix_m9.yaml",
+    "prefix_m11": "configs/j10_prefix_m11.yaml",
+    "prefix_zs_m9": "configs/j10_prefix_zs_m9.yaml",
+    "prefix_zs_m11": "configs/j10_prefix_zs_m11.yaml",
+    "advise_k1_fullctx": "configs/j10_advise_k1_fullctx.yaml",
+    "advise_k10_fullctx": "configs/j10_advise_k10_fullctx.yaml",
+    "takeover_k10": None,
+}
+
+A1_METRIC_FIELDS = {"goal_pass": "goal_pass_rate", "tgc": "tgc"}
+
+
+# ---- decision rules (code), referenced by name from the prediction data -----
+def _rule_negative_with_reversal(point: float, lo_above: bool, hi_below: bool) -> str:
+    if hi_below:
+        return "supported"
+    if lo_above:
+        return "reversed"
+    return "not_supported"
+
+
+def _rule_lower_bound_above(point: float, lo_above: bool, hi_below: bool) -> str:
+    return "supported" if lo_above else "not_supported"
+
+
+def _rule_positive_graded(point: float, lo_above: bool, hi_below: bool) -> str:
+    if lo_above:
+        return "supported"
+    if point > 0:
+        return "directionally_consistent"
+    return "not_supported"
+
+
+def _rule_not_positive_excluding(point: float, lo_above: bool, hi_below: bool) -> str:
+    return "not_supported" if lo_above else "supported"
+
+
+# `bounds`: the interval ends whose position against the threshold can change the
+# verdict -- the ones POOL-04 re-checks. `direction`: the alternative the
+# bootstrap p (and hence Holm) is computed for.
+A1_RULES: dict[str, dict[str, Any]] = {
+    "negative_excludes_zero_with_reversal": {
+        "decide": _rule_negative_with_reversal,
+        "bounds": ("hi", "lo"),
+        "direction": "two-sided",
+        "text": "supported if CI hi < t; reversed if CI lo > t; else not_supported",
+    },
+    "lower_bound_above_threshold": {
+        "decide": _rule_lower_bound_above,
+        "bounds": ("lo",),
+        "direction": "greater",
+        "text": "supported if CI lo > t; else not_supported",
+    },
+    "positive_graded": {
+        "decide": _rule_positive_graded,
+        "bounds": ("lo",),
+        "direction": "greater",
+        "text": (
+            "supported if CI lo > t; directionally_consistent if point > t and CI "
+            "includes t; else not_supported"
+        ),
+    },
+    "not_positive_excluding_zero": {
+        "decide": _rule_not_positive_excluding,
+        "bounds": ("lo",),
+        "direction": "greater",
+        "text": "not_supported if CI lo > t; else supported",
+    },
+    "cost_ratio_at_least": {
+        "decide": None,
+        "bounds": (),
+        "direction": None,
+        "text": "supported if left/right tokens >= min_ratio AND left calls > right calls",
+    },
+}
+
+# ---- the registered predictions, as data ------------------------------------
+A1_PREDICTIONS: list[dict[str, Any]] = [
+    {
+        "id": "P1",
+        "role": "primary",
+        "kind": "paired_contrast",
+        "metric": "goal_pass",
+        "left": "advise_k1_fullctx",
+        "right": "prefix_m11",
+        "rule": "negative_excludes_zero_with_reversal",
+        "threshold_pp": 0.0,
+        "holm_family": True,
+        "statement": "advise_k1_fullctx − prefix_m11 on goal_pass is negative, CI excluding zero",
+        "citation": f"{A1_PREREG}:174-186",
+        "dev_reference": {
+            "diff_pp": -14.81,
+            "ci95_pp_scenario": [-21.20, -7.96],
+            "ci95_pp_task": [-21.73, -8.02],
+            "source": A1_DEV_BASIS,
+            "key": "contrasts.goal_pass_all_advise_k1_minus_c81_bp_m11",
+            "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
+        },
+    },
+    {
+        "id": "P2",
+        "role": "primary",
+        "kind": "cost_ratio",
+        "metric": "noncached_tokens_per_episode",
+        "left": "advise_k1_fullctx",
+        "right": "prefix_m11",
+        "rule": "cost_ratio_at_least",
+        "min_ratio": 2.0,
+        "tokens_field": "noncached_tokens_per_episode",
+        "calls_field": "hosted_calls_per_episode",
+        "holm_family": False,
+        "statement": (
+            "advise_k1_fullctx spends >= 2x the non-cached planner tokens of prefix_m11 "
+            "and strictly more hosted calls per episode"
+        ),
+        "citation": f"{A1_PREREG}:188-212",
+        "notes": (
+            "Read from a scripts/analysis/j12_cost_axes.py report over the J10 arms "
+            "(--cost-report), whose prefix arms are costed at their attributed source "
+            "steps. Run j12 with --packet-source pointed at the J10 arm-3 campaign, not "
+            "its hj1b default. If not supported, P1 is uninterpretable as a channel "
+            "result [A1:211-212]."
+        ),
+        "dev_reference": {
+            "ratio": 3.19,
+            "left_tokens_per_episode": 1414410.035088,
+            "right_tokens_per_episode": 443361.412281,
+            "left_calls_per_episode": 19.017544,
+            "right_calls_per_episode": 11.254386,
+            "source": "campaign/results/hj13_advice_at_price_cost_20260923.report.json",
+        },
+    },
+    {
+        "id": "P3",
+        "role": "secondary",
+        "kind": "paired_contrast",
+        "metric": "goal_pass",
+        "left": "prefix_m11",
+        "right": "planner_alone_cap81",
+        "rule": "lower_bound_above_threshold",
+        "threshold_pp": -7.00,
+        "holm_family": True,
+        "statement": "prefix_m11 − planner_alone_cap81 on goal_pass has CI lower bound above −7.00 pp",
+        "citation": f"{A1_PREREG}:214-227",
+        "dev_reference": {
+            "diff_pp": 4.75,
+            "ci95_pp_scenario": [-1.16, 11.75],
+            "source": A1_DEV_BASIS,
+            "key": "contrasts.goal_pass_all_ceiling_c81_minus_c81_bp_m11 (negated by A1)",
+            "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
+        },
+    },
+    {
+        "id": "P4",
+        "role": "secondary",
+        "kind": "paired_contrast",
+        "metric": "goal_pass",
+        "left": "prefix_zs_m11",
+        "right": "prefix_zs_m9",
+        "rule": "positive_graded",
+        "threshold_pp": 0.0,
+        "holm_family": True,
+        "statement": "prefix_zs_m11 − prefix_zs_m9 on goal_pass is positive (registered underpowered)",
+        "citation": f"{A1_PREREG}:229-245",
+        "dev_reference": {
+            "diff_pp": 2.82,
+            "ci95_pp_scenario": [-1.55, 7.16],
+            "source": A1_DEV_BASIS,
+            "key": "contrasts.goal_pass_all_c81_zs_m9_minus_c81_zs_m11 (stored −2.82 [−7.16, +1.55]; negated by A1)",
+            "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
+        },
+    },
+    {
+        "id": "P5",
+        "role": "secondary",
+        "kind": "paired_contrast",
+        "metric": "goal_pass",
+        "left": "advise_k1_fullctx",
+        "right": "sft_plan",
+        "rule": "not_positive_excluding_zero",
+        "threshold_pp": 0.0,
+        "holm_family": True,
+        "statement": "advise_k1_fullctx − sft_plan on goal_pass is NOT positive with a CI excluding zero",
+        "citation": f"{A1_PREREG}:253-265",
+        "dev_reference": {
+            "diff_pp": -5.51,
+            "ci95_pp_scenario": [-13.15, 2.51],
+            "source": "campaign/results/hj13_advice_at_price_20260923.report.json",
+            "key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_plan_floor",
+            "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
+        },
+    },
+    {
+        "id": "P6",
+        "role": "primary",
+        "kind": "paired_contrast",
+        "metric": "goal_pass",
+        "left": "takeover_k10",
+        "right": "advise_k10_fullctx",
+        "rule": "lower_bound_above_threshold",
+        "threshold_pp": 0.0,
+        "holm_family": True,
+        "statement": "takeover_k10 − advise_k10_fullctx on goal_pass is positive, 95% scenario CI excluding zero",
+        "citation": "pending A1 revision (not in docs/prereg_j10_amendment_20260924.md as of 2026-09-23)",
+        "dev_reference": {
+            "diff_pp": 6.69,
+            "ci95_pp_scenario": [1.29, 13.48],
+            "source": "caller brief 2026-09-23; j8_frontier at seed 20260915 gives [1.29, 13.49]",
+            "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
+        },
+    },
+]
+
+# A1 §6 "supporting contrasts, registered but not decision-bearing".
+A1_SUPPORTING: list[dict[str, Any]] = [
+    {"id": "S1", "left": "advise_k1_fullctx", "right": "prefix_m9",
+     "dev_reference": {"diff_pp": -9.89, "ci95_pp_scenario": [-17.79, -1.99]}},
+    {"id": "S2", "left": "advise_k10_fullctx", "right": "prefix_m11",
+     "dev_reference": {"diff_pp": -7.73, "ci95_pp_scenario": [-12.60, -3.12]}},
+    {"id": "S3", "left": "prefix_m9", "right": "prefix_m11",
+     "dev_reference": {"diff_pp": -4.92, "ci95_pp_scenario": [-10.36, 0.43]}},
+    {"id": "S4", "left": "planner_alone_cap81", "right": "prefix_zs_m11",
+     "dev_reference": {"diff_pp": -2.95, "ci95_pp_scenario": [-8.65, 1.91]}},
+]
+
+A1_AMBIGUITIES: list[dict[str, Any]] = [
+    {
+        "id": "bootstrap_seed_of_dev_references",
+        "citations": [f"{A1_PREREG}:157", "scripts/setup/hj1_gate.py:29",
+                      "scripts/analysis/j8_frontier.py:55-59,1184"],
+        "what": (
+            "A1 §5.2 fixes bootstrap seed 20260924, but every dev interval it quotes was "
+            "produced by j8_frontier, which always uses hj1_gate.SEED = 20260915."
+        ),
+        "script_behaviour": (
+            "Test verdicts use 20260924. dev_reference blocks carry the 20260915 seed "
+            "they were computed under; the regression test reproduces P1 at 20260915."
+        ),
+    },
+    {
+        "id": "negated_dev_references",
+        "citations": [f"{A1_PREREG}:219-222", f"{A1_PREREG}:233-234"],
+        "what": (
+            "P3 and P4 quote intervals obtained by negating the stored contrast. Under "
+            "the percentile convention (lo = means[250], hi = means[9750]) negation is "
+            "not exactly the direct interval: one end moves by one order statistic "
+            "(≈0.01 pp). P4's stored key is −2.82 [−7.16, +1.55]; A1 does not say it was "
+            "negated."
+        ),
+        "script_behaviour": "Every contrast is computed directly in the registered orientation (left − right).",
+    },
+    {
+        "id": "holm_family_size",
+        "citations": [f"{A1_PREREG}:164"],
+        "what": (
+            "§5.3 applies Holm 'across the five predictions on goal_pass', but P2 is a "
+            "cost predicate, so P1-P5 contain four goal_pass predictions."
+        ),
+        "script_behaviour": "Family = every prediction with holm_family=True (P1, P3, P4, P5, P6 → m = 5).",
+    },
+    {
+        "id": "holm_vs_ci_rules",
+        "citations": [f"{A1_PREREG}:164", f"{A1_PREREG}:170-265"],
+        "what": (
+            "Decision rules are written as CI conditions; Holm needs p-values. A1 does not "
+            "say how the two combine, nor that for P5 a Holm adjustment makes 'supported' "
+            "EASIER (its support event is a non-rejection)."
+        ),
+        "script_behaviour": (
+            "p = two-sided-equivalent percentile-bootstrap p for the rule's direction at "
+            "its threshold (2 x tail share of the scenario-clustered bootstrap means). An "
+            "exclusion event counts only if the CI excludes the threshold AND the Holm-"
+            "adjusted p <= 0.05. Unadjusted and adjusted verdicts are both reported."
+        ),
+    },
+    {
+        "id": "residual_crash_scoring",
+        "citations": [f"{A1_PREREG}:148-149", f"{A1_PREREG}:352-355",
+                      "scripts/analysis/j8_frontier.py:419-430"],
+        "what": (
+            "A1 requires 336 non-crashed pairs per arm but does not say how a crash left "
+            "in the tree is scored; the dev basis used j8's all-episodes view (crash = 0), "
+            "with zero crashes, so the choice never mattered on dev."
+        ),
+        "script_behaviour": (
+            "A crashed episode is not an outcome: it is dropped from every pair and counted, "
+            "and an arm with any crash or missing episode is incomplete, which refuses every "
+            "prediction that uses it."
+        ),
+    },
+    {
+        "id": "p6_arm_not_registered",
+        "citations": [f"{A1_PREREG}:89-101", f"{A1_PREREG}:134-135", f"{A1_PREREG}:304",
+                      f"{A1_PREREG}:320-323"],
+        "what": (
+            "P6 needs takeover_k10, which is not one of A1's nine arms ('No arm is added "
+            "after the read'), and makes advise_k10_fullctx decision-bearing although A1 "
+            "calls arm 9 droppable, first in the sacrifice order, supporting no prediction."
+        ),
+        "script_behaviour": "P6 is implemented as instructed; takeover_k10 has no J10 config.",
+    },
+]
+
+
+# ---- loading ----------------------------------------------------------------
+def a1_split_provenance(root: Path) -> dict[str, int]:
+    """Count episodes by the split their manifest.json recorded (A1 §10.2)."""
+    counts: Counter[str] = Counter()
+    if not root.exists():
+        return {}
+    for path in sorted(root.rglob("result.json")):
+        man = path.parent / "manifest.json"
+        split: Optional[str] = None
+        if man.exists():
+            try:
+                prov = (json.loads(man.read_text(encoding="utf-8")) or {}).get("provenance")
+                if isinstance(prov, dict) and prov.get("split") is not None:
+                    split = str(prov["split"])
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+                split = None
+        counts[split or "unrecorded"] += 1
+    return dict(sorted(counts.items()))
+
+
+def a1_arm_episodes(
+    label: str,
+    loaded: dict[str, Any],
+    tasks: list[str],
+    seeds: list[int],
+) -> dict[str, Any]:
+    """Scored episodes of one arm over the registered (task, seed) matrix.
+
+    A crash is not an outcome and is excluded; every other readable result
+    (including limit / timeout / parse_error) is scored. None metrics are kept
+    as None and dropped per contrast, never coerced to 0.
+    """
+    runs: dict[tuple[str, int], dict[str, Any]] = loaded["runs"]
+    task_set, seed_set = set(tasks), set(seeds)
+    episodes: dict[tuple[str, int], dict[str, Any]] = {}
+    n_missing = n_crash = 0
+    for task_id in tasks:
+        for seed in seeds:
+            row = runs.get((task_id, seed))
+            if row is None:
+                n_missing += 1
+                continue
+            if row.get("error_type") == "crash":
+                n_crash += 1
+                continue
+            episodes[(task_id, seed)] = {
+                "goal_pass_rate": optional_float(row, "goal_pass_rate"),
+                "tgc": score_tgc(row)["tgc"],
+                "error_type": row.get("error_type"),
+            }
+    n_expected = len(tasks) * len(seeds)
+    in_matrix = [k for k in runs if k[0] in task_set and k[1] in seed_set]
+    gp = [e["goal_pass_rate"] for e in episodes.values() if e["goal_pass_rate"] is not None]
+    tg = [e["tgc"] for e in episodes.values() if e["tgc"] is not None]
+    complete = (
+        n_missing == 0
+        and n_crash == 0
+        and len(episodes) == n_expected
+        and not loaded["empty_files"]
+        and not loaded["unreadable"]
+        and not loaded["duplicates"]
+        and not loaded["root_missing"]
+    )
+    return {
+        "label": label,
+        "episodes": episodes,
+        "n_expected": n_expected,
+        "n_scored": len(episodes),
+        "n_crash": n_crash,
+        "n_missing": n_missing,
+        "n_extra_ignored": len(runs) - len(in_matrix),
+        "n_empty_files": len(loaded["empty_files"]),
+        "n_unreadable": len(loaded["unreadable"]),
+        "n_duplicates": len(loaded["duplicates"]),
+        "root_missing": loaded["root_missing"],
+        "systems_in_tree": sorted(loaded["systems"]),
+        "error_types": dict(
+            sorted(Counter(str(runs[k].get("error_type") or "none") for k in in_matrix).items())
+        ),
+        "goal_pass_mean": round(statistics.fmean(gp), 6) if gp else None,
+        "n_goal_pass_missing": len(episodes) - len(gp),
+        "tgc_mean": round(statistics.fmean(tg), 6) if tg else None,
+        "complete": complete,
+    }
+
+
+# ---- bootstrap --------------------------------------------------------------
+def cluster_bootstrap_means(
+    diffs: list[float],
+    clusters: list[str],
+    *,
+    n_boot: int = A1_BOOTSTRAP_N,
+    seed: int = A1_BOOTSTRAP_SEED,
+) -> list[float]:
+    """Sorted bootstrap means, clusters drawn with replacement.
+
+    Draw-for-draw the algorithm of hj1_gate._draw_task_clusters and
+    j8_frontier.paired_diff_scenario: clusters sorted by label, one
+    random.Random(seed), G draws of randrange(G) per replicate, and the mean of
+    the concatenated values (sum / len, in draw order).
+    """
+    by_cluster: dict[str, list[float]] = {}
+    for diff, cluster in zip(diffs, clusters):
+        by_cluster.setdefault(cluster, []).append(diff)
+    labels = sorted(by_cluster)
+    n_clusters = len(labels)
+    rng = random.Random(seed)
+    means: list[float] = []
+    for _ in range(n_boot):
+        sampled = [
+            value
+            for label in (labels[rng.randrange(n_clusters)] for _ in range(n_clusters))
+            for value in by_cluster[label]
+        ]
+        means.append(sum(sampled) / len(sampled))
+    means.sort()
+    return means
+
+
+def percentile_ci(means: list[float]) -> tuple[float, float]:
+    n = len(means)
+    return means[int(0.025 * n)], means[int(0.975 * n)]
+
+
+def bootstrap_pvalue(means: list[float], threshold: float, direction: str) -> float:
+    """Two-sided-equivalent percentile p at `threshold` (native units).
+
+    greater: evidence the effect exceeds t   -> 2 x share of means <= t
+    less:    evidence the effect is below t   -> 2 x share of means >= t
+    two-sided: 2 x the smaller tail. Capped at 1. Consistent with the 95%
+    percentile CI: the CI excludes t (on that side) iff p <= 0.05, up to one
+    order statistic at the boundary.
+    """
+    n = len(means)
+    share_le = bisect.bisect_right(means, threshold) / n
+    share_ge = (n - bisect.bisect_left(means, threshold)) / n
+    if direction == "greater":
+        p = 2.0 * share_le
+    elif direction == "less":
+        p = 2.0 * share_ge
+    elif direction == "two-sided":
+        p = 2.0 * min(share_le, share_ge)
+    else:
+        raise ValueError(f"unknown direction {direction!r}")
+    return min(1.0, p)
+
+
+def holm_adjust(pvalues: list[float]) -> list[float]:
+    """Holm step-down adjusted p-values, returned in input order."""
+    m = len(pvalues)
+    order = sorted(range(m), key=lambda i: (pvalues[i], i))
+    adjusted = [0.0] * m
+    running = 0.0
+    for rank, idx in enumerate(order):
+        running = max(running, min(1.0, (m - rank) * pvalues[idx]))
+        adjusted[idx] = running
+    return adjusted
+
+
+def a1_paired_series(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+    field: str,
+) -> dict[str, Any]:
+    shared = sorted(set(left) & set(right))
+    keys: list[tuple[str, int]] = []
+    diffs: list[float] = []
+    missing = 0
+    for key in shared:
+        a, b = left[key].get(field), right[key].get(field)
+        if a is None or b is None:
+            missing += 1
+            continue
+        keys.append(key)
+        diffs.append(float(a) - float(b))
+    return {
+        "keys": keys,
+        "diffs": diffs,
+        "n_shared": len(shared),
+        "n_left_only": len(left) - len(shared),
+        "n_right_only": len(right) - len(shared),
+        "n_dropped_missing_field": missing,
+    }
+
+
+def _cluster_labels(keys: list[tuple[str, int]], clustering: str) -> list[str]:
+    if clustering == "scenario":
+        return [scenario_of(k[0]) for k in keys]
+    if clustering == "task":
+        return [k[0] for k in keys]
+    raise ValueError(f"unknown clustering {clustering!r}")
+
+
+def a1_interval(
+    series: dict[str, Any],
+    clustering: str,
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """One clustered interval. `_means` is internal (stripped before output)."""
+    diffs = series["diffs"]
+    if not diffs:
+        return {"clustering": clustering, "n_pairs": 0, "point": None, "lo": None,
+                "hi": None, "diff_pp": None, "ci95_pp": None, "n_clusters": 0}
+    clusters = _cluster_labels(series["keys"], clustering)
+    means = cluster_bootstrap_means(diffs, clusters, n_boot=n_boot, seed=seed)
+    lo, hi = percentile_ci(means)
+    point = statistics.fmean(diffs)
+    return {
+        "clustering": clustering,
+        "n_pairs": len(diffs),
+        "n_clusters": len(set(clusters)),
+        "point": point,
+        "lo": lo,
+        "hi": hi,
+        "diff_pp": round(point * 100, 2),
+        "ci95_pp": [round(lo * 100, 2), round(hi * 100, 2)],
+        "n_boot": n_boot,
+        "seed": seed,
+        "_means": means,
+    }
+
+
+def _public(block: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in block.items() if not k.startswith("_")}
+
+
+def a1_contrast(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+    field: str,
+    *,
+    n_boot: int = A1_BOOTSTRAP_N,
+    seed: int = A1_BOOTSTRAP_SEED,
+) -> dict[str, Any]:
+    """Paired contrast left − right: scenario (primary) and task intervals."""
+    series = a1_paired_series(left, right, field)
+    return {
+        "field": field,
+        "n_pairs": len(series["diffs"]),
+        "n_shared": series["n_shared"],
+        "n_left_only": series["n_left_only"],
+        "n_right_only": series["n_right_only"],
+        "n_dropped_missing_field": series["n_dropped_missing_field"],
+        "scenario": a1_interval(series, "scenario", n_boot=n_boot, seed=seed),
+        "task": a1_interval(series, "task", n_boot=n_boot, seed=seed),
+        "_series": series,
+    }
+
+
+def _public_contrast(cmp: dict[str, Any]) -> dict[str, Any]:
+    out = {k: v for k, v in cmp.items() if not k.startswith("_")}
+    for name in ("scenario", "task"):
+        if isinstance(out.get(name), dict):
+            out[name] = _public(out[name])
+    return out
+
+
+def _load_cluster_signflip():
+    """Lazy import of cluster_signflip_pvalue (owned by another unit).
+
+    Contract: cluster_signflip_pvalue(diffs, clusters, *, n_perm=10000,
+    seed=20260924, alternative="two-sided") -> float. Returns None if absent.
+    """
+    if not CLUSTER_INFERENCE_PATH.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("cluster_inference", CLUSTER_INFERENCE_PATH)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return getattr(module, "cluster_signflip_pvalue", None)
+
+
+def a1_permutation(series: dict[str, Any], threshold: float) -> dict[str, Any]:
+    """Scenario-cluster sign-flip p for H0: effect == threshold. Not decision-bearing."""
+    base = {
+        "decision_bearing": False,
+        "clusters": "scenario",
+        "null": "paired differences symmetric about the threshold",
+        "n_perm": PERMUTATION_N,
+        "seed": A1_BOOTSTRAP_SEED,
+        "alternative": "two-sided",
+    }
+    if not series["diffs"]:
+        return {**base, "status": "no_pairs", "p_value": None}
+    try:
+        fn = _load_cluster_signflip()
+    except Exception as exc:  # the module is written concurrently; never fatal
+        return {**base, "status": "import_error", "error": f"{type(exc).__name__}: {exc}", "p_value": None}
+    if fn is None:
+        return {**base, "status": "unavailable", "p_value": None,
+                "reason": f"{CLUSTER_INFERENCE_PATH.name} or cluster_signflip_pvalue absent"}
+    shifted = [d - threshold for d in series["diffs"]]
+    clusters = _cluster_labels(series["keys"], "scenario")
+    try:
+        p = fn(shifted, clusters, n_perm=PERMUTATION_N, seed=A1_BOOTSTRAP_SEED,
+               alternative="two-sided")
+    except Exception as exc:
+        return {**base, "status": "error", "error": f"{type(exc).__name__}: {exc}", "p_value": None}
+    return {**base, "status": "ok", "p_value": None if p is None else float(p)}
+
+
+# ---- evaluating one prediction ---------------------------------------------
+def _events(lo: float, hi: float, threshold: float) -> tuple[bool, bool]:
+    return bool(lo > threshold), bool(hi < threshold)
+
+
+def a1_pool04(
+    pred: dict[str, Any],
+    series: dict[str, Any],
+    primary: dict[str, Any],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """POOL-04: a decision-bearing bound within 1.00 pp of its threshold is
+    recomputed at seven bootstrap seeds; any change of verdict -> on_boundary."""
+    rule = A1_RULES[pred["rule"]]
+    t = float(pred["threshold_pp"]) / 100.0
+    near = {}
+    for name in rule["bounds"]:
+        value = primary[name]
+        near[name] = abs(value - t) * 100.0 <= POOL04_WINDOW_PP + 1e-12
+    fired = any(near.values())
+    out: dict[str, Any] = {
+        "rule": "POOL-04",
+        "window_pp": POOL04_WINDOW_PP,
+        "threshold_pp": pred["threshold_pp"],
+        "bounds_checked": list(rule["bounds"]),
+        "within_window": near,
+        "fired": fired,
+        "seeds": list(POOL04_SEEDS),
+    }
+    if not fired:
+        out["stable"] = True
+        return out
+    base_verdict = rule["decide"](primary["point"], *_events(primary["lo"], primary["hi"], t))
+    per_seed = []
+    for s in POOL04_SEEDS:
+        if s == seed:
+            lo, hi = primary["lo"], primary["hi"]
+        else:
+            lo, hi = percentile_ci(
+                cluster_bootstrap_means(series["diffs"], _cluster_labels(series["keys"], "scenario"),
+                                        n_boot=n_boot, seed=s)
+            )
+        verdict = rule["decide"](primary["point"], *_events(lo, hi, t))
+        per_seed.append({"seed": s, "lo_pp": round(lo * 100, 2), "hi_pp": round(hi * 100, 2),
+                         "verdict": verdict})
+    out["bounds_by_seed"] = per_seed
+    out["verdicts_by_seed"] = sorted({row["verdict"] for row in per_seed})
+    out["stable"] = all(row["verdict"] == base_verdict for row in per_seed)
+    return out
+
+
+def a1_evaluate_contrast_prediction(
+    pred: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    rule = A1_RULES[pred["rule"]]
+    out: dict[str, Any] = {k: v for k, v in pred.items()}
+    out["rule_text"] = rule["text"]
+    out["direction"] = rule["direction"]
+    missing = [a for a in (pred["left"], pred["right"]) if a not in arms]
+    if missing:
+        out.update(decidable=False, verdict="arm_absent", reason=f"no --arm for {missing}")
+        return out
+    left, right = arms[pred["left"]], arms[pred["right"]]
+    field = A1_METRIC_FIELDS[pred["metric"]]
+    cmp = a1_contrast(left["episodes"], right["episodes"], field, n_boot=n_boot, seed=seed)
+    primary = cmp["scenario"]
+    out["contrast"] = _public_contrast(cmp)
+    out["tgc_secondary"] = (
+        _public_contrast(a1_contrast(left["episodes"], right["episodes"], "tgc",
+                                     n_boot=n_boot, seed=seed))
+        if pred["metric"] != "tgc"
+        else None
+    )
+    incomplete = [a for a in (pred["left"], pred["right"]) if not arms[a]["complete"]]
+    if primary["point"] is None:
+        out.update(decidable=False, verdict="refused_no_pairs", reason="no scored pairs")
+        return out
+    t = float(pred["threshold_pp"]) / 100.0
+    lo_above, hi_below = _events(primary["lo"], primary["hi"], t)
+    out["events_unadjusted"] = {"lo_above_threshold": lo_above, "hi_below_threshold": hi_below}
+    out["verdict_unadjusted"] = rule["decide"](primary["point"], lo_above, hi_below)
+    out["p_value"] = bootstrap_pvalue(primary["_means"], t, rule["direction"])
+    out["pool04"] = a1_pool04(pred, cmp["_series"], primary, n_boot=n_boot, seed=seed)
+    out["permutation_sensitivity"] = a1_permutation(cmp["_series"], t)
+    out["_point"], out["_lo"], out["_hi"] = primary["point"], primary["lo"], primary["hi"]
+    if incomplete:
+        out.update(decidable=False, verdict="refused_incomplete",
+                   reason=f"arm(s) below the registered non-crashed matrix: {incomplete}")
+        return out
+    out["decidable"] = True
+    return out
+
+
+def a1_evaluate_cost_prediction(
+    pred: dict[str, Any],
+    cost_report: Optional[dict[str, Any]],
+    expected_n: int,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {k: v for k, v in pred.items()}
+    out["rule_text"] = A1_RULES[pred["rule"]]["text"]
+    if cost_report is None:
+        out.update(decidable=False, verdict="not_computed",
+                   reason="no --cost-report (scripts/analysis/j12_cost_axes.py JSON over the J10 arms)")
+        return out
+    arms = cost_report.get("arms") or {}
+    if isinstance(arms, list):
+        arms = {a.get("label"): a for a in arms if isinstance(a, dict)}
+    left, right = arms.get(pred["left"]), arms.get(pred["right"])
+    if not isinstance(left, dict) or not isinstance(right, dict):
+        out.update(decidable=False, verdict="arm_absent",
+                   reason=f"cost report lacks {pred['left']!r} or {pred['right']!r}")
+        return out
+    tf, cf = pred["tokens_field"], pred["calls_field"]
+    values = {
+        "left_tokens_per_episode": left.get(tf),
+        "right_tokens_per_episode": right.get(tf),
+        "left_calls_per_episode": left.get(cf),
+        "right_calls_per_episode": right.get(cf),
+        "left_n_episodes": left.get("n_episodes"),
+        "right_n_episodes": right.get("n_episodes"),
+    }
+    out["observed"] = values
+    if any(values[k] is None for k in values if not k.endswith("n_episodes")):
+        out.update(decidable=False, verdict="not_computed", reason="a cost value is null")
+        return out
+    short = [s for s in ("left", "right") if (values[f"{s}_n_episodes"] or 0) < expected_n]
+    lt, rt = float(values["left_tokens_per_episode"]), float(values["right_tokens_per_episode"])
+    ratio = (lt / rt) if rt > 0 else math.inf
+    out["ratio"] = None if math.isinf(ratio) else round(ratio, 4)
+    calls_more = float(values["left_calls_per_episode"]) > float(values["right_calls_per_episode"])
+    out["calls_strictly_more"] = calls_more
+    verdict = "supported" if (ratio >= float(pred["min_ratio"]) and calls_more) else "not_supported"
+    out["verdict_unadjusted"] = verdict
+    if short:
+        out.update(decidable=False, verdict="refused_incomplete",
+                   reason=f"cost report covers fewer than {expected_n} episodes for {short}")
+        return out
+    out["decidable"] = True
+    out["verdict"] = verdict
+    return out
+
+
+def a1_decide_family(results: list[dict[str, Any]], alpha: float = A1_ALPHA) -> dict[str, Any]:
+    """Holm across the goal_pass family, then POOL-04, then the final verdict.
+
+    Pure over the per-prediction dicts (p_value, _point/_lo/_hi, rule,
+    threshold_pp, pool04, decidable), so the multiplicity logic is testable
+    without a bootstrap.
+    """
+    family = [r for r in results if r.get("holm_family")]
+    raw = [
+        float(r["p_value"]) if r.get("decidable") and r.get("p_value") is not None else 1.0
+        for r in family
+    ]
+    adjusted = holm_adjust(raw) if family else []
+    for r, p_raw, p_adj in zip(family, raw, adjusted):
+        r["holm"] = {
+            "m": len(family),
+            "p_raw": p_raw,
+            "p_adjusted": p_adj,
+            "rejects_at_alpha": bool(p_adj <= alpha),
+            "p_raw_substituted": not (r.get("decidable") and r.get("p_value") is not None),
+        }
+    for r in results:
+        if r.get("kind") == "cost_ratio" or not r.get("decidable"):
+            r.setdefault("verdict", r.get("verdict") or "refused")
+            continue
+        rule = A1_RULES[r["rule"]]
+        t = float(r["threshold_pp"]) / 100.0
+        lo_above, hi_below = _events(r["_lo"], r["_hi"], t)
+        if r.get("holm_family"):
+            ok = r["holm"]["rejects_at_alpha"]
+            lo_above, hi_below = lo_above and ok, hi_below and ok
+        r["verdict_holm"] = rule["decide"](r["_point"], lo_above, hi_below)
+        pool = r.get("pool04") or {}
+        if pool.get("fired") and not pool.get("stable", True):
+            r["verdict"] = "on_boundary"
+        else:
+            r["verdict"] = r["verdict_holm"]
+    return {
+        "method": "Holm step-down",
+        "alpha": alpha,
+        "family": [r["id"] for r in family],
+        "m": len(family),
+    }
+
+
+# ---- report -----------------------------------------------------------------
+def a1_protocol_guard(
+    split: str,
+    confirm: bool,
+    plumbing: bool,
+    arm_dirs: Iterable[Path],
+    out_path: Optional[Path],
+    registered_settings: bool,
+) -> Optional[str]:
+    if split == "test_challenge":
+        return "refusing test_challenge: it is not read under A1 [docs/prereg_j10_amendment_20260924.md:303]"
+    if split not in A1_SPLIT_N_TASKS:
+        return f"unknown split {split!r}; A1 analyses dev (dry runs) or test_normal"
+    if split == "test_normal" and not confirm:
+        return (
+            "refusing test_normal without --confirm-heldout-test-split: A1 is a single "
+            "read [docs/prereg_j10_amendment_20260924.md:293-304]"
+        )
+    if split == "test_normal" and plumbing:
+        return "refusing --plumbing-check on test_normal"
+    if split == "test_normal" and not registered_settings:
+        return "refusing test_normal with a non-registered bootstrap seed or resample count"
+    for directory in arm_dirs:
+        marker = heldout_marker_in_path(directory)
+        if marker and split != marker:
+            return f"refusing path {directory}: contains {marker!r} while --split={split}"
+    if out_path is not None:
+        resolved = out_path.resolve()
+        try:
+            resolved.relative_to(RAW_RESULTS_ROOT.resolve())
+            return f"refusing --out under {RAW_RESULTS_ROOT} (raw results are read-only)"
+        except ValueError:
+            pass
+    return None
+
+
+def load_predictions(path: Optional[Path]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Registry override: a JSON list of predictions, or {predictions, supporting}."""
+    if path is None:
+        return [dict(p) for p in A1_PREDICTIONS], [dict(s) for s in A1_SUPPORTING]
+    data = json.loads(path.read_text(encoding="utf-8"))
+    preds = data if isinstance(data, list) else data.get("predictions")
+    support = [] if isinstance(data, list) else list(data.get("supporting") or [])
+    if not isinstance(preds, list) or not preds:
+        raise ValueError(f"{path}: no predictions")
+    ids = set()
+    for p in preds:
+        for key in ("id", "kind", "left", "right", "rule"):
+            if key not in p:
+                raise ValueError(f"{path}: prediction missing {key!r}: {p}")
+        if p["id"] in ids:
+            raise ValueError(f"{path}: duplicate prediction id {p['id']!r}")
+        ids.add(p["id"])
+        if p["rule"] not in A1_RULES:
+            raise ValueError(f"{path}: unknown rule {p['rule']!r}; known {sorted(A1_RULES)}")
+        if (p["kind"] == "cost_ratio") != (p["rule"] == "cost_ratio_at_least"):
+            raise ValueError(f"{path}: {p['id']}: rule {p['rule']!r} does not fit kind {p['kind']!r}")
+        if p["kind"] == "paired_contrast":
+            if p.get("metric") not in A1_METRIC_FIELDS or "threshold_pp" not in p:
+                raise ValueError(f"{path}: {p['id']} needs metric in {sorted(A1_METRIC_FIELDS)} and threshold_pp")
+        elif p["kind"] == "cost_ratio":
+            for key in ("min_ratio", "tokens_field", "calls_field"):
+                if key not in p:
+                    raise ValueError(f"{path}: {p['id']} missing {key!r}")
+        else:
+            raise ValueError(f"{path}: unknown kind {p['kind']!r}")
+        p.setdefault("holm_family", False)
+        p.setdefault("role", "secondary")
+    return preds, support
+
+
+def build_report_a1(
+    *,
+    split: str,
+    seeds: list[int],
+    arm_dirs: dict[str, Path],
+    expected_n_tasks: int,
+    confirm_heldout_test_split: bool = False,
+    plumbing_check: bool = False,
+    cost_report: Optional[dict[str, Any]] = None,
+    predictions: Optional[list[dict[str, Any]]] = None,
+    supporting: Optional[list[dict[str, Any]]] = None,
+    n_boot: int = A1_BOOTSTRAP_N,
+    bootstrap_seed: int = A1_BOOTSTRAP_SEED,
+    out_path: Optional[Path] = None,
+) -> tuple[dict[str, Any], int]:
+    preds = [dict(p) for p in (predictions if predictions is not None else A1_PREDICTIONS)]
+    support = [dict(s) for s in (supporting if supporting is not None else A1_SUPPORTING)]
+    registered = n_boot == A1_BOOTSTRAP_N and bootstrap_seed == A1_BOOTSTRAP_SEED
+    proto = a1_protocol_guard(split, confirm_heldout_test_split, plumbing_check,
+                              arm_dirs.values(), out_path, registered)
+    if proto:
+        return ({"protocol": "A1", "label": "REFUSED", "refused": True, "reason": proto,
+                 "headline": proto, "split": split}, 2)
+
+    loaded = {label: load_arm_tree(path) for label, path in arm_dirs.items()}
+    tasks = discover_tasks(loaded, seeds)
+    reasons: list[str] = []
+    if len(tasks) != expected_n_tasks:
+        reasons.append(f"task_count_is_{len(tasks)}_expected_{expected_n_tasks}")
+    arms = {label: a1_arm_episodes(label, blob, tasks, seeds) for label, blob in loaded.items()}
+    provenance = {label: a1_split_provenance(path) for label, path in arm_dirs.items()}
+    split_problems = []
+    for label, counts in provenance.items():
+        wrong = {k: v for k, v in counts.items() if k not in {split, "unrecorded"}}
+        if wrong:
+            split_problems.append(f"{label}:{wrong}")
+        if split != "dev" and counts.get("unrecorded"):
+            split_problems.append(f"{label}:unrecorded={counts['unrecorded']}")
+    if split_problems:
+        reasons.append("split_provenance_mismatch:" + ";".join(split_problems))
+    for label, arm in arms.items():
+        if len(arm["systems_in_tree"]) > 1:
+            reasons.append(f"mixed_systems:{label}={arm['systems_in_tree']}")
+        if not arm["complete"]:
+            reasons.append(
+                f"incomplete_arm:{label} scored={arm['n_scored']}/{arm['n_expected']} "
+                f"crash={arm['n_crash']} missing={arm['n_missing']}"
+            )
+    blocking = bool(split_problems) or len(tasks) != expected_n_tasks or any(
+        r.startswith("mixed_systems") for r in reasons
+    )
+    if blocking:
+        for arm in arms.values():
+            arm["complete"] = False
+
+    results: list[dict[str, Any]] = []
+    for pred in preds:
+        if pred["kind"] == "cost_ratio":
+            row = a1_evaluate_cost_prediction(pred, cost_report, expected_n_tasks * len(seeds))
+            if blocking and row.get("decidable"):
+                row.update(decidable=False, verdict="refused_incomplete",
+                           reason="the matrix itself is refused: " + "; ".join(reasons))
+            results.append(row)
+        else:
+            results.append(a1_evaluate_contrast_prediction(pred, arms, n_boot=n_boot, seed=bootstrap_seed))
+    multiplicity = a1_decide_family(results)
+    for r in results:
+        for key in [k for k in r if k.startswith("_")]:
+            r.pop(key)
+
+    supporting_out = []
+    for s in support:
+        row = dict(s)
+        row["decision_bearing"] = False
+        if s["left"] in arms and s["right"] in arms:
+            row["goal_pass"] = _public_contrast(a1_contrast(
+                arms[s["left"]]["episodes"], arms[s["right"]]["episodes"], "goal_pass_rate",
+                n_boot=n_boot, seed=bootstrap_seed))
+        else:
+            row["goal_pass"] = None
+            row["reason"] = "arm absent"
+        supporting_out.append(row)
+
+    decided = [r for r in results if r.get("decidable")]
+    all_decided = len(decided) == len(results)
+    not_result = plumbing_check or not registered or split != "test_normal"
+    label = (
+        "PLUMBING CHECK, NOT A RESULT" if plumbing_check
+        else "A1 DRY RUN ON DEV, NOT THE J10 RESULT" if split == "dev"
+        else "J10 A1 registered analysis"
+    )
+    if not registered:
+        label += " (NON-REGISTERED bootstrap settings)"
+    headline = (
+        "COMPLETE: every registered prediction decided."
+        if all_decided and not reasons
+        else "INCOMPLETE: " + "; ".join(reasons or ["some predictions not decidable"])
+    )
+    report: dict[str, Any] = {
+        "protocol": "A1",
+        "prereg": A1_PREREG,
+        "label": label,
+        "headline": headline,
+        "not_the_j10_result": not_result,
+        "split": split,
+        "seeds": seeds,
+        "expected_n_tasks": expected_n_tasks,
+        "n_tasks_observed_union": len(tasks),
+        "expected_pairs_per_arm": expected_n_tasks * len(seeds),
+        "incomplete_reasons": reasons,
+        "bootstrap": {
+            "n": n_boot,
+            "seed": bootstrap_seed,
+            "registered": registered,
+            "primary_clustering": "scenario",
+            "secondary_clustering": "task",
+            "interval": "95% percentile; lo = means[int(0.025 B)], hi = means[int(0.975 B)]",
+            "paired_on": "(task_id, seed)",
+            "algorithm": "hj1_gate._draw_task_clusters / j8_frontier.paired_diff_scenario, seed exposed",
+        },
+        "stability_rule": {"id": "POOL-04", "window_pp": POOL04_WINDOW_PP, "seeds": list(POOL04_SEEDS)},
+        "multiplicity": multiplicity,
+        "arms": {
+            label_: {k: v for k, v in arm.items() if k != "episodes"} | {"split_provenance": provenance[label_]}
+            for label_, arm in arms.items()
+        },
+        "predictions": results,
+        "verdicts": {r["id"]: r.get("verdict") for r in results},
+        "supporting_contrasts": supporting_out,
+        "ambiguities": A1_AMBIGUITIES,
+        "crash_convention": (
+            "error_type == 'crash' is not an outcome (dropped, counted, arm incomplete); "
+            "limit / timeout / parse_error / api_error are scored outcomes."
+        ),
+    }
+    return report, (0 if all_decided and not reasons else 1)
+
+
+def build_parser_a1() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="J10 analysis under Amendment A1 (default protocol).")
+    p.add_argument("--split", required=True, choices=["dev", "test_normal", "test_challenge"])
+    p.add_argument("--confirm-heldout-test-split", "--i-understand-this-is-the-single-j10-look",
+                   dest="confirm_heldout_test_split", action="store_true")
+    p.add_argument("--seeds", default=A1_DEFAULT_SEEDS, help="registered seeds (A1: 1,2)")
+    p.add_argument("--expected-n-tasks", type=int, default=None,
+                   help="default: dev 57, test_normal 168")
+    p.add_argument("--arm", action="append", required=True, metavar="LABEL=DIR",
+                   help=f"repeatable; labels {sorted(A1_ARMS)} (or any label a --predictions-json names)")
+    p.add_argument("--cost-report", type=Path, default=None,
+                   help="scripts/analysis/j12_cost_axes.py JSON over the J10 arms (P2)")
+    p.add_argument("--predictions-json", type=Path, default=None,
+                   help="override the prediction registry (a JSON list, or {predictions, supporting})")
+    p.add_argument("--bootstrap-seed", type=int, default=A1_BOOTSTRAP_SEED)
+    p.add_argument("--n-boot", type=int, default=A1_BOOTSTRAP_N)
+    p.add_argument("--plumbing-check", action="store_true")
+    p.add_argument("--out", type=Path, default=None)
+    return p
+
+
+def main_a1(argv: Optional[list[str]] = None) -> int:
+    args = build_parser_a1().parse_args(argv)
+    try:
+        seeds = parse_seeds(args.seeds)
+        preds, support = load_predictions(args.predictions_json)
+        allowed = set(A1_ARMS) | {p[k] for p in preds for k in ("left", "right")}
+        arm_dirs: dict[str, Path] = {}
+        for spec in args.arm:
+            label, sep, directory = spec.partition("=")
+            if not sep or not label or not directory:
+                raise ValueError(f"expected LABEL=DIR, got {spec!r}")
+            if label not in allowed:
+                raise ValueError(f"unknown arm label {label!r}; allowed: {sorted(allowed)}")
+            if label in arm_dirs:
+                raise ValueError(f"duplicate --arm {label}")
+            arm_dirs[label] = Path(directory)
+        cost = json.loads(args.cost_report.read_text(encoding="utf-8")) if args.cost_report else None
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        print(json.dumps({"protocol": "A1", "refused": True, "reason": str(exc)}, indent=2))
+        return 2
+    expected = args.expected_n_tasks
+    if expected is None:
+        expected = A1_SPLIT_N_TASKS.get(args.split, 0)
+    report, code = build_report_a1(
+        split=args.split,
+        seeds=seeds,
+        arm_dirs=arm_dirs,
+        expected_n_tasks=expected,
+        confirm_heldout_test_split=args.confirm_heldout_test_split,
+        plumbing_check=args.plumbing_check,
+        cost_report=cost,
+        predictions=preds,
+        supporting=support,
+        n_boot=args.n_boot,
+        bootstrap_seed=args.bootstrap_seed,
+        out_path=args.out,
+    )
+    text = json.dumps(report, indent=2, default=str) + "\n"
+    print(text, end="")
+    if args.out and code != 2:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(text, encoding="utf-8")
+    return code
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    """`--protocol a1` (default) or `--protocol v1` (the prereg_v1 H1-H4 report)."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    protocol = "a1"
+    for i, token in enumerate(args):
+        if token == "--protocol" and i + 1 < len(args):
+            protocol = args[i + 1]
+            del args[i : i + 2]
+            break
+        if token.startswith("--protocol="):
+            protocol = token.split("=", 1)[1]
+            del args[i]
+            break
+    if protocol == "v1":
+        return main_v1(args)
+    if protocol != "a1":
+        print(json.dumps({"refused": True, "reason": f"unknown --protocol {protocol!r} (a1|v1)"}))
+        return 2
+    return main_a1(args)
 
 
 if __name__ == "__main__":

@@ -231,6 +231,139 @@ def purge_broken(out_root: Path, campaign_id: str) -> int:
     return removed
 
 
+# The project crash convention (J10 / A1 §10.1): an episode is a crash ONLY when its
+# result.json says `error_type == "crash"`. Everything else that wrote a readable result
+# -- `limit`, `timeout`, `parse_error`, `api_error`, or no error at all -- is a scored
+# outcome of the registered read and must never be deleted or re-run. `--purge-broken`
+# (BROKEN above) is deliberately wider: it also retries timeout / parse_error / api_error,
+# which is right for a dev resume after a harness fix and wrong for a confirmatory read,
+# where re-running a scored episode is a second look at it.
+CRASH_ERROR_TYPE = "crash"
+
+
+def _campaign_root(out_root: Path, campaign_id: str) -> Path:
+    """<out_root>/<campaign_id>, refusing any id that could resolve outside out_root."""
+    cid = str(campaign_id or "").strip()
+    if not cid or cid in {".", ".."} or "/" in cid or "\\" in cid:
+        raise ValueError(f"refusing unsafe campaign id {campaign_id!r}")
+    root = out_root / cid
+    if root.resolve().parent != out_root.resolve():
+        raise ValueError(f"refusing campaign id {campaign_id!r}: resolves outside {out_root}")
+    return root
+
+
+def purge_crashed(out_root: Path, campaign_id: str) -> dict[str, int]:
+    """Delete ONLY the episode directories that are not scored outcomes.
+
+    Removed, each as a whole directory (EventLog appends, see purge_broken):
+      * ``crash``             -- result.json parses and ``error_type == "crash"``;
+      * ``unreadable_result`` -- result.json is empty, not JSON, or not an object
+        (a write killed mid-flight; the runner would otherwise skip it forever,
+        because it only checks that the file exists);
+      * ``no_result``         -- an attempt directory with events/manifest but no
+        result.json (the job died mid-episode). The runner re-runs it anyway, but
+        into the same events.jsonl, which it opens for APPEND
+        [src/sidekick/trajectories/eventlog.py:30].
+    Kept: every readable result.json whose error_type is anything but "crash",
+    including ``limit`` / ``timeout`` / ``parse_error`` / ``api_error``.
+
+    Only ``<out_root>/<campaign_id>`` is touched. Callers must not run this while
+    another job is writing the same campaign (the J10 wrapper holds a lock).
+    """
+    counts = {"crash": 0, "unreadable_result": 0, "no_result": 0, "kept": 0}
+    root = _campaign_root(out_root, campaign_id)
+    if not root.is_dir():
+        return counts
+    doomed: list[tuple[Path, str]] = []
+    for path in sorted(root.rglob("result.json")):
+        try:
+            text = path.read_text(encoding="utf-8").strip()
+            data = json.loads(text) if text else None
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            data = None
+        if not isinstance(data, dict):
+            doomed.append((path.parent, "unreadable_result"))
+        elif data.get("error_type") == CRASH_ERROR_TYPE:
+            doomed.append((path.parent, "crash"))
+        else:
+            counts["kept"] += 1
+    attempt_dirs: set[Path] = set()
+    for name in ("events.jsonl", "manifest.json"):
+        attempt_dirs.update(p.parent for p in root.rglob(name))
+    for ep in sorted(attempt_dirs):
+        if not (ep / "result.json").exists():
+            doomed.append((ep, "no_result"))
+    for ep, why in doomed:
+        if ep == root or root not in ep.parents:
+            continue  # never delete the campaign root itself or anything outside it
+        shutil.rmtree(ep, ignore_errors=True)
+        counts[why] += 1
+    return counts
+
+
+def split_check(
+    out_root: Path,
+    campaign_id: str,
+    expect_split: str,
+    dev_task_ids: set[str],
+) -> list[str]:
+    """A1 §10.2 (2): verify the campaign actually ran on the split it claims.
+
+    The split is a CLI argument, so a campaign can silently evaluate dev tasks while
+    every name says test. Dev and test share no task ids, so for a non-dev split any
+    overlap with the dev list is fatal; for dev, every id must be a dev id. Each
+    episode's manifest.json also records the split it was launched with
+    (``provenance.split``); a recorded split that disagrees is fatal too.
+    Returns failure strings (empty = pass). An empty campaign is a failure, not a
+    vacuous pass.
+    """
+    root = _campaign_root(out_root, campaign_id)
+    task_ids: set[str] = set()
+    recorded: Counter = Counter()
+    for path in sorted(root.rglob("result.json")) if root.is_dir() else []:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict) or data.get("task_id") is None:
+            continue
+        task_ids.add(str(data["task_id"]))
+        split = None
+        man = path.parent / "manifest.json"
+        if man.exists():
+            try:
+                prov = (json.loads(man.read_text(encoding="utf-8")) or {}).get("provenance") or {}
+                split = prov.get("split") if isinstance(prov, dict) else None
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+                split = None
+        recorded[str(split) if split is not None else "unrecorded"] += 1
+    fails: list[str] = []
+    if not task_ids:
+        fails.append(f"no readable result.json under {root}; nothing to verify")
+        return fails
+    if expect_split == "dev":
+        foreign = sorted(task_ids - set(dev_task_ids))
+        if foreign:
+            fails.append(f"{len(foreign)} task id(s) are not dev ids, e.g. {foreign[:3]}")
+    else:
+        overlap = sorted(task_ids & set(dev_task_ids))
+        if overlap:
+            fails.append(
+                f"{len(overlap)} task id(s) are DEV ids in a campaign expected to be "
+                f"{expect_split!r}, e.g. {overlap[:3]} -- the split flag did not take effect"
+            )
+    wrong = {k: v for k, v in recorded.items() if k not in {expect_split, "unrecorded"}}
+    if wrong:
+        fails.append(f"episode manifests record split(s) {wrong}, expected {expect_split!r}")
+    return fails
+
+
+def _load_dev_task_ids() -> set[str]:
+    from appworld import load_task_ids  # lazy: only the compute node has AppWorld data
+
+    return {str(t) for t in load_task_ids("dev")}
+
+
 def manifest(out_root: Path, campaign_id: str, config_path: Path, repo: Path) -> dict:
     def _run(cmd: list[str]) -> str:
         try:
@@ -267,19 +400,29 @@ def manifest(out_root: Path, campaign_id: str, config_path: Path, repo: Path) ->
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--out", required=True)
     p.add_argument("--campaign-id", required=True)
     p.add_argument("--config")
     p.add_argument("--repo", default=".")
     p.add_argument("--gate", action="store_true")
-    p.add_argument("--purge-broken", action="store_true",
-                   help="delete result.json for crashed/timed-out runs so they are retried")
+    purge = p.add_mutually_exclusive_group()
+    purge.add_argument("--purge-broken", action="store_true",
+                       help="delete the run dirs of api_error/timeout/crash/parse_error runs "
+                            "(and unparseable result.json) so they are retried")
+    purge.add_argument("--purge-crashed-only", action="store_true",
+                       help="crash convention: delete ONLY run dirs whose result.json has "
+                            "error_type == 'crash', plus unreadable result.json and "
+                            "result-less attempt dirs. limit/timeout/parse_error/api_error "
+                            "are scored outcomes and are kept.")
     p.add_argument("--expect-planner", action="store_true")
     p.add_argument("--expect-model")
+    p.add_argument("--expect-split",
+                   help="A1 §10.2: fail unless every task id matches this split "
+                        "(dev ids for 'dev'; zero overlap with dev ids otherwise)")
     p.add_argument("--manifest", help="write a manifest.json here")
-    a = p.parse_args()
+    a = p.parse_args(argv)
 
     out_root = Path(a.out)
     if a.purge_broken:
@@ -287,6 +430,19 @@ def main() -> int:
         # Name the set from BROKEN rather than restating it, so the log cannot drift out
         # of step with what was actually deleted.
         print(f"[purge] removed {n} broken result.json ({'/'.join(sorted(BROKEN))}) so they retry")
+    if a.purge_crashed_only:
+        c = purge_crashed(out_root, a.campaign_id)
+        print(
+            f"[purge-crashed-only] campaign={a.campaign_id} removed crash={c['crash']} "
+            f"unreadable_result={c['unreadable_result']} no_result={c['no_result']} "
+            f"kept={c['kept']} (limit/timeout/parse_error/api_error are kept)"
+        )
+    split_fails: list[str] = []
+    if a.expect_split:
+        split_fails = split_check(out_root, a.campaign_id, a.expect_split, _load_dev_task_ids())
+        print(f"[split] {'FAIL' if split_fails else 'PASS'} expect={a.expect_split}")
+        for f in split_fails:
+            print(f"  - {f}")
     s = summarise(out_root, a.campaign_id)
     print(json.dumps(s, indent=2))
 
@@ -305,6 +461,8 @@ def main() -> int:
                 print(f"  - {f}")
             return 1
         print("[gate] PASS")
+    if split_fails:
+        return 1
     return 0
 
 

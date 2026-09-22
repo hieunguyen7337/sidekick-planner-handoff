@@ -1,0 +1,762 @@
+#!/bin/bash
+#PBS -N j10-arm
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:gpu_id=H100:mem=64gb
+#PBS -l walltime=10:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#
+# J10 -- ONE registered arm of Amendment A1 (docs/prereg_j10_amendment_20260924.md),
+# resumable across hosted-quota windows. Submit the same arm again after a window
+# resets; it purges crashed episodes of THIS campaign only, skips completed episodes
+# (src/sidekick/runner.py:408-413) and fills the rest. That is resumption, not a
+# re-read: no readable result.json is ever overwritten (A1 §8, §10.1).
+#
+#   Dry run on dev (forces SPLIT=dev, CID gets _dryrun):
+#     qsub -v CFG=configs/j10_planner_alone_cap81.yaml,DRYRUN=1,TASKS=6 scripts/pbs/j10_arm.pbs
+#   The registered read (only once A1 is committed FROZEN):
+#     qsub -v CFG=configs/j10_advise_k1_fullctx.yaml,SPLIT=test_normal,J10_CONFIRM=A1_FROZEN,EXPECTED_CODEX_VERSION=<x.y.z> scripts/pbs/j10_arm.pbs
+#   Arm 3 (planner_alone) serves no model; it may be submitted with a CPU select:
+#     qsub -l select=1:ncpus=12:mem=64gb -v CFG=configs/j10_planner_alone_cap81.yaml,... scripts/pbs/j10_arm.pbs
+#
+# Job variables (qsub -v):
+#   CFG        configs/j10_*.yaml (required; relative to the repo or absolute)
+#   SYSTEM     runner --system; default derived from the config stem, and it must agree
+#   SPLIT      dev (default) | test_normal. test_challenge is always refused.
+#   TASKS      default: the whole split (dev 57, test_normal 168; test_normal refuses others)
+#   SEEDS      default 1,2 (test_normal refuses anything else -- A1 §4)
+#   CID        default: the config's campaign_id (+ _dryrun when DRYRUN=1)
+#   DRYRUN     1 -> SPLIT=dev, CID+_dryrun, prefix sources rewritten to the _dryrun planner run
+#   EXPECTED_CODEX_VERSION  refuse to start unless `codex --version` matches (full line or version token)
+#   J10_CONFIRM             must equal A1_FROZEN for SPLIT=test_normal
+#   WORKERS (6), RUN_TIMEOUT (30600 s), ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS, SKIP_VERIFY_CONFIGS=1
+#
+# Refusals (exit 2), all before a GPU model is loaded or anything under results/ changes:
+#   (a) SPLIT=test_challenge, any split but dev/test_normal; SPLIT=test_normal unless the one
+#       `**Status**` line of the prereg starts FROZEN and says no DRAFT, the prereg is committed
+#       and unmodified, J10_CONFIRM=A1_FROZEN, CID is the config's campaign_id, TASKS=168, SEEDS=1,2
+#   (b) EXPECTED_CODEX_VERSION set and `codex --version` differs (or codex absent)
+#   (c) planner.type codex with planner.model != gpt-5.6-luna; a hosted arm whose planner is not
+#       codex; executor_alone with a codex planner; a prefix arm without packet_source
+#   plus: config with a `split:` key (A1 §10.2), SYSTEM disagreeing with the config, dev episodes
+#   aimed at a registered test campaign id, a prefix arm whose planner source is incomplete
+#   (A1 §10: arm 3 completes first), another live job holding the same CID.
+# Exit codes: 0 arm complete (target non-crashed episodes, 0 crashes) | 2 refused |
+#   3 crashes or missing episodes remain -> resubmit next quota window | other: smoke/gate/infra.
+#
+# Do NOT add reasoning-parser flags to vLLM (G3). The --lora-modules alias MUST equal
+# executor.lora_name or requests silently hit the base model.
+
+set -uo pipefail
+
+REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+SELFTEST="${J10_SELFTEST:-0}"
+JOBTAG="${PBS_JOBID:-nopbs$$}"
+JOBNUM="${JOBTAG%%.*}"; JOBNUM="${JOBNUM//[^0-9A-Za-z]/}"
+PBS_LOGDIR="${REPO}/campaign/workers/logs"
+
+CFG="${CFG:-}"
+SYSTEM="${SYSTEM:-}"
+SPLIT="${SPLIT:-dev}"
+TASKS="${TASKS:-}"
+SEEDS="${SEEDS:-1,2}"
+CID="${CID:-}"
+DRYRUN="${DRYRUN:-0}"
+EXPECTED_CODEX_VERSION="${EXPECTED_CODEX_VERSION:-}"
+J10_CONFIRM="${J10_CONFIRM:-}"
+WORKERS="${WORKERS:-6}"
+RUN_TIMEOUT="${RUN_TIMEOUT:-30600}"
+REGISTERED_PLANNER_MODEL=gpt-5.6-luna
+PREREG="${REPO}/docs/prereg_j10_amendment_20260924.md"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+if [[ "${SELFTEST}" == "1" ]]; then
+  # Self-test seams only: never honoured by a real submission.
+  PREREG="${J10_PREREG:-${PREREG}}"
+  OUT="${J10_OUT:-${OUT}}"
+  LOGDIR="${J10_LOGDIR:-${LOGDIR}}"
+fi
+
+if [[ "${SELFTEST}" != "1" ]]; then
+  mkdir -p "${PBS_LOGDIR}"
+  CFG_TAG="$(basename "${CFG:-nocfg}" .yaml)"
+  exec >> "${PBS_LOGDIR}/j10_arm.${CFG_TAG}.${JOBTAG}.out" 2>&1
+fi
+
+fatal () { echo "[j10] FATAL: $*"; exit 2; }
+echo "[j10] start=$(date -Iseconds) job=${JOBTAG} host=$(hostname) cfg=${CFG} system=${SYSTEM:-<derive>} split=${SPLIT} tasks=${TASKS:-<split>} seeds=${SEEDS} cid=${CID:-<config>} dryrun=${DRYRUN} selftest=${SELFTEST}"
+
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="${REPO}/src:${REPO}:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json.
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+if [[ "${SELFTEST}" == "1" && -n "${J10_STUB_DIR:-}" ]]; then
+  export PATH="${J10_STUB_DIR}:${PATH}"  # a stub codex must win over ~/.local/bin/codex
+fi
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+PY="${PY:-${SIDEKICK_VENV}/bin/python}"
+SUM="${REPO}/scripts/setup/campaign_summarize.py"
+MODEL_GRANITE=ibm-granite/granite-4.2-8b
+ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
+# Same default as hj12_prefix.pbs / hj12_live.pbs, which produced the dev prefix and advice
+# arms A1 cites. hj8_frontier.pbs defaults to the older sft_b_plus_granite8b -- see the report.
+ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b}"
+MAX_LORAS=4
+cd "${REPO}" || exit 1
+echo "[j10] repo_commit=${SIDEKICK_START_COMMIT} dirty_files=$(git -C "${REPO}" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+
+# ---- config -------------------------------------------------------------------
+[[ -n "${CFG}" ]] || fatal "CFG is required (a configs/j10_*.yaml path)"
+[[ "${CFG}" == /* ]] || CFG="${REPO}/${CFG}"
+[[ -f "${CFG}" ]] || fatal "config not found: ${CFG}"
+CFG_BASE="$(basename "${CFG}")"
+CFG_STEM="${CFG_BASE%.yaml}"
+[[ "${CFG_BASE}" == j10_*.yaml ]] || fatal "CFG must be a j10_*.yaml config, got ${CFG_BASE}"
+if [[ "${SELFTEST}" != "1" && "$(dirname "$(readlink -f "${CFG}")")" != "$(readlink -f "${REPO}/configs")" ]]; then
+  fatal "CFG must live in ${REPO}/configs (got ${CFG})"
+fi
+echo "[j10] config ${CFG} sha256=$(sha256sum "${CFG}" | cut -d' ' -f1)"
+
+CFG_CAMPAIGN_ID=""; PLANNER_TYPE=""; PLANNER_MODEL=""; PACKET_SOURCE=""; EXECUTOR_TYPE=""
+EXECUTOR_MODEL=""; LORA_NAME=""; HANDOFF_SOURCE=""; HAS_SPLIT_KEY=""
+FACTS="$(timeout 60 "${PY}" - "${CFG}" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+
+data = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+if not isinstance(data, dict):
+    sys.exit("config is not a mapping")
+planner = data.get("planner") if isinstance(data.get("planner"), dict) else {}
+executor = data.get("executor") if isinstance(data.get("executor"), dict) else {}
+handoff = data.get("handoff") if isinstance(data.get("handoff"), dict) else {}
+lora = executor.get("lora_name")
+lora = "" if lora is None or str(lora).strip() in ("", "null", "None") else str(lora).strip()
+
+
+def clean(value):
+    return "" if value is None else str(value).strip().replace("\n", " ")
+
+
+facts = {
+    "CFG_CAMPAIGN_ID": clean(data.get("campaign_id")),
+    "PLANNER_TYPE": clean(planner.get("type") or data.get("planner_type") or "mock"),
+    "PLANNER_MODEL": clean(planner.get("model")),
+    "PACKET_SOURCE": clean(planner.get("packet_source")),
+    "EXECUTOR_TYPE": clean(executor.get("type") or data.get("executor_type") or "mock"),
+    "EXECUTOR_MODEL": clean(executor.get("model")),
+    "LORA_NAME": lora,
+    "HANDOFF_SOURCE": clean(handoff.get("source_campaign")),
+    "HAS_SPLIT_KEY": "1" if "split" in data else "0",
+}
+for key, value in facts.items():
+    print(f"{key}={value}")
+PY
+)" || fatal "could not read ${CFG} (PyYAML / syntax)"
+while IFS='=' read -r key value; do
+  case "${key}" in
+    CFG_CAMPAIGN_ID) CFG_CAMPAIGN_ID="${value}";;
+    PLANNER_TYPE) PLANNER_TYPE="${value}";;
+    PLANNER_MODEL) PLANNER_MODEL="${value}";;
+    PACKET_SOURCE) PACKET_SOURCE="${value}";;
+    EXECUTOR_TYPE) EXECUTOR_TYPE="${value}";;
+    EXECUTOR_MODEL) EXECUTOR_MODEL="${value}";;
+    LORA_NAME) LORA_NAME="${value}";;
+    HANDOFF_SOURCE) HANDOFF_SOURCE="${value}";;
+    HAS_SPLIT_KEY) HAS_SPLIT_KEY="${value}";;
+  esac
+done <<< "${FACTS}"
+echo "[j10] config campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} planner.model=${PLANNER_MODEL:-<unset>} packet_source=${PACKET_SOURCE:-<none>} executor=${EXECUTOR_TYPE}:${EXECUTOR_MODEL:-<none>} lora_name=${LORA_NAME:-<none>} handoff.source_campaign=${HANDOFF_SOURCE:-<none>}"
+[[ -n "${CFG_CAMPAIGN_ID}" ]] || fatal "${CFG} has no campaign_id"
+[[ "${HAS_SPLIT_KEY}" == "0" ]] || fatal "${CFG} carries a split: key; the split is a CLI argument and a config key is inert (A1 §10.2)"
+
+case "${CFG_STEM}" in
+  j10_executor_alone) REG_SYSTEM=executor_alone;;
+  j10_sft_plan) REG_SYSTEM=sft_plan;;
+  j10_planner_alone_cap81) REG_SYSTEM=planner_alone;;
+  j10_prefix_*) REG_SYSTEM=prefix_handoff;;
+  j10_advise_*|j10_takeover_*) REG_SYSTEM=fixed_k;;
+  *) REG_SYSTEM="";;
+esac
+if [[ -z "${SYSTEM}" ]]; then
+  [[ -n "${REG_SYSTEM}" ]] || fatal "no registered system for ${CFG_STEM}; pass SYSTEM"
+  SYSTEM="${REG_SYSTEM}"
+elif [[ -n "${REG_SYSTEM}" && "${SYSTEM}" != "${REG_SYSTEM}" ]]; then
+  fatal "SYSTEM=${SYSTEM} disagrees with the registered system ${REG_SYSTEM} for ${CFG_STEM}"
+fi
+case "${SYSTEM}" in
+  planner_alone|fixed_k|sft_plan) HOSTED=1;;
+  executor_alone|prefix_handoff) HOSTED=0;;
+  *) fatal "SYSTEM=${SYSTEM} is not a J10 system";;
+esac
+
+# ---- (a) split -------------------------------------------------------------------
+if [[ "${DRYRUN}" == "1" ]]; then
+  [[ "${SPLIT}" == "dev" ]] || echo "[j10] DRYRUN=1 forces SPLIT=dev (was ${SPLIT})"
+  SPLIT=dev
+fi
+case "${SPLIT}" in
+  test_challenge) fatal "SPLIT=test_challenge is never read under A1 (A1 §8)";;
+  dev) N_SPLIT_TASKS=57;;
+  test_normal) N_SPLIT_TASKS=168;;
+  *) fatal "SPLIT must be dev or test_normal, got ${SPLIT}";;
+esac
+TASKS="${TASKS:-${N_SPLIT_TASKS}}"
+[[ "${TASKS}" =~ ^[0-9]+$ && "${TASKS}" -ge 1 ]] || fatal "TASKS must be a positive integer, got ${TASKS}"
+[[ "${SEEDS}" =~ ^[0-9]+(,[0-9]+)*$ ]] || fatal "SEEDS must look like 1,2 -- got ${SEEDS}"
+N_SEEDS=$(awk -F, '{print NF}' <<< "${SEEDS}")
+SMOKE_SEED="${SEEDS%%,*}"
+TARGET=$((TASKS * N_SEEDS))
+
+if [[ "${SPLIT}" == "test_normal" ]]; then
+  [[ -f "${PREREG}" ]] || fatal "prereg not found: ${PREREG}"
+  mapfile -t STATUS_LINES < <(grep -E '^\*\*Status\*\*' "${PREREG}")
+  [[ "${#STATUS_LINES[@]}" -eq 1 ]] || fatal "expected exactly one **Status** line in ${PREREG}, found ${#STATUS_LINES[@]}"
+  STATUS_LINE="${STATUS_LINES[0]}"
+  echo "[j10] prereg status line: ${STATUS_LINE}"
+  # "contains FROZEN" alone is not enough: the DRAFT line reads "... Becomes FROZEN on commit."
+  if ! [[ "${STATUS_LINE}" =~ ^\*\*Status\*\*:[[:space:]]*(\*\*)?[[:space:]]*FROZEN ]]; then
+    fatal "A1 is not FROZEN: the **Status** value must begin with FROZEN"
+  fi
+  if grep -qi 'DRAFT' <<< "${STATUS_LINE}"; then
+    fatal "A1 status line still mentions DRAFT"
+  fi
+  [[ "${J10_CONFIRM}" == "A1_FROZEN" ]] || fatal "SPLIT=test_normal needs J10_CONFIRM=A1_FROZEN"
+  if [[ "${SELFTEST}" != "1" ]]; then
+    git -C "${REPO}" ls-files --error-unmatch "${PREREG}" >/dev/null 2>&1 \
+      || fatal "${PREREG} is not committed; FROZEN means committed"
+    git -C "${REPO}" diff --quiet HEAD -- "${PREREG}" \
+      || fatal "${PREREG} has uncommitted changes; the frozen text is the committed text"
+  fi
+  [[ "${TASKS}" -eq 168 ]] || fatal "test_normal is registered at all 168 tasks (TASKS=${TASKS})"
+  [[ "${SEEDS}" == "1,2" ]] || fatal "test_normal is registered at seeds 1,2 (SEEDS=${SEEDS})"
+fi
+
+# ---- campaign id -------------------------------------------------------------------
+if [[ -z "${CID}" ]]; then
+  CID="${CFG_CAMPAIGN_ID}"
+fi
+if [[ "${DRYRUN}" == "1" && "${CID}" != *_dryrun ]]; then
+  CID="${CID}_dryrun"
+fi
+[[ "${CID}" =~ ^[A-Za-z0-9_.-]+$ && "${CID}" != "." && "${CID}" != ".." ]] || fatal "unsafe CID ${CID}"
+if [[ "${SPLIT}" == "test_normal" && "${CID}" != "${CFG_CAMPAIGN_ID}" ]]; then
+  fatal "test_normal must write the registered campaign id ${CFG_CAMPAIGN_ID}, not ${CID}"
+fi
+if [[ "${SPLIT}" != "test_normal" && "${CID}" == "${CFG_CAMPAIGN_ID}" ]]; then
+  fatal "SPLIT=${SPLIT} into the registered test campaign id ${CID} would mix dev episodes into the test tree; use DRYRUN=1 or another CID"
+fi
+echo "[j10] cid=${CID} system=${SYSTEM} hosted=${HOSTED} split=${SPLIT} tasks=${TASKS} seeds=${SEEDS} target=${TARGET}"
+
+# ---- (c) planner model ---------------------------------------------------------------
+echo "[j10] planner model from config: ${PLANNER_MODEL:-<unset>} (type ${PLANNER_TYPE})"
+if [[ "${PLANNER_TYPE}" == "codex" && "${PLANNER_MODEL}" != "${REGISTERED_PLANNER_MODEL}" ]]; then
+  fatal "planner.model is '${PLANNER_MODEL}', registered planner is exactly ${REGISTERED_PLANNER_MODEL}"
+fi
+if [[ "${HOSTED}" == "1" && "${PLANNER_TYPE}" != "codex" ]]; then
+  fatal "hosted arm ${SYSTEM} has planner.type=${PLANNER_TYPE}; anything but codex silently runs MockPlanner"
+fi
+if [[ "${SYSTEM}" == "executor_alone" && "${PLANNER_TYPE}" == "codex" ]]; then
+  fatal "executor_alone must not carry a codex planner"
+fi
+if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+  [[ -n "${HANDOFF_SOURCE}" ]] || fatal "prefix arm without handoff.source_campaign"
+  [[ -z "${PLANNER_MODEL}" || "${PLANNER_TYPE}" != "codex" || -n "${PACKET_SOURCE}" ]] \
+    || fatal "prefix arm with a codex planner but no packet_source could spend live calls"
+fi
+
+# ---- (b) codex version ---------------------------------------------------------------
+CODEX_VERSION=""
+if command -v codex >/dev/null 2>&1; then
+  CODEX_VERSION="$(timeout 60 codex --version 2>/dev/null | head -n 1 | tr -d '\r')"
+fi
+echo "[j10] codex --version: ${CODEX_VERSION:-<unavailable>}"
+if [[ -n "${EXPECTED_CODEX_VERSION}" ]]; then
+  [[ -n "${CODEX_VERSION}" ]] || fatal "EXPECTED_CODEX_VERSION=${EXPECTED_CODEX_VERSION} but codex --version returned nothing"
+  CODEX_TOKEN="${CODEX_VERSION##* }"
+  if [[ "${CODEX_VERSION}" != "${EXPECTED_CODEX_VERSION}" && "${CODEX_TOKEN}" != "${EXPECTED_CODEX_VERSION}" ]]; then
+    fatal "codex --version is '${CODEX_VERSION}', expected '${EXPECTED_CODEX_VERSION}'"
+  fi
+  echo "[j10] codex version matches EXPECTED_CODEX_VERSION=${EXPECTED_CODEX_VERSION}"
+fi
+if [[ "${HOSTED}" == "1" ]]; then
+  command -v codex >/dev/null 2>&1 || fatal "hosted arm but codex is not on PATH"
+  if [[ "${SELFTEST}" != "1" && ! -s "${HOME}/.codex/auth.json" ]]; then
+    fatal "~/.codex/auth.json missing or empty -- planner cannot authenticate"
+  fi
+fi
+
+# ---- DRYRUN: replay the dry-run planner campaign, never the registered one -----------
+CFG_EFF="${CFG}"
+case "${HANDOFF_SOURCE}${PACKET_SOURCE}" in
+  *j10_*_20260924*) REGISTERED_SOURCE=1;;
+  *) REGISTERED_SOURCE=0;;
+esac
+if [[ "${DRYRUN}" == "1" && -n "${HANDOFF_SOURCE}${PACKET_SOURCE}" ]]; then
+  mkdir -p "${LOGDIR}/j10_dryrun_cfg"
+  CFG_EFF="${LOGDIR}/j10_dryrun_cfg/${CID}.${JOBNUM}.yaml"
+  timeout 60 "${PY}" - "${CFG}" "${CFG_EFF}" "${CID}" <<'PY' || fatal "could not write the dry-run config"
+import re
+import sys
+from pathlib import Path
+import yaml
+
+src, dest, cid = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
+data = yaml.safe_load(Path(src).read_text(encoding="utf-8")) or {}
+pattern = re.compile(r"^(.*/)?(j10_[A-Za-z0-9_]+_20260924)/?$")
+
+
+def rewrite(value):
+    if isinstance(value, dict):
+        return {k: rewrite(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [rewrite(v) for v in value]
+    if isinstance(value, str):
+        m = pattern.match(value)
+        if m:
+            return f"{m.group(1) or ''}{m.group(2)}_dryrun"
+    return value
+
+
+data = rewrite(data)
+data["campaign_id"] = cid
+dest.write_text(
+    f"# DRY-RUN derivative of {src}; J10 sources rewritten to *_dryrun. Never a registered config.\n"
+    + yaml.safe_dump(data, sort_keys=False),
+    encoding="utf-8",
+)
+print(f"[j10] dry-run config {dest}")
+PY
+  HANDOFF_SOURCE="$(grep -E '^[[:space:]]*source_campaign:' "${CFG_EFF}" | head -n 1 | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]+$//')"
+  echo "[j10] dry-run handoff.source_campaign=${HANDOFF_SOURCE:-<none>}"
+elif [[ "${SPLIT}" == "dev" && "${REGISTERED_SOURCE}" == "1" ]]; then
+  fatal "a dev run of ${CFG_STEM} would replay the registered TEST planner campaign; use DRYRUN=1"
+fi
+
+# ---- prefix arms: the planner run they replay must be complete (A1 §10) --------------
+if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+  SRC_STATS="$(timeout 300 "${PY}" - "${HANDOFF_SOURCE}" "${SEEDS}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+seeds = {s for s in sys.argv[2].split(",") if s}
+ok = crash = bad = 0
+if root.is_dir():
+    for path in root.rglob("result.json"):
+        try:
+            row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            bad += 1
+            continue
+        if not isinstance(row, dict):
+            bad += 1
+        elif row.get("error_type") == "crash":
+            crash += 1
+        elif str(row.get("seed")) in seeds:
+            ok += 1
+print(f"{ok} {crash} {bad} {1 if root.is_dir() else 0}")
+PY
+)" || fatal "could not inspect the prefix source ${HANDOFF_SOURCE}"
+  read -r SRC_OK SRC_CRASH SRC_BAD SRC_EXISTS <<< "${SRC_STATS}"
+  echo "[j10] prefix source ${HANDOFF_SOURCE}: exists=${SRC_EXISTS} non_crashed=${SRC_OK} crashed=${SRC_CRASH} unreadable=${SRC_BAD} (need >= ${TARGET}, 0 crashed)"
+  if [[ "${SRC_EXISTS}" != "1" || "${SRC_OK}" -lt "${TARGET}" || "${SRC_CRASH}" -ne 0 || "${SRC_BAD}" -ne 0 ]]; then
+    fatal "prefix source campaign is not complete; arm 3 must complete before arms 4-7 start (A1 §10)"
+  fi
+fi
+
+# Gate flags: arms that must not call the planner get --gate alone, which asserts ZERO
+# live planner calls; hosted arms must show gpt-5.6-luna on every planner usage record.
+GATE_ARGS=(--gate)
+if [[ "${HOSTED}" == "1" ]]; then
+  GATE_ARGS+=(--expect-planner --expect-model "${REGISTERED_PLANNER_MODEL}")
+fi
+
+# ---- (g) the tally: what an operator reads before resubmitting ------------------------
+tally_campaign () {
+  local root="${OUT}/${CID}"
+  local n_files=0 n_bad=0 n_crash=0 n_ok=0 n_other_seed=0 n_orphan=0 line et sd f d
+  local -A dist=()
+  local seeds_csv=",${SEEDS},"
+  echo "[j10] ---- error_type distribution (${CID}) ----"
+  if command -v jq >/dev/null 2>&1; then
+    while IFS= read -r -d '' f; do
+      n_files=$((n_files + 1))
+      line="$(jq -r '[((.error_type // "none") | tostring), ((.seed // "?") | tostring)] | @tsv' "${f}" 2>/dev/null)"
+      if [[ $? -ne 0 || -z "${line}" ]]; then
+        n_bad=$((n_bad + 1)); dist[unreadable]=$(( ${dist[unreadable]:-0} + 1 )); continue
+      fi
+      IFS=$'\t' read -r et sd <<< "${line}"
+      dist[${et}]=$(( ${dist[${et}]:-0} + 1 ))
+      if [[ "${et}" == "crash" ]]; then
+        n_crash=$((n_crash + 1))
+      elif [[ "${seeds_csv}" == *",${sd},"* ]]; then
+        n_ok=$((n_ok + 1))
+      else
+        n_other_seed=$((n_other_seed + 1))
+      fi
+    done < <(find "${root}" -type f -name result.json -print0 2>/dev/null)
+  else
+    echo "[j10] WARN: jq not on PATH; tally via python"
+    read -r n_files n_bad n_crash n_ok n_other_seed < <(timeout 300 "${PY}" - "${root}" "${SEEDS}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from collections import Counter
+
+root, seeds = Path(sys.argv[1]), {s for s in sys.argv[2].split(",") if s}
+n = bad = crash = ok = other = 0
+dist = Counter()
+for path in root.rglob("result.json") if root.is_dir() else []:
+    n += 1
+    try:
+        row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        row = None
+    if not isinstance(row, dict):
+        bad += 1
+        dist["unreadable"] += 1
+        continue
+    dist[str(row.get("error_type") or "none")] += 1
+    if row.get("error_type") == "crash":
+        crash += 1
+    elif str(row.get("seed")) in seeds:
+        ok += 1
+    else:
+        other += 1
+for key, count in dist.most_common():
+    print(f"{count:8d}  {key}", file=sys.stderr)
+print(n, bad, crash, ok, other)
+PY
+)
+  fi
+  for et in "${!dist[@]}"; do
+    printf '%8d  %s\n' "${dist[${et}]}" "${et}"
+  done | sort -rn
+  while IFS= read -r -d '' d; do
+    [[ -f "${d}/result.json" ]] || n_orphan=$((n_orphan + 1))
+  done < <(find "${root}" -type f \( -name events.jsonl -o -name manifest.json \) -printf '%h\0' 2>/dev/null | sort -zu)
+  local missing=$((TARGET - n_ok))
+  (( missing < 0 )) && missing=0
+  echo "[j10] tally cid=${CID} target=${TARGET} non_crashed=${n_ok} crashed=${n_crash} unreadable=${n_bad} other_seed=${n_other_seed} attempts_without_result=${n_orphan} missing=${missing} result_files=${n_files}"
+  if (( n_crash > 0 || n_bad > 0 || n_ok < TARGET )); then
+    echo "[j10] INCOMPLETE: ${n_ok}/${TARGET} non-crashed, ${n_crash} crashed -- resubmit this arm after the quota window resets"
+    return 3
+  fi
+  (( n_ok > TARGET )) && echo "[j10] WARN: ${n_ok} non-crashed episodes exceed the target ${TARGET} (was TASKS changed between submissions?)"
+  echo "[j10] COMPLETE: ${n_ok}/${TARGET} non-crashed, 0 crashed"
+  return 0
+}
+
+if [[ "${SELFTEST}" == "1" ]]; then
+  echo "[j10] selftest: preflight passed system=${SYSTEM} cid=${CID} split=${SPLIT} target=${TARGET} cfg_eff=${CFG_EFF} gate=${GATE_ARGS[*]}"
+  if [[ "${J10_SELFTEST_STAGE:-preflight}" == "tally" ]]; then
+    tally_campaign
+    exit $?
+  fi
+  exit 0
+fi
+
+# ---- config gate, as hj8/hj12 --------------------------------------------------------
+if [[ "${SKIP_VERIFY_CONFIGS:-0}" != "1" ]]; then
+  echo "[j10] ---- scripts/setup/verify_configs.py ----"
+  timeout 300 "${PY}" "${REPO}/scripts/setup/verify_configs.py" >/dev/null
+  VERIFY_RC=$?
+  [[ "${VERIFY_RC}" -eq 0 ]] || { echo "[j10] FATAL: verify_configs.py exited ${VERIFY_RC}"; exit "${VERIFY_RC}"; }
+else
+  echo "[j10] WARN: SKIP_VERIFY_CONFIGS=1 -- config gate skipped"
+fi
+
+# ---- one job per campaign id at a time (purge + resume assume nobody else writes) ------
+LOCKROOT="${LOGDIR}/j10_locks"
+LOCK="${LOCKROOT}/${CID}.lock"
+mkdir -p "${LOCKROOT}" "${LOGDIR}" "${OUT}/results" /scratch/n12194778/sidekick/codex_scratch
+if ! mkdir "${LOCK}" 2>/dev/null; then
+  OWNER="$(cat "${LOCK}/owner" 2>/dev/null || true)"
+  if [[ -n "${OWNER}" && "${OWNER}" != "${JOBTAG}" ]] && qstat "${OWNER}" >/dev/null 2>&1; then
+    fatal "campaign ${CID} is locked by live job ${OWNER} (${LOCK})"
+  fi
+  echo "[j10] WARN: taking over stale lock ${LOCK} (owner=${OWNER:-unknown} is not a live job)"
+  rm -rf "${LOCK}"
+  mkdir "${LOCK}" || fatal "could not take lock ${LOCK}"
+fi
+echo "${JOBTAG}" > "${LOCK}/owner"
+
+VLLM_PID=""
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]]; then
+    kill -TERM -- -"${VLLM_PID}" 2>/dev/null || true
+    local _
+    for _ in $(seq 1 12); do
+      kill -0 "${VLLM_PID}" 2>/dev/null || break
+      sleep 5
+    done
+    kill -KILL -- -"${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+    VLLM_PID=""
+    sleep 5
+    echo "[j10] GPU after shutdown:"
+    nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader || true
+  fi
+}
+cleanup () {
+  kill_vllm
+  if [[ "$(cat "${LOCK}/owner" 2>/dev/null)" == "${JOBTAG}" ]]; then
+    rm -rf "${LOCK}"
+  fi
+}
+trap cleanup EXIT
+trap 'echo "[j10] caught TERM"; exit 143' TERM
+
+# ---- vLLM: copied from scripts/pbs/hj12_prefix.pbs (port, LoRA registration, identity) --
+LORA_MODULES=()
+register_lora () {
+  local alias="$1"
+  local path="$2"
+  if [[ ! -d "${path}" ]]; then
+    echo "[j10] FATAL: adapter path for alias ${alias} is not a directory: ${path}" >&2
+    exit 2
+  fi
+  if [[ ! -f "${path}/adapter_config.json" ]]; then
+    echo "[j10] FATAL: adapter for alias ${alias} missing adapter_config.json: ${path}" >&2
+    exit 2
+  fi
+  if [[ ! -f "${path}/adapter_model.safetensors" && ! -f "${path}/adapter_model.bin" && ! -f "${path}/adapter_model.pt" ]]; then
+    echo "[j10] FATAL: adapter for alias ${alias} missing weights file: ${path}" >&2
+    exit 2
+  fi
+  LORA_MODULES+=("${alias}=${path}")
+  echo "[j10] lora-module ${alias}=${path} adapter_config.sha256=$(sha256sum "${path}/adapter_config.json" | cut -d' ' -f1)"
+}
+
+j10_vllm_fatal () {
+  echo "[j10] FATAL: $*"
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]]; then
+    echo "[j10] vllm log tail:"
+    tail -n 60 "${VLOG}" || true
+  fi
+  exit 1
+}
+
+j10_port_listening () {
+  local p="$1"
+  ss -ltn 2>/dev/null | awk -v want="$p" '
+    $1 == "LISTEN" {
+      n = split($4, a, ":")
+      if (n > 0 && a[n] == want) found = 1
+    }
+    END { exit found ? 0 : 1 }
+  '
+}
+
+j10_choose_vllm_port () {
+  local jobnum tries
+  jobnum="${JOBNUM//[^0-9]/}"
+  [[ -n "${jobnum}" ]] || jobnum="$$"
+  VLLM_PORT=$(( 20000 + jobnum % 20000 ))
+  tries=0
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "[j10] WARN: ss not available; using derived VLLM_PORT=${VLLM_PORT} without LISTEN probe"
+  else
+    while j10_port_listening "${VLLM_PORT}"; do
+      tries=$((tries + 1))
+      if [[ "${tries}" -ge 50 ]]; then
+        echo "[j10] FATAL: no free vLLM port after 50 tries (last=${VLLM_PORT})"
+        exit 1
+      fi
+      VLLM_PORT=$((VLLM_PORT + 1))
+      if [[ "${VLLM_PORT}" -ge 40000 ]]; then
+        VLLM_PORT=20000
+      fi
+    done
+  fi
+  export VLLM_PORT
+  export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"
+  echo "[j10] vllm_port=${VLLM_PORT} base_url=${SIDEKICK_VLLM_BASE_URL}"
+}
+
+j10_vllm_identity_check () {
+  local body ids_file alias spec missing have ss_line listen_pid listen_pgid
+  body=$(curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models") || j10_vllm_fatal "/v1/models failed after the port answered"
+  ids_file="$(mktemp)"
+  printf '%s' "${body}" | "${PY}" -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    body = json.loads(raw or "null")
+except json.JSONDecodeError as exc:
+    sys.stderr.write(f"[j10] FATAL: /v1/models body is not JSON: {exc}\n")
+    sys.exit(2)
+ids = []
+if isinstance(body, dict):
+    data = body.get("data")
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and item.get("id") is not None:
+                ids.append(str(item["id"]))
+    if body.get("id") is not None:
+        ids.append(str(body["id"]))
+print("\n".join(ids))
+' > "${ids_file}" || j10_vllm_fatal "/v1/models body is not JSON"
+  missing=()
+  have="$(tr '\n' ' ' < "${ids_file}")"
+  if ! grep -Fxq "${MODEL}" "${ids_file}"; then
+    rm -f "${ids_file}"
+    j10_vllm_fatal "vLLM /v1/models missing served base model ${MODEL} (have: ${have})"
+  fi
+  echo "[j10] vllm identity: base_model=${MODEL} present in /v1/models"
+  for spec in "${LORA_MODULES[@]+"${LORA_MODULES[@]}"}"; do
+    alias="${spec%%=*}"
+    if ! grep -Fxq "${alias}" "${ids_file}"; then
+      missing+=("${alias}")
+    fi
+  done
+  rm -f "${ids_file}"
+  if [[ "${#missing[@]}" -ne 0 ]]; then
+    j10_vllm_fatal "vLLM /v1/models missing LoRA alias(es): ${missing[*]} (have: ${have})"
+  fi
+  if command -v ss >/dev/null 2>&1; then
+    ss_line="$(ss -ltnp 2>/dev/null | awk -v p="${VLLM_PORT}" '
+      $1 == "LISTEN" {
+        n = split($4, a, ":")
+        if (n > 0 && a[n] == p) { print; exit }
+      }
+    ')"
+    if [[ -n "${ss_line}" && "${ss_line}" =~ pid=([0-9]+) ]]; then
+      listen_pid="${BASH_REMATCH[1]}"
+      listen_pgid="$(ps -o pgid= -p "${listen_pid}" 2>/dev/null | tr -d '[:space:]')"
+      if [[ "${listen_pgid}" != "${VLLM_PID}" ]]; then
+        j10_vllm_fatal "vLLM port ${VLLM_PORT} is held by pid=${listen_pid} pgid=${listen_pgid}, expected pgid=${VLLM_PID}"
+      fi
+      echo "[j10] vllm identity: listen pid=${listen_pid} pgid=${listen_pgid} matches VLLM_PID"
+    else
+      echo "[j10] WARN: no pid on the LISTEN line for ${VLLM_PORT}; skipping pgid identity check"
+    fi
+  fi
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]] && grep -Eq 'port .* is used by process' "${VLOG}"; then
+    j10_vllm_fatal "vLLM log reports port is used by process"
+  fi
+}
+
+if [[ "${EXECUTOR_TYPE}" == "vllm" ]]; then
+  MODEL="${EXECUTOR_MODEL}"
+  [[ "${MODEL}" == "${MODEL_GRANITE}" ]] || fatal "executor.model ${MODEL} is not the registered receiver ${MODEL_GRANITE}"
+  export HF_HOME=/scratch/n12194778/hf
+  unset HF_HUB_OFFLINE || true
+  if [[ -n "${LORA_NAME}" ]]; then
+    [[ "${LORA_NAME}" == "${ALIAS_SFT_B_PLUS}" ]] \
+      || fatal "executor.lora_name=${LORA_NAME} is not the served alias ${ALIAS_SFT_B_PLUS}; requests would silently hit BASE"
+    register_lora "${ALIAS_SFT_B_PLUS}" "${ADAPTER_SFT_B_PLUS}"
+  else
+    echo "[j10] executor.lora_name is null: serving the BASE model only (registered receiver for this arm)"
+  fi
+  [[ "${#LORA_MODULES[@]}" -le "${MAX_LORAS}" ]] || fatal "too many LoRA modules"
+  j10_choose_vllm_port
+  VLOG="${LOGDIR}/j10_arm.${CID}.${JOBNUM}_vllm.log"
+  LORA_SERVE_FLAGS=()
+  if [[ "${#LORA_MODULES[@]}" -gt 0 ]]; then
+    LORA_SERVE_FLAGS=(--enable-lora --max-loras "${MAX_LORAS}" --max-lora-rank 64 --lora-modules "${LORA_MODULES[@]}")
+  fi
+  mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+  setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+    --served-model-name "${MODEL}" \
+    --dtype bfloat16 \
+    --max-model-len 32768 \
+    --host 127.0.0.1 --port "${VLLM_PORT}" \
+    --gpu-memory-utilization 0.85 \
+    ${LORA_SERVE_FLAGS[@]+"${LORA_SERVE_FLAGS[@]}"} \
+    > "${VLOG}" 2>&1 &
+  VLLM_PID=$!
+  echo "[j10] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} ${LORA_SERVE_FLAGS[*]} vlog=${VLOG}"
+  t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+  while (( $(date +%s) < deadline )); do
+    kill -0 "${VLLM_PID}" 2>/dev/null || j10_vllm_fatal "vllm died before healthy"
+    if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
+      echo "[j10] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+    fi
+    sleep 5
+  done
+  [[ "${healthy}" -eq 1 ]] || j10_vllm_fatal "vllm not healthy within 300s"
+  j10_vllm_identity_check
+else
+  echo "[j10] executor.type=${EXECUTOR_TYPE}: no vLLM server (planner drives)"
+fi
+
+# ---- (d) purge crashed episodes of THIS campaign only ------------------------------------
+echo "[j10] ---- purge crashed episodes (${CID} only; limit/timeout/parse_error are scored and kept) ----"
+# Captured, not piped to head: a closed pipe would SIGPIPE the summary print and fail the rc.
+PURGE_OUT="$(timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-crashed-only 2>&1)"
+PURGE_RC=$?
+printf '%s\n' "${PURGE_OUT}" | grep -E '^\[purge-crashed-only\]|Error|error' | head -n 5
+[[ "${PURGE_RC}" -eq 0 ]] || { echo "[j10] FATAL: purge exited ${PURGE_RC}"; printf '%s\n' "${PURGE_OUT}" | tail -n 20; exit 1; }
+N_EXISTING=$(find "${OUT}/${CID}" -type f -name result.json 2>/dev/null | wc -l | tr -d ' ')
+echo "[j10] resume: ${CID} has ${N_EXISTING} result.json after purge (target ${TARGET})"
+
+# ---- (e) smoke gate: first submission only, fresh campaign id every time ------------------
+if [[ "${N_EXISTING}" -eq 0 ]]; then
+  SCID="${CID}_smoke_${JOBNUM}"
+  echo "[j10] ---- smoke gate (${SCID}, split ${SPLIT}, 3 tasks, seed ${SMOKE_SEED}) ----"
+  timeout 1800 "${PY}" -m sidekick.runner \
+    --system "${SYSTEM}" --split "${SPLIT}" --tasks 3 --seeds "${SMOKE_SEED}" \
+    --env appworld --workers 3 \
+    --config "${CFG_EFF}" --campaign-id "${SCID}" --out "${OUT}"
+  SMOKE_RC=$?
+  [[ "${SMOKE_RC}" -eq 0 ]] || { echo "[j10] FATAL: smoke runner exited ${SMOKE_RC}"; exit "${SMOKE_RC}"; }
+  timeout 300 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${SCID}" \
+    --config "${CFG_EFF}" --repo "${REPO}" "${GATE_ARGS[@]}" --expect-split "${SPLIT}"
+  GATE_RC=$?
+  [[ "${GATE_RC}" -eq 0 ]] || { echo "[j10] FATAL: smoke gate failed (rc=${GATE_RC}); ${SCID} kept for inspection"; exit "${GATE_RC}"; }
+  if [[ "${SPLIT}" == "dev" ]]; then
+    rm -rf "${OUT:?}/${SCID:?}"
+  else
+    echo "[j10] smoke tree ${OUT}/${SCID} kept: held-out episodes are never deleted"
+  fi
+else
+  echo "[j10] resume: smoke skipped (campaign already has results)"
+fi
+
+# ---- (f) the arm ---------------------------------------------------------------------------
+echo "[j10] ---- runner (${CID}) ----"
+timeout "${RUN_TIMEOUT}" "${PY}" -m sidekick.runner \
+  --system "${SYSTEM}" --split "${SPLIT}" --tasks "${TASKS}" --seeds "${SEEDS}" \
+  --env appworld --workers "${WORKERS}" \
+  --config "${CFG_EFF}" --out "${OUT}" --campaign-id "${CID}"
+CAMP_RC=$?
+echo "[j10] runner rc=${CAMP_RC}"
+
+echo "[j10] ---- summary + manifest + gate + split check (${CID}) ----"
+timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --config "${CFG_EFF}" \
+  --manifest "${OUT}/results/${CID}/manifest.json" --repo "${REPO}" \
+  "${GATE_ARGS[@]}" --expect-split "${SPLIT}"
+SUM_RC=$?
+
+tally_campaign
+TALLY_RC=$?
+
+kill_vllm
+JOB_RC=0
+if [[ "${TALLY_RC}" -ne 0 ]]; then
+  JOB_RC="${TALLY_RC}"
+elif [[ "${SUM_RC}" -ne 0 ]]; then
+  JOB_RC="${SUM_RC}"
+elif [[ "${CAMP_RC}" -ne 0 ]]; then
+  JOB_RC="${CAMP_RC}"
+fi
+echo "[j10] done=$(date -Iseconds) cid=${CID} runner_rc=${CAMP_RC} gate_rc=${SUM_RC} tally_rc=${TALLY_RC} job_rc=${JOB_RC}"
+exit "${JOB_RC}"
