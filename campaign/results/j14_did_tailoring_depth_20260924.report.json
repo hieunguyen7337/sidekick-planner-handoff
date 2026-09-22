@@ -1,0 +1,234 @@
+{
+  "analysis": "difference-in-differences, cluster bootstrap",
+  "arm_n_loaded": {
+    "c25_t_m11": 114,
+    "c25_t_m9": 114,
+    "c25_u_m11": 114,
+    "c25_u_m9": 114,
+    "c81_t_m11": 114,
+    "c81_t_m9": 114,
+    "c81_u_m11": 114,
+    "c81_u_m9": 114
+  },
+  "arm_sources": {
+    "c25_t_m11": "/scratch/n12194778/sidekick/results/hj12_prefix_m11_20260923",
+    "c25_t_m9": "/scratch/n12194778/sidekick/results/hj12_prefix_m9_20260923",
+    "c25_u_m11": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m11_20260923",
+    "c25_u_m9": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m9_20260923",
+    "c81_t_m11": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m11_20260923",
+    "c81_t_m9": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m9_20260923",
+    "c81_u_m11": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m11_20260923",
+    "c81_u_m9": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m9_20260923"
+  },
+  "bootstrap": 10000,
+  "dids": {
+    "cap25": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "c25_t_m11": 0.809825,
+          "c25_t_m9": 0.785184,
+          "c25_u_m11": 0.834456,
+          "c25_u_m9": 0.784535
+        },
+        "arms": {
+          "a_neg": "c25_t_m9",
+          "a_pos": "c25_t_m11",
+          "b_neg": "c25_u_m9",
+          "b_pos": "c25_u_m11"
+        },
+        "crashed_episodes": {
+          "c25_t_m11": 0,
+          "c25_t_m9": 0,
+          "c25_u_m11": 0,
+          "c25_u_m9": 0
+        },
+        "definition": "(c25_t_m11 - c25_t_m9) - (c25_u_m11 - c25_u_m9)",
+        "field": "goal_pass_rate",
+        "gap_a_pp": 2.464,
+        "gap_b_pp": 4.9921,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -7.6579,
+            2.5298
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -2.5281,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -7.9658,
+            3.0772
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": -2.5281,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "c25_t_m11": 0.605263,
+          "c25_t_m9": 0.561404,
+          "c25_u_m11": 0.622807,
+          "c25_u_m9": 0.552632
+        },
+        "arms": {
+          "a_neg": "c25_t_m9",
+          "a_pos": "c25_t_m11",
+          "b_neg": "c25_u_m9",
+          "b_pos": "c25_u_m11"
+        },
+        "crashed_episodes": {
+          "c25_t_m11": 0,
+          "c25_t_m9": 0,
+          "c25_u_m11": 0,
+          "c25_u_m9": 0
+        },
+        "definition": "(c25_t_m11 - c25_t_m9) - (c25_u_m11 - c25_u_m9)",
+        "field": "tgc",
+        "gap_a_pp": 4.386,
+        "gap_b_pp": 7.0175,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -9.6491,
+            4.386
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -2.6316,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -10.5263,
+            5.2632
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": -2.6316,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "cap81": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "c81_t_m11": 0.811149,
+          "c81_t_m9": 0.761904,
+          "c81_u_m11": 0.793184,
+          "c81_u_m9": 0.764974
+        },
+        "arms": {
+          "a_neg": "c81_t_m9",
+          "a_pos": "c81_t_m11",
+          "b_neg": "c81_u_m9",
+          "b_pos": "c81_u_m11"
+        },
+        "crashed_episodes": {
+          "c81_t_m11": 0,
+          "c81_t_m9": 0,
+          "c81_u_m11": 0,
+          "c81_u_m9": 0
+        },
+        "definition": "(c81_t_m11 - c81_t_m9) - (c81_u_m11 - c81_u_m9)",
+        "field": "goal_pass_rate",
+        "gap_a_pp": 4.9246,
+        "gap_b_pp": 2.8211,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.714,
+            9.0096
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 2.1035,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -3.9307,
+            8.2465
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 2.1035,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "c81_t_m11": 0.596491,
+          "c81_t_m9": 0.508772,
+          "c81_u_m11": 0.552632,
+          "c81_u_m9": 0.526316
+        },
+        "arms": {
+          "a_neg": "c81_t_m9",
+          "a_pos": "c81_t_m11",
+          "b_neg": "c81_u_m9",
+          "b_pos": "c81_u_m11"
+        },
+        "crashed_episodes": {
+          "c81_t_m11": 0,
+          "c81_t_m9": 0,
+          "c81_u_m11": 0,
+          "c81_u_m9": 0
+        },
+        "definition": "(c81_t_m11 - c81_t_m9) - (c81_u_m11 - c81_u_m9)",
+        "field": "tgc",
+        "gap_a_pp": 8.7719,
+        "gap_b_pp": 2.6316,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -3.5088,
+            16.6667
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 6.1404,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -3.5088,
+            15.7895
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 6.1404,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    }
+  },
+  "note": "DiD-2 tailoring x depth. Positive = depth helps the TAILORED receiver more. Computed separately on the two planner samples because their point estimates disagree in sign (ledger C81-02); they are reported side by side and never averaged.",
+  "population": "all (crashed episode scores 0; error_type 'limit' is not a crash)",
+  "primary_resample_unit": "scenario",
+  "seed": 20260924
+}

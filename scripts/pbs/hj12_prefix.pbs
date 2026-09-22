@@ -125,7 +125,12 @@ MAX_LORAS=4
 
 N_SMOKE_TASKS=3
 N_FULL_TASKS=57
-N_FULL_SEEDS=2
+# Allow a third seed without editing this script; the default exactly reproduces the
+# original two-seed campaigns. The smoke slice must sample the SAME seed population as
+# the full run, or its episodes are orphans that inflate the campaign count and waste time.
+SEEDS="${SEEDS:-1,2}"
+SMOKE_SEED="${SEEDS%%,*}"
+N_FULL_SEEDS=$(awk -F, "{print NF}" <<< "${SEEDS}")
 N_PLANNED=$((N_FULL_TASKS * N_FULL_SEEDS))
 
 cd "${REPO}" || exit 1
@@ -190,6 +195,20 @@ FREE_ARMS=(
   "prompt_only|${REPO}/configs/hj16_narrated_m11_zs.yaml|hj16_narrated_m11_zs"
   "sft_plan|${REPO}/configs/hj16_narrated_m6_bplus.yaml|hj16_narrated_m6_bplus"
   "sft_plan|${REPO}/configs/hj16_narrated_m11_bplus.yaml|hj16_narrated_m11_bplus"
+  # HJ-19: the same Qwen adapter served with a prompt that matches training (no
+  # chat_template_kwargs). Diagnostic A/B for the missing terminal action; see the
+  # header of configs/hj19_sft_plan_qwen_notk.yaml.
+  "sft_plan|${REPO}/configs/hj19_sft_plan_qwen_notk.yaml|hj19_sft_plan_qwen_notk"
+  "prefix_handoff|${REPO}/configs/hj19_prefix_m11_qwen_notk.yaml|hj19_prefix_m11_qwen_notk"
+  # HJ-18: seed-3 replays of the cap-81 planner sample. Same receivers, same depths,
+  # third planner seed; pooled with the HJ-17 arms they take each contrast to 171 pairs.
+  # Submit with SEEDS=3 -- the source campaign only contains seed 3.
+  "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_zs_m6.yaml|hj18_prefix_c81s3_zs_m6"
+  "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_zs_m9.yaml|hj18_prefix_c81s3_zs_m9"
+  "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_zs_m11.yaml|hj18_prefix_c81s3_zs_m11"
+  "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m6.yaml|hj18_prefix_c81s3_bplus_m6"
+  "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m9.yaml|hj18_prefix_c81s3_bplus_m9"
+  "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m11.yaml|hj18_prefix_c81s3_bplus_m11"
 )
 
 hj12_select_arms () {
@@ -799,7 +818,7 @@ run_arm () {
     rm -rf "${OUT:?}/${scid:?}"
     echo "[hj12] ---- smoke gate (${scid}) ----"
     timeout 1800 "${PY}" -m sidekick.runner \
-      --system "${system}" --split dev --tasks "${N_SMOKE_TASKS}" --seeds 1 \
+      --system "${system}" --split dev --tasks "${N_SMOKE_TASKS}" --seeds "${SMOKE_SEED}" \
       --env appworld --workers 3 \
       --config "${cfg}" --campaign-id "${scid}" --out "${OUT}"
     smoke_rc=$?
@@ -832,7 +851,7 @@ run_arm () {
 
   echo "[hj12] ---- full campaign (${cid}) ----"
   timeout 10800 "${PY}" -m sidekick.runner \
-    --system "${system}" --split dev --tasks "${N_FULL_TASKS}" --seeds 1,2 \
+    --system "${system}" --split dev --tasks "${N_FULL_TASKS}" --seeds "${SEEDS}" \
     --env appworld --workers 6 \
     --config "${cfg}" --out "${OUT}" --campaign-id "${cid}"
   camp_rc=$?

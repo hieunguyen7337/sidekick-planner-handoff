@@ -1,0 +1,344 @@
+{
+  "analysis": "difference-in-differences, cluster bootstrap",
+  "arm_n_loaded": {
+    "exec_t_m11": 114,
+    "exec_t_m6": 114,
+    "exec_t_m9": 114,
+    "exec_u_m11": 114,
+    "exec_u_m6": 114,
+    "exec_u_m9": 114,
+    "narr_t_m11": 114,
+    "narr_t_m6": 114,
+    "narr_t_m9": 114,
+    "narr_u_m11": 114,
+    "narr_u_m6": 114,
+    "narr_u_m9": 114
+  },
+  "arm_sources": {
+    "exec_t_m11": "/scratch/n12194778/sidekick/results/hj12_prefix_m11_20260923",
+    "exec_t_m6": "/scratch/n12194778/sidekick/results/hj12_prefix_m6_20260923",
+    "exec_t_m9": "/scratch/n12194778/sidekick/results/hj12_prefix_m9_20260923",
+    "exec_u_m11": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m11_20260923",
+    "exec_u_m6": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m6_20260923",
+    "exec_u_m9": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m9_20260923",
+    "narr_t_m11": "/scratch/n12194778/sidekick/results/hj16_narrated_m11_bplus_20260923",
+    "narr_t_m6": "/scratch/n12194778/sidekick/results/hj16_narrated_m6_bplus_20260923",
+    "narr_t_m9": "/scratch/n12194778/sidekick/results/hj16_narrated_m9_bplus_20260923",
+    "narr_u_m11": "/scratch/n12194778/sidekick/results/hj16_narrated_m11_zs_20260923",
+    "narr_u_m6": "/scratch/n12194778/sidekick/results/hj16_narrated_m6_zs_20260923",
+    "narr_u_m9": "/scratch/n12194778/sidekick/results/hj16_narrated_m9_zs_20260923"
+  },
+  "bootstrap": 10000,
+  "dids": {
+    "m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "exec_t_m11": 0.809825,
+          "exec_u_m11": 0.834456,
+          "narr_t_m11": 0.804886,
+          "narr_u_m11": 0.76864
+        },
+        "arms": {
+          "a_neg": "exec_t_m11",
+          "a_pos": "narr_t_m11",
+          "b_neg": "exec_u_m11",
+          "b_pos": "narr_u_m11"
+        },
+        "crashed_episodes": {
+          "exec_t_m11": 0,
+          "exec_u_m11": 0,
+          "narr_t_m11": 0,
+          "narr_u_m11": 0
+        },
+        "definition": "(narr_t_m11 - exec_t_m11) - (narr_u_m11 - exec_u_m11)",
+        "field": "goal_pass_rate",
+        "gap_a_pp": -0.4939,
+        "gap_b_pp": -6.5816,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            1.5553,
+            11.0
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 6.0877,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.6254,
+            11.8465
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 6.0877,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "exec_t_m11": 0.605263,
+          "exec_u_m11": 0.622807,
+          "narr_t_m11": 0.614035,
+          "narr_u_m11": 0.508772
+        },
+        "arms": {
+          "a_neg": "exec_t_m11",
+          "a_pos": "narr_t_m11",
+          "b_neg": "exec_u_m11",
+          "b_pos": "narr_u_m11"
+        },
+        "crashed_episodes": {
+          "exec_t_m11": 0,
+          "exec_u_m11": 0,
+          "narr_t_m11": 0,
+          "narr_u_m11": 0
+        },
+        "definition": "(narr_t_m11 - exec_t_m11) - (narr_u_m11 - exec_u_m11)",
+        "field": "tgc",
+        "gap_a_pp": 0.8772,
+        "gap_b_pp": -11.4035,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.8772,
+            26.3158
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 12.2807,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            2.6316,
+            22.807
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 12.2807,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "m6": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "exec_t_m6": 0.723675,
+          "exec_u_m6": 0.682474,
+          "narr_t_m6": 0.698579,
+          "narr_u_m6": 0.612842
+        },
+        "arms": {
+          "a_neg": "exec_t_m6",
+          "a_pos": "narr_t_m6",
+          "b_neg": "exec_u_m6",
+          "b_pos": "narr_u_m6"
+        },
+        "crashed_episodes": {
+          "exec_t_m6": 0,
+          "exec_u_m6": 0,
+          "narr_t_m6": 0,
+          "narr_u_m6": 0
+        },
+        "definition": "(narr_t_m6 - exec_t_m6) - (narr_u_m6 - exec_u_m6)",
+        "field": "goal_pass_rate",
+        "gap_a_pp": -2.5096,
+        "gap_b_pp": -6.9632,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -6.7149,
+            14.25
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 4.4535,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -5.0675,
+            13.9816
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 4.4535,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "exec_t_m6": 0.429825,
+          "exec_u_m6": 0.385965,
+          "narr_t_m6": 0.403509,
+          "narr_u_m6": 0.254386
+        },
+        "arms": {
+          "a_neg": "exec_t_m6",
+          "a_pos": "narr_t_m6",
+          "b_neg": "exec_u_m6",
+          "b_pos": "narr_u_m6"
+        },
+        "crashed_episodes": {
+          "exec_t_m6": 0,
+          "exec_u_m6": 0,
+          "narr_t_m6": 0,
+          "narr_u_m6": 0
+        },
+        "definition": "(narr_t_m6 - exec_t_m6) - (narr_u_m6 - exec_u_m6)",
+        "field": "tgc",
+        "gap_a_pp": -2.6316,
+        "gap_b_pp": -13.1579,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.6316,
+            22.807
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 10.5263,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -1.7544,
+            22.807
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 10.5263,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "m9": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "exec_t_m9": 0.785184,
+          "exec_u_m9": 0.784535,
+          "narr_t_m9": 0.766746,
+          "narr_u_m9": 0.767649
+        },
+        "arms": {
+          "a_neg": "exec_t_m9",
+          "a_pos": "narr_t_m9",
+          "b_neg": "exec_u_m9",
+          "b_pos": "narr_u_m9"
+        },
+        "crashed_episodes": {
+          "exec_t_m9": 0,
+          "exec_u_m9": 0,
+          "narr_t_m9": 0,
+          "narr_u_m9": 0
+        },
+        "definition": "(narr_t_m9 - exec_t_m9) - (narr_u_m9 - exec_u_m9)",
+        "field": "goal_pass_rate",
+        "gap_a_pp": -1.8439,
+        "gap_b_pp": -1.6886,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -8.3579,
+            7.1088
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -0.1553,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -8.507,
+            8.0412
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": -0.1553,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "exec_t_m9": 0.561404,
+          "exec_u_m9": 0.552632,
+          "narr_t_m9": 0.526316,
+          "narr_u_m9": 0.491228
+        },
+        "arms": {
+          "a_neg": "exec_t_m9",
+          "a_pos": "narr_t_m9",
+          "b_neg": "exec_u_m9",
+          "b_pos": "narr_u_m9"
+        },
+        "crashed_episodes": {
+          "exec_t_m9": 0,
+          "exec_u_m9": 0,
+          "narr_t_m9": 0,
+          "narr_u_m9": 0
+        },
+        "definition": "(narr_t_m9 - exec_t_m9) - (narr_u_m9 - exec_u_m9)",
+        "field": "tgc",
+        "gap_a_pp": -3.5088,
+        "gap_b_pp": -6.1404,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 114,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -7.8947,
+            14.0351
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 2.6316,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -8.7719,
+            14.0351
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 2.6316,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    }
+  },
+  "note": "DiD-1 narration x receiver. Positive = narration substitutes for execution BETTER on the tailored receiver, which is the paper mechanism reading for Limitation 5.",
+  "population": "all (crashed episode scores 0; error_type 'limit' is not a crash)",
+  "primary_resample_unit": "scenario",
+  "seed": 20260924
+}
