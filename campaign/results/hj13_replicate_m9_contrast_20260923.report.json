@@ -1,0 +1,1667 @@
+{
+  "headline": "J8 frontier (dev): all named arms have \u2265114 rows. Headline quality contrast uses all-episodes (crash = 0) for every metric; survivor population is reported alongside.",
+  "headline_refused": false,
+  "refusals": [],
+  "oracle_semantics": "oracle semantics: runs free  (src/sidekick/runner.py:326; src/sidekick/systems/loop.py:660; src/sidekick/systems/loop.py:777; src/sidekick/systems/oracle_escalation.py:9-18; configs/hj8_oracle_escalation.yaml:37-38)",
+  "oracle_semantics_citation": "src/sidekick/runner.py:326; src/sidekick/systems/loop.py:660; src/sidekick/systems/loop.py:777; src/sidekick/systems/oracle_escalation.py:9-18; configs/hj8_oracle_escalation.yaml:37-38",
+  "oracle_semantics_established": true,
+  "min_rows": 114,
+  "seeds": [
+    1,
+    2
+  ],
+  "resample_unit": "task",
+  "planner_calls_definition": "planner_calls_per_episode is the mean of ledger live totals.planner_calls_total; planner_calls_replay_inclusive_per_episode is the mean of RunResult.n_planner_calls. The live count is never silently replaced by the replay count.",
+  "arms": {
+    "m9_original": {
+      "label": "m9_original",
+      "n": 114,
+      "n_broken": 0,
+      "n_crashed": 0,
+      "n_survivors": 114,
+      "n_cleaned": 114,
+      "tgc_all": 0.561404,
+      "tgc_survivors": 0.561404,
+      "goal_pass_all": 0.785184,
+      "goal_pass_survivors": 0.785184,
+      "tgc_handoff_only": 0.487805,
+      "tgc_no_handoff": 0.75,
+      "goal_pass_handoff_only": 0.741902,
+      "goal_pass_no_handoff": 0.896094,
+      "n_no_handoff": 32,
+      "handoff_only_coincides_with_all": false,
+      "populations_coincide": true,
+      "planner_calls_total": 0,
+      "crash_per_call": null,
+      "crash_per_call_pct": null,
+      "tgc": 0.561404,
+      "goal_pass": 0.785184,
+      "planner_calls_per_episode": 0.0,
+      "planner_calls_replay_inclusive_per_episode": 9.77193,
+      "planner_tokens_per_episode": 0.0,
+      "cost_key": "planner_calls_live",
+      "cost_per_episode": 0.0,
+      "cost_per_episode_survivors": 0.0,
+      "cost_total": 0.0,
+      "cached_input_tokens_per_episode": null,
+      "cached_share_of_inclusive_total": null,
+      "sft_plan_source_plan_tokens_mean": null,
+      "sft_plan_floor_costing": {
+        "applied": false,
+        "route": null,
+        "n_sft_plan_rows": 0,
+        "n_mapped": 0,
+        "n_missing": 0,
+        "mean_noncached_plan_tokens": null,
+        "packet_source": "/scratch/n12194778/sidekick/results/hj1b_planner_20260915",
+        "packet_system": "planner_alone",
+        "understatement": null
+      },
+      "cost_key_note": "planner_calls_live counts ledger totals.planner_calls_total per episode.",
+      "handoff_occurred_rate": 0.719298,
+      "handoff_occurred_rate_all": 0.719298,
+      "handoff_occurred_rate_survivors": 0.719298,
+      "hash_ok_rate": 1.0,
+      "hash_ok_rate_all": 1.0,
+      "hash_ok_rate_survivors": 1.0,
+      "effective_m_mean": 8.701754,
+      "effective_m_mean_all": 8.701754,
+      "effective_m_mean_survivors": 8.701754,
+      "n_handoff_occurred": 82,
+      "n_hash_ok": 114,
+      "n_with_handoff_record": 114,
+      "n_episodes_live_differs_from_replay": 114,
+      "k": null,
+      "gated": false,
+      "oracle": false,
+      "complete_n": true,
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    },
+    "m9_replicate": {
+      "label": "m9_replicate",
+      "n": 114,
+      "n_broken": 0,
+      "n_crashed": 0,
+      "n_survivors": 114,
+      "n_cleaned": 114,
+      "tgc_all": 0.570175,
+      "tgc_survivors": 0.570175,
+      "goal_pass_all": 0.803342,
+      "goal_pass_survivors": 0.803342,
+      "tgc_handoff_only": 0.5,
+      "tgc_no_handoff": 0.75,
+      "goal_pass_handoff_only": 0.767146,
+      "goal_pass_no_handoff": 0.896094,
+      "n_no_handoff": 32,
+      "handoff_only_coincides_with_all": false,
+      "populations_coincide": true,
+      "planner_calls_total": 0,
+      "crash_per_call": null,
+      "crash_per_call_pct": null,
+      "tgc": 0.570175,
+      "goal_pass": 0.803342,
+      "planner_calls_per_episode": 0.0,
+      "planner_calls_replay_inclusive_per_episode": 9.77193,
+      "planner_tokens_per_episode": 0.0,
+      "cost_key": "planner_calls_live",
+      "cost_per_episode": 0.0,
+      "cost_per_episode_survivors": 0.0,
+      "cost_total": 0.0,
+      "cached_input_tokens_per_episode": null,
+      "cached_share_of_inclusive_total": null,
+      "sft_plan_source_plan_tokens_mean": null,
+      "sft_plan_floor_costing": {
+        "applied": false,
+        "route": null,
+        "n_sft_plan_rows": 0,
+        "n_mapped": 0,
+        "n_missing": 0,
+        "mean_noncached_plan_tokens": null,
+        "packet_source": "/scratch/n12194778/sidekick/results/hj1b_planner_20260915",
+        "packet_system": "planner_alone",
+        "understatement": null
+      },
+      "cost_key_note": "planner_calls_live counts ledger totals.planner_calls_total per episode.",
+      "handoff_occurred_rate": 0.719298,
+      "handoff_occurred_rate_all": 0.719298,
+      "handoff_occurred_rate_survivors": 0.719298,
+      "hash_ok_rate": 1.0,
+      "hash_ok_rate_all": 1.0,
+      "hash_ok_rate_survivors": 1.0,
+      "effective_m_mean": 8.701754,
+      "effective_m_mean_all": 8.701754,
+      "effective_m_mean_survivors": 8.701754,
+      "n_handoff_occurred": 82,
+      "n_hash_ok": 114,
+      "n_with_handoff_record": 114,
+      "n_episodes_live_differs_from_replay": 114,
+      "k": null,
+      "gated": false,
+      "oracle": false,
+      "complete_n": true,
+      "error_types": {
+        "limit": 4,
+        "none": 110
+      },
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false
+    }
+  },
+  "contrasts": {
+    "tgc_all_m9_original_minus_m9_replicate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 19,
+      "mean_cluster_size": 6.0,
+      "resample": "scenario",
+      "resample_unit": "scenario",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -0.88,
+      "ci95_pp": [
+        -6.14,
+        3.51
+      ],
+      "bootstrap": 10000,
+      "diff": -0.0088,
+      "ci95": [
+        -0.0614,
+        0.0351
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -0.88,
+        "ci95_pp": [
+          -6.14,
+          4.39
+        ],
+        "bootstrap": 10000,
+        "diff": -0.0088,
+        "ci95": [
+          -0.0614,
+          0.0439
+        ]
+      },
+      "resample_unit_for_decision": "scenario",
+      "field": "tgc",
+      "left": "m9_original",
+      "right": "m9_replicate",
+      "population": "all-episodes",
+      "n_pairs_dropped_crash": 0,
+      "n_pairs_shared": 114,
+      "diff_pp_scenario": -0.88,
+      "ci95_pp_scenario": [
+        -6.14,
+        3.51
+      ],
+      "n_clusters_scenario": 19,
+      "n_pairs_scenario": 114,
+      "mean_cluster_size_scenario": 6.0,
+      "resample_unit_scenario": "scenario",
+      "n_pairs_dropped_missing_field_scenario": 0,
+      "diff_scenario": -0.0088,
+      "ci95_scenario": [
+        -0.0614,
+        0.0351
+      ],
+      "diff_pp_task": -0.88,
+      "ci95_pp_task": [
+        -7.02,
+        4.39
+      ],
+      "diff_task": -0.0088,
+      "ci95_task": [
+        -0.0702,
+        0.0439
+      ],
+      "n_clusters_task": 57,
+      "mean_cluster_size_task": 2.0,
+      "resample_unit_task": "task"
+    },
+    "tgc_survivors_m9_original_minus_m9_replicate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 19,
+      "mean_cluster_size": 6.0,
+      "resample": "scenario",
+      "resample_unit": "scenario",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -0.88,
+      "ci95_pp": [
+        -6.14,
+        3.51
+      ],
+      "bootstrap": 10000,
+      "diff": -0.0088,
+      "ci95": [
+        -0.0614,
+        0.0351
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -0.88,
+        "ci95_pp": [
+          -6.14,
+          4.39
+        ],
+        "bootstrap": 10000,
+        "diff": -0.0088,
+        "ci95": [
+          -0.0614,
+          0.0439
+        ]
+      },
+      "resample_unit_for_decision": "scenario",
+      "field": "tgc",
+      "left": "m9_original",
+      "right": "m9_replicate",
+      "population": "survivors",
+      "n_pairs_dropped_crash": 0,
+      "n_pairs_shared": 114,
+      "diff_pp_scenario": -0.88,
+      "ci95_pp_scenario": [
+        -6.14,
+        3.51
+      ],
+      "n_clusters_scenario": 19,
+      "n_pairs_scenario": 114,
+      "mean_cluster_size_scenario": 6.0,
+      "resample_unit_scenario": "scenario",
+      "n_pairs_dropped_missing_field_scenario": 0,
+      "diff_scenario": -0.0088,
+      "ci95_scenario": [
+        -0.0614,
+        0.0351
+      ],
+      "diff_pp_task": -0.88,
+      "ci95_pp_task": [
+        -7.02,
+        4.39
+      ],
+      "diff_task": -0.0088,
+      "ci95_task": [
+        -0.0702,
+        0.0439
+      ],
+      "n_clusters_task": 57,
+      "mean_cluster_size_task": 2.0,
+      "resample_unit_task": "task"
+    },
+    "tgc_m9_original_minus_m9_replicate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 19,
+      "mean_cluster_size": 6.0,
+      "resample": "scenario",
+      "resample_unit": "scenario",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -0.88,
+      "ci95_pp": [
+        -6.14,
+        3.51
+      ],
+      "bootstrap": 10000,
+      "diff": -0.0088,
+      "ci95": [
+        -0.0614,
+        0.0351
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -0.88,
+        "ci95_pp": [
+          -6.14,
+          4.39
+        ],
+        "bootstrap": 10000,
+        "diff": -0.0088,
+        "ci95": [
+          -0.0614,
+          0.0439
+        ]
+      },
+      "resample_unit_for_decision": "scenario",
+      "field": "tgc",
+      "left": "m9_original",
+      "right": "m9_replicate",
+      "population": "all-episodes",
+      "n_pairs_dropped_crash": 0,
+      "n_pairs_shared": 114,
+      "diff_pp_scenario": -0.88,
+      "ci95_pp_scenario": [
+        -6.14,
+        3.51
+      ],
+      "n_clusters_scenario": 19,
+      "n_pairs_scenario": 114,
+      "mean_cluster_size_scenario": 6.0,
+      "resample_unit_scenario": "scenario",
+      "n_pairs_dropped_missing_field_scenario": 0,
+      "diff_scenario": -0.0088,
+      "ci95_scenario": [
+        -0.0614,
+        0.0351
+      ],
+      "diff_pp_task": -0.88,
+      "ci95_pp_task": [
+        -7.02,
+        4.39
+      ],
+      "diff_task": -0.0088,
+      "ci95_task": [
+        -0.0702,
+        0.0439
+      ],
+      "n_clusters_task": 57,
+      "mean_cluster_size_task": 2.0,
+      "resample_unit_task": "task"
+    },
+    "goal_pass_all_m9_original_minus_m9_replicate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 19,
+      "mean_cluster_size": 6.0,
+      "resample": "scenario",
+      "resample_unit": "scenario",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -1.82,
+      "ci95_pp": [
+        -4.37,
+        0.6
+      ],
+      "bootstrap": 10000,
+      "diff": -0.0182,
+      "ci95": [
+        -0.0437,
+        0.006
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -1.82,
+        "ci95_pp": [
+          -5.04,
+          1.39
+        ],
+        "bootstrap": 10000,
+        "diff": -0.0182,
+        "ci95": [
+          -0.0504,
+          0.0139
+        ]
+      },
+      "resample_unit_for_decision": "scenario",
+      "field": "goal_pass_rate",
+      "left": "m9_original",
+      "right": "m9_replicate",
+      "population": "all-episodes",
+      "n_pairs_dropped_crash": 0,
+      "n_pairs_shared": 114,
+      "diff_pp_scenario": -1.82,
+      "ci95_pp_scenario": [
+        -4.37,
+        0.6
+      ],
+      "n_clusters_scenario": 19,
+      "n_pairs_scenario": 114,
+      "mean_cluster_size_scenario": 6.0,
+      "resample_unit_scenario": "scenario",
+      "n_pairs_dropped_missing_field_scenario": 0,
+      "diff_scenario": -0.0182,
+      "ci95_scenario": [
+        -0.0437,
+        0.006
+      ],
+      "diff_pp_task": -1.82,
+      "ci95_pp_task": [
+        -5.4,
+        1.57
+      ],
+      "diff_task": -0.0182,
+      "ci95_task": [
+        -0.054,
+        0.0157
+      ],
+      "n_clusters_task": 57,
+      "mean_cluster_size_task": 2.0,
+      "resample_unit_task": "task"
+    },
+    "goal_pass_survivors_m9_original_minus_m9_replicate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 19,
+      "mean_cluster_size": 6.0,
+      "resample": "scenario",
+      "resample_unit": "scenario",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -1.82,
+      "ci95_pp": [
+        -4.37,
+        0.6
+      ],
+      "bootstrap": 10000,
+      "diff": -0.0182,
+      "ci95": [
+        -0.0437,
+        0.006
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -1.82,
+        "ci95_pp": [
+          -5.04,
+          1.39
+        ],
+        "bootstrap": 10000,
+        "diff": -0.0182,
+        "ci95": [
+          -0.0504,
+          0.0139
+        ]
+      },
+      "resample_unit_for_decision": "scenario",
+      "field": "goal_pass_rate",
+      "left": "m9_original",
+      "right": "m9_replicate",
+      "population": "survivors",
+      "n_pairs_dropped_crash": 0,
+      "n_pairs_shared": 114,
+      "diff_pp_scenario": -1.82,
+      "ci95_pp_scenario": [
+        -4.37,
+        0.6
+      ],
+      "n_clusters_scenario": 19,
+      "n_pairs_scenario": 114,
+      "mean_cluster_size_scenario": 6.0,
+      "resample_unit_scenario": "scenario",
+      "n_pairs_dropped_missing_field_scenario": 0,
+      "diff_scenario": -0.0182,
+      "ci95_scenario": [
+        -0.0437,
+        0.006
+      ],
+      "diff_pp_task": -1.82,
+      "ci95_pp_task": [
+        -5.4,
+        1.57
+      ],
+      "diff_task": -0.0182,
+      "ci95_task": [
+        -0.054,
+        0.0157
+      ],
+      "n_clusters_task": 57,
+      "mean_cluster_size_task": 2.0,
+      "resample_unit_task": "task"
+    },
+    "goal_pass_rate_m9_original_minus_m9_replicate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 19,
+      "mean_cluster_size": 6.0,
+      "resample": "scenario",
+      "resample_unit": "scenario",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": -1.82,
+      "ci95_pp": [
+        -4.37,
+        0.6
+      ],
+      "bootstrap": 10000,
+      "diff": -0.0182,
+      "ci95": [
+        -0.0437,
+        0.006
+      ],
+      "diagnostic_pair_resample": {
+        "n_pairs": 114,
+        "n_tasks": 57,
+        "n_clusters": 114,
+        "mean_cluster_size": 1.0,
+        "resample": "pair",
+        "resample_unit": "pair",
+        "dropped_from_base": 0,
+        "dropped_from_other": 0,
+        "dropped_unmatched_keys": {
+          "base": 0,
+          "other": 0,
+          "total": 0
+        },
+        "pairs_dropped_missing_field": 0,
+        "diff_pp": -1.82,
+        "ci95_pp": [
+          -5.04,
+          1.39
+        ],
+        "bootstrap": 10000,
+        "diff": -0.0182,
+        "ci95": [
+          -0.0504,
+          0.0139
+        ]
+      },
+      "resample_unit_for_decision": "scenario",
+      "field": "goal_pass_rate",
+      "left": "m9_original",
+      "right": "m9_replicate",
+      "population": "all-episodes",
+      "n_pairs_dropped_crash": 0,
+      "n_pairs_shared": 114,
+      "diff_pp_scenario": -1.82,
+      "ci95_pp_scenario": [
+        -4.37,
+        0.6
+      ],
+      "n_clusters_scenario": 19,
+      "n_pairs_scenario": 114,
+      "mean_cluster_size_scenario": 6.0,
+      "resample_unit_scenario": "scenario",
+      "n_pairs_dropped_missing_field_scenario": 0,
+      "diff_scenario": -0.0182,
+      "ci95_scenario": [
+        -0.0437,
+        0.006
+      ],
+      "diff_pp_task": -1.82,
+      "ci95_pp_task": [
+        -5.4,
+        1.57
+      ],
+      "diff_task": -0.0182,
+      "ci95_task": [
+        -0.054,
+        0.0157
+      ],
+      "n_clusters_task": 57,
+      "mean_cluster_size_task": 2.0,
+      "resample_unit_task": "task"
+    },
+    "calls_live_m9_original_minus_m9_replicate": {
+      "n_pairs": 114,
+      "n_tasks": 57,
+      "n_clusters": 57,
+      "mean_cluster_size": 2.0,
+      "resample": "task",
+      "resample_unit": "task",
+      "dropped_from_base": 0,
+      "dropped_from_other": 0,
+      "dropped_unmatched_keys": {
+        "base": 0,
+        "other": 0,
+        "total": 0
+      },
+      "pairs_dropped_missing_field": 0,
+      "diff_pp": 0.0,
+      "ci95_pp": [
+        0.0,
+        0.0
+      ],
+      "bootstrap": 10000,
+      "diff": 0.0,
+      "ci95": [
+        0.0,
+        0.0
+      ],
+      "units": "planner_calls (ci95); paired_diff also reports ci95_pp = 100\u00d7calls",
+      "resample_unit_for_decision": "task",
+      "field": "planner_calls_live",
+      "left": "m9_original",
+      "right": "m9_replicate",
+      "population": "all-episodes",
+      "n_pairs_dropped_crash": 0,
+      "n_pairs_shared": 114,
+      "diff_pp_scenario": 0.0,
+      "ci95_pp_scenario": [
+        0.0,
+        0.0
+      ],
+      "n_clusters_scenario": 19,
+      "n_pairs_scenario": 114,
+      "mean_cluster_size_scenario": 6.0,
+      "resample_unit_scenario": "scenario",
+      "n_pairs_dropped_missing_field_scenario": 0,
+      "diff_scenario": 0.0,
+      "ci95_scenario": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "frontier": [
+    {
+      "label": "m9_original",
+      "role": "other",
+      "k": null,
+      "n": 114,
+      "n_crashed": 0,
+      "tgc_all": 0.561404,
+      "tgc_survivors": 0.561404,
+      "goal_pass_all": 0.785184,
+      "goal_pass_survivors": 0.785184,
+      "planner_calls_total": 0,
+      "crash_per_call_pct": null,
+      "tgc": 0.561404,
+      "goal_pass": 0.785184,
+      "planner_calls_per_episode": 0.0,
+      "planner_calls_replay_inclusive_per_episode": 9.77193,
+      "cost_key": "planner_calls_live",
+      "cost_per_episode": 0.0,
+      "cached_input_tokens_per_episode": null,
+      "cached_share_of_inclusive_total": null,
+      "sft_plan_source_plan_tokens_mean": null,
+      "handoff_occurred_rate": 0.719298,
+      "hash_ok_rate": 1.0,
+      "effective_m_mean": 8.701754
+    },
+    {
+      "label": "m9_replicate",
+      "role": "other",
+      "k": null,
+      "n": 114,
+      "n_crashed": 0,
+      "tgc_all": 0.570175,
+      "tgc_survivors": 0.570175,
+      "goal_pass_all": 0.803342,
+      "goal_pass_survivors": 0.803342,
+      "planner_calls_total": 0,
+      "crash_per_call_pct": null,
+      "tgc": 0.570175,
+      "goal_pass": 0.803342,
+      "planner_calls_per_episode": 0.0,
+      "planner_calls_replay_inclusive_per_episode": 9.77193,
+      "cost_key": "planner_calls_live",
+      "cost_per_episode": 0.0,
+      "cached_input_tokens_per_episode": null,
+      "cached_share_of_inclusive_total": null,
+      "sft_plan_source_plan_tokens_mean": null,
+      "handoff_occurred_rate": 0.719298,
+      "hash_ok_rate": 1.0,
+      "effective_m_mean": 8.701754
+    }
+  ],
+  "oracle_headroom": {
+    "error": "no complete oracle_escalation arm"
+  },
+  "f1": {},
+  "h3": [],
+  "h3_headline_population": "scored",
+  "h3_populations": "scored is the primary H3 population: ticks at or before the episode's final step (decision points that existed). grid retains the published 5,10,...,40 tick grid, including post-episode filler scored as 0.0. Headline H3 uses scored.",
+  "h3_score_quantiles": {},
+  "cost_key": "planner_calls_live",
+  "cost_key_note": "planner_calls_live counts ledger totals.planner_calls_total per episode.",
+  "known_cost_understatements": [],
+  "sft_plan_floor_costing": null,
+  "reference_arm": "m9_original",
+  "floor_arm": null,
+  "noninferiority_margin_pp": 7.0,
+  "noninferiority": {
+    "reference_arm": "m9_original",
+    "margin_pp": 7.0,
+    "primary_metric": "goal_pass_rate",
+    "secondary_metric": "tgc",
+    "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+    "arms": {
+      "m9_replicate": {
+        "goal_pass_all": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 1.82,
+          "ci95_pp": [
+            -0.6,
+            4.37
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0182,
+          "ci95": [
+            -0.006,
+            0.0437
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 1.82,
+            "ci95_pp": [
+              -1.39,
+              5.05
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0182,
+            "ci95": [
+              -0.0139,
+              0.0505
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "goal_pass_rate",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": 1.82,
+          "ci95_pp_scenario": [
+            -0.6,
+            4.37
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0182,
+          "ci95_scenario": [
+            -0.006,
+            0.0437
+          ],
+          "diff_pp_task": 1.82,
+          "ci95_pp_task": [
+            -1.57,
+            5.41
+          ],
+          "diff_task": 0.0182,
+          "ci95_task": [
+            -0.0157,
+            0.0541
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": 0.6,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": true,
+          "deficit_ci_upper_pp_scenario": 0.6,
+          "holds_scenario": true
+        },
+        "goal_pass_survivors": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 1.82,
+          "ci95_pp": [
+            -0.6,
+            4.37
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0182,
+          "ci95": [
+            -0.006,
+            0.0437
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 1.82,
+            "ci95_pp": [
+              -1.39,
+              5.05
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0182,
+            "ci95": [
+              -0.0139,
+              0.0505
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "goal_pass_rate",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "survivors",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": 1.82,
+          "ci95_pp_scenario": [
+            -0.6,
+            4.37
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0182,
+          "ci95_scenario": [
+            -0.006,
+            0.0437
+          ],
+          "diff_pp_task": 1.82,
+          "ci95_pp_task": [
+            -1.57,
+            5.41
+          ],
+          "diff_task": 0.0182,
+          "ci95_task": [
+            -0.0157,
+            0.0541
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": 0.6,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": true,
+          "deficit_ci_upper_pp_scenario": 0.6,
+          "holds_scenario": true
+        },
+        "goal_pass_handoff_only": {
+          "n_pairs": 82,
+          "n_tasks": 53,
+          "n_clusters": 19,
+          "mean_cluster_size": 4.3158,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 2.52,
+          "ci95_pp": [
+            -0.82,
+            5.99
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0252,
+          "ci95": [
+            -0.0082,
+            0.0599
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 82,
+            "n_tasks": 53,
+            "n_clusters": 82,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 2.52,
+            "ci95_pp": [
+              -1.93,
+              7.0
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0252,
+            "ci95": [
+              -0.0193,
+              0.07
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "goal_pass_rate",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "handoff-only",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_handoff": 32,
+          "defining_arm": "m9_replicate",
+          "handoff_keys_from": "m9_replicate",
+          "diff_pp_scenario": 2.52,
+          "ci95_pp_scenario": [
+            -0.82,
+            5.99
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 82,
+          "mean_cluster_size_scenario": 4.3158,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0252,
+          "ci95_scenario": [
+            -0.0082,
+            0.0599
+          ],
+          "diff_pp_task": 2.52,
+          "ci95_pp_task": [
+            -2.13,
+            7.53
+          ],
+          "diff_task": 0.0252,
+          "ci95_task": [
+            -0.0213,
+            0.0753
+          ],
+          "n_clusters_task": 53,
+          "mean_cluster_size_task": 1.5472,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": 0.82,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": true,
+          "deficit_ci_upper_pp_scenario": 0.82,
+          "holds_scenario": true,
+          "arm_score": 0.767146,
+          "reference_score": 0.741902,
+          "n_score_keys": 82
+        },
+        "goal_pass_no_handoff": {
+          "n_pairs": 32,
+          "n_tasks": 28,
+          "n_clusters": 15,
+          "mean_cluster_size": 2.1333,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 0.0,
+          "ci95_pp": [
+            0.0,
+            0.0
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 32,
+            "n_tasks": 28,
+            "n_clusters": 32,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 0.0,
+            "ci95_pp": [
+              0.0,
+              0.0
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "goal_pass_rate",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "no-handoff",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_handoff": 82,
+          "defining_arm": "m9_replicate",
+          "handoff_keys_from": "m9_replicate",
+          "diff_pp_scenario": 0.0,
+          "ci95_pp_scenario": [
+            0.0,
+            0.0
+          ],
+          "n_clusters_scenario": 15,
+          "n_pairs_scenario": 32,
+          "mean_cluster_size_scenario": 2.1333,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0,
+          "ci95_scenario": [
+            0.0,
+            0.0
+          ],
+          "diff_pp_task": 0.0,
+          "ci95_pp_task": [
+            0.0,
+            0.0
+          ],
+          "diff_task": 0.0,
+          "ci95_task": [
+            0.0,
+            0.0
+          ],
+          "n_clusters_task": 28,
+          "mean_cluster_size_task": 1.1429,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": -0.0,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": true,
+          "deficit_ci_upper_pp_scenario": -0.0,
+          "holds_scenario": true,
+          "arm_score": 0.896094,
+          "reference_score": 0.896094,
+          "n_score_keys": 32
+        },
+        "tgc_all": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 0.88,
+          "ci95_pp": [
+            -3.51,
+            6.14
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0088,
+          "ci95": [
+            -0.0351,
+            0.0614
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 0.88,
+            "ci95_pp": [
+              -4.39,
+              6.14
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0088,
+            "ci95": [
+              -0.0439,
+              0.0614
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "all-episodes",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": 0.88,
+          "ci95_pp_scenario": [
+            -3.51,
+            6.14
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0088,
+          "ci95_scenario": [
+            -0.0351,
+            0.0614
+          ],
+          "diff_pp_task": 0.88,
+          "ci95_pp_task": [
+            -4.39,
+            7.02
+          ],
+          "diff_task": 0.0088,
+          "ci95_task": [
+            -0.0439,
+            0.0702
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": 3.51,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": false,
+          "deficit_ci_upper_pp_scenario": 3.51,
+          "holds_scenario": true
+        },
+        "tgc_survivors": {
+          "n_pairs": 114,
+          "n_tasks": 57,
+          "n_clusters": 19,
+          "mean_cluster_size": 6.0,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 0.88,
+          "ci95_pp": [
+            -3.51,
+            6.14
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0088,
+          "ci95": [
+            -0.0351,
+            0.0614
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 114,
+            "n_tasks": 57,
+            "n_clusters": 114,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 0.88,
+            "ci95_pp": [
+              -4.39,
+              6.14
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0088,
+            "ci95": [
+              -0.0439,
+              0.0614
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "survivors",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "diff_pp_scenario": 0.88,
+          "ci95_pp_scenario": [
+            -3.51,
+            6.14
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 114,
+          "mean_cluster_size_scenario": 6.0,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0088,
+          "ci95_scenario": [
+            -0.0351,
+            0.0614
+          ],
+          "diff_pp_task": 0.88,
+          "ci95_pp_task": [
+            -4.39,
+            7.02
+          ],
+          "diff_task": 0.0088,
+          "ci95_task": [
+            -0.0439,
+            0.0702
+          ],
+          "n_clusters_task": 57,
+          "mean_cluster_size_task": 2.0,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": 3.51,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": false,
+          "deficit_ci_upper_pp_scenario": 3.51,
+          "holds_scenario": true
+        },
+        "tgc_handoff_only": {
+          "n_pairs": 82,
+          "n_tasks": 53,
+          "n_clusters": 19,
+          "mean_cluster_size": 4.3158,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 1.22,
+          "ci95_pp": [
+            -5.41,
+            8.64
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0122,
+          "ci95": [
+            -0.0541,
+            0.0864
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 82,
+            "n_tasks": 53,
+            "n_clusters": 82,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 1.22,
+            "ci95_pp": [
+              -6.1,
+              8.54
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0122,
+            "ci95": [
+              -0.061,
+              0.0854
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "handoff-only",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_handoff": 32,
+          "defining_arm": "m9_replicate",
+          "handoff_keys_from": "m9_replicate",
+          "diff_pp_scenario": 1.22,
+          "ci95_pp_scenario": [
+            -5.41,
+            8.64
+          ],
+          "n_clusters_scenario": 19,
+          "n_pairs_scenario": 82,
+          "mean_cluster_size_scenario": 4.3158,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0122,
+          "ci95_scenario": [
+            -0.0541,
+            0.0864
+          ],
+          "diff_pp_task": 1.22,
+          "ci95_pp_task": [
+            -6.25,
+            9.52
+          ],
+          "diff_task": 0.0122,
+          "ci95_task": [
+            -0.0625,
+            0.0952
+          ],
+          "n_clusters_task": 53,
+          "mean_cluster_size_task": 1.5472,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": 5.41,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": false,
+          "deficit_ci_upper_pp_scenario": 5.41,
+          "holds_scenario": true,
+          "arm_score": 0.5,
+          "reference_score": 0.487805,
+          "n_score_keys": 82
+        },
+        "tgc_no_handoff": {
+          "n_pairs": 32,
+          "n_tasks": 28,
+          "n_clusters": 15,
+          "mean_cluster_size": 2.1333,
+          "resample": "scenario",
+          "resample_unit": "scenario",
+          "dropped_from_base": 0,
+          "dropped_from_other": 0,
+          "dropped_unmatched_keys": {
+            "base": 0,
+            "other": 0,
+            "total": 0
+          },
+          "pairs_dropped_missing_field": 0,
+          "diff_pp": 0.0,
+          "ci95_pp": [
+            0.0,
+            0.0
+          ],
+          "bootstrap": 10000,
+          "diff": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "diagnostic_pair_resample": {
+            "n_pairs": 32,
+            "n_tasks": 28,
+            "n_clusters": 32,
+            "mean_cluster_size": 1.0,
+            "resample": "pair",
+            "resample_unit": "pair",
+            "dropped_from_base": 0,
+            "dropped_from_other": 0,
+            "dropped_unmatched_keys": {
+              "base": 0,
+              "other": 0,
+              "total": 0
+            },
+            "pairs_dropped_missing_field": 0,
+            "diff_pp": 0.0,
+            "ci95_pp": [
+              0.0,
+              0.0
+            ],
+            "bootstrap": 10000,
+            "diff": 0.0,
+            "ci95": [
+              0.0,
+              0.0
+            ]
+          },
+          "resample_unit_for_decision": "scenario",
+          "field": "tgc",
+          "left": "m9_replicate",
+          "right": "m9_original",
+          "population": "no-handoff",
+          "n_pairs_dropped_crash": 0,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_handoff": 82,
+          "defining_arm": "m9_replicate",
+          "handoff_keys_from": "m9_replicate",
+          "diff_pp_scenario": 0.0,
+          "ci95_pp_scenario": [
+            0.0,
+            0.0
+          ],
+          "n_clusters_scenario": 15,
+          "n_pairs_scenario": 32,
+          "mean_cluster_size_scenario": 2.1333,
+          "resample_unit_scenario": "scenario",
+          "n_pairs_dropped_missing_field_scenario": 0,
+          "diff_scenario": 0.0,
+          "ci95_scenario": [
+            0.0,
+            0.0
+          ],
+          "diff_pp_task": 0.0,
+          "ci95_pp_task": [
+            0.0,
+            0.0
+          ],
+          "diff_task": 0.0,
+          "ci95_task": [
+            0.0,
+            0.0
+          ],
+          "n_clusters_task": 28,
+          "mean_cluster_size_task": 1.1429,
+          "resample_unit_task": "task",
+          "holds": true,
+          "margin_pp": 7.0,
+          "deficit_ci_upper_pp": -0.0,
+          "rule": "contrast is arm minus reference; non-inferior if ci95_pp[0] >= -7.00 (equivalently, deficit CI upper bound = -ci95_pp[0] <= 7.00). Primary metric goal_pass_rate; TGC always reported alongside.",
+          "primary": false,
+          "deficit_ci_upper_pp_scenario": -0.0,
+          "holds_scenario": true,
+          "arm_score": 0.75,
+          "reference_score": 0.75,
+          "n_score_keys": 32
+        },
+        "handoff_ease": {
+          "defining_arm": "m9_replicate",
+          "reference_arm": "m9_original",
+          "fields": {
+            "goal_pass_rate": {
+              "n_handoff_only": 82,
+              "n_no_handoff": 32,
+              "arm_score_handoff_only": 0.767146,
+              "arm_score_no_handoff": 0.896094,
+              "reference_score_handoff_only": 0.741902,
+              "reference_score_no_handoff": 0.896094,
+              "reference_higher_on_no_handoff": true,
+              "reference_gap_no_handoff_minus_handoff_only": 0.154192,
+              "reference_far_higher_on_no_handoff": true
+            },
+            "tgc": {
+              "n_handoff_only": 82,
+              "n_no_handoff": 32,
+              "arm_score_handoff_only": 0.5,
+              "arm_score_no_handoff": 0.75,
+              "reference_score_handoff_only": 0.487805,
+              "reference_score_no_handoff": 0.75,
+              "reference_higher_on_no_handoff": true,
+              "reference_gap_no_handoff_minus_handoff_only": 0.262195,
+              "reference_far_higher_on_no_handoff": true
+            }
+          },
+          "note": "reference scores far higher on no-handoff episodes than on handoff-only (gap 15.42 pp); no-handoff tasks look easier for the reference, so the pooled all-episodes hybrid figure mixes planner-like scores on easy tasks with hybrid scores on the rest",
+          "far_higher_threshold_pp": 5.0
+        }
+      }
+    }
+  },
+  "chord": null,
+  "cluster": "scenario",
+  "cluster_note": "The 57 dev tasks are 19 scenarios x 3 variants: AppWorld task ids are `<scenario>_<n>`, so `50e1ac9_1`, `_2` and `_3` are one scenario (scripts/setup/hj1_gate.py:45-46). Three variants of one scenario share a world, a user and an app set, so their outcomes are correlated. `*_scenario` fields bootstrap over scenarios (the cluster is scenario_of(task_id)); unmarked / `*_task` fields bootstrap over tasks as before. Both intervals are always reported side by side; the point estimate is identical, only the interval moves.",
+  "exclude_reference_limit": false,
+  "reference_episodes_excluded_limit": null,
+  "exclude_reference_limit_sensitivity": null,
+  "headline_population": "all-episodes",
+  "population_preamble": "Headline quality contrast uses all-episodes for every metric (crashed episode scores 0). Survivor columns/contrasts use episodes with error_type != 'crash'; a paired survivor contrast drops a (task_id, seed) pair if either side crashed. handoff-only restricts every arm in a contrast to the (task_id, seed) keys where the comparison arm's report event has handoff_occurred true (all-episodes scoring: crash = 0). no-handoff is the complement (handoff_occurred false) on those same keys.",
+  "population_notes": [
+    "m9_original: 0 crashes; all-episodes and survivor populations coincide",
+    "m9_original: 32 episodes did not hand off; handoff-only n=82",
+    "m9_replicate: 0 crashes; all-episodes and survivor populations coincide",
+    "m9_replicate: 32 episodes did not hand off; handoff-only n=82"
+  ],
+  "population_disagreements": [],
+  "population_disagreements_text": [],
+  "contrast_accounting": [
+    "survivor contrast pair accounting (a pair is dropped if either side crashed):",
+    "  tgc_survivors_m9_original_minus_m9_replicate: n_pairs=114 dropped_crash=0 shared=114",
+    "  goal_pass_survivors_m9_original_minus_m9_replicate: n_pairs=114 dropped_crash=0 shared=114"
+  ],
+  "quality_populations": "tgc_all and goal_pass_all average every episode (crash scores 0). tgc_survivors and goal_pass_survivors average episodes with error_type != 'crash'. Headline contrast uses all-episodes for every quality metric. Survivor paired contrasts drop a (task_id, seed) pair if either arm crashed. handoff-only / no-handoff are additional populations on the non-inferiority and chord tables: the comparison arm's handoff_occurred flag selects the (task_id, seed) keys, then every arm in the contrast is restricted to those same keys (all-episodes scoring: crash = 0)."
+}

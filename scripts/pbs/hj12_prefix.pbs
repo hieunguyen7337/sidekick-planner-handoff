@@ -173,6 +173,10 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj14_prefix_m11.yaml|hj14_prefix_m11"
   "prefix_handoff|${REPO}/configs/hj15_prefix_zsq_m6.yaml|hj15_prefix_zsq_m6"
   "prefix_handoff|${REPO}/configs/hj15_prefix_zsq_m9.yaml|hj15_prefix_zsq_m9"
+  "prompt_only|${REPO}/configs/hj16_narrated_m9_zs.yaml|hj16_narrated_m9_zs"
+  "prompt_only|${REPO}/configs/hj16_narrated_obs_m9_zs.yaml|hj16_narrated_obs_m9_zs"
+  "sft_plan|${REPO}/configs/hj16_narrated_m9_bplus.yaml|hj16_narrated_m9_bplus"
+  "sft_plan|${REPO}/configs/hj16_narrated_obs_m9_bplus.yaml|hj16_narrated_obs_m9_bplus"
 )
 
 hj12_select_arms () {
@@ -846,7 +850,7 @@ for spec in "${SELECTED_ARMS[@]}"; do
   fi
   PENDING_ARMS+=("${spec}")
   case "${system}" in
-    prefix_handoff|sft_plan|executor_alone) ;;
+    prefix_handoff|sft_plan|prompt_only|executor_alone) ;;
     *) PENDING_LIVE=1 ;;
   esac
 done

@@ -287,3 +287,23 @@ straight line fail S3 (interval includes 4) rather than invent a threshold.
 
 **Status of results from this test.** Exploratory on `hj12_prefix_*_20260922` and
 `hj12_prefix_*_20260923`. Not confirmatory.
+
+## Outcome record — 2026-09-22 19:15 (appended; nothing above this line edited)
+
+**Registered replicate (§3, "Replicate noise floor") executed as specified.** PBS job 25693138,
+`ARMS="hj12_prefix_m6 hj12_prefix_m9"`, `DATE=20260923rep`, one job, the same frozen configs and the
+same post-guard code as the originals `hj12_prefix_m{6,9}_20260923`.
+
+| m | original | replicate | absolute difference |
+|---|---:|---:|---:|
+| 6 | 0.7237 | 0.7241 | 0.04 pp |
+| 9 | 0.7852 | 0.8033 | 1.82 pp |
+
+Larger replicate difference 1.82 pp; twice it is 3.63 pp; observed m6→m9 rise 6.15 pp (replicate
+pair: 7.92 pp). **The withdrawal condition does not fire.** Under the substitute floor introduced by
+the 2026-09-22 amendment above (3.31 pp, guard-free m2/m4 pairs) it would have; the registered text
+governs, and both floors are reported beside every statement of the shape claim. S1–S3 verdicts are
+unchanged: S1 holds 8/8, S2 holds 8/8, S3 fails 8/8 (`hj13_shape_{pre,post}_guard_20260923.report.json`),
+so the claim is stated as "flat below a breakpoint and rising above it; the breakpoint is not
+located" (claims ledger F1-RESULT-04, NOISE-03). Report:
+`campaign/results/hj13_replicate_floor_20260923.report.json`.

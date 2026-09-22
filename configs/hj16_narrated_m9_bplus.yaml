@@ -1,10 +1,9 @@
-# HJ-16 narrated prefix m=9 zero-shot: planner actions narrated as text in plan steps,
-# untailored BASE granite executor executes in fresh environment.
-# Runs under prompt_only because sft_plan.py:18 defaults adapter_name to 'sft_plan' when executor.lora_name is null (runner.py:256-258).
-# Copied from configs/hj8_sft_plan_bplus.yaml; only header, campaign_id, packet_source, and lora_name differ.
+# HJ-16 narrated prefix m=9 with sft_b_plus adapter: planner actions narrated as text in plan steps,
+# granite executes under sft_b_plus adapter in fresh environment.
+# Copied from configs/hj8_sft_plan_bplus.yaml; only header, campaign_id, and packet_source differ.
 env: appworld
-campaign_id: hj16_narrated_m9_zs_20260923
-# HJ-8 Class C. luna's HJ-1 plan is replayed; granite executes it under prompt_only.
+campaign_id: hj16_narrated_m9_bplus_20260923
+# HJ-8 Class C. luna's HJ-1 plan is replayed; granite executes it under sft_b_plus.
 planner:
   type: codex
   model: gpt-5.6-luna
@@ -22,7 +21,7 @@ executor:
   type: vllm
   model: ibm-granite/granite-4.2-8b
   base_url: http://127.0.0.1:8000
-  lora_name: null  # Explicit no-adapter. complete() then sends model=<executor.model>. Action events: usage.model is the base id and usage.raw.lora_name is null. A dummy alias that is not in --lora-modules still hits BASE while usage.model names the alias.
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
   temperature: 0.7
   max_tokens: 2048
   # See pilot_exec_8b.yaml: ends generation at the first action instead of paying for the

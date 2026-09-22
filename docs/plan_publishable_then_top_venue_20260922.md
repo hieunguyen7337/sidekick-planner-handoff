@@ -14,7 +14,8 @@ Dev, 57 tasks × 2 seeds = 114 pairs, `goal_pass`, replayed prefixes from `hj1b_
 | untailored base granite | 0.1903 | 0.2885 | 0.6825 | 0.7845 | **0.8345** | CHAN-ZS-01, -04 |
 | tailored `sft_b_plus` (post-guard) | 0.5289 | 0.7181 | 0.7237 | 0.7852 | 0.8098 | SHAPE-*, TAILOR-07 |
 | replicate of tailored (same job, same code) | — | — | 0.7241 | *running* | — | NOISE-02 |
-| planner alone, **25-call cap** (handicapped) | | | | | 0.8284 | attack 2; H0 refills |
+| planner alone, **25-call cap** (the run every prefix arm replays) | | | | | 0.8284 | CEIL-01 |
+| planner alone, **cap 81** (fresh sample, 2026-09-22) | | | | | 0.7637 | CEIL-01: −6.47 pp [−11.68, −1.37] vs cap 25 |
 
 Established (interval excludes zero on the primary, scenario-clustered):
 - **Action channel ≫ advice channel on an untailored receiver**: +9.8 pp for one plan against +59.4 pp
@@ -101,7 +102,7 @@ Estimated wall time to G-P: **8–10 working days** with the degraded worker ros
 | T1 | **Power.** 57 tasks in **19 scenario clusters** leave S3 unresolved and the m=9 non-inferiority missing by 0.06 pp | "n=19 clusters" is the first thing a statistician sees | H5 seed 3 (~820) then **H7 test split** | ~820 + ~8–12k; H7 needs the J9 §8.1 authorisation and a committed prereg amendment |
 | T2 | **Matched cost and matched information** for the channel claim | "actions executed vs prose is unfair by construction" | X38, X38b (free) + H2 | 0 + ~1,600 |
 | T3 | **Deployability**: oracle replay → live handoff | attack 8 | H3 `planner_handoff` | ~900–1,300 |
-| T4 | **Generality**: second receiver family with full curve; limitation for one suite, one planner | "one model pair" | Qwen zs m6/m9/m11 (free); a second *planner* is out of scope (rule: luna only) — stated as a limitation | 0 |
+| T4 | **Generality**: second receiver family with full curve; a second *planner sample* for the curve; limitation for one suite, one planner model | "one model pair, one planner run" | Qwen zs m6/m9/m11 (free); untailored curve on the cap-81 trajectories (free, CEIL-02 item 4); a second planner *model* is out of scope (rule: luna only) — stated as a limitation | 0 |
 | T5 | **Mechanism**: why flat-then-rising; what the executor does at the first post-handoff error | descriptive curve vs explanation | F3 complete | 0 |
 | T6 | **External anchoring**: AppWorld leaderboard, Handoff Tax's percentile-of-trajectory scale beside our step scale | "how does this relate to the field's numbers" | F7 + F1 percentile-scale | 0 |
 | T7 | **Multiplicity and confirmation**: Holm across the depth-contrast family on dev; one pre-registered confirmatory read on test | post-hoc grid (attack 6) | analysis + H7 amendment | 0 (+H7) |
@@ -112,14 +113,23 @@ authorisation.
 
 ## 4. What would change this plan
 
-- **Replicate m=9 differs from 0.7852 by more than 3.075 pp** → the tailored shape claim is withdrawn
-  under the registered floor (reported beside the zero-shot rise, which has a 5.1 pp bar and stands).
+- ~~Replicate m=9 differs from 0.7852 by more than 3.075 pp~~ **Resolved 19:10: m=9 replicate 0.8033,
+  gap 1.81 pp; larger replicate difference 1.81 pp; twice that is 3.62 pp < the 6.15 pp rise.** The
+  registered withdrawal condition does not fire (NOISE-03). Under the substitute floor of NOISE-01
+  (3.31 pp) it would have; both are reported and the registered one governs. The replicate pair's own
+  rise is 7.92 pp, larger than the original's.
 - **Qwen shows no m6→m9 rise** → kill-condition 4 fires; generality is stated as "one family"; the
   paper's claim (ii) becomes granite-specific. Check the first Qwen episodes for parse failures before
   believing any number (never-run family; silent-zero hazard).
 - **X38 lands near plan-only** → H2 is dropped, H3 takes its budget, headline (i) is re-worded to the
   state-advancement mechanism.
-- **H0 ceiling rises well above 0.83** → no arm is non-inferior on dev; non-inferiority moves to H7.
+- ~~H0 ceiling rises well above 0.83~~ **Resolved 19:10: the opposite happened.** The cap-81 sample
+  scores 0.7637, significantly *below* the 25-cap run (CEIL-01). Every non-inferiority statement so
+  far was against the higher ceiling, so none weakens. Two consequences: name the ceiling in every
+  comparison (CEIL-02), and treat the 6.47 pp between planner runs as the planner's own noise, which
+  the replay design removes from the depth curve (executor-side replicate noise: 0.04 pp at m=6).
+- **New free robustness check**: re-run the untailored prefix curve (m6/m9/m11) on the cap-81
+  trajectories — a second, weaker planner sample for the curve at zero hosted cost (goes into §3 T4).
 
 ## 5. Odds tonight (moved since this morning's 80–85 / 50–60)
 

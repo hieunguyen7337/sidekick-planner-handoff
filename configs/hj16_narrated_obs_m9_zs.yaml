@@ -1,9 +1,9 @@
-# HJ-16 narrated prefix m=9 zero-shot: planner actions narrated as text in plan steps,
+# HJ-16 narrated prefix with observations m=9 zero-shot: planner actions and observations narrated as text in plan steps,
 # untailored BASE granite executor executes in fresh environment.
 # Runs under prompt_only because sft_plan.py:18 defaults adapter_name to 'sft_plan' when executor.lora_name is null (runner.py:256-258).
 # Copied from configs/hj8_sft_plan_bplus.yaml; only header, campaign_id, packet_source, and lora_name differ.
 env: appworld
-campaign_id: hj16_narrated_m9_zs_20260923
+campaign_id: hj16_narrated_obs_m9_zs_20260923
 # HJ-8 Class C. luna's HJ-1 plan is replayed; granite executes it under prompt_only.
 planner:
   type: codex
@@ -13,7 +13,7 @@ planner:
   scratch_parent: /scratch/n12194778/sidekick/codex_scratch
   # Replays HJ-1 packets: this arm spends zero hosted planner calls, so every arm sees
   # the identical plan per task and plan-sampling noise is removed from the comparison.
-  packet_source: /scratch/n12194778/sidekick/artifacts/packets/hj16_narrated_m9
+  packet_source: /scratch/n12194778/sidekick/artifacts/packets/hj16_narrated_obs_m9
   packet_system: planner_alone
   # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss
   # must abort, not fall through to a live Codex call.

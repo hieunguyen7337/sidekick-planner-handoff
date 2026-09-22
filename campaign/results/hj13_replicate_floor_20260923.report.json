@@ -1,0 +1,67 @@
+{
+  "registered_text": "docs/prereg_hj13_shape_20260923.md:114-117 — prefix_m6 and prefix_m9 re-run once more under identical settings in a single job; the absolute difference between replicates at each m is the noise floor; if the observed m6->m9 rise is not at least twice the larger replicate difference, the shape claim is withdrawn regardless of S1-S3.",
+  "job": "PBS 25693138, ARMS=\"hj12_prefix_m6 hj12_prefix_m9\", DATE=20260923rep, same frozen configs and same post-guard code as the originals",
+  "arms": {
+    "m6_original": {
+      "campaign": "hj12_prefix_m6_20260923",
+      "n": 114,
+      "goal_pass": 0.7236754385964912,
+      "tgc": 0.4298245614035088,
+      "errors": {
+        "limit": 13,
+        "none": 101
+      }
+    },
+    "m6_replicate": {
+      "campaign": "hj12_prefix_m6_20260923rep",
+      "n": 114,
+      "goal_pass": 0.7241228070175438,
+      "tgc": 0.41228070175438597,
+      "errors": {
+        "limit": 15,
+        "none": 99
+      }
+    },
+    "m9_original": {
+      "campaign": "hj12_prefix_m9_20260923",
+      "n": 114,
+      "goal_pass": 0.7851842105263159,
+      "tgc": 0.5614035087719298,
+      "errors": {
+        "limit": 10,
+        "none": 104
+      }
+    },
+    "m9_replicate": {
+      "campaign": "hj12_prefix_m9_20260923rep",
+      "n": 114,
+      "goal_pass": 0.803342105263158,
+      "tgc": 0.5701754385964912,
+      "errors": {
+        "limit": 4,
+        "none": 110
+      }
+    }
+  },
+  "replicate_abs_diff_pp": {
+    "m6": 0.04,
+    "m9": 1.82
+  },
+  "larger_replicate_diff_pp": 1.82,
+  "observed_rise_m6_to_m9_pp": {
+    "original_pair": 6.15,
+    "replicate_pair": 7.92
+  },
+  "withdrawal_bar_pp": 3.08,
+  "twice_larger_replicate_diff_pp": 3.63,
+  "withdrawal_condition_fires": false,
+  "verdict": "NOT withdrawn under the registered floor: the m6->m9 rise exceeds twice the larger replicate difference",
+  "substitute_floor_noise01": {
+    "source": "guard-free m2/m4 pre-vs-post-guard pairs (NOISE-01)",
+    "larger_diff_pp": 3.31,
+    "fires": true,
+    "note": "reported alongside; the registered floor governs"
+  },
+  "metric": "goal_pass_rate, all-episodes mean over 114",
+  "generated": "2026-09-22T09:12:17Z"
+}
