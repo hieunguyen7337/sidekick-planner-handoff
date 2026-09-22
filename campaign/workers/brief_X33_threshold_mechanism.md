@@ -84,3 +84,47 @@ Then answer in one line each:
 
 Report a mechanism as unsupported if that is what you find. A clean negative on all three is a real
 result and must not be dressed up. Tag every claim `[OBSERVED <path>:<line>]` or `[INFERRED]`.
+
+## Addendum 2026-09-22 16:30 — M3 partially measured already; your job is to do it properly
+
+I ran a first pass on M3. Build on it; do not just reproduce it.
+
+**Post-guard arms, all episodes vs a fixed common key set** (the 83 episodes where the post-guard m9
+prefix did *not* already finish the task, so every arm with m ≤ 9 genuinely hands off):
+
+| m | all episodes | common-83 set |
+|---|---|---|
+| 2 | 0.6856 | 0.7051 |
+| 4 | 0.7190 | 0.6925 |
+| 6 | 0.7237 | 0.7025 |
+| 7 | 0.7544 | 0.7122 |
+| 8 | 0.7627 | 0.7081 |
+| 9 | 0.7852 | 0.7390 |
+
+m2→m9 is **+9.96 pp** on all episodes and **+3.39 pp** on the common set, against a replicate noise
+floor of 3.31 pp (NOISE-01). Silenced-episode counts rise 0, 0, 3, 8, 20, 31 across that range.
+
+**The key-set choice matters and you must handle it explicitly.** Pinning to m8's set (94 episodes)
+instead gives m6→m9 = +6.04 pp rather than +3.65 pp, because m8's set contains ~11 episodes that the
+m9 prefix auto-completes, so m9 collects credit for them. Whether a prefix already finished the task is
+**deterministic given (source trajectory, m)** — it is not a stochastic property of the arm — so the
+correct control is to pin to the set defined by the **largest m under comparison**, which makes the
+sets nested. State which set you used for every number and report at least two pinnings.
+
+**What I need from you, precisely:**
+
+1. The common-key-set curve for every completed post-guard arm including m10 and m11 once they land,
+   pinned to the largest available m, with paired bootstrap CIs (task- and scenario-clustered) on each
+   adjacent contrast — not just point estimates. My pass has no intervals; that is the gap.
+2. An **arm-independent** key set as a cross-check: episodes whose source planner trajectory required
+   more executed actions than the largest m in the grid, so no prefix in the grid could complete them.
+   Derive it from the source campaign, not from any arm's outcome, and say where you got it.
+3. The decomposition: of the all-episodes rise from m=2 to the largest m, how many percentage points
+   are attributable to the growing silenced share versus to improvement on genuinely-handed-off
+   episodes. Give the arithmetic explicitly.
+
+**Do not soften the result.** If conditional on a genuine handoff the curve is flat within noise, that
+is the finding, and it reframes the thesis rather than sinking it — the system-level curve is still
+real and still the deployable claim. What must not happen is a rise reported as a handoff effect when
+it is a population-mix effect. Equally, do not overcorrect: if the rise does survive on the controlled
+set with intervals that exclude zero, say that plainly too.
