@@ -137,6 +137,18 @@ We verify that this span rise is not an artifact of run-to-run sampling noise. R
 
 ---
 
+### 5.3 Replication on an Independent Planner Sample
+
+Every prefix arm above replays one planner run, the cap-25 trajectories, which invites the objection that the effect rests on a single lucky sample. We therefore replayed a second, independent set: the cap-81 planner trajectories, whose source planner scores **6.47 pp below** the cap-25 planner (CEIL-01). The untailored curve is complete (C81-01).
+
+The depth effect replicates. `goal_pass` runs 0.7201, 0.7650 and 0.7932 at $m = 6, 9, 11$, and TGC 0.4561, 0.5263 and 0.5526. Over the span $m = 6 \rightarrow 11$ the rise is **+7.31 pp** on `goal_pass` (scenario [+2.07, +12.80]) and **+9.65 pp** on TGC (scenario [+2.63, +16.67]), both excluding zero. As on the original curve, and consistent with MULT-01, **no single adjacent step is individually significant**: $m = 6 \rightarrow 9$ is +4.49 pp [−1.72, +11.29] and $m = 9 \rightarrow 11$ is +2.82 pp [−1.55, +7.16] on `goal_pass`.
+
+The generality result is the endpoint comparison. At $m = 11$ the cap-81 prefix differs from the cap-25 prefix by **−4.13 pp**, scenario [−8.84, +0.50], task [−9.74, +1.44] — **including zero**. A materially weaker planner run therefore yields a prefix of statistically indistinguishable value at depth 11, which is the strongest evidence available here against the single-sample objection.
+
+The curve is **compressed rather than translated**: it starts higher (0.7201 against 0.6825 at $m = 6$) and ends lower (0.7932 against 0.8345 at $m = 11$), a span of 7.31 pp against 15.20 pp. The two curves converge with depth, so this is a replication of the *effect*, not of the *curve*. The tailored cap-81 arms were still running at the time of writing.
+
+---
+
 ## 6. What the Prefix Actually Conveys: The Narrated Control
 
 Does an executed prefix assist the local model because the environment has physically advanced into a partially solved state, or because the prefix provides concrete in-context demonstrations of API usage and argument syntax?
