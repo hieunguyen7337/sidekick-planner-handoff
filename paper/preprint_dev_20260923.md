@@ -56,6 +56,20 @@ We compare four interaction paradigms:
 - **Bootstrap Protocol:** Confidence intervals are computed using 10,000 paired percentile bootstrap draws, reporting both **scenario-clustered** (primary) and **task-clustered** 95% confidence intervals.
 - **Non-Inferiority Margin:** For non-inferiority hypotheses against planner ceilings, we adopt the pre-registered margin of $\delta = 7.00$ percentage points (pp).
 
+#### Trajectory sourcing, and why it has to be stated
+
+Every prefix arm in this paper *replays* a recorded planner campaign rather than calling the planner
+online. That is what removes planner sampling noise from the depth curve — measured at 0.04 pp of
+executor-side replicate variation against 6.47 pp between two planner runs (CEIL-02) — and it is what
+makes the receiver comparisons exactly paired, since both receivers consume byte-identical prefixes.
+
+The cost is that a prefix arm and a ceiling arm are comparable only if they replay the **same** campaign.
+We run two planner samples: a 25-call-capped campaign and an 81-call-capped one. A prefix arm sourced
+from the cap-25 campaign and compared against the cap-81 ceiling is paired **by task, not by
+trajectory** — the two arms saw different planner behaviour on the same task. We state each arm's source
+campaign wherever it matters, and §5.4 reports a ceiling claim that does not survive being measured
+like-for-like. Readers checking a number against the ledger should check its source campaign first.
+
 ---
 
 ## 3. The Action Channel Beats the Advice Channel at Matched Trigger
@@ -532,3 +546,95 @@ When pairing a strong hosted planner with a small local executor on complex inte
 Two boundaries are worth stating beside the result. The depth effect replicates in a second executor family, but the fine-tuning recipe does not — the second family never acquires the harness's terminal convention from a training set in which it is 2.44% of the targets, while the first acquires it at the rate it is taught. And every number here is one environment, one planner model, and the development split; the confirmatory read is registered and not yet run.
 
 ---
+
+---
+
+## Appendix A. Reproducibility
+
+Every number in this paper is produced by a script from a campaign directory of per-episode
+`result.json` files, and is recorded in `docs/claims_ledger.md` with the report path and the JSON key
+it came from. `scripts/analysis/preprint_number_audit.sh` enforces this mechanically: it takes the set
+difference between the figures printed here and the figures in the ledger, and fails if the paper
+claims anything the ledger cannot source. It exits 0 on this draft over 77 percentage-point figures
+and 83 four-decimal rates.
+
+That check exists because of a real failure. A worker drafting the cost table invented three of its
+eleven TGC values — one a fill-down of the row above, one wrong by 10.52 pp — while reporting zero
+outstanding work, and the entire `goal_pass` column beside them was correct, so nothing looked wrong
+(QUAL-03). An instruction to flag uncertain values cannot catch that, because a model that does not
+know it is guessing cannot comply with it. A set difference can, and did.
+
+### A.1 Figures
+
+No figure is drawn from retyped numbers. `scripts/analysis/figures.py` reads each series out of a
+report by key, and refuses to render a panel whose key is missing rather than silently omitting it
+(FIG-01). `paper/figures/figures_manifest.json` records, for every figure, its source reports and the
+exact keys.
+
+| Figure | Source report(s) |
+|---|---|
+| F1 depth curve | `hj13_shape_post_guard_bands`, `hj12_unified_frontier_scenario`, `hj13_ceiling_cap25_vs_cap81`, `hj13_zeroshot_depth_m6_m9`, `hj13_zeroshot_depth_m9_m11` |
+| F2 channel at matched budget | `hj12_unified_frontier_scenario`, `hj13_advice_fullctx_matched` |
+| F3 tailoring gap | `hj13_receiver_contrast_m6` / `_m9` / `_m11` |
+| F4 mechanism | `hj13_mechanism_zeroshot_20260923c` |
+| F5 second family | `hj15_qwen_curve` |
+| F6 narrated vs executed | `hj16_narrated_tailored_complete`, `hj16_narrated_untailored_complete` |
+| F7 narrated minus executed | `hj16_narrated_curve_bplus`, `hj16_narrated_curve_zs` |
+| F8 advice cost vs quality | `hj13_advice_at_price`, `hj13_advice_at_price_cost` |
+
+All report files carry the `_20260923` or `_20260924` suffix and live under `campaign/results/`.
+
+### A.2 Models, adapters and decoding
+
+| role | model | adapter |
+|---|---|---|
+| Planner | `gpt-5.6-luna`, `reasoning_effort: medium`, frozen for the whole campaign | — |
+| Executor, tailored | `ibm-granite/granite-4.2-8b` | `sft_b_plus_iaware_granite8b` |
+| Executor, untailored | `ibm-granite/granite-4.2-8b` | none (`lora_name: null`) |
+| Executor, suffix-trained | `ibm-granite/granite-4.2-8b` | `sft_b_plus_handoff_granite8b` |
+| Second family, tailored | `Qwen/Qwen3-8B` | `sft_b_plus_iaware_qwen8b` |
+| Second family, untailored | `Qwen/Qwen3-8B` | none |
+
+Both tailored adapters were trained on the identical file
+`sft_b_plus_iaware_20260920.jsonl` (`sha256 f2f439d9…`, 497 rows, 6,767 assistant targets), LoRA rank
+64 / alpha 128, two epochs, `max_length` 32768, bf16, on an H100. Decoding is temperature 0.7,
+`max_tokens` 2048, with stop sequences ending generation at the close of the first action.
+
+⚠ **An untailored arm must be configured under the `prompt_only` system, never under `sft_plan`.**
+`SftPlan.policy_defaults` sets `adapter_name: "sft_plan"` (`src/sidekick/policies/sft_plan.py:18`), so
+an untailored config placed under `sft_plan` silently receives the base model while every log line
+still names the alias (`src/sidekick/runner.py:256-258`). The arm then measures a configuration no one
+intended and returns entirely plausible numbers.
+
+### A.3 Pre-registration
+
+| document | scope |
+|---|---|
+| `docs/prereg_v1.md`, `docs/prereg_b1_pilot.md` (+ amendment) | the original protocol and the pilot |
+| `docs/prereg_j9_freeze_20260920.md` | the freeze, including the one-read rule for the test split |
+| `docs/prereg_hj12_dev_20260922.md` | the dev frontier and its gates |
+| `docs/prereg_hj13_shape_20260923.md` | the depth-shape hypotheses, the replicate floor and the kill conditions |
+| `docs/prereg_h2_advice_at_price_20260923.md` | advice bought above the action channel's price |
+| `docs/prereg_j10_amendment_20260924.md` | the registered confirmatory read, **not yet run** |
+
+Registered text is amended by appending, never by editing what it already says; the amendment record
+in each document is the audit trail. Where we departed from a frozen document we say so in
+§11 rather than absorbing it — see item 7, a prediction whose attached remedy did not fit the
+direction in which it failed.
+
+### A.4 Statistical protocol
+
+Contrasts are paired on `(task_id, seed)` and bootstrapped over **clusters**, not episodes: 10,000
+percentile draws, scenario-clustered as primary and task-clustered reported beside it, because the 57
+dev tasks form only 19 scenario groups and tasks within a scenario are not independent. A crashed
+episode scores 0 under the all-episodes population; `error_type == "limit"` is not a crash and keeps
+its recorded score. Difference-in-differences contrasts are formed **per episode** before averaging,
+so the pairing between the two gaps survives into the bootstrap (§6.1).
+
+### A.5 Provenance and what is not yet automated
+
+The results in this draft were produced at commit `c448a8d` of the analysis tree. ⚠ Per-episode
+`result.json` files do **not** yet carry the git SHA of the code that produced them, so provenance is
+established at campaign granularity through `campaign/RUNS.md` rather than per episode. That is a
+known gap, it is tracked, and it is the one piece of the reproducibility story we cannot currently
+check mechanically.
