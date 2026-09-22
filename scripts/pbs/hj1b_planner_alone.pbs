@@ -13,7 +13,7 @@
 # observable from a batch job, so the job is written to be resumable and to fail loudly.
 # Do NOT submit from a worker.
 #   CONFIG="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/configs/hj13_planner_alone_cap81.yaml" CID="hj13_planner_alone_cap81_20260923"
-#   qsub -v CONFIG="${CONFIG}",CID="${CID}" scripts/pbs/hj1b_planner_alone.pbs
+#   qsub -v CONFIG="${CONFIG}",CID="${CID}",SEEDS="${SEEDS}" scripts/pbs/hj1b_planner_alone.pbs
 
 set -uo pipefail
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
@@ -34,6 +34,10 @@ REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
 export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
 OUT=/scratch/n12194778/sidekick/results
 CONFIG="${CONFIG:-${REPO}/configs/pilot_planner_alone.yaml}"
+# Allow a third planner seed without editing this script; the default exactly reproduces the original two-seed campaign.
+SEEDS="${SEEDS:-1,2}"
+# The smoke slice must sample the same seed population as the full run, or its episodes are orphans that inflate the campaign count and waste hosted calls.
+SMOKE_SEED="${SEEDS%%,*}"
 CID="${CID:-hj1b_planner_20260915}"
 PY="${SIDEKICK_VENV}/bin/python"
 SUM="${REPO}/scripts/setup/campaign_summarize.py"
@@ -59,17 +63,19 @@ if [[ ! -d "${APPWORLD_ROOT}" ]]; then
 fi
 mkdir -p "${OUT}" /scratch/n12194778/sidekick/codex_scratch
 
-# ---- smoke gate: 3 tasks, seed 1 -------------------------------------------
+# ---- smoke gate: 3 tasks, first configured seed ----------------------------
 # Same campaign id as the full run, so these 3 runs are reused rather than repeated
 # (the runner skips any run whose result.json already exists).
+# The smoke seed is derived from SEEDS rather than fixed, so it remains in the full
+# run's seed population when the campaign is launched with a different seed list.
 # Retry anything that previously crashed. run_campaign skips any run whose
 # result.json exists, so without this a crashed run is skipped forever on resume.
 echo "[hj1b] ---- purge broken runs from any earlier attempt ----"
 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-broken 2>/dev/null | head -2
 
-echo "[hj1b] ---- smoke slice (3 tasks, seed 1) ----"
+echo "[hj1b] ---- smoke slice (3 tasks, seed ${SMOKE_SEED}) ----"
 timeout 1800 "${PY}" -m sidekick.runner \
-  --system planner_alone --split dev --tasks 3 --seeds 1 \
+  --system planner_alone --split dev --tasks 3 --seeds "${SMOKE_SEED}" \
   --env appworld --workers 3 \
   --config "${CONFIG}" --out "${OUT}" --campaign-id "${CID}"
 SMOKE_RC=$?
@@ -85,9 +91,9 @@ if [[ "${GATE_RC}" -ne 0 ]]; then
 fi
 
 # ---- full campaign: 57 tasks x 2 seeds -------------------------------------
-echo "[hj1b] ---- full campaign (57 tasks, seeds 1,2) ----"
+echo "[hj1b] ---- full campaign (57 tasks, seeds ${SEEDS}) ----"
 timeout 14400 "${PY}" -m sidekick.runner \
-  --system planner_alone --split dev --tasks 57 --seeds 1,2 \
+  --system planner_alone --split dev --tasks 57 --seeds "${SEEDS}" \
   --env appworld --workers 6 \
   --config "${CONFIG}" --out "${OUT}" --campaign-id "${CID}"
 FULL_RC=$?
