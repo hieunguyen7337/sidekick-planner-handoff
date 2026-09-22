@@ -15,14 +15,15 @@
 #PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
 #PBS -e /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
 #
-# HJ-12 prefix-handoff: serve one base model at a time with its LoRA.
-# Granite-4.2-8b uses sft_b_plus_iaware_granite8b (alias sft_b_plus).
+# HJ-12 prefix-handoff: serve one base model at a time with its LoRA(s).
+# Granite-4.2-8b uses sft_b_plus_iaware_granite8b (alias sft_b_plus) and
+# sft_b_plus_handoff_granite8b (alias sft_b_plus_handoff) together in one serve.
 # Qwen/Qwen3-8B uses sft_b_plus_iaware_qwen8b (alias sft_b_plus_qwen8b).
 # Pending arms are grouped by executor.model; vLLM is restarted between
 # groups. Zero hosted planner calls. ARMS="<stem> <stem>" overrides the
 # full set. Never pattern-kill another job's vLLM server.
 # Alias launched via --lora-modules MUST equal executor.lora_name or requests
-# silently hit the base model.
+# silently hit the base model. Both granite aliases must be in that list.
 #
 # Queue sizing copied from hj8_frontier.pbs (ncpus=12:ngpus=1:mem=64gb).
 #   A non-interactive `qsub -q gpu_inter` is remapped to gpu_batch_exec
@@ -44,6 +45,7 @@
 # Job variables (override at qsub time):
 #   ARMSET (free|all), ARMS (space-separated cid stems; overrides ARMSET),
 #   DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS,
+#   ADAPTER_SFT_B_PLUS_HANDOFF, ALIAS_SFT_B_PLUS_HANDOFF,
 #   ADAPTER_SFT_B_PLUS_QWEN, ALIAS_SFT_B_PLUS_QWEN, MODEL_QWEN, MODEL_GRANITE,
 #   SYSTEM (default prefix_handoff)
 #   SMOKE_ONLY=1 (default 0): each pending arm runs its 3-task smoke and
@@ -113,6 +115,8 @@ echo "[hj12] vlog=${VLOG}"
 # loadable PEFT dir (adapter_config.json + weights), not merely a directory.
 ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
 ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b}"
+ALIAS_SFT_B_PLUS_HANDOFF="${ALIAS_SFT_B_PLUS_HANDOFF:-sft_b_plus_handoff}"
+ADAPTER_SFT_B_PLUS_HANDOFF="${ADAPTER_SFT_B_PLUS_HANDOFF:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_handoff_granite8b}"
 ALIAS_SFT_B_PLUS_QWEN="${ALIAS_SFT_B_PLUS_QWEN:-sft_b_plus_qwen8b}"
 ADAPTER_SFT_B_PLUS_QWEN="${ADAPTER_SFT_B_PLUS_QWEN:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_qwen8b}"
 QWEN_HF_HOME="${QWEN_HF_HOME:-${HOME}/.cache/huggingface}"
@@ -154,6 +158,9 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m6.yaml|hj13_prefix_zs_m6"
   "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m9.yaml|hj13_prefix_zs_m9"
   "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m11.yaml|hj13_prefix_zs_m11"
+  "prefix_handoff|${REPO}/configs/hj13_prefix_hf_m6.yaml|hj13_prefix_hf_m6"
+  "prefix_handoff|${REPO}/configs/hj13_prefix_hf_m9.yaml|hj13_prefix_hf_m9"
+  "prefix_handoff|${REPO}/configs/hj13_prefix_hf_m11.yaml|hj13_prefix_hf_m11"
   "executor_alone|${REPO}/configs/hj14_executor_alone.yaml|hj14_executor_alone"
   "sft_plan|${REPO}/configs/hj14_sft_plan.yaml|hj14_sft_plan"
   "prefix_handoff|${REPO}/configs/hj14_prefix_m2.yaml|hj14_prefix_m2"
@@ -233,8 +240,9 @@ hj12_assert_selected_configs_exist () {
   if [[ "${cfg_missing}" -ne 0 ]]; then
     echo "[hj12] not starting vLLM. Static LoRA line that will be used:"
     echo "[hj12] granite: --lora-modules ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}"
+    echo "[hj12] granite: --lora-modules ${ALIAS_SFT_B_PLUS_HANDOFF}=${ADAPTER_SFT_B_PLUS_HANDOFF}"
     echo "[hj12] qwen:    --lora-modules ${ALIAS_SFT_B_PLUS_QWEN}=${ADAPTER_SFT_B_PLUS_QWEN}"
-    echo "[hj12] alias source: ALIAS_SFT_B_PLUS / ALIAS_SFT_B_PLUS_QWEN, must equal executor.lora_name"
+    echo "[hj12] alias source: ALIAS_SFT_B_PLUS / ALIAS_SFT_B_PLUS_HANDOFF / ALIAS_SFT_B_PLUS_QWEN, must equal executor.lora_name"
     exit 2
   fi
 }
@@ -869,8 +877,9 @@ else
 fi
 
 # Group pending arms by executor.model. One vLLM process cannot serve granite
-# and Qwen together; restart between groups. The --lora-modules alias must
-# equal executor.lora_name or requests silently hit BASE.
+# and Qwen together; restart between groups. Each --lora-modules alias must
+# equal executor.lora_name or requests silently hit BASE. Granite serves
+# sft_b_plus and sft_b_plus_handoff together in one job.
 SERVE_MODELS=()
 for spec in "${PENDING_ARMS[@]}"; do
   IFS='|' read -r _system cfg _stem <<<"${spec}"
@@ -898,6 +907,11 @@ for MODEL in "${SERVE_MODELS[@]}"; do
   hj12_alias_adapter_for_model "${MODEL}"
   LORA_MODULES=()
   GROUP_ARMS=()
+  ALLOWED_ALIASES=("${EXPECT_ALIAS}")
+  if [[ "${MODEL}" == "${MODEL_GRANITE}" ]]; then
+    ALLOWED_ALIASES=("${ALIAS_SFT_B_PLUS}" "${ALIAS_SFT_B_PLUS_HANDOFF}")
+  fi
+  need_handoff=0
   for spec in "${PENDING_ARMS[@]}"; do
     IFS='|' read -r system cfg stem <<<"${spec}"
     fields="$(hj12_executor_fields "${cfg}")" || exit $?
@@ -906,14 +920,30 @@ for MODEL in "${SERVE_MODELS[@]}"; do
     if [[ "${arm_model}" != "${MODEL}" ]]; then
       continue
     fi
-    if [[ -n "${arm_lora}" && "${arm_lora}" != "${EXPECT_ALIAS}" ]]; then
-      echo "[hj12] FATAL: ${cfg} executor.lora_name=${arm_lora} != served alias ${EXPECT_ALIAS} for base ${MODEL}"
-      exit 2
+    if [[ -n "${arm_lora}" ]]; then
+      alias_ok=0
+      for allowed in "${ALLOWED_ALIASES[@]}"; do
+        if [[ "${arm_lora}" == "${allowed}" ]]; then
+          alias_ok=1
+          break
+        fi
+      done
+      if [[ "${alias_ok}" -eq 0 ]]; then
+        echo "[hj12] FATAL: ${cfg} executor.lora_name=${arm_lora} not in served aliases ${ALLOWED_ALIASES[*]} for base ${MODEL}"
+        exit 2
+      fi
+    fi
+    if [[ "${arm_lora}" == "${ALIAS_SFT_B_PLUS_HANDOFF}" ]]; then
+      need_handoff=1
     fi
     GROUP_ARMS+=("${spec}")
   done
   echo "[hj12] serving_record base_model=${MODEL} alias=${EXPECT_ALIAS} adapter=${ADAPTER_PATH} n_arms=${#GROUP_ARMS[@]}"
   register_lora "${EXPECT_ALIAS}" "${ADAPTER_PATH}"
+  if [[ "${need_handoff}" -eq 1 ]]; then
+    echo "[hj12] serving_record base_model=${MODEL} alias=${ALIAS_SFT_B_PLUS_HANDOFF} adapter=${ADAPTER_SFT_B_PLUS_HANDOFF} n_arms=${#GROUP_ARMS[@]}"
+    register_lora "${ALIAS_SFT_B_PLUS_HANDOFF}" "${ADAPTER_SFT_B_PLUS_HANDOFF}"
+  fi
   if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
     echo "[hj12] FATAL: no LoRA modules registered for base ${MODEL}; set the matching ADAPTER_* path" >&2
     exit 2

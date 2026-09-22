@@ -156,3 +156,50 @@ infer them**. `docs/prereg_hj13_shape_20260923.md` §2.1 predicted these arms wo
 m. Report the observed deltas at every m together with the silenced counts and the replicate floor, and
 state whether the registered prediction is met **at each m separately**. Do not summarise it as a single
 pass/fail across the curve, and do not soften or restate the prereg language.
+
+## Addendum 2026-09-22 17:25 — the grid is complete, and here is why this unit is now the priority
+
+Every arm in the grid has finished at 114/114. **Fill the m=10 and m=11 rows from the artifacts**; the
+values are m10 pre 0.7906 / post 0.8065 (Δ +1.59, 41 silenced) and m11 pre 0.8307 / post 0.8098
+(Δ −2.09, 56 silenced). The silenced series across the whole grid is 0, 0, 3, 8, 20, 31, 41, 56 at
+m = 2, 4, 6, 7, 8, 9, 10, 11 — note the m=9 count is **31**, correcting the 30 in the table above.
+
+The post-guard all-episodes curve is monotone increasing across the whole grid: 0.6856, 0.7190,
+0.7237, 0.7544, 0.7627, 0.7852, 0.8065, 0.8098. The pre-guard curve dipped at m6 and m10.
+
+### Why the trend test matters more than it did when this brief was written
+
+I have since run the curve on **controlled populations** — every arm restricted to the episodes where
+the deepest prefix still genuinely hands off, so no arm collects credit for a task its prefix finished
+alone. Pinned to m11's keys (n=54): 0.7119, 0.7001, 0.6967, 0.6839, 0.6801, 0.7167, 0.7487, 0.7558.
+Pinned to m10's keys (n=71): 0.7145, 0.7052, 0.7053, 0.7139, 0.6991, 0.7282, 0.7694.
+
+Both are flat-or-declining through m=8 and rise from m=9. But the **pairwise** contrasts are
+underpowered: at n=54 over 19 scenarios the intervals span roughly ±8 pp, and only the m8-versus-largest
+contrast excludes zero. Testing eight adjacent pairs is the wrong instrument for this much data.
+
+**Your segmented/trend test pools the whole curve, which is why it can do what those contrasts cannot.**
+Report the breakpoint with an interval. If the breakpoint interval is so wide that it is uninformative,
+say that plainly — that is a real finding about the design's power and I need it before the H7
+pre-registration is written, not after.
+
+### Run it on all three populations
+
+Report the test on (a) all episodes, (b) pinned to m10's handoff keys, (c) pinned to m11's handoff keys.
+The existing `scripts/analysis/j8_frontier.py` already implements the pinning via `--handoff-keys-from
+<arm>`, and that flag takes effect inside the **non-inferiority** block, not the pairwise `contrasts`
+block — read `noninferiority.arms.<arm>.goal_pass_handoff_only`. Reuse it rather than re-implementing
+the population logic, and say what you reused.
+
+⚠ Two population definitions are in play and they differ by two episodes: the harness's recorded
+`handoff_occurred` flag gives 71 episodes at m10, while `totals.per_actor.executor.n_calls > 0` gives
+73. **Report which you used and, if it is cheap, reconcile the two** — identify the episodes that
+differ and say why they differ. That discrepancy is currently an open item in the ledger (SHAPE-04).
+
+### Constraints unchanged, plus two that cost units today
+
+- **Commit the amendment before you run the test**, as the brief already requires.
+- **Run every command in the FOREGROUND under `timeout` via `hpc` and wait for it.** A worker today
+  backgrounded its analysis, exited, and its log printed "Wrote report to …" for a file that was never
+  on disk. Before you finish, `ls` every artifact you claim to have written.
+- **Do not file a STATUS that implies work you did not finish.** Say plainly what is missing.
