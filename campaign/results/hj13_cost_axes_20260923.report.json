@@ -1,0 +1,1509 @@
+{
+  "prices_source": "configs/cost/prices_2026-09.yaml",
+  "cluster": "scenario",
+  "n_boot": 10000,
+  "seed": 20260915,
+  "seeds_filter": [
+    1,
+    2
+  ],
+  "n_usage_without_cache_split": 0,
+  "arms": [
+    {
+      "label": "executor_alone",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": null,
+      "usd_per_episode": 0.079943,
+      "hosted_calls_per_episode": 0.0,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "plan_only",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 23905.587719,
+      "usd_per_episode": 0.072651,
+      "hosted_calls_per_episode": 1.0,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "advise_k10_starved",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 43823.385965,
+      "usd_per_episode": 0.069664,
+      "hosted_calls_per_episode": 2.421053,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "advise_k3_starved",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 204499.763158,
+      "usd_per_episode": 0.078095,
+      "hosted_calls_per_episode": 6.824561,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "advise_k10_fullctx",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 49819.359649,
+      "usd_per_episode": 0.073054,
+      "hosted_calls_per_episode": 2.464912,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "takeover_k10",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 41463.675439,
+      "usd_per_episode": 0.05885,
+      "hosted_calls_per_episode": 2.315789,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "prefix_m6",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 221043.061404,
+      "usd_per_episode": 0.063604,
+      "hosted_calls_per_episode": 6.982456,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "prefix_m9",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 357448.359649,
+      "usd_per_episode": 0.052185,
+      "hosted_calls_per_episode": 9.77193,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "prefix_m11",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 443361.412281,
+      "usd_per_episode": 0.049698,
+      "hosted_calls_per_episode": 11.254386,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "ceiling_cap25",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 684453.263158,
+      "usd_per_episode": 0.035479,
+      "hosted_calls_per_episode": 14.429825,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    },
+    {
+      "label": "ceiling_cap81",
+      "n_episodes": 114,
+      "diagnostics": {
+        "n_usage_without_cache_split": 0,
+        "n_episodes_priced": 114,
+        "n_episodes_missing_usage": 0,
+        "n_episodes_with_wall_time": 0
+      },
+      "noncached_tokens_per_episode": 1160215.149123,
+      "usd_per_episode": 0.048208,
+      "hosted_calls_per_episode": 17.350877,
+      "local_gpu_usd_per_episode": null,
+      "local_gpu_wall_time_note": "documented assumption using local.usd_per_gpu_hour; null when wall time is unrecorded"
+    }
+  ],
+  "ordering_by_axis": {
+    "noncached_tokens_per_episode": [
+      "plan_only",
+      "takeover_k10",
+      "advise_k10_starved",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ],
+    "usd_per_episode": [
+      "ceiling_cap25",
+      "ceiling_cap81",
+      "prefix_m11",
+      "prefix_m9",
+      "takeover_k10",
+      "prefix_m6",
+      "advise_k10_starved",
+      "plan_only",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "executor_alone"
+    ],
+    "hosted_calls_per_episode": [
+      "executor_alone",
+      "plan_only",
+      "takeover_k10",
+      "advise_k10_starved",
+      "advise_k10_fullctx",
+      "advise_k3_starved",
+      "prefix_m6",
+      "prefix_m9",
+      "prefix_m11",
+      "ceiling_cap25",
+      "ceiling_cap81"
+    ]
+  },
+  "ordering_is_stable_across_axes": false,
+  "ordering_flips": [
+    {
+      "pair": [
+        "plan_only",
+        "advise_k10_starved"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "takeover_k10"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "takeover_k10"
+      ],
+      "order_in_axis_b": [
+        "takeover_k10",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "prefix_m6"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "prefix_m9"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "prefix_m11"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "prefix_m6"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "advise_k10_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "prefix_m9"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "advise_k10_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "prefix_m11"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "advise_k10_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "advise_k10_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "advise_k10_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "prefix_m6"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k3_starved",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "advise_k3_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "prefix_m9"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k3_starved",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "advise_k3_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "prefix_m11"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k3_starved",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "advise_k3_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k3_starved",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "advise_k3_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k3_starved",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "advise_k3_starved"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "prefix_m6"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_fullctx",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "advise_k10_fullctx"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "prefix_m9"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_fullctx",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "advise_k10_fullctx"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "prefix_m11"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_fullctx",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "advise_k10_fullctx"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_fullctx",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "advise_k10_fullctx"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_fullctx",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "advise_k10_fullctx"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "prefix_m9"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "prefix_m11"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "prefix_m9"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "prefix_m11"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m9",
+        "prefix_m11"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m9",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m9",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m11",
+        "ceiling_cap25"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "ceiling_cap25"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap25",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m11",
+        "ceiling_cap81"
+      ],
+      "axis_a": "noncached_tokens_per_episode",
+      "axis_b": "usd_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "ceiling_cap81"
+      ],
+      "order_in_axis_b": [
+        "ceiling_cap81",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "plan_only"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "plan_only",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "plan_only"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "advise_k10_starved"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "advise_k10_starved"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "advise_k3_starved"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "advise_k3_starved",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "advise_k3_starved"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "advise_k10_fullctx"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_fullctx",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "advise_k10_fullctx"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "takeover_k10"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "prefix_m6"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "prefix_m9"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "executor_alone",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "executor_alone"
+      ],
+      "order_in_axis_b": [
+        "executor_alone",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "advise_k10_starved"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "advise_k10_starved",
+        "plan_only"
+      ],
+      "order_in_axis_b": [
+        "plan_only",
+        "advise_k10_starved"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "takeover_k10"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "takeover_k10",
+        "plan_only"
+      ],
+      "order_in_axis_b": [
+        "plan_only",
+        "takeover_k10"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "prefix_m6"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "plan_only"
+      ],
+      "order_in_axis_b": [
+        "plan_only",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "prefix_m9"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "plan_only"
+      ],
+      "order_in_axis_b": [
+        "plan_only",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "plan_only"
+      ],
+      "order_in_axis_b": [
+        "plan_only",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "plan_only"
+      ],
+      "order_in_axis_b": [
+        "plan_only",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "plan_only",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "plan_only"
+      ],
+      "order_in_axis_b": [
+        "plan_only",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "prefix_m6"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "prefix_m9"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_starved",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "advise_k10_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_starved",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "prefix_m6"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "advise_k3_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k3_starved",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "prefix_m9"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "advise_k3_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k3_starved",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "advise_k3_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k3_starved",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "advise_k3_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k3_starved",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k3_starved",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "advise_k3_starved"
+      ],
+      "order_in_axis_b": [
+        "advise_k3_starved",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "prefix_m6"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m6",
+        "advise_k10_fullctx"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_fullctx",
+        "prefix_m6"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "prefix_m9"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "advise_k10_fullctx"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_fullctx",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "advise_k10_fullctx"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_fullctx",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "advise_k10_fullctx"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_fullctx",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "advise_k10_fullctx",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "advise_k10_fullctx"
+      ],
+      "order_in_axis_b": [
+        "advise_k10_fullctx",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "prefix_m9"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "takeover_k10"
+      ],
+      "order_in_axis_b": [
+        "takeover_k10",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "takeover_k10"
+      ],
+      "order_in_axis_b": [
+        "takeover_k10",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "takeover_k10"
+      ],
+      "order_in_axis_b": [
+        "takeover_k10",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "takeover_k10",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "takeover_k10"
+      ],
+      "order_in_axis_b": [
+        "takeover_k10",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "prefix_m9"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m9",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "prefix_m9"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m6",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "prefix_m6"
+      ],
+      "order_in_axis_b": [
+        "prefix_m6",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m9",
+        "prefix_m11"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "prefix_m11",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "prefix_m11"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m9",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m9",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "prefix_m9"
+      ],
+      "order_in_axis_b": [
+        "prefix_m9",
+        "ceiling_cap81"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m11",
+        "ceiling_cap25"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap25",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "ceiling_cap25"
+      ]
+    },
+    {
+      "pair": [
+        "prefix_m11",
+        "ceiling_cap81"
+      ],
+      "axis_a": "usd_per_episode",
+      "axis_b": "hosted_calls_per_episode",
+      "order_in_axis_a": [
+        "ceiling_cap81",
+        "prefix_m11"
+      ],
+      "order_in_axis_b": [
+        "prefix_m11",
+        "ceiling_cap81"
+      ]
+    }
+  ],
+  "non_inferiority": {
+    "evaluated": false,
+    "ceiling_arm": "",
+    "reason": "ceiling arm '' not in loaded arms (['advise_k10_fullctx', 'advise_k10_starved', 'advise_k3_starved', 'ceiling_cap25', 'ceiling_cap81', 'executor_alone', 'plan_only', 'prefix_m11', 'prefix_m6', 'prefix_m9', 'takeover_k10'])",
+    "ni_unchanged_across_axes": null,
+    "comparisons": {}
+  },
+  "ni_unchanged_across_axes": null
+}

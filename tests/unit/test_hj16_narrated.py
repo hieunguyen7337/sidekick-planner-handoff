@@ -25,6 +25,13 @@ CONFIG_PATHS = {
     "obs_bplus_m9": REPO / "configs" / "hj16_narrated_obs_m9_bplus.yaml",
 }
 
+CURVE_CONFIG_PATHS = {
+    "zs_m6": REPO / "configs" / "hj16_narrated_m6_zs.yaml",
+    "bplus_m6": REPO / "configs" / "hj16_narrated_m6_bplus.yaml",
+    "zs_m11": REPO / "configs" / "hj16_narrated_m11_zs.yaml",
+    "bplus_m11": REPO / "configs" / "hj16_narrated_m11_bplus.yaml",
+}
+
 BASE_MODEL_GRANITE = "ibm-granite/granite-4.2-8b"
 LORA_ALIAS_BPLUS = "sft_b_plus"
 TASK_ID = "copy_hello"
@@ -522,3 +529,64 @@ def test_pbs_free_arms_lines() -> None:
     ]
     for line in expected_lines:
         assert line in text, f"Line missing from {PBS}:\n{line}"
+
+
+def test_narrated_curve_configs_point_at_their_own_packet_dir() -> None:
+    for key, path in CURVE_CONFIG_PATHS.items():
+        assert path.is_file(), f"Config {path} must exist"
+        cfg = load_config(str(path))
+        packet_source = Path(cfg["planner"]["packet_source"])
+        m_tag = "m6" if "m6" in key else "m11"
+        assert packet_source.name == f"hj16_narrated_{m_tag}", f"Expected packet source ending in hj16_narrated_{m_tag}, got {packet_source}"
+        assert packet_source.is_dir(), f"Packet directory {packet_source} must exist"
+
+
+def test_narrated_curve_untailored_runs_under_prompt_only() -> None:
+    text = PBS.read_text(encoding="utf-8")
+    assert "FREE_ARMS=(" in text
+    free_arms_block = text.split("FREE_ARMS=(")[1].split(")")[0]
+    lines = [
+        line.strip().strip('"').strip("'")
+        for line in free_arms_block.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+    arms = {}
+    for line in lines:
+        parts = line.split("|")
+        if len(parts) == 3:
+            arms[parts[2]] = (parts[0], parts[1])
+
+    for m in (6, 11):
+        zs_stem = f"hj16_narrated_m{m}_zs"
+        bplus_stem = f"hj16_narrated_m{m}_bplus"
+        assert zs_stem in arms, f"{zs_stem} not in FREE_ARMS"
+        assert arms[zs_stem][0] == "prompt_only", f"{zs_stem} must run under prompt_only, got {arms[zs_stem][0]}"
+        assert bplus_stem in arms, f"{bplus_stem} not in FREE_ARMS"
+        assert arms[bplus_stem][0] == "sft_plan", f"{bplus_stem} must run under sft_plan, got {arms[bplus_stem][0]}"
+
+
+def test_narrated_curve_configs_have_expected_lora() -> None:
+    for key, path in CURVE_CONFIG_PATHS.items():
+        assert path.is_file(), f"Config {path} must exist"
+        cfg = load_config(str(path))
+        if "zs" in key:
+            assert cfg["executor"]["lora_name"] is None
+            ex = make_executor(cfg)
+            assert ex.lora_name is None
+            assert ex.model == BASE_MODEL_GRANITE
+            model_sent, usage, adapter_name = _served_model("prompt_only", cfg, ex)
+            assert adapter_name is None
+            assert model_sent == BASE_MODEL_GRANITE
+            assert usage.model == BASE_MODEL_GRANITE
+            assert usage.raw.get("lora_name") is None
+        else:
+            assert cfg["executor"]["lora_name"] == LORA_ALIAS_BPLUS
+            ex = make_executor(cfg)
+            assert ex.lora_name == LORA_ALIAS_BPLUS
+            assert ex.model == BASE_MODEL_GRANITE
+            model_sent, usage, adapter_name = _served_model("sft_plan", cfg, ex)
+            assert adapter_name == LORA_ALIAS_BPLUS
+            assert model_sent == LORA_ALIAS_BPLUS
+            assert usage.model == LORA_ALIAS_BPLUS
+            assert usage.raw.get("lora_name") == LORA_ALIAS_BPLUS
+

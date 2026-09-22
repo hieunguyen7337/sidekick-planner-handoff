@@ -186,6 +186,10 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj17_prefix_c81_bplus_m6.yaml|hj17_prefix_c81_bplus_m6"
   "prefix_handoff|${REPO}/configs/hj17_prefix_c81_bplus_m9.yaml|hj17_prefix_c81_bplus_m9"
   "prefix_handoff|${REPO}/configs/hj17_prefix_c81_bplus_m11.yaml|hj17_prefix_c81_bplus_m11"
+  "prompt_only|${REPO}/configs/hj16_narrated_m6_zs.yaml|hj16_narrated_m6_zs"
+  "prompt_only|${REPO}/configs/hj16_narrated_m11_zs.yaml|hj16_narrated_m11_zs"
+  "sft_plan|${REPO}/configs/hj16_narrated_m6_bplus.yaml|hj16_narrated_m6_bplus"
+  "sft_plan|${REPO}/configs/hj16_narrated_m11_bplus.yaml|hj16_narrated_m11_bplus"
 )
 
 hj12_select_arms () {

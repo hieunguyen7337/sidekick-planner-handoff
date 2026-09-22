@@ -746,6 +746,9 @@ def fit_population(
         )
     floor = means.get(0)
     iso = isotonic_first_exceed(ms, qs, floor if floor is not None else qs[0])
+    multiplicity = holm_adjusted_intervals(
+        boot_scen.get("adjacent_contrasts", {}), alpha=0.05
+    )
     return {
         "population": name,
         "analysis_status": "exploratory",
@@ -760,6 +763,7 @@ def fit_population(
         "verdict_scenario_primary": verdict,
         "verdict_task_alongside": verdict_task,
         "noise_floor": noise_floor_block(means),
+        "multiplicity": multiplicity,
         "robustness": {
             "label": "descriptive_uncorrected",
             "a_isotonic": iso,
@@ -1073,6 +1077,7 @@ def build_series_report(
         "populations": pops,
         "primary_population": primary_pop,
         "primary_verdict": primary_verdict,
+        "multiplicity": pops[primary_pop].get("multiplicity"),
         "per_m_pre_post_delta": per_m,
         "registered_prediction_m11_minus_planner_alone_pp": m11_minus_planner,
         "registered_prediction_m11_minus_planner_alone_positive": (
