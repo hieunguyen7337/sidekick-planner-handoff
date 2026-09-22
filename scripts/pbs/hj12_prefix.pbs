@@ -177,6 +177,15 @@ FREE_ARMS=(
   "prompt_only|${REPO}/configs/hj16_narrated_obs_m9_zs.yaml|hj16_narrated_obs_m9_zs"
   "sft_plan|${REPO}/configs/hj16_narrated_m9_bplus.yaml|hj16_narrated_m9_bplus"
   "sft_plan|${REPO}/configs/hj16_narrated_obs_m9_bplus.yaml|hj16_narrated_obs_m9_bplus"
+  "executor_alone|${REPO}/configs/hj15_executor_alone_zsq.yaml|hj15_executor_alone_zsq"
+  "prompt_only|${REPO}/configs/hj15_prompt_only_zsq.yaml|hj15_prompt_only_zsq"
+  "prefix_handoff|${REPO}/configs/hj15_prefix_zsq_m11.yaml|hj15_prefix_zsq_m11"
+  "prefix_handoff|${REPO}/configs/hj17_prefix_c81_zs_m6.yaml|hj17_prefix_c81_zs_m6"
+  "prefix_handoff|${REPO}/configs/hj17_prefix_c81_zs_m9.yaml|hj17_prefix_c81_zs_m9"
+  "prefix_handoff|${REPO}/configs/hj17_prefix_c81_zs_m11.yaml|hj17_prefix_c81_zs_m11"
+  "prefix_handoff|${REPO}/configs/hj17_prefix_c81_bplus_m6.yaml|hj17_prefix_c81_bplus_m6"
+  "prefix_handoff|${REPO}/configs/hj17_prefix_c81_bplus_m9.yaml|hj17_prefix_c81_bplus_m9"
+  "prefix_handoff|${REPO}/configs/hj17_prefix_c81_bplus_m11.yaml|hj17_prefix_c81_bplus_m11"
 )
 
 hj12_select_arms () {

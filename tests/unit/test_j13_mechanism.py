@@ -112,14 +112,14 @@ def test_m2_compounding_error_and_handoff_occurred_filter() -> None:
     # Ep A: handoff_occurred=True, executor error at action 2
     ep_a_events = [
         _make_event(1, "executor", "action", {"kind": "CODE", "code": "apis.gmail.read()"}),
-        _make_event(1, "executor", "observation", {"text": "ok"}),
+        _make_event(1, "environment", "observation", {"text": "ok"}),
         _make_event(2, "executor", "action", {"kind": "CODE", "code": "apis.gmail.send()"}),
-        _make_event(2, "executor", "observation", {"text": "Execution failed"}, error_type="ExecutionError"),
+        _make_event(2, "environment", "observation", {"text": "Execution failed"}, error_type="ExecutionError"),
+        _make_event(3, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
     ]
     rec_a = {
         "events": ep_a_events,
         "result": {
-            "handoff_occurred": True,
             "goal_pass_rate": 0.0,
             "totals": {"per_actor": {"executor": {"n_calls": 2}}},
         },
@@ -128,10 +128,12 @@ def test_m2_compounding_error_and_handoff_occurred_filter() -> None:
     }
 
     # Ep B: handoff_occurred=False (silenced / prefix-exhausted)
+    ep_b_events = [
+        _make_event(1, "system", "report", {"handoff_occurred": False, "effective_m": 4, "n_source_actions": 5}),
+    ]
     rec_b = {
-        "events": [],
+        "events": ep_b_events,
         "result": {
-            "handoff_occurred": False,
             "goal_pass_rate": 1.0,
             "totals": {"per_actor": {"executor": {"n_calls": 0}}},
         },
@@ -142,12 +144,12 @@ def test_m2_compounding_error_and_handoff_occurred_filter() -> None:
     # Ep C: handoff_occurred=True, no errors
     ep_c_events = [
         _make_event(1, "executor", "action", {"kind": "CODE", "code": "apis.notes.list()"}),
-        _make_event(1, "executor", "observation", {"text": "ok"}),
+        _make_event(1, "environment", "observation", {"text": "ok"}),
+        _make_event(2, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
     ]
     rec_c = {
         "events": ep_c_events,
         "result": {
-            "handoff_occurred": True,
             "goal_pass_rate": 1.0,
             "totals": {"per_actor": {"executor": {"n_calls": 1}}},
         },
@@ -166,26 +168,115 @@ def test_m2_compounding_error_and_handoff_occurred_filter() -> None:
     assert m4["first_error_rel_step_dist"]["min"] == 2
 
 
+def test_m2_counts_errors_from_environment_observations() -> None:
+    """Scripted handoff episode with executor action followed by observation|environment starting 'Execution failed. Traceback:' yields error_rate_on_handoff == 1.0 and first_error_rel_step == 1."""
+    events = [
+        _make_event(1, "executor", "action", {"kind": "CODE", "code": "apis.gmail.send()"}),
+        _make_event(1, "environment", "observation", {"text": "Execution failed. Traceback: KeyError: 'id'"}),
+        _make_event(2, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
+    ]
+    rec = {
+        "events": events,
+        "result": {
+            "goal_pass_rate": 0.0,
+            "totals": {"per_actor": {"executor": {"n_calls": 1}}},
+        },
+        "task_id": "t1",
+        "seed": 1,
+    }
+    arm_records = {"m4": {("t1", 1): rec}}
+    res = mech.measure_m2_compounding_error(arm_records, [4])
+    m4 = res["m4"]
+    assert m4["handoff_episodes"] == 1
+    assert m4["error_episodes"] == 1
+    assert m4["error_rate_on_handoff"] == 1.0
+    assert m4["first_error_rel_step_dist"]["min"] == 1
+
+
+def test_m2_ignores_successful_observations() -> None:
+    """Scripted handoff episode with text 'Execution successful.' yields no error."""
+    events = [
+        _make_event(1, "executor", "action", {"kind": "CODE", "code": "apis.gmail.send()"}),
+        _make_event(1, "environment", "observation", {"text": "Execution successful. Result: 200"}),
+        _make_event(2, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
+    ]
+    rec = {
+        "events": events,
+        "result": {
+            "goal_pass_rate": 1.0,
+            "totals": {"per_actor": {"executor": {"n_calls": 1}}},
+        },
+        "task_id": "t1",
+        "seed": 1,
+    }
+    arm_records = {"m4": {("t1", 1): rec}}
+    res = mech.measure_m2_compounding_error(arm_records, [4])
+    m4 = res["m4"]
+    assert m4["handoff_episodes"] == 1
+    assert m4["error_episodes"] == 0
+    assert m4["error_rate_on_handoff"] == 0.0
+    assert m4["first_error_rel_step_dist"] is None
+
+
+def test_m2_first_error_step_is_one_based_on_executor_actions() -> None:
+    """Error in reply to 3rd executor action yields first_error_rel_step == 3."""
+    events = [
+        _make_event(1, "executor", "action", {"kind": "CODE", "code": "apis.a()"}),
+        _make_event(1, "environment", "observation", {"text": "Execution successful."}),
+        _make_event(2, "executor", "action", {"kind": "CODE", "code": "apis.b()"}),
+        _make_event(2, "environment", "observation", {"text": "Execution successful."}),
+        _make_event(3, "executor", "action", {"kind": "CODE", "code": "apis.c()"}),
+        _make_event(3, "environment", "observation", {"text": "Execution failed. Traceback: ..."}, error_type="ExecutionError"),
+        _make_event(4, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
+    ]
+    rec = {
+        "events": events,
+        "result": {
+            "goal_pass_rate": 0.0,
+            "totals": {"per_actor": {"executor": {"n_calls": 3}}},
+        },
+        "task_id": "t1",
+        "seed": 1,
+    }
+    arm_records = {"m4": {("t1", 1): rec}}
+    res = mech.measure_m2_compounding_error(arm_records, [4])
+    m4 = res["m4"]
+    assert m4["handoff_episodes"] == 1
+    assert m4["error_episodes"] == 1
+    assert m4["first_error_rel_step_dist"]["min"] == 3
+    assert m4["share_first_error_at_step_1"] == 0.0
+    assert m4["share_first_error_in_steps_1_2"] == 0.0
+
+
 def test_m3_handoff_population_and_divergence_diagnostic() -> None:
     """4. M3 handoff-only equals handoff_occurred set; divergence counted when n_calls==0 and handoff_occurred==True."""
     # Ep 1: handoff_occurred: True, n_calls: 3 -> handoff
     rec1 = {
-        "events": [_make_event(1, "planner", "action", {"kind": "CODE", "code": "apis.a.b()"})],
-        "result": {"handoff_occurred": True, "goal_pass_rate": 1.0, "tgc": 1.0, "totals": {"per_actor": {"executor": {"n_calls": 3}}}},
+        "events": [
+            _make_event(1, "planner", "action", {"kind": "CODE", "code": "apis.a.b()"}),
+            _make_event(2, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
+        ],
+        "result": {"goal_pass_rate": 1.0, "tgc": 1.0, "totals": {"per_actor": {"executor": {"n_calls": 3}}}},
         "task_id": "t1",
         "seed": 1,
     }
     # Ep 2: handoff_occurred: False, n_calls: 0 -> silenced
     rec2 = {
-        "events": [_make_event(1, "planner", "action", {"kind": "CODE", "code": "apis.a.b()"})],
-        "result": {"handoff_occurred": False, "goal_pass_rate": 1.0, "tgc": 1.0, "totals": {"per_actor": {"executor": {"n_calls": 0}}}},
+        "events": [
+            _make_event(1, "planner", "action", {"kind": "CODE", "code": "apis.a.b()"}),
+            _make_event(2, "system", "report", {"handoff_occurred": False, "effective_m": 4, "n_source_actions": 5}),
+        ],
+        "result": {"goal_pass_rate": 1.0, "tgc": 1.0, "totals": {"per_actor": {"executor": {"n_calls": 0}}}},
         "task_id": "t2",
         "seed": 1,
     }
     # Ep 3: handoff_occurred: True, n_calls: 0 -> divergence!
     rec3 = {
-        "events": [_make_event(1, "planner", "action", {"kind": "CODE", "code": "apis.a.b()"})],
-        "result": {"handoff_occurred": True, "goal_pass_rate": 0.0, "tgc": 0.0, "totals": {"per_actor": {"executor": {"n_calls": 0}}}},
+        "events": [
+            _make_event(1, "planner", "action", {"kind": "CODE", "code": "apis.a.b()"}),
+            _make_event(2, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
+        ],
+        "result": {"goal_pass_rate": 0.0, "tgc": 0.0, "totals": {"per_actor": {"executor": {"n_calls": 0}}}},
         "task_id": "t3",
         "seed": 1,
     }
@@ -204,6 +295,161 @@ def test_m3_handoff_population_and_divergence_diagnostic() -> None:
     assert curve["silenced_count"] == 1
     assert curve["divergence_count"] == 1
     assert curve["divergence_keys"] == [["t3", 1]]
+
+
+def test_handoff_flag_is_read_from_report_event(tmp_path: Path) -> None:
+    """Handoff flag is read from report event in events.jsonl, not result.json."""
+    ep_dir = tmp_path / "hj12_prefix_m9_20260923" / "prefix_handoff" / "1" / "task_01"
+    ep_dir.mkdir(parents=True)
+    res_file = ep_dir / "result.json"
+    res_file.write_text(
+        json.dumps({
+            "task_id": "task_01",
+            "seed": 1,
+            "goal_pass_rate": 1.0,
+            "totals": {"per_actor": {"executor": {"n_calls": 2}}},
+        }),
+        encoding="utf-8",
+    )
+    events_file = ep_dir / "events.jsonl"
+    events_content = (
+        json.dumps({
+            "run_id": "r1", "task_id": "task_01", "system": "test", "seed": 1,
+            "step": 0, "ts": "2026-09-15T00:00:00Z", "actor": "system",
+            "event_type": "run_start", "payload": {},
+        }) + "\n" +
+        json.dumps({
+            "run_id": "r1", "task_id": "task_01", "system": "test", "seed": 1,
+            "step": 1, "ts": "2026-09-15T00:00:00Z", "actor": "system",
+            "event_type": "report", "payload": {
+                "handoff_occurred": True,
+                "effective_m": 9,
+                "n_source_actions": 10,
+                "replayed_planner_tokens": 318026,
+            },
+        }) + "\n"
+    )
+    events_file.write_text(events_content, encoding="utf-8")
+
+    arm_root = tmp_path / "hj12_prefix_m9_20260923" / "prefix_handoff"
+    flags = mech.load_handoff_flags(arm_root)
+    assert ("task_01", 1) in flags
+    assert flags[("task_01", 1)]["handoff_occurred"] is True
+    assert flags[("task_01", 1)]["effective_m"] == 9
+    assert flags[("task_01", 1)]["n_source_actions"] == 10
+
+    records = mech.load_episode_records(arm_root)
+    assert records[("task_01", 1)]["handoff_occurred"] is True
+
+    m2_res = mech.measure_m2_compounding_error({"m9": records}, [9])
+    assert m2_res["m9"]["handoff_episodes"] == 1
+    assert m2_res["m9"]["silenced_episodes"] == 0
+
+
+def test_empty_handoff_population_is_fatal(tmp_path: Path) -> None:
+    """Fixture arm where every result.json lacks the key and no report event exists raises SystemExit."""
+    ep_dir = tmp_path / "hj12_prefix_m9_20260923" / "prefix_handoff" / "1" / "task_01"
+    ep_dir.mkdir(parents=True)
+    res_file = ep_dir / "result.json"
+    res_file.write_text(
+        json.dumps({
+            "task_id": "task_01",
+            "seed": 1,
+            "goal_pass_rate": 0.0,
+            "totals": {"per_actor": {"executor": {"n_calls": 2}}},
+        }),
+        encoding="utf-8",
+    )
+    # No report event in events.jsonl
+    events_file = ep_dir / "events.jsonl"
+    events_file.write_text(
+        json.dumps({
+            "run_id": "r1", "task_id": "task_01", "system": "test", "seed": 1,
+            "step": 0, "ts": "2026-09-15T00:00:00Z", "actor": "system",
+            "event_type": "run_start", "payload": {},
+        }) + "\n",
+        encoding="utf-8",
+    )
+
+    arm_root = tmp_path / "hj12_prefix_m9_20260923" / "prefix_handoff"
+    with pytest.raises(SystemExit, match="missing a report event"):
+        mech.load_episode_records(arm_root)
+
+
+def test_handoff_true_with_zero_executor_calls_is_fatal(tmp_path: Path) -> None:
+    """handoff_occurred is True but executor n_calls == 0 is fatal (SystemExit)."""
+    records = {
+        ("task_01", 1): {
+            "events": [
+                _make_event(1, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
+            ],
+            "result": {
+                "task_id": "task_01",
+                "seed": 1,
+                "totals": {"per_actor": {"executor": {"n_calls": 0}}},
+            },
+            "task_id": "task_01",
+            "seed": 1,
+        }
+    }
+    with pytest.raises(SystemExit, match="with handoff_occurred is True but executor n_calls == 0"):
+        mech.validate_arm_population(records, arm_name="m4")
+
+
+def test_post_complete_actions_are_recorded_not_fatal() -> None:
+    """Arm where 10% of episodes have handoff_occurred False and n_calls > 0 completes and reports post_complete_executor_actions."""
+    records = {}
+    # 9 episodes: handoff_occurred=True, n_calls=2 (handoff)
+    for i in range(9):
+        records[(f"task_{i}", 1)] = {
+            "events": [
+                _make_event(1, "executor", "action", {"kind": "CODE", "code": "apis.a()"}),
+                _make_event(1, "environment", "observation", {"text": "Execution successful."}),
+                _make_event(2, "system", "report", {"handoff_occurred": True, "effective_m": 4, "n_source_actions": 5}),
+            ],
+            "result": {
+                "task_id": f"task_{i}",
+                "seed": 1,
+                "goal_pass_rate": 1.0,
+                "tgc": 1.0,
+                "totals": {"per_actor": {"executor": {"n_calls": 2}}},
+            },
+            "task_id": f"task_{i}",
+            "seed": 1,
+        }
+    # 1 episode (1/10 = 10%): handoff_occurred=False, n_calls=2 (post-complete executor action)
+    records[("task_post_complete", 1)] = {
+        "events": [
+            _make_event(1, "executor", "action", {"kind": "CODE", "code": "apis.a()"}),
+            _make_event(1, "environment", "observation", {"text": "Execution successful."}),
+            _make_event(2, "system", "report", {"handoff_occurred": False, "effective_m": 4, "n_source_actions": 5}),
+        ],
+        "result": {
+            "task_id": "task_post_complete",
+            "seed": 1,
+            "goal_pass_rate": 1.0,
+            "tgc": 1.0,
+            "totals": {"per_actor": {"executor": {"n_calls": 2}}},
+        },
+        "task_id": "task_post_complete",
+        "seed": 1,
+    }
+
+    # Should not raise SystemExit
+    mech.validate_arm_population(records, arm_name="m4")
+
+    # Check measure_m2_compounding_error reports post_complete_executor_actions == 1
+    m2_res = mech.measure_m2_compounding_error({"m4": records}, [4])
+    assert m2_res["m4"]["post_complete_executor_actions"] == 1
+    assert m2_res["m4"]["divergence_count"] == 1
+    assert m2_res["m4"]["silenced_episodes"] == 1
+    assert m2_res["m4"]["handoff_episodes"] == 9
+
+    # Check measure_m3_prefix_exhausted reports post_complete_executor_actions == 1
+    source_records = {k: {"events": ep_actions(5), "task_id": k[0], "seed": k[1]} for k in records}
+    m3_res = mech.measure_m3_prefix_exhausted({"m4": records}, source_records, [4])
+    assert m3_res["all_episodes_curve"]["m4"]["post_complete_executor_actions"] == 1
+    assert m3_res["all_episodes_curve"]["m4"]["divergence_count"] == 1
 
 
 def ep_actions(count: int) -> list[Event]:
@@ -323,6 +569,7 @@ def test_markdown_renders_none_as_na() -> None:
                     "handoff_episodes": 0,
                     "silenced_episodes": 0,
                     "divergence_count": 0,
+                    "post_complete_executor_actions": 0,
                     "error_rate_on_handoff": None,
                     "share_first_error_at_step_1": None,
                     "share_first_error_in_steps_1_2": None,
@@ -354,4 +601,115 @@ def test_markdown_renders_none_as_na() -> None:
     out = mech.generate_markdown_report(report)
     assert isinstance(out, str)
     assert "n/a" in out
+
+
+def _make_arm_record(
+    task_id: str,
+    seed: int,
+    gpr: float,
+    handoff: bool,
+    m: int = 6,
+    n_source_actions: int = 15,
+) -> dict[str, Any]:
+    events = [
+        _make_event(1, "executor" if handoff else "planner", "action", {"kind": "CODE", "code": "apis.a.b()"}),
+        _make_event(2, "system", "report", {"handoff_occurred": handoff, "effective_m": m, "n_source_actions": n_source_actions}),
+    ]
+    return {
+        "events": events,
+        "result": {
+            "task_id": task_id,
+            "seed": seed,
+            "goal_pass_rate": gpr,
+            "tgc": gpr,
+            "totals": {"per_actor": {"executor": {"n_calls": 1 if handoff else 0}}},
+        },
+        "task_id": task_id,
+        "seed": seed,
+        "handoff_occurred": handoff,
+        "effective_m": m,
+        "n_source_actions": n_source_actions,
+        "has_report": True,
+    }
+
+
+def test_decompose_pairs_emits_exactly_the_requested_pairs() -> None:
+    """Parse 'm6:m9,m6:m11' against scripted arm set containing m6, m9, m11; assert decomposition keys are {'m6_to_m9', 'm6_to_m11'}."""
+    arm_records = {
+        "m6": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.2, True, 6),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 6),
+        },
+        "m9": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.4, True, 9),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 9),
+        },
+        "m11": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.6, True, 11),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 11),
+        },
+    }
+    source_records = {
+        ("t1", 1): {"events": ep_actions(15), "task_id": "t1", "seed": 1},
+        ("t2", 1): {"events": ep_actions(5), "task_id": "t2", "seed": 1},
+    }
+    m3_res = mech.measure_m3_prefix_exhausted(
+        arm_records, source_records, [6, 9, 11], decompose_pairs="m6:m9,m6:m11", receiver="zeroshot"
+    )
+    assert set(m3_res["decompositions"].keys()) == {"m6_to_m9", "m6_to_m11"}
+    assert "m6_to_m9" in m3_res["decompositions"]
+    assert "m6_to_m11" in m3_res["decompositions"]
+    assert m3_res["decompositions"]["m6_to_m9"]["m_base"] == 6
+    assert m3_res["decompositions"]["m6_to_m9"]["m_target"] == 9
+    assert m3_res["decompositions"]["m6_to_m11"]["m_base"] == 6
+    assert m3_res["decompositions"]["m6_to_m11"]["m_target"] == 11
+
+
+def test_decompose_pairs_missing_depth_is_fatal() -> None:
+    """Requesting 'm6:m9' against an arm set with only m6 and m11 raises SystemExit naming 9."""
+    arm_records = {
+        "m6": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.2, True, 6),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 6),
+        },
+        "m11": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.6, True, 11),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 11),
+        },
+    }
+    source_records = {
+        ("t1", 1): {"events": ep_actions(15), "task_id": "t1", "seed": 1},
+        ("t2", 1): {"events": ep_actions(5), "task_id": "t2", "seed": 1},
+    }
+    with pytest.raises(SystemExit, match="9"):
+        mech.measure_m3_prefix_exhausted(
+            arm_records, source_records, [6, 11], decompose_pairs="m6:m9", receiver="zeroshot"
+        )
+
+
+def test_decompose_pairs_default_is_unchanged() -> None:
+    """Omitting the option reproduces the current key set on a scripted grid."""
+    arm_records = {
+        "m2": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.2, True, 2),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 2),
+        },
+        "m10": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.4, True, 10),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 10),
+        },
+        "m11": {
+            ("t1", 1): _make_arm_record("t1", 1, 0.6, True, 11),
+            ("t2", 1): _make_arm_record("t2", 1, 0.5, False, 11),
+        },
+    }
+    source_records = {
+        ("t1", 1): {"events": ep_actions(15), "task_id": "t1", "seed": 1},
+        ("t2", 1): {"events": ep_actions(5), "task_id": "t2", "seed": 1},
+    }
+    m3_res = mech.measure_m3_prefix_exhausted(
+        arm_records, source_records, [2, 10, 11], decompose_pairs=None, receiver="tailored"
+    )
+    assert set(m3_res["decompositions"].keys()) == {"m2_to_m10", "m2_to_m11"}
+
 

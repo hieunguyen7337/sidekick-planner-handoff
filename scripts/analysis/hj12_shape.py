@@ -306,6 +306,92 @@ def panel_means(
     return out
 
 
+def holm_adjusted_intervals(
+    contrasts: dict[str, list[float]], alpha: float = 0.05
+) -> dict[str, Any]:
+    """Holm-adjusted intervals and p-values for a family of bootstrap contrasts.
+
+    Uniformly more powerful than Bonferroni at the same family-wise error rate.
+    """
+    if not contrasts:
+        return {
+            "method": "holm",
+            "alpha": alpha,
+            "family": [],
+            "n_comparisons": 0,
+            "adjusted": {},
+        }
+
+    K = len(contrasts)
+    raw_info: dict[str, dict[str, Any]] = {}
+    for name, samples in contrasts.items():
+        if not samples:
+            raw_info[name] = {
+                "p_raw": 1.0,
+                "ci_raw": None,
+                "samples_sorted": [],
+                "n": 0,
+            }
+            continue
+        s = sorted(float(x) for x in samples)
+        n = len(s)
+        n_le_0 = sum(1 for x in s if x <= 0.0)
+        n_ge_0 = sum(1 for x in s if x >= 0.0)
+        p_raw = min(1.0, 2.0 * min(n_le_0 / n, n_ge_0 / n))
+        lo_raw = s[max(0, min(n - 1, int((alpha / 2.0) * n)))]
+        hi_raw = s[max(0, min(n - 1, int((1.0 - alpha / 2.0) * n)))]
+        raw_info[name] = {
+            "p_raw": p_raw,
+            "ci_raw": [lo_raw, hi_raw],
+            "samples_sorted": s,
+            "n": n,
+        }
+
+    # Sort contrasts by raw p-value ascending
+    sorted_names = sorted(contrasts.keys(), key=lambda k: (raw_info[k]["p_raw"], k))
+
+    # Holm step-down loop
+    adjusted: dict[str, Any] = {}
+    running_max_p = 0.0
+
+    for i, name in enumerate(sorted_names):
+        multiplier = K - i
+        info = raw_info[name]
+        p_raw = info["p_raw"]
+        p_unclamped = float(multiplier) * p_raw
+        running_max_p = max(running_max_p, p_unclamped)
+        p_adj = min(1.0, running_max_p)
+
+        s = info["samples_sorted"]
+        n = info["n"]
+        if n > 0:
+            alpha_adj = alpha / float(multiplier)
+            lo_idx = max(0, min(n - 1, int((alpha_adj / 2.0) * n)))
+            hi_idx = max(0, min(n - 1, int((1.0 - alpha_adj / 2.0) * n)))
+            lo_adj = s[lo_idx]
+            hi_adj = s[hi_idx]
+            ci_adj = [round(lo_adj, 6), round(hi_adj, 6)]
+        else:
+            ci_adj = None
+
+        adjusted[name] = {
+            "ci95_pp_adjusted": ci_adj,
+            "p_adjusted": round(p_adj, 6),
+            "survives": bool(p_adj <= alpha),
+            "ci95_pp_raw": [round(v, 6) for v in info["ci_raw"]] if info["ci_raw"] else None,
+            "p_raw": round(p_raw, 6),
+            "multiplier": multiplier,
+        }
+
+    return {
+        "method": "holm",
+        "alpha": alpha,
+        "family": list(contrasts.keys()),
+        "n_comparisons": K,
+        "adjusted": adjusted,
+    }
+
+
 def bootstrap_segmented(
     panel: dict[int, dict[tuple[str, int], float]],
     *,
@@ -334,6 +420,9 @@ def bootstrap_segmented(
     tau_s: list[float] = []
     b1_s: list[float] = []
     b12_s: list[float] = []
+    contrasts_b: dict[str, list[float]] = {
+        f"m{ms[i]}_to_m{ms[i+1]}": [] for i in range(len(ms) - 1)
+    }
     skipped = 0
     for _ in range(n_boot):
         drawn = _draw_task_clusters(grouped, rng) if grouped else []
@@ -355,6 +444,9 @@ def bootstrap_segmented(
         tau_s.append(float(fit["tau"]))
         b1_s.append(float(fit["beta1"]))
         b12_s.append(float(fit["beta1_plus_beta2"]))
+        for i in range(len(ms) - 1):
+            pair_key = f"m{ms[i]}_to_m{ms[i+1]}"
+            contrasts_b[pair_key].append((qs_b[i+1] - qs_b[i]) * 100.0)
     tau_ci = percentile_interval(tau_s)
     b1_ci = percentile_interval(b1_s)
     b12_ci = percentile_interval(b12_s)
@@ -385,6 +477,7 @@ def bootstrap_segmented(
         "beta1_plus_beta2": point["beta1_plus_beta2"],
         "beta1_plus_beta2_ci95": b12_ci,
         "beta1_plus_beta2_onesided95_lower": b12_lo_os,
+        "adjacent_contrasts": contrasts_b,
         "resampler": "hj1_gate._draw_task_clusters",
     }
 

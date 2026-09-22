@@ -1,0 +1,6297 @@
+{
+  "generated_by": "scripts/analysis/j13_mechanism.py",
+  "description": "Brief X33 Threshold Mechanism Empirical Measurements",
+  "receiver": "tailored",
+  "arms_used": {
+    "primary": {
+      "m2": "/scratch/n12194778/sidekick/results/hj12_prefix_m2_20260923/prefix_handoff",
+      "m4": "/scratch/n12194778/sidekick/results/hj12_prefix_m4_20260923/prefix_handoff",
+      "m6": "/scratch/n12194778/sidekick/results/hj12_prefix_m6_20260923/prefix_handoff",
+      "m7": "/scratch/n12194778/sidekick/results/hj12_prefix_m7_20260923/prefix_handoff",
+      "m8": "/scratch/n12194778/sidekick/results/hj12_prefix_m8_20260923/prefix_handoff",
+      "m9": "/scratch/n12194778/sidekick/results/hj12_prefix_m9_20260923/prefix_handoff",
+      "m10": "/scratch/n12194778/sidekick/results/hj12_prefix_m10_20260923/prefix_handoff",
+      "m11": "/scratch/n12194778/sidekick/results/hj12_prefix_m11_20260923/prefix_handoff"
+    },
+    "comparison": {
+      "m2": "/scratch/n12194778/sidekick/results/hj12_prefix_m2_20260922/prefix_handoff",
+      "m4": "/scratch/n12194778/sidekick/results/hj12_prefix_m4_20260922/prefix_handoff",
+      "m6": "/scratch/n12194778/sidekick/results/hj12_prefix_m6_20260922/prefix_handoff",
+      "m7": "/scratch/n12194778/sidekick/results/hj12_prefix_m7_20260922/prefix_handoff",
+      "m8": "/scratch/n12194778/sidekick/results/hj12_prefix_m8_20260922/prefix_handoff",
+      "m9": "/scratch/n12194778/sidekick/results/hj12_prefix_m9_20260922/prefix_handoff",
+      "m10": "/scratch/n12194778/sidekick/results/hj12_prefix_m10_20260922/prefix_handoff",
+      "m11": "/scratch/n12194778/sidekick/results/hj12_prefix_m11_20260922/prefix_handoff"
+    },
+    "source_planner": "/scratch/n12194778/sidekick/results/hj1b_planner_20260915/planner_alone",
+    "excluded_arms": [
+      {
+        "group": "primary",
+        "m": 3,
+        "path": "/scratch/n12194778/sidekick/results/hj12_prefix_m3_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "primary",
+        "m": 5,
+        "path": "/scratch/n12194778/sidekick/results/hj12_prefix_m5_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 3,
+        "path": "/scratch/n12194778/sidekick/results/hj12_prefix_m3_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 5,
+        "path": "/scratch/n12194778/sidekick/results/hj12_prefix_m5_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      }
+    ]
+  },
+  "m1_api_novelty": {
+    "n_episodes": 114,
+    "total_first_uses": 673,
+    "mean_first_uses_per_episode": 5.9,
+    "first_use_position_distribution": {
+      "min": 1,
+      "p25": 3,
+      "p50": 5,
+      "p75": 9,
+      "max": 24,
+      "mean": 6.2363
+    },
+    "cumulative_by_position": {
+      "1": {
+        "first_uses_at_pos": 114,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 1.0,
+        "cum_first_uses": 114,
+        "cum_first_uses_share": 0.1694
+      },
+      "2": {
+        "first_uses_at_pos": 44,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.386,
+        "cum_first_uses": 158,
+        "cum_first_uses_share": 0.2348
+      },
+      "3": {
+        "first_uses_at_pos": 81,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.7105,
+        "cum_first_uses": 239,
+        "cum_first_uses_share": 0.3551
+      },
+      "4": {
+        "first_uses_at_pos": 59,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.5175,
+        "cum_first_uses": 298,
+        "cum_first_uses_share": 0.4428
+      },
+      "5": {
+        "first_uses_at_pos": 54,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.4737,
+        "cum_first_uses": 352,
+        "cum_first_uses_share": 0.523
+      },
+      "6": {
+        "first_uses_at_pos": 55,
+        "total_actions_at_pos": 112,
+        "novel_share_at_pos": 0.4911,
+        "cum_first_uses": 407,
+        "cum_first_uses_share": 0.6048
+      },
+      "7": {
+        "first_uses_at_pos": 44,
+        "total_actions_at_pos": 111,
+        "novel_share_at_pos": 0.3964,
+        "cum_first_uses": 451,
+        "cum_first_uses_share": 0.6701
+      },
+      "8": {
+        "first_uses_at_pos": 42,
+        "total_actions_at_pos": 106,
+        "novel_share_at_pos": 0.3962,
+        "cum_first_uses": 493,
+        "cum_first_uses_share": 0.7325
+      },
+      "9": {
+        "first_uses_at_pos": 34,
+        "total_actions_at_pos": 94,
+        "novel_share_at_pos": 0.3617,
+        "cum_first_uses": 527,
+        "cum_first_uses_share": 0.7831
+      },
+      "10": {
+        "first_uses_at_pos": 31,
+        "total_actions_at_pos": 83,
+        "novel_share_at_pos": 0.3735,
+        "cum_first_uses": 558,
+        "cum_first_uses_share": 0.8291
+      },
+      "11": {
+        "first_uses_at_pos": 25,
+        "total_actions_at_pos": 74,
+        "novel_share_at_pos": 0.3378,
+        "cum_first_uses": 583,
+        "cum_first_uses_share": 0.8663
+      },
+      "12": {
+        "first_uses_at_pos": 16,
+        "total_actions_at_pos": 59,
+        "novel_share_at_pos": 0.2712,
+        "cum_first_uses": 599,
+        "cum_first_uses_share": 0.89
+      },
+      "13": {
+        "first_uses_at_pos": 18,
+        "total_actions_at_pos": 54,
+        "novel_share_at_pos": 0.3333,
+        "cum_first_uses": 617,
+        "cum_first_uses_share": 0.9168
+      },
+      "14": {
+        "first_uses_at_pos": 9,
+        "total_actions_at_pos": 48,
+        "novel_share_at_pos": 0.1875,
+        "cum_first_uses": 626,
+        "cum_first_uses_share": 0.9302
+      },
+      "15": {
+        "first_uses_at_pos": 7,
+        "total_actions_at_pos": 40,
+        "novel_share_at_pos": 0.175,
+        "cum_first_uses": 633,
+        "cum_first_uses_share": 0.9406
+      },
+      "16": {
+        "first_uses_at_pos": 11,
+        "total_actions_at_pos": 34,
+        "novel_share_at_pos": 0.3235,
+        "cum_first_uses": 644,
+        "cum_first_uses_share": 0.9569
+      },
+      "17": {
+        "first_uses_at_pos": 11,
+        "total_actions_at_pos": 28,
+        "novel_share_at_pos": 0.3929,
+        "cum_first_uses": 655,
+        "cum_first_uses_share": 0.9733
+      },
+      "18": {
+        "first_uses_at_pos": 6,
+        "total_actions_at_pos": 24,
+        "novel_share_at_pos": 0.25,
+        "cum_first_uses": 661,
+        "cum_first_uses_share": 0.9822
+      },
+      "19": {
+        "first_uses_at_pos": 3,
+        "total_actions_at_pos": 20,
+        "novel_share_at_pos": 0.15,
+        "cum_first_uses": 664,
+        "cum_first_uses_share": 0.9866
+      },
+      "20": {
+        "first_uses_at_pos": 2,
+        "total_actions_at_pos": 17,
+        "novel_share_at_pos": 0.1176,
+        "cum_first_uses": 666,
+        "cum_first_uses_share": 0.9896
+      }
+    },
+    "binned": {
+      "1-2": {
+        "first_uses": 158,
+        "total_actions": 228,
+        "share_of_all_first_uses": 0.2348,
+        "novel_share_in_bin": 0.693
+      },
+      "3-4": {
+        "first_uses": 140,
+        "total_actions": 228,
+        "share_of_all_first_uses": 0.208,
+        "novel_share_in_bin": 0.614
+      },
+      "5-6": {
+        "first_uses": 109,
+        "total_actions": 226,
+        "share_of_all_first_uses": 0.162,
+        "novel_share_in_bin": 0.4823
+      },
+      "7-8": {
+        "first_uses": 86,
+        "total_actions": 217,
+        "share_of_all_first_uses": 0.1278,
+        "novel_share_in_bin": 0.3963
+      },
+      "9-10": {
+        "first_uses": 65,
+        "total_actions": 177,
+        "share_of_all_first_uses": 0.0966,
+        "novel_share_in_bin": 0.3672
+      },
+      "11-20": {
+        "first_uses": 108,
+        "total_actions": 398,
+        "share_of_all_first_uses": 0.1605,
+        "novel_share_in_bin": 0.2714
+      }
+    }
+  },
+  "m2_compounding_error": {
+    "primary": {
+      "m2": {
+        "m": 2,
+        "n_episodes": 114,
+        "silenced_episodes": 0,
+        "handoff_episodes": 114,
+        "divergence_count": 0,
+        "divergence_keys": [],
+        "post_complete_executor_actions": 0,
+        "post_complete_keys": [],
+        "error_episodes": 97,
+        "error_rate_on_handoff": 0.8509,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 2,
+          "p50": 3,
+          "p75": 4,
+          "max": 11,
+          "mean": 3.2062
+        },
+        "share_first_error_at_step_1": 0.2062,
+        "share_first_error_in_steps_1_2": 0.4124,
+        "executor_steps_taken_all": {
+          "min": 4,
+          "p25": 10,
+          "p50": 13,
+          "p75": 27,
+          "max": 38,
+          "mean": 18.4035
+        },
+        "executor_steps_taken_success": {
+          "min": 6,
+          "p25": 9,
+          "p50": 12,
+          "p75": 15,
+          "max": 29,
+          "mean": 12.4878
+        },
+        "executor_steps_taken_fail": {
+          "min": 4,
+          "p25": 10,
+          "p50": 15,
+          "p75": 38,
+          "max": 38,
+          "mean": 21.726
+        }
+      },
+      "m4": {
+        "m": 4,
+        "n_episodes": 114,
+        "silenced_episodes": 0,
+        "handoff_episodes": 114,
+        "divergence_count": 0,
+        "divergence_keys": [],
+        "post_complete_executor_actions": 0,
+        "post_complete_keys": [],
+        "error_episodes": 86,
+        "error_rate_on_handoff": 0.7544,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 15,
+          "mean": 2.6279
+        },
+        "share_first_error_at_step_1": 0.2674,
+        "share_first_error_in_steps_1_2": 0.6279,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 8,
+          "p50": 10,
+          "p75": 20,
+          "max": 36,
+          "mean": 15.5702
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 6,
+          "p50": 10,
+          "p75": 13,
+          "max": 31,
+          "mean": 10.0625
+        },
+        "executor_steps_taken_fail": {
+          "min": 4,
+          "p25": 9,
+          "p50": 14,
+          "p75": 36,
+          "max": 36,
+          "mean": 19.5758
+        }
+      },
+      "m6": {
+        "m": 6,
+        "n_episodes": 114,
+        "silenced_episodes": 3,
+        "handoff_episodes": 111,
+        "divergence_count": 0,
+        "divergence_keys": [],
+        "post_complete_executor_actions": 0,
+        "post_complete_keys": [],
+        "error_episodes": 63,
+        "error_rate_on_handoff": 0.5676,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 7,
+          "mean": 2.381
+        },
+        "share_first_error_at_step_1": 0.3968,
+        "share_first_error_in_steps_1_2": 0.5556,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 5,
+          "p50": 7,
+          "p75": 17,
+          "max": 34,
+          "mean": 11.7568
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 4,
+          "p50": 5,
+          "p75": 12,
+          "max": 19,
+          "mean": 7.2609
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 5,
+          "p50": 10,
+          "p75": 22,
+          "max": 34,
+          "mean": 14.9385
+        }
+      },
+      "m7": {
+        "m": 7,
+        "n_episodes": 114,
+        "silenced_episodes": 8,
+        "handoff_episodes": 106,
+        "divergence_count": 0,
+        "divergence_keys": [],
+        "post_complete_executor_actions": 0,
+        "post_complete_keys": [],
+        "error_episodes": 49,
+        "error_rate_on_handoff": 0.4623,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 4,
+          "max": 9,
+          "mean": 2.6531
+        },
+        "share_first_error_at_step_1": 0.3265,
+        "share_first_error_in_steps_1_2": 0.5714,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 4,
+          "p50": 6,
+          "p75": 11,
+          "max": 33,
+          "mean": 9.4528
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 3,
+          "p50": 6,
+          "p75": 8,
+          "max": 18,
+          "mean": 6.2444
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 4,
+          "p50": 8,
+          "p75": 16,
+          "max": 33,
+          "mean": 11.8197
+        }
+      },
+      "m8": {
+        "m": 8,
+        "n_episodes": 114,
+        "silenced_episodes": 21,
+        "handoff_episodes": 93,
+        "divergence_count": 1,
+        "divergence_keys": [
+          [
+            "383cbac_2",
+            1
+          ]
+        ],
+        "post_complete_executor_actions": 1,
+        "post_complete_keys": [
+          [
+            "383cbac_2",
+            1
+          ]
+        ],
+        "error_episodes": 45,
+        "error_rate_on_handoff": 0.4839,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 2,
+          "max": 13,
+          "mean": 2.1778
+        },
+        "share_first_error_at_step_1": 0.4222,
+        "share_first_error_in_steps_1_2": 0.7556,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 3,
+          "p50": 6,
+          "p75": 13,
+          "max": 32,
+          "mean": 10.0968
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 2,
+          "p50": 5,
+          "p75": 9,
+          "max": 17,
+          "mean": 5.8409
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 4,
+          "p50": 11,
+          "p75": 24,
+          "max": 32,
+          "mean": 13.9184
+        }
+      },
+      "m9": {
+        "m": 9,
+        "n_episodes": 114,
+        "silenced_episodes": 32,
+        "handoff_episodes": 82,
+        "divergence_count": 1,
+        "divergence_keys": [
+          [
+            "383cbac_2",
+            1
+          ]
+        ],
+        "post_complete_executor_actions": 1,
+        "post_complete_keys": [
+          [
+            "383cbac_2",
+            1
+          ]
+        ],
+        "error_episodes": 35,
+        "error_rate_on_handoff": 0.4268,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 17,
+          "mean": 2.7429
+        },
+        "share_first_error_at_step_1": 0.4,
+        "share_first_error_in_steps_1_2": 0.6571,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 3,
+          "p50": 6,
+          "p75": 12,
+          "max": 31,
+          "mean": 9.1707
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 2,
+          "p50": 5,
+          "p75": 7,
+          "max": 17,
+          "mean": 5.625
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 5,
+          "p50": 8,
+          "p75": 17,
+          "max": 31,
+          "mean": 12.5476
+        }
+      },
+      "m10": {
+        "m": 10,
+        "n_episodes": 114,
+        "silenced_episodes": 43,
+        "handoff_episodes": 71,
+        "divergence_count": 2,
+        "divergence_keys": [
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ]
+        ],
+        "post_complete_executor_actions": 2,
+        "post_complete_keys": [
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ]
+        ],
+        "error_episodes": 29,
+        "error_rate_on_handoff": 0.4085,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 1,
+          "p75": 3,
+          "max": 7,
+          "mean": 2.069
+        },
+        "share_first_error_at_step_1": 0.5172,
+        "share_first_error_in_steps_1_2": 0.7241,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 3,
+          "p50": 5,
+          "p75": 10,
+          "max": 30,
+          "mean": 8.4225
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 2,
+          "p50": 5,
+          "p75": 10,
+          "max": 21,
+          "mean": 6.2222
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 3,
+          "p50": 7,
+          "p75": 18,
+          "max": 30,
+          "mean": 10.6857
+        }
+      },
+      "m11": {
+        "m": 11,
+        "n_episodes": 114,
+        "silenced_episodes": 60,
+        "handoff_episodes": 54,
+        "divergence_count": 4,
+        "divergence_keys": [
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "530b157_2",
+            1
+          ],
+          [
+            "68ee2c9_1",
+            1
+          ]
+        ],
+        "post_complete_executor_actions": 4,
+        "post_complete_keys": [
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "530b157_2",
+            1
+          ],
+          [
+            "68ee2c9_1",
+            1
+          ]
+        ],
+        "error_episodes": 23,
+        "error_rate_on_handoff": 0.4259,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 7,
+          "mean": 2.4783
+        },
+        "share_first_error_at_step_1": 0.3043,
+        "share_first_error_in_steps_1_2": 0.6087,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 3,
+          "p50": 6,
+          "p75": 12,
+          "max": 29,
+          "mean": 10.1296
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 3,
+          "p50": 4,
+          "p75": 6,
+          "max": 12,
+          "mean": 5.0
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 5,
+          "p50": 12,
+          "p75": 29,
+          "max": 29,
+          "mean": 15.6538
+        }
+      }
+    },
+    "comparison": {
+      "m2": {
+        "m": 2,
+        "n_episodes": 114,
+        "silenced_episodes": 0,
+        "handoff_episodes": 114,
+        "divergence_count": 0,
+        "divergence_keys": [],
+        "post_complete_executor_actions": 0,
+        "post_complete_keys": [],
+        "error_episodes": 94,
+        "error_rate_on_handoff": 0.8246,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 4,
+          "max": 18,
+          "mean": 2.8723
+        },
+        "share_first_error_at_step_1": 0.2872,
+        "share_first_error_in_steps_1_2": 0.5106,
+        "executor_steps_taken_all": {
+          "min": 4,
+          "p25": 10,
+          "p50": 12,
+          "p75": 18,
+          "max": 38,
+          "mean": 16.614
+        },
+        "executor_steps_taken_success": {
+          "min": 5,
+          "p25": 9,
+          "p50": 11,
+          "p75": 15,
+          "max": 20,
+          "mean": 11.8333
+        },
+        "executor_steps_taken_fail": {
+          "min": 4,
+          "p25": 10,
+          "p50": 15,
+          "p75": 38,
+          "max": 38,
+          "mean": 20.0909
+        }
+      },
+      "m4": {
+        "m": 4,
+        "n_episodes": 114,
+        "silenced_episodes": 0,
+        "handoff_episodes": 114,
+        "divergence_count": 0,
+        "divergence_keys": [],
+        "post_complete_executor_actions": 0,
+        "post_complete_keys": [],
+        "error_episodes": 85,
+        "error_rate_on_handoff": 0.7456,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 19,
+          "mean": 2.8118
+        },
+        "share_first_error_at_step_1": 0.2706,
+        "share_first_error_in_steps_1_2": 0.6235,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 6,
+          "p50": 10,
+          "p75": 20,
+          "max": 36,
+          "mean": 14.5088
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 6,
+          "p50": 9,
+          "p75": 11,
+          "max": 21,
+          "mean": 8.9388
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 7,
+          "p50": 14,
+          "p75": 36,
+          "max": 36,
+          "mean": 18.7077
+        }
+      },
+      "m6": {
+        "m": 6,
+        "n_episodes": 114,
+        "silenced_episodes": 3,
+        "handoff_episodes": 111,
+        "divergence_count": 3,
+        "divergence_keys": [
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_3",
+            1
+          ]
+        ],
+        "post_complete_executor_actions": 3,
+        "post_complete_keys": [
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_3",
+            1
+          ]
+        ],
+        "error_episodes": 67,
+        "error_rate_on_handoff": 0.6036,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 13,
+          "mean": 2.9254
+        },
+        "share_first_error_at_step_1": 0.3881,
+        "share_first_error_in_steps_1_2": 0.5522,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 5,
+          "p50": 9,
+          "p75": 15,
+          "max": 34,
+          "mean": 11.973
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 4,
+          "p50": 6,
+          "p75": 10,
+          "max": 18,
+          "mean": 7.1739
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 5,
+          "p50": 11,
+          "p75": 24,
+          "max": 34,
+          "mean": 15.3692
+        }
+      },
+      "m7": {
+        "m": 7,
+        "n_episodes": 114,
+        "silenced_episodes": 8,
+        "handoff_episodes": 106,
+        "divergence_count": 8,
+        "divergence_keys": [
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ]
+        ],
+        "post_complete_executor_actions": 8,
+        "post_complete_keys": [
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ]
+        ],
+        "error_episodes": 55,
+        "error_rate_on_handoff": 0.5189,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 9,
+          "mean": 2.7636
+        },
+        "share_first_error_at_step_1": 0.3455,
+        "share_first_error_in_steps_1_2": 0.6182,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 4,
+          "p50": 7,
+          "p75": 16,
+          "max": 33,
+          "mean": 11.7075
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 4,
+          "p50": 6,
+          "p75": 9,
+          "max": 30,
+          "mean": 7.087
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 5,
+          "p50": 11,
+          "p75": 28,
+          "max": 33,
+          "mean": 15.25
+        }
+      },
+      "m8": {
+        "m": 8,
+        "n_episodes": 114,
+        "silenced_episodes": 21,
+        "handoff_episodes": 93,
+        "divergence_count": 21,
+        "divergence_keys": [
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "post_complete_executor_actions": 21,
+        "post_complete_keys": [
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "error_episodes": 49,
+        "error_rate_on_handoff": 0.5269,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 3,
+          "max": 16,
+          "mean": 2.8367
+        },
+        "share_first_error_at_step_1": 0.3061,
+        "share_first_error_in_steps_1_2": 0.5102,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 3,
+          "p50": 6,
+          "p75": 12,
+          "max": 32,
+          "mean": 9.4731
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 2,
+          "p50": 5,
+          "p75": 8,
+          "max": 24,
+          "mean": 6.119
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 4,
+          "p50": 7,
+          "p75": 13,
+          "max": 32,
+          "mean": 12.2353
+        }
+      },
+      "m9": {
+        "m": 9,
+        "n_episodes": 114,
+        "silenced_episodes": 32,
+        "handoff_episodes": 82,
+        "divergence_count": 32,
+        "divergence_keys": [
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_2",
+            1
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "396c5a2_1",
+            2
+          ],
+          [
+            "396c5a2_2",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            2
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_2",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_2",
+            2
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6171bbc_1",
+            1
+          ],
+          [
+            "6171bbc_2",
+            1
+          ],
+          [
+            "68ee2c9_2",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "6c2c621_3",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "df61dc5_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "post_complete_executor_actions": 32,
+        "post_complete_keys": [
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_2",
+            1
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "396c5a2_1",
+            2
+          ],
+          [
+            "396c5a2_2",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            2
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_2",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_2",
+            2
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6171bbc_1",
+            1
+          ],
+          [
+            "6171bbc_2",
+            1
+          ],
+          [
+            "68ee2c9_2",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "6c2c621_3",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "df61dc5_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "error_episodes": 28,
+        "error_rate_on_handoff": 0.3415,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 1,
+          "p75": 3,
+          "max": 6,
+          "mean": 2.1786
+        },
+        "share_first_error_at_step_1": 0.5357,
+        "share_first_error_in_steps_1_2": 0.6429,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 3,
+          "p50": 5,
+          "p75": 9,
+          "max": 31,
+          "mean": 7.5854
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 2,
+          "p50": 5,
+          "p75": 9,
+          "max": 21,
+          "mean": 6.2791
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 3,
+          "p50": 6,
+          "p75": 10,
+          "max": 31,
+          "mean": 9.0256
+        }
+      },
+      "m10": {
+        "m": 10,
+        "n_episodes": 114,
+        "silenced_episodes": 43,
+        "handoff_episodes": 71,
+        "divergence_count": 43,
+        "divergence_keys": [
+          [
+            "0d8a4ee_1",
+            1
+          ],
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_2",
+            1
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "396c5a2_1",
+            1
+          ],
+          [
+            "396c5a2_1",
+            2
+          ],
+          [
+            "396c5a2_2",
+            1
+          ],
+          [
+            "3ab5b8b_2",
+            2
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            2
+          ],
+          [
+            "4ec8de5_1",
+            1
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_2",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "4fab96f_3",
+            1
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_2",
+            2
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6171bbc_1",
+            1
+          ],
+          [
+            "6171bbc_2",
+            1
+          ],
+          [
+            "68ee2c9_2",
+            2
+          ],
+          [
+            "68ee2c9_3",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "6c2c621_3",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            1
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "d4e9306_3",
+            2
+          ],
+          [
+            "df61dc5_2",
+            1
+          ],
+          [
+            "df61dc5_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "post_complete_executor_actions": 43,
+        "post_complete_keys": [
+          [
+            "0d8a4ee_1",
+            1
+          ],
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_2",
+            1
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "396c5a2_1",
+            1
+          ],
+          [
+            "396c5a2_1",
+            2
+          ],
+          [
+            "396c5a2_2",
+            1
+          ],
+          [
+            "3ab5b8b_2",
+            2
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            2
+          ],
+          [
+            "4ec8de5_1",
+            1
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_2",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "4fab96f_3",
+            1
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_2",
+            2
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6171bbc_1",
+            1
+          ],
+          [
+            "6171bbc_2",
+            1
+          ],
+          [
+            "68ee2c9_2",
+            2
+          ],
+          [
+            "68ee2c9_3",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "6c2c621_3",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            1
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "d4e9306_3",
+            2
+          ],
+          [
+            "df61dc5_2",
+            1
+          ],
+          [
+            "df61dc5_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "error_episodes": 30,
+        "error_rate_on_handoff": 0.4225,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 4,
+          "max": 14,
+          "mean": 3.3
+        },
+        "share_first_error_at_step_1": 0.3333,
+        "share_first_error_in_steps_1_2": 0.6,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 2,
+          "p50": 6,
+          "p75": 16,
+          "max": 30,
+          "mean": 10.507
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 2,
+          "p50": 3,
+          "p75": 10,
+          "max": 24,
+          "mean": 6.1471
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 4,
+          "p50": 9,
+          "p75": 30,
+          "max": 30,
+          "mean": 14.5135
+        }
+      },
+      "m11": {
+        "m": 11,
+        "n_episodes": 114,
+        "silenced_episodes": 60,
+        "handoff_episodes": 54,
+        "divergence_count": 60,
+        "divergence_keys": [
+          [
+            "0d8a4ee_1",
+            1
+          ],
+          [
+            "0d8a4ee_1",
+            2
+          ],
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_2",
+            1
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "396c5a2_1",
+            1
+          ],
+          [
+            "396c5a2_1",
+            2
+          ],
+          [
+            "396c5a2_2",
+            1
+          ],
+          [
+            "396c5a2_3",
+            1
+          ],
+          [
+            "396c5a2_3",
+            2
+          ],
+          [
+            "3ab5b8b_1",
+            1
+          ],
+          [
+            "3ab5b8b_2",
+            2
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            2
+          ],
+          [
+            "4ec8de5_1",
+            1
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_2",
+            1
+          ],
+          [
+            "4ec8de5_2",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "4fab96f_3",
+            1
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_1",
+            2
+          ],
+          [
+            "50e1ac9_2",
+            2
+          ],
+          [
+            "50e1ac9_3",
+            1
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "530b157_2",
+            1
+          ],
+          [
+            "57c3486_1",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6171bbc_1",
+            1
+          ],
+          [
+            "6171bbc_2",
+            1
+          ],
+          [
+            "68ee2c9_1",
+            1
+          ],
+          [
+            "68ee2c9_2",
+            2
+          ],
+          [
+            "68ee2c9_3",
+            1
+          ],
+          [
+            "68ee2c9_3",
+            2
+          ],
+          [
+            "6bdbc26_1",
+            2
+          ],
+          [
+            "6bdbc26_2",
+            1
+          ],
+          [
+            "6bdbc26_2",
+            2
+          ],
+          [
+            "6c2c621_1",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "6c2c621_3",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            1
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "d4e9306_3",
+            2
+          ],
+          [
+            "df61dc5_1",
+            2
+          ],
+          [
+            "df61dc5_2",
+            1
+          ],
+          [
+            "df61dc5_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "post_complete_executor_actions": 60,
+        "post_complete_keys": [
+          [
+            "0d8a4ee_1",
+            1
+          ],
+          [
+            "0d8a4ee_1",
+            2
+          ],
+          [
+            "0d8a4ee_3",
+            1
+          ],
+          [
+            "23cf851_1",
+            1
+          ],
+          [
+            "23cf851_1",
+            2
+          ],
+          [
+            "23cf851_2",
+            1
+          ],
+          [
+            "23cf851_3",
+            1
+          ],
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "396c5a2_1",
+            1
+          ],
+          [
+            "396c5a2_1",
+            2
+          ],
+          [
+            "396c5a2_2",
+            1
+          ],
+          [
+            "396c5a2_3",
+            1
+          ],
+          [
+            "396c5a2_3",
+            2
+          ],
+          [
+            "3ab5b8b_1",
+            1
+          ],
+          [
+            "3ab5b8b_2",
+            2
+          ],
+          [
+            "3ab5b8b_3",
+            1
+          ],
+          [
+            "3ab5b8b_3",
+            2
+          ],
+          [
+            "4ec8de5_1",
+            1
+          ],
+          [
+            "4ec8de5_1",
+            2
+          ],
+          [
+            "4ec8de5_2",
+            1
+          ],
+          [
+            "4ec8de5_2",
+            2
+          ],
+          [
+            "4ec8de5_3",
+            1
+          ],
+          [
+            "4ec8de5_3",
+            2
+          ],
+          [
+            "4fab96f_2",
+            2
+          ],
+          [
+            "4fab96f_3",
+            1
+          ],
+          [
+            "50e1ac9_1",
+            1
+          ],
+          [
+            "50e1ac9_1",
+            2
+          ],
+          [
+            "50e1ac9_2",
+            2
+          ],
+          [
+            "50e1ac9_3",
+            1
+          ],
+          [
+            "50e1ac9_3",
+            2
+          ],
+          [
+            "530b157_2",
+            1
+          ],
+          [
+            "57c3486_1",
+            2
+          ],
+          [
+            "57c3486_3",
+            2
+          ],
+          [
+            "6171bbc_1",
+            1
+          ],
+          [
+            "6171bbc_2",
+            1
+          ],
+          [
+            "68ee2c9_1",
+            1
+          ],
+          [
+            "68ee2c9_2",
+            2
+          ],
+          [
+            "68ee2c9_3",
+            1
+          ],
+          [
+            "68ee2c9_3",
+            2
+          ],
+          [
+            "6bdbc26_1",
+            2
+          ],
+          [
+            "6bdbc26_2",
+            1
+          ],
+          [
+            "6bdbc26_2",
+            2
+          ],
+          [
+            "6c2c621_1",
+            2
+          ],
+          [
+            "6c2c621_2",
+            1
+          ],
+          [
+            "6c2c621_3",
+            1
+          ],
+          [
+            "d4e9306_1",
+            2
+          ],
+          [
+            "d4e9306_2",
+            1
+          ],
+          [
+            "d4e9306_2",
+            2
+          ],
+          [
+            "d4e9306_3",
+            1
+          ],
+          [
+            "d4e9306_3",
+            2
+          ],
+          [
+            "df61dc5_1",
+            2
+          ],
+          [
+            "df61dc5_2",
+            1
+          ],
+          [
+            "df61dc5_3",
+            1
+          ],
+          [
+            "fac291d_1",
+            1
+          ],
+          [
+            "fac291d_1",
+            2
+          ],
+          [
+            "fac291d_2",
+            1
+          ],
+          [
+            "fac291d_3",
+            1
+          ],
+          [
+            "fac291d_3",
+            2
+          ]
+        ],
+        "error_episodes": 27,
+        "error_rate_on_handoff": 0.5,
+        "first_error_rel_step_dist": {
+          "min": 1,
+          "p25": 1,
+          "p50": 2,
+          "p75": 4,
+          "max": 10,
+          "mean": 2.8519
+        },
+        "share_first_error_at_step_1": 0.4074,
+        "share_first_error_in_steps_1_2": 0.6296,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 2,
+          "p50": 6,
+          "p75": 14,
+          "max": 29,
+          "mean": 9.2593
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 2,
+          "p50": 5,
+          "p75": 9,
+          "max": 22,
+          "mean": 6.3
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 5,
+          "p50": 13,
+          "p75": 18,
+          "max": 29,
+          "mean": 12.9583
+        }
+      }
+    }
+  },
+  "m3_prefix_exhausted": {
+    "primary": {
+      "all_episodes_curve": {
+        "m2": {
+          "m": 2,
+          "n": 114,
+          "silenced_count": 0,
+          "handoff_count": 114,
+          "divergence_count": 0,
+          "divergence_keys": [],
+          "post_complete_executor_actions": 0,
+          "post_complete_keys": [],
+          "mean_goal_pass_rate": 0.6856,
+          "mean_tgc": 0.3596
+        },
+        "m4": {
+          "m": 4,
+          "n": 114,
+          "silenced_count": 0,
+          "handoff_count": 114,
+          "divergence_count": 0,
+          "divergence_keys": [],
+          "post_complete_executor_actions": 0,
+          "post_complete_keys": [],
+          "mean_goal_pass_rate": 0.719,
+          "mean_tgc": 0.4211
+        },
+        "m6": {
+          "m": 6,
+          "n": 114,
+          "silenced_count": 3,
+          "handoff_count": 111,
+          "divergence_count": 0,
+          "divergence_keys": [],
+          "post_complete_executor_actions": 0,
+          "post_complete_keys": [],
+          "mean_goal_pass_rate": 0.7237,
+          "mean_tgc": 0.4298
+        },
+        "m7": {
+          "m": 7,
+          "n": 114,
+          "silenced_count": 8,
+          "handoff_count": 106,
+          "divergence_count": 0,
+          "divergence_keys": [],
+          "post_complete_executor_actions": 0,
+          "post_complete_keys": [],
+          "mean_goal_pass_rate": 0.7544,
+          "mean_tgc": 0.4561
+        },
+        "m8": {
+          "m": 8,
+          "n": 114,
+          "silenced_count": 21,
+          "handoff_count": 93,
+          "divergence_count": 1,
+          "divergence_keys": [
+            [
+              "383cbac_2",
+              1
+            ]
+          ],
+          "post_complete_executor_actions": 1,
+          "post_complete_keys": [
+            [
+              "383cbac_2",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.7627,
+          "mean_tgc": 0.5175
+        },
+        "m9": {
+          "m": 9,
+          "n": 114,
+          "silenced_count": 32,
+          "handoff_count": 82,
+          "divergence_count": 1,
+          "divergence_keys": [
+            [
+              "383cbac_2",
+              1
+            ]
+          ],
+          "post_complete_executor_actions": 1,
+          "post_complete_keys": [
+            [
+              "383cbac_2",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.7852,
+          "mean_tgc": 0.5614
+        },
+        "m10": {
+          "m": 10,
+          "n": 114,
+          "silenced_count": 43,
+          "handoff_count": 71,
+          "divergence_count": 2,
+          "divergence_keys": [
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ]
+          ],
+          "post_complete_executor_actions": 2,
+          "post_complete_keys": [
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.8065,
+          "mean_tgc": 0.5877
+        },
+        "m11": {
+          "m": 11,
+          "n": 114,
+          "silenced_count": 60,
+          "handoff_count": 54,
+          "divergence_count": 4,
+          "divergence_keys": [
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "530b157_2",
+              1
+            ],
+            [
+              "68ee2c9_1",
+              1
+            ]
+          ],
+          "post_complete_executor_actions": 4,
+          "post_complete_keys": [
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "530b157_2",
+              1
+            ],
+            [
+              "68ee2c9_1",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.8098,
+          "mean_tgc": 0.6053
+        }
+      },
+      "controlled_curves": {
+        "pinned_m2": {
+          "name": "common_handoff_m2",
+          "description": "Episodes where m2 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 114,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 114,
+              "mean_goal_pass_rate": 0.6856,
+              "mean_tgc": 0.3596
+            }
+          },
+          "contrasts": {}
+        },
+        "pinned_m4": {
+          "name": "common_handoff_m4",
+          "description": "Episodes where m4 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 114,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 114,
+              "mean_goal_pass_rate": 0.6856,
+              "mean_tgc": 0.3596
+            },
+            "m4": {
+              "m": 4,
+              "n": 114,
+              "mean_goal_pass_rate": 0.719,
+              "mean_tgc": 0.4211
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 114,
+              "diff_pp": 3.35,
+              "ci95_task_pp": [
+                -1.88,
+                8.42
+              ],
+              "ci95_scenario_pp": [
+                -1.79,
+                8.16
+              ]
+            }
+          }
+        },
+        "pinned_m6": {
+          "name": "common_handoff_m6",
+          "description": "Episodes where m6 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 111,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 111,
+              "mean_goal_pass_rate": 0.6861,
+              "mean_tgc": 0.3604
+            },
+            "m4": {
+              "m": 4,
+              "n": 111,
+              "mean_goal_pass_rate": 0.7114,
+              "mean_tgc": 0.4054
+            },
+            "m6": {
+              "m": 6,
+              "n": 111,
+              "mean_goal_pass_rate": 0.7162,
+              "mean_tgc": 0.4144
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 111,
+              "diff_pp": 2.54,
+              "ci95_task_pp": [
+                -2.69,
+                7.71
+              ],
+              "ci95_scenario_pp": [
+                -2.27,
+                7.2
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 111,
+              "diff_pp": 0.48,
+              "ci95_task_pp": [
+                -5.17,
+                5.71
+              ],
+              "ci95_scenario_pp": [
+                -5.21,
+                6.13
+              ]
+            },
+            "m6_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m6",
+              "n_pairs": 111,
+              "diff_pp": 3.01,
+              "ci95_task_pp": [
+                -2.8,
+                8.84
+              ],
+              "ci95_scenario_pp": [
+                -2.98,
+                9.1
+              ]
+            }
+          }
+        },
+        "pinned_m7": {
+          "name": "common_handoff_m7",
+          "description": "Episodes where m7 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 106,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 106,
+              "mean_goal_pass_rate": 0.6826,
+              "mean_tgc": 0.3585
+            },
+            "m4": {
+              "m": 4,
+              "n": 106,
+              "mean_goal_pass_rate": 0.6997,
+              "mean_tgc": 0.3868
+            },
+            "m6": {
+              "m": 6,
+              "n": 106,
+              "mean_goal_pass_rate": 0.7047,
+              "mean_tgc": 0.3962
+            },
+            "m7": {
+              "m": 7,
+              "n": 106,
+              "mean_goal_pass_rate": 0.7377,
+              "mean_tgc": 0.4245
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 106,
+              "diff_pp": 1.71,
+              "ci95_task_pp": [
+                -3.55,
+                6.94
+              ],
+              "ci95_scenario_pp": [
+                -2.96,
+                6.32
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 106,
+              "diff_pp": 0.5,
+              "ci95_task_pp": [
+                -5.36,
+                6.0
+              ],
+              "ci95_scenario_pp": [
+                -5.39,
+                6.48
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 106,
+              "diff_pp": 3.3,
+              "ci95_task_pp": [
+                -2.48,
+                9.34
+              ],
+              "ci95_scenario_pp": [
+                -3.04,
+                9.26
+              ]
+            },
+            "m7_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m7",
+              "n_pairs": 106,
+              "diff_pp": 5.51,
+              "ci95_task_pp": [
+                0.43,
+                10.76
+              ],
+              "ci95_scenario_pp": [
+                -0.33,
+                11.86
+              ]
+            }
+          }
+        },
+        "pinned_m8": {
+          "name": "common_handoff_m8",
+          "description": "Episodes where m8 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 93,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7007,
+              "mean_tgc": 0.3871
+            },
+            "m4": {
+              "m": 4,
+              "n": 93,
+              "mean_goal_pass_rate": 0.71,
+              "mean_tgc": 0.3978
+            },
+            "m6": {
+              "m": 6,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7078,
+              "mean_tgc": 0.3871
+            },
+            "m7": {
+              "m": 7,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7365,
+              "mean_tgc": 0.4194
+            },
+            "m8": {
+              "m": 8,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7359,
+              "mean_tgc": 0.4731
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 93,
+              "diff_pp": 0.93,
+              "ci95_task_pp": [
+                -4.47,
+                6.19
+              ],
+              "ci95_scenario_pp": [
+                -3.77,
+                5.67
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 93,
+              "diff_pp": -0.22,
+              "ci95_task_pp": [
+                -6.39,
+                5.75
+              ],
+              "ci95_scenario_pp": [
+                -6.84,
+                6.05
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 93,
+              "diff_pp": 2.87,
+              "ci95_task_pp": [
+                -3.44,
+                9.21
+              ],
+              "ci95_scenario_pp": [
+                -4.1,
+                9.34
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 93,
+              "diff_pp": -0.06,
+              "ci95_task_pp": [
+                -5.53,
+                5.57
+              ],
+              "ci95_scenario_pp": [
+                -4.93,
+                4.85
+              ]
+            },
+            "m8_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m8",
+              "n_pairs": 93,
+              "diff_pp": 3.52,
+              "ci95_task_pp": [
+                -2.86,
+                9.82
+              ],
+              "ci95_scenario_pp": [
+                -2.29,
+                9.53
+              ]
+            }
+          }
+        },
+        "pinned_m9": {
+          "name": "common_handoff_m9",
+          "description": "Episodes where m9 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 82,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7076,
+              "mean_tgc": 0.4024
+            },
+            "m4": {
+              "m": 4,
+              "n": 82,
+              "mean_goal_pass_rate": 0.6948,
+              "mean_tgc": 0.378
+            },
+            "m6": {
+              "m": 6,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7111,
+              "mean_tgc": 0.4024
+            },
+            "m7": {
+              "m": 7,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7148,
+              "mean_tgc": 0.3902
+            },
+            "m8": {
+              "m": 8,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7106,
+              "mean_tgc": 0.4268
+            },
+            "m9": {
+              "m": 9,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7419,
+              "mean_tgc": 0.4878
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 82,
+              "diff_pp": -1.28,
+              "ci95_task_pp": [
+                -7.13,
+                4.63
+              ],
+              "ci95_scenario_pp": [
+                -5.98,
+                3.47
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 82,
+              "diff_pp": 1.63,
+              "ci95_task_pp": [
+                -4.88,
+                7.7
+              ],
+              "ci95_scenario_pp": [
+                -5.31,
+                7.93
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 82,
+              "diff_pp": 0.37,
+              "ci95_task_pp": [
+                -6.4,
+                7.58
+              ],
+              "ci95_scenario_pp": [
+                -6.58,
+                7.03
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 82,
+              "diff_pp": -0.41,
+              "ci95_task_pp": [
+                -6.73,
+                5.85
+              ],
+              "ci95_scenario_pp": [
+                -6.29,
+                5.18
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 82,
+              "diff_pp": 3.13,
+              "ci95_task_pp": [
+                -3.17,
+                10.34
+              ],
+              "ci95_scenario_pp": [
+                -1.08,
+                7.95
+              ]
+            },
+            "m9_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m9",
+              "n_pairs": 82,
+              "diff_pp": 3.43,
+              "ci95_task_pp": [
+                -2.63,
+                9.8
+              ],
+              "ci95_scenario_pp": [
+                -3.27,
+                10.14
+              ]
+            }
+          }
+        },
+        "pinned_m10": {
+          "name": "common_handoff_m10",
+          "description": "Episodes where m10 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 71,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7145,
+              "mean_tgc": 0.4225
+            },
+            "m4": {
+              "m": 4,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7052,
+              "mean_tgc": 0.3944
+            },
+            "m6": {
+              "m": 6,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7053,
+              "mean_tgc": 0.4085
+            },
+            "m7": {
+              "m": 7,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7139,
+              "mean_tgc": 0.3944
+            },
+            "m8": {
+              "m": 8,
+              "n": 71,
+              "mean_goal_pass_rate": 0.6991,
+              "mean_tgc": 0.4085
+            },
+            "m9": {
+              "m": 9,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7282,
+              "mean_tgc": 0.4648
+            },
+            "m10": {
+              "m": 10,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7694,
+              "mean_tgc": 0.507
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 71,
+              "diff_pp": -0.93,
+              "ci95_task_pp": [
+                -7.82,
+                5.75
+              ],
+              "ci95_scenario_pp": [
+                -6.47,
+                4.64
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 71,
+              "diff_pp": 0.01,
+              "ci95_task_pp": [
+                -7.63,
+                7.1
+              ],
+              "ci95_scenario_pp": [
+                -7.58,
+                7.28
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 71,
+              "diff_pp": 0.86,
+              "ci95_task_pp": [
+                -6.66,
+                8.63
+              ],
+              "ci95_scenario_pp": [
+                -6.25,
+                8.05
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 71,
+              "diff_pp": -1.48,
+              "ci95_task_pp": [
+                -8.07,
+                5.23
+              ],
+              "ci95_scenario_pp": [
+                -7.84,
+                4.76
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 71,
+              "diff_pp": 2.91,
+              "ci95_task_pp": [
+                -4.3,
+                10.98
+              ],
+              "ci95_scenario_pp": [
+                -2.76,
+                9.05
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": 4.12,
+              "ci95_task_pp": [
+                -5.32,
+                12.56
+              ],
+              "ci95_scenario_pp": [
+                -2.08,
+                10.26
+              ]
+            },
+            "m10_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": 5.5,
+              "ci95_task_pp": [
+                -1.99,
+                12.83
+              ],
+              "ci95_scenario_pp": [
+                -1.48,
+                12.7
+              ]
+            }
+          }
+        },
+        "pinned_m11": {
+          "name": "common_handoff_m11",
+          "description": "Episodes where m11 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 54,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7119,
+              "mean_tgc": 0.4259
+            },
+            "m4": {
+              "m": 4,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7001,
+              "mean_tgc": 0.4074
+            },
+            "m6": {
+              "m": 6,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6967,
+              "mean_tgc": 0.3704
+            },
+            "m7": {
+              "m": 7,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6839,
+              "mean_tgc": 0.3704
+            },
+            "m8": {
+              "m": 8,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6801,
+              "mean_tgc": 0.4074
+            },
+            "m9": {
+              "m": 9,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7167,
+              "mean_tgc": 0.463
+            },
+            "m10": {
+              "m": 10,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7487,
+              "mean_tgc": 0.4815
+            },
+            "m11": {
+              "m": 11,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7558,
+              "mean_tgc": 0.5185
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 54,
+              "diff_pp": -1.18,
+              "ci95_task_pp": [
+                -8.55,
+                6.18
+              ],
+              "ci95_scenario_pp": [
+                -9.43,
+                6.64
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 54,
+              "diff_pp": -0.33,
+              "ci95_task_pp": [
+                -8.71,
+                7.27
+              ],
+              "ci95_scenario_pp": [
+                -8.53,
+                7.29
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 54,
+              "diff_pp": -1.28,
+              "ci95_task_pp": [
+                -9.6,
+                7.3
+              ],
+              "ci95_scenario_pp": [
+                -8.18,
+                5.76
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 54,
+              "diff_pp": -0.38,
+              "ci95_task_pp": [
+                -8.24,
+                7.87
+              ],
+              "ci95_scenario_pp": [
+                -8.93,
+                7.62
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 54,
+              "diff_pp": 3.66,
+              "ci95_task_pp": [
+                -5.24,
+                14.09
+              ],
+              "ci95_scenario_pp": [
+                -3.59,
+                10.75
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 54,
+              "diff_pp": 3.2,
+              "ci95_task_pp": [
+                -8.43,
+                13.94
+              ],
+              "ci95_scenario_pp": [
+                -3.86,
+                11.06
+              ]
+            },
+            "m11_minus_m10": {
+              "arm_a": "m10",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 0.71,
+              "ci95_task_pp": [
+                -7.4,
+                8.86
+              ],
+              "ci95_scenario_pp": [
+                -5.96,
+                6.78
+              ]
+            },
+            "m11_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 4.39,
+              "ci95_task_pp": [
+                -1.52,
+                10.54
+              ],
+              "ci95_scenario_pp": [
+                -1.46,
+                9.89
+              ]
+            }
+          }
+        },
+        "source_gt10": {
+          "name": "source_planner_gt_10_actions",
+          "description": "Episodes where source planner trajectory has > 10 executed actions [OBSERVED hj1b_planner_20260915]",
+          "n_keys": 71,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7145,
+              "mean_tgc": 0.4225
+            },
+            "m4": {
+              "m": 4,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7052,
+              "mean_tgc": 0.3944
+            },
+            "m6": {
+              "m": 6,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7053,
+              "mean_tgc": 0.4085
+            },
+            "m7": {
+              "m": 7,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7139,
+              "mean_tgc": 0.3944
+            },
+            "m8": {
+              "m": 8,
+              "n": 71,
+              "mean_goal_pass_rate": 0.6991,
+              "mean_tgc": 0.4085
+            },
+            "m9": {
+              "m": 9,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7282,
+              "mean_tgc": 0.4648
+            },
+            "m10": {
+              "m": 10,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7694,
+              "mean_tgc": 0.507
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 71,
+              "diff_pp": -0.93,
+              "ci95_task_pp": [
+                -7.82,
+                5.75
+              ],
+              "ci95_scenario_pp": [
+                -6.47,
+                4.64
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 71,
+              "diff_pp": 0.01,
+              "ci95_task_pp": [
+                -7.63,
+                7.1
+              ],
+              "ci95_scenario_pp": [
+                -7.58,
+                7.28
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 71,
+              "diff_pp": 0.86,
+              "ci95_task_pp": [
+                -6.66,
+                8.63
+              ],
+              "ci95_scenario_pp": [
+                -6.25,
+                8.05
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 71,
+              "diff_pp": -1.48,
+              "ci95_task_pp": [
+                -8.07,
+                5.23
+              ],
+              "ci95_scenario_pp": [
+                -7.84,
+                4.76
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 71,
+              "diff_pp": 2.91,
+              "ci95_task_pp": [
+                -4.3,
+                10.98
+              ],
+              "ci95_scenario_pp": [
+                -2.76,
+                9.05
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": 4.12,
+              "ci95_task_pp": [
+                -5.32,
+                12.56
+              ],
+              "ci95_scenario_pp": [
+                -2.08,
+                10.26
+              ]
+            },
+            "m10_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": 5.5,
+              "ci95_task_pp": [
+                -1.99,
+                12.83
+              ],
+              "ci95_scenario_pp": [
+                -1.48,
+                12.7
+              ]
+            }
+          }
+        },
+        "source_gt11": {
+          "name": "source_planner_gt_11_actions",
+          "description": "Episodes where source planner trajectory has > 11 executed actions [OBSERVED hj1b_planner_20260915]",
+          "n_keys": 54,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7119,
+              "mean_tgc": 0.4259
+            },
+            "m4": {
+              "m": 4,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7001,
+              "mean_tgc": 0.4074
+            },
+            "m6": {
+              "m": 6,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6967,
+              "mean_tgc": 0.3704
+            },
+            "m7": {
+              "m": 7,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6839,
+              "mean_tgc": 0.3704
+            },
+            "m8": {
+              "m": 8,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6801,
+              "mean_tgc": 0.4074
+            },
+            "m9": {
+              "m": 9,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7167,
+              "mean_tgc": 0.463
+            },
+            "m10": {
+              "m": 10,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7487,
+              "mean_tgc": 0.4815
+            },
+            "m11": {
+              "m": 11,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7558,
+              "mean_tgc": 0.5185
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 54,
+              "diff_pp": -1.18,
+              "ci95_task_pp": [
+                -8.55,
+                6.18
+              ],
+              "ci95_scenario_pp": [
+                -9.43,
+                6.64
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 54,
+              "diff_pp": -0.33,
+              "ci95_task_pp": [
+                -8.71,
+                7.27
+              ],
+              "ci95_scenario_pp": [
+                -8.53,
+                7.29
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 54,
+              "diff_pp": -1.28,
+              "ci95_task_pp": [
+                -9.6,
+                7.3
+              ],
+              "ci95_scenario_pp": [
+                -8.18,
+                5.76
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 54,
+              "diff_pp": -0.38,
+              "ci95_task_pp": [
+                -8.24,
+                7.87
+              ],
+              "ci95_scenario_pp": [
+                -8.93,
+                7.62
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 54,
+              "diff_pp": 3.66,
+              "ci95_task_pp": [
+                -5.24,
+                14.09
+              ],
+              "ci95_scenario_pp": [
+                -3.59,
+                10.75
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 54,
+              "diff_pp": 3.2,
+              "ci95_task_pp": [
+                -8.43,
+                13.94
+              ],
+              "ci95_scenario_pp": [
+                -3.86,
+                11.06
+              ]
+            },
+            "m11_minus_m10": {
+              "arm_a": "m10",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 0.71,
+              "ci95_task_pp": [
+                -7.4,
+                8.86
+              ],
+              "ci95_scenario_pp": [
+                -5.96,
+                6.78
+              ]
+            },
+            "m11_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 4.39,
+              "ci95_task_pp": [
+                -1.52,
+                10.54
+              ],
+              "ci95_scenario_pp": [
+                -1.46,
+                9.89
+              ]
+            }
+          }
+        }
+      },
+      "decompositions": {
+        "m2_to_m10": {
+          "m_base": 2,
+          "m_target": 10,
+          "total_episodes": 114,
+          "silenced_count": 43,
+          "handoff_count": 71,
+          "weight_silenced": 0.3772,
+          "weight_handoff": 0.6228,
+          "y_base_all": 0.6856,
+          "y_target_all": 0.8065,
+          "delta_total_pp": 12.09,
+          "y_base_silenced_subset": 0.6379,
+          "y_target_silenced_subset": 0.8677,
+          "gain_on_silenced_subset_pp": 22.97,
+          "contribution_silenced_subset_pp": 8.67,
+          "share_of_rise_from_silenced_pct": 71.7,
+          "y_base_handoff_subset": 0.7145,
+          "y_target_handoff_subset": 0.7694,
+          "gain_on_handoff_subset_pp": 5.5,
+          "contribution_handoff_subset_pp": 3.42,
+          "share_of_rise_from_handoff_pct": 28.3,
+          "arithmetic_identity_check_pp": 12.09
+        },
+        "m2_to_m11": {
+          "m_base": 2,
+          "m_target": 11,
+          "total_episodes": 114,
+          "silenced_count": 60,
+          "handoff_count": 54,
+          "weight_silenced": 0.5263,
+          "weight_handoff": 0.4737,
+          "y_base_all": 0.6856,
+          "y_target_all": 0.8098,
+          "delta_total_pp": 12.42,
+          "y_base_silenced_subset": 0.6619,
+          "y_target_silenced_subset": 0.8585,
+          "gain_on_silenced_subset_pp": 19.66,
+          "contribution_silenced_subset_pp": 10.34,
+          "share_of_rise_from_silenced_pct": 83.3,
+          "y_base_handoff_subset": 0.7119,
+          "y_target_handoff_subset": 0.7558,
+          "gain_on_handoff_subset_pp": 4.39,
+          "contribution_handoff_subset_pp": 2.08,
+          "share_of_rise_from_handoff_pct": 16.7,
+          "arithmetic_identity_check_pp": 12.42
+        }
+      }
+    },
+    "comparison": {
+      "all_episodes_curve": {
+        "m2": {
+          "m": 2,
+          "n": 114,
+          "silenced_count": 0,
+          "handoff_count": 114,
+          "divergence_count": 0,
+          "divergence_keys": [],
+          "post_complete_executor_actions": 0,
+          "post_complete_keys": [],
+          "mean_goal_pass_rate": 0.7187,
+          "mean_tgc": 0.4211
+        },
+        "m4": {
+          "m": 4,
+          "n": 114,
+          "silenced_count": 0,
+          "handoff_count": 114,
+          "divergence_count": 0,
+          "divergence_keys": [],
+          "post_complete_executor_actions": 0,
+          "post_complete_keys": [],
+          "mean_goal_pass_rate": 0.734,
+          "mean_tgc": 0.4298
+        },
+        "m6": {
+          "m": 6,
+          "n": 114,
+          "silenced_count": 3,
+          "handoff_count": 111,
+          "divergence_count": 3,
+          "divergence_keys": [
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_3",
+              1
+            ]
+          ],
+          "post_complete_executor_actions": 3,
+          "post_complete_keys": [
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_3",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.7145,
+          "mean_tgc": 0.4298
+        },
+        "m7": {
+          "m": 7,
+          "n": 114,
+          "silenced_count": 8,
+          "handoff_count": 106,
+          "divergence_count": 8,
+          "divergence_keys": [
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ]
+          ],
+          "post_complete_executor_actions": 8,
+          "post_complete_keys": [
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.7514,
+          "mean_tgc": 0.4649
+        },
+        "m8": {
+          "m": 8,
+          "n": 114,
+          "silenced_count": 21,
+          "handoff_count": 93,
+          "divergence_count": 21,
+          "divergence_keys": [
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "post_complete_executor_actions": 21,
+          "post_complete_keys": [
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "mean_goal_pass_rate": 0.7733,
+          "mean_tgc": 0.5
+        },
+        "m9": {
+          "m": 9,
+          "n": 114,
+          "silenced_count": 32,
+          "handoff_count": 82,
+          "divergence_count": 32,
+          "divergence_keys": [
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_2",
+              1
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "396c5a2_1",
+              2
+            ],
+            [
+              "396c5a2_2",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              2
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_2",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_2",
+              2
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6171bbc_1",
+              1
+            ],
+            [
+              "6171bbc_2",
+              1
+            ],
+            [
+              "68ee2c9_2",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "6c2c621_3",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "df61dc5_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "post_complete_executor_actions": 32,
+          "post_complete_keys": [
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_2",
+              1
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "396c5a2_1",
+              2
+            ],
+            [
+              "396c5a2_2",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              2
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_2",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_2",
+              2
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6171bbc_1",
+              1
+            ],
+            [
+              "6171bbc_2",
+              1
+            ],
+            [
+              "68ee2c9_2",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "6c2c621_3",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "df61dc5_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "mean_goal_pass_rate": 0.8134,
+          "mean_tgc": 0.5877
+        },
+        "m10": {
+          "m": 10,
+          "n": 114,
+          "silenced_count": 43,
+          "handoff_count": 71,
+          "divergence_count": 43,
+          "divergence_keys": [
+            [
+              "0d8a4ee_1",
+              1
+            ],
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_2",
+              1
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "396c5a2_1",
+              1
+            ],
+            [
+              "396c5a2_1",
+              2
+            ],
+            [
+              "396c5a2_2",
+              1
+            ],
+            [
+              "3ab5b8b_2",
+              2
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              2
+            ],
+            [
+              "4ec8de5_1",
+              1
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_2",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "4fab96f_3",
+              1
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_2",
+              2
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6171bbc_1",
+              1
+            ],
+            [
+              "6171bbc_2",
+              1
+            ],
+            [
+              "68ee2c9_2",
+              2
+            ],
+            [
+              "68ee2c9_3",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "6c2c621_3",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              1
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "d4e9306_3",
+              2
+            ],
+            [
+              "df61dc5_2",
+              1
+            ],
+            [
+              "df61dc5_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "post_complete_executor_actions": 43,
+          "post_complete_keys": [
+            [
+              "0d8a4ee_1",
+              1
+            ],
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_2",
+              1
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "396c5a2_1",
+              1
+            ],
+            [
+              "396c5a2_1",
+              2
+            ],
+            [
+              "396c5a2_2",
+              1
+            ],
+            [
+              "3ab5b8b_2",
+              2
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              2
+            ],
+            [
+              "4ec8de5_1",
+              1
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_2",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "4fab96f_3",
+              1
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_2",
+              2
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6171bbc_1",
+              1
+            ],
+            [
+              "6171bbc_2",
+              1
+            ],
+            [
+              "68ee2c9_2",
+              2
+            ],
+            [
+              "68ee2c9_3",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "6c2c621_3",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              1
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "d4e9306_3",
+              2
+            ],
+            [
+              "df61dc5_2",
+              1
+            ],
+            [
+              "df61dc5_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "mean_goal_pass_rate": 0.7906,
+          "mean_tgc": 0.5614
+        },
+        "m11": {
+          "m": 11,
+          "n": 114,
+          "silenced_count": 60,
+          "handoff_count": 54,
+          "divergence_count": 60,
+          "divergence_keys": [
+            [
+              "0d8a4ee_1",
+              1
+            ],
+            [
+              "0d8a4ee_1",
+              2
+            ],
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_2",
+              1
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "396c5a2_1",
+              1
+            ],
+            [
+              "396c5a2_1",
+              2
+            ],
+            [
+              "396c5a2_2",
+              1
+            ],
+            [
+              "396c5a2_3",
+              1
+            ],
+            [
+              "396c5a2_3",
+              2
+            ],
+            [
+              "3ab5b8b_1",
+              1
+            ],
+            [
+              "3ab5b8b_2",
+              2
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              2
+            ],
+            [
+              "4ec8de5_1",
+              1
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_2",
+              1
+            ],
+            [
+              "4ec8de5_2",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "4fab96f_3",
+              1
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_1",
+              2
+            ],
+            [
+              "50e1ac9_2",
+              2
+            ],
+            [
+              "50e1ac9_3",
+              1
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "530b157_2",
+              1
+            ],
+            [
+              "57c3486_1",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6171bbc_1",
+              1
+            ],
+            [
+              "6171bbc_2",
+              1
+            ],
+            [
+              "68ee2c9_1",
+              1
+            ],
+            [
+              "68ee2c9_2",
+              2
+            ],
+            [
+              "68ee2c9_3",
+              1
+            ],
+            [
+              "68ee2c9_3",
+              2
+            ],
+            [
+              "6bdbc26_1",
+              2
+            ],
+            [
+              "6bdbc26_2",
+              1
+            ],
+            [
+              "6bdbc26_2",
+              2
+            ],
+            [
+              "6c2c621_1",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "6c2c621_3",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              1
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "d4e9306_3",
+              2
+            ],
+            [
+              "df61dc5_1",
+              2
+            ],
+            [
+              "df61dc5_2",
+              1
+            ],
+            [
+              "df61dc5_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "post_complete_executor_actions": 60,
+          "post_complete_keys": [
+            [
+              "0d8a4ee_1",
+              1
+            ],
+            [
+              "0d8a4ee_1",
+              2
+            ],
+            [
+              "0d8a4ee_3",
+              1
+            ],
+            [
+              "23cf851_1",
+              1
+            ],
+            [
+              "23cf851_1",
+              2
+            ],
+            [
+              "23cf851_2",
+              1
+            ],
+            [
+              "23cf851_3",
+              1
+            ],
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "396c5a2_1",
+              1
+            ],
+            [
+              "396c5a2_1",
+              2
+            ],
+            [
+              "396c5a2_2",
+              1
+            ],
+            [
+              "396c5a2_3",
+              1
+            ],
+            [
+              "396c5a2_3",
+              2
+            ],
+            [
+              "3ab5b8b_1",
+              1
+            ],
+            [
+              "3ab5b8b_2",
+              2
+            ],
+            [
+              "3ab5b8b_3",
+              1
+            ],
+            [
+              "3ab5b8b_3",
+              2
+            ],
+            [
+              "4ec8de5_1",
+              1
+            ],
+            [
+              "4ec8de5_1",
+              2
+            ],
+            [
+              "4ec8de5_2",
+              1
+            ],
+            [
+              "4ec8de5_2",
+              2
+            ],
+            [
+              "4ec8de5_3",
+              1
+            ],
+            [
+              "4ec8de5_3",
+              2
+            ],
+            [
+              "4fab96f_2",
+              2
+            ],
+            [
+              "4fab96f_3",
+              1
+            ],
+            [
+              "50e1ac9_1",
+              1
+            ],
+            [
+              "50e1ac9_1",
+              2
+            ],
+            [
+              "50e1ac9_2",
+              2
+            ],
+            [
+              "50e1ac9_3",
+              1
+            ],
+            [
+              "50e1ac9_3",
+              2
+            ],
+            [
+              "530b157_2",
+              1
+            ],
+            [
+              "57c3486_1",
+              2
+            ],
+            [
+              "57c3486_3",
+              2
+            ],
+            [
+              "6171bbc_1",
+              1
+            ],
+            [
+              "6171bbc_2",
+              1
+            ],
+            [
+              "68ee2c9_1",
+              1
+            ],
+            [
+              "68ee2c9_2",
+              2
+            ],
+            [
+              "68ee2c9_3",
+              1
+            ],
+            [
+              "68ee2c9_3",
+              2
+            ],
+            [
+              "6bdbc26_1",
+              2
+            ],
+            [
+              "6bdbc26_2",
+              1
+            ],
+            [
+              "6bdbc26_2",
+              2
+            ],
+            [
+              "6c2c621_1",
+              2
+            ],
+            [
+              "6c2c621_2",
+              1
+            ],
+            [
+              "6c2c621_3",
+              1
+            ],
+            [
+              "d4e9306_1",
+              2
+            ],
+            [
+              "d4e9306_2",
+              1
+            ],
+            [
+              "d4e9306_2",
+              2
+            ],
+            [
+              "d4e9306_3",
+              1
+            ],
+            [
+              "d4e9306_3",
+              2
+            ],
+            [
+              "df61dc5_1",
+              2
+            ],
+            [
+              "df61dc5_2",
+              1
+            ],
+            [
+              "df61dc5_3",
+              1
+            ],
+            [
+              "fac291d_1",
+              1
+            ],
+            [
+              "fac291d_1",
+              2
+            ],
+            [
+              "fac291d_2",
+              1
+            ],
+            [
+              "fac291d_3",
+              1
+            ],
+            [
+              "fac291d_3",
+              2
+            ]
+          ],
+          "mean_goal_pass_rate": 0.8307,
+          "mean_tgc": 0.614
+        }
+      },
+      "controlled_curves": {
+        "pinned_m2": {
+          "name": "common_handoff_m2",
+          "description": "Episodes where m2 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 114,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 114,
+              "mean_goal_pass_rate": 0.7187,
+              "mean_tgc": 0.4211
+            }
+          },
+          "contrasts": {}
+        },
+        "pinned_m4": {
+          "name": "common_handoff_m4",
+          "description": "Episodes where m4 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 114,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 114,
+              "mean_goal_pass_rate": 0.7187,
+              "mean_tgc": 0.4211
+            },
+            "m4": {
+              "m": 4,
+              "n": 114,
+              "mean_goal_pass_rate": 0.734,
+              "mean_tgc": 0.4298
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 114,
+              "diff_pp": 1.53,
+              "ci95_task_pp": [
+                -4.35,
+                7.4
+              ],
+              "ci95_scenario_pp": [
+                -3.81,
+                7.14
+              ]
+            }
+          }
+        },
+        "pinned_m6": {
+          "name": "common_handoff_m6",
+          "description": "Episodes where m6 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 111,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 111,
+              "mean_goal_pass_rate": 0.7156,
+              "mean_tgc": 0.4144
+            },
+            "m4": {
+              "m": 4,
+              "n": 111,
+              "mean_goal_pass_rate": 0.7313,
+              "mean_tgc": 0.4234
+            },
+            "m6": {
+              "m": 6,
+              "n": 111,
+              "mean_goal_pass_rate": 0.7068,
+              "mean_tgc": 0.4144
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 111,
+              "diff_pp": 1.57,
+              "ci95_task_pp": [
+                -4.47,
+                7.61
+              ],
+              "ci95_scenario_pp": [
+                -3.87,
+                7.35
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 111,
+              "diff_pp": -2.45,
+              "ci95_task_pp": [
+                -8.0,
+                2.92
+              ],
+              "ci95_scenario_pp": [
+                -7.88,
+                2.84
+              ]
+            },
+            "m6_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m6",
+              "n_pairs": 111,
+              "diff_pp": -0.88,
+              "ci95_task_pp": [
+                -6.02,
+                4.29
+              ],
+              "ci95_scenario_pp": [
+                -4.88,
+                3.11
+              ]
+            }
+          }
+        },
+        "pinned_m7": {
+          "name": "common_handoff_m7",
+          "description": "Episodes where m7 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 106,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 106,
+              "mean_goal_pass_rate": 0.7088,
+              "mean_tgc": 0.4057
+            },
+            "m4": {
+              "m": 4,
+              "n": 106,
+              "mean_goal_pass_rate": 0.7252,
+              "mean_tgc": 0.4151
+            },
+            "m6": {
+              "m": 6,
+              "n": 106,
+              "mean_goal_pass_rate": 0.6948,
+              "mean_tgc": 0.3962
+            },
+            "m7": {
+              "m": 7,
+              "n": 106,
+              "mean_goal_pass_rate": 0.7345,
+              "mean_tgc": 0.434
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 106,
+              "diff_pp": 1.64,
+              "ci95_task_pp": [
+                -4.68,
+                8.09
+              ],
+              "ci95_scenario_pp": [
+                -4.09,
+                7.63
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 106,
+              "diff_pp": -3.04,
+              "ci95_task_pp": [
+                -8.95,
+                2.47
+              ],
+              "ci95_scenario_pp": [
+                -8.62,
+                2.42
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 106,
+              "diff_pp": 3.97,
+              "ci95_task_pp": [
+                -1.79,
+                9.86
+              ],
+              "ci95_scenario_pp": [
+                -1.86,
+                10.09
+              ]
+            },
+            "m7_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m7",
+              "n_pairs": 106,
+              "diff_pp": 2.57,
+              "ci95_task_pp": [
+                -2.77,
+                7.79
+              ],
+              "ci95_scenario_pp": [
+                -2.9,
+                8.34
+              ]
+            }
+          }
+        },
+        "pinned_m8": {
+          "name": "common_handoff_m8",
+          "description": "Episodes where m8 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 93,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7215,
+              "mean_tgc": 0.4301
+            },
+            "m4": {
+              "m": 4,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7285,
+              "mean_tgc": 0.4194
+            },
+            "m6": {
+              "m": 6,
+              "n": 93,
+              "mean_goal_pass_rate": 0.6965,
+              "mean_tgc": 0.3871
+            },
+            "m7": {
+              "m": 7,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7274,
+              "mean_tgc": 0.4086
+            },
+            "m8": {
+              "m": 8,
+              "n": 93,
+              "mean_goal_pass_rate": 0.7489,
+              "mean_tgc": 0.4516
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 93,
+              "diff_pp": 0.7,
+              "ci95_task_pp": [
+                -5.69,
+                7.36
+              ],
+              "ci95_scenario_pp": [
+                -5.23,
+                6.87
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 93,
+              "diff_pp": -3.19,
+              "ci95_task_pp": [
+                -9.47,
+                2.94
+              ],
+              "ci95_scenario_pp": [
+                -9.28,
+                2.89
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 93,
+              "diff_pp": 3.09,
+              "ci95_task_pp": [
+                -3.56,
+                9.6
+              ],
+              "ci95_scenario_pp": [
+                -3.79,
+                10.06
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 93,
+              "diff_pp": 2.15,
+              "ci95_task_pp": [
+                -3.54,
+                8.05
+              ],
+              "ci95_scenario_pp": [
+                -4.43,
+                8.2
+              ]
+            },
+            "m8_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m8",
+              "n_pairs": 93,
+              "diff_pp": 2.74,
+              "ci95_task_pp": [
+                -2.29,
+                7.7
+              ],
+              "ci95_scenario_pp": [
+                -2.83,
+                7.69
+              ]
+            }
+          }
+        },
+        "pinned_m9": {
+          "name": "common_handoff_m9",
+          "description": "Episodes where m9 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 82,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7253,
+              "mean_tgc": 0.4512
+            },
+            "m4": {
+              "m": 4,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7193,
+              "mean_tgc": 0.4024
+            },
+            "m6": {
+              "m": 6,
+              "n": 82,
+              "mean_goal_pass_rate": 0.6862,
+              "mean_tgc": 0.378
+            },
+            "m7": {
+              "m": 7,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7153,
+              "mean_tgc": 0.4024
+            },
+            "m8": {
+              "m": 8,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7254,
+              "mean_tgc": 0.4024
+            },
+            "m9": {
+              "m": 9,
+              "n": 82,
+              "mean_goal_pass_rate": 0.7812,
+              "mean_tgc": 0.5244
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 82,
+              "diff_pp": -0.61,
+              "ci95_task_pp": [
+                -7.28,
+                6.33
+              ],
+              "ci95_scenario_pp": [
+                -6.34,
+                5.82
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 82,
+              "diff_pp": -3.31,
+              "ci95_task_pp": [
+                -10.2,
+                3.2
+              ],
+              "ci95_scenario_pp": [
+                -9.56,
+                2.74
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 82,
+              "diff_pp": 2.91,
+              "ci95_task_pp": [
+                -4.3,
+                10.26
+              ],
+              "ci95_scenario_pp": [
+                -3.83,
+                10.07
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 82,
+              "diff_pp": 1.01,
+              "ci95_task_pp": [
+                -4.94,
+                7.31
+              ],
+              "ci95_scenario_pp": [
+                -5.93,
+                7.52
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 82,
+              "diff_pp": 5.58,
+              "ci95_task_pp": [
+                0.88,
+                10.95
+              ],
+              "ci95_scenario_pp": [
+                0.81,
+                10.74
+              ]
+            },
+            "m9_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m9",
+              "n_pairs": 82,
+              "diff_pp": 5.58,
+              "ci95_task_pp": [
+                0.61,
+                11.42
+              ],
+              "ci95_scenario_pp": [
+                1.08,
+                10.68
+              ]
+            }
+          }
+        },
+        "pinned_m10": {
+          "name": "common_handoff_m10",
+          "description": "Episodes where m10 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 71,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7382,
+              "mean_tgc": 0.4789
+            },
+            "m4": {
+              "m": 4,
+              "n": 71,
+              "mean_goal_pass_rate": 0.719,
+              "mean_tgc": 0.4225
+            },
+            "m6": {
+              "m": 6,
+              "n": 71,
+              "mean_goal_pass_rate": 0.6897,
+              "mean_tgc": 0.3944
+            },
+            "m7": {
+              "m": 7,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7322,
+              "mean_tgc": 0.4225
+            },
+            "m8": {
+              "m": 8,
+              "n": 71,
+              "mean_goal_pass_rate": 0.719,
+              "mean_tgc": 0.3944
+            },
+            "m9": {
+              "m": 9,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7618,
+              "mean_tgc": 0.493
+            },
+            "m10": {
+              "m": 10,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7439,
+              "mean_tgc": 0.4789
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 71,
+              "diff_pp": -1.92,
+              "ci95_task_pp": [
+                -9.01,
+                5.05
+              ],
+              "ci95_scenario_pp": [
+                -7.71,
+                4.04
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 71,
+              "diff_pp": -2.93,
+              "ci95_task_pp": [
+                -9.67,
+                3.89
+              ],
+              "ci95_scenario_pp": [
+                -8.62,
+                3.17
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 71,
+              "diff_pp": 4.26,
+              "ci95_task_pp": [
+                -3.2,
+                11.8
+              ],
+              "ci95_scenario_pp": [
+                -2.46,
+                11.72
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 71,
+              "diff_pp": -1.32,
+              "ci95_task_pp": [
+                -7.23,
+                4.9
+              ],
+              "ci95_scenario_pp": [
+                -8.22,
+                5.02
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 71,
+              "diff_pp": 4.28,
+              "ci95_task_pp": [
+                -0.37,
+                9.02
+              ],
+              "ci95_scenario_pp": [
+                -0.56,
+                9.23
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": -1.79,
+              "ci95_task_pp": [
+                -7.61,
+                3.55
+              ],
+              "ci95_scenario_pp": [
+                -7.81,
+                2.76
+              ]
+            },
+            "m10_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": 0.57,
+              "ci95_task_pp": [
+                -5.26,
+                6.17
+              ],
+              "ci95_scenario_pp": [
+                -5.72,
+                7.04
+              ]
+            }
+          }
+        },
+        "pinned_m11": {
+          "name": "common_handoff_m11",
+          "description": "Episodes where m11 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 54,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7042,
+              "mean_tgc": 0.4444
+            },
+            "m4": {
+              "m": 4,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7021,
+              "mean_tgc": 0.4444
+            },
+            "m6": {
+              "m": 6,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6669,
+              "mean_tgc": 0.3704
+            },
+            "m7": {
+              "m": 7,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7352,
+              "mean_tgc": 0.4259
+            },
+            "m8": {
+              "m": 8,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6988,
+              "mean_tgc": 0.3889
+            },
+            "m9": {
+              "m": 9,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7387,
+              "mean_tgc": 0.463
+            },
+            "m10": {
+              "m": 10,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7078,
+              "mean_tgc": 0.4444
+            },
+            "m11": {
+              "m": 11,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7887,
+              "mean_tgc": 0.5556
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 54,
+              "diff_pp": -0.21,
+              "ci95_task_pp": [
+                -8.35,
+                8.02
+              ],
+              "ci95_scenario_pp": [
+                -6.72,
+                6.22
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 54,
+              "diff_pp": -3.52,
+              "ci95_task_pp": [
+                -12.16,
+                4.89
+              ],
+              "ci95_scenario_pp": [
+                -10.26,
+                4.34
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 54,
+              "diff_pp": 6.83,
+              "ci95_task_pp": [
+                -0.64,
+                14.35
+              ],
+              "ci95_scenario_pp": [
+                0.43,
+                13.72
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 54,
+              "diff_pp": -3.64,
+              "ci95_task_pp": [
+                -10.17,
+                3.04
+              ],
+              "ci95_scenario_pp": [
+                -10.89,
+                3.6
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 54,
+              "diff_pp": 3.99,
+              "ci95_task_pp": [
+                -1.15,
+                9.44
+              ],
+              "ci95_scenario_pp": [
+                -1.62,
+                9.65
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 54,
+              "diff_pp": -3.09,
+              "ci95_task_pp": [
+                -10.6,
+                3.81
+              ],
+              "ci95_scenario_pp": [
+                -10.87,
+                2.93
+              ]
+            },
+            "m11_minus_m10": {
+              "arm_a": "m10",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 8.09,
+              "ci95_task_pp": [
+                1.33,
+                16.0
+              ],
+              "ci95_scenario_pp": [
+                2.31,
+                15.04
+              ]
+            },
+            "m11_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 8.45,
+              "ci95_task_pp": [
+                1.71,
+                16.72
+              ],
+              "ci95_scenario_pp": [
+                0.52,
+                18.49
+              ]
+            }
+          }
+        },
+        "source_gt10": {
+          "name": "source_planner_gt_10_actions",
+          "description": "Episodes where source planner trajectory has > 10 executed actions [OBSERVED hj1b_planner_20260915]",
+          "n_keys": 71,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7382,
+              "mean_tgc": 0.4789
+            },
+            "m4": {
+              "m": 4,
+              "n": 71,
+              "mean_goal_pass_rate": 0.719,
+              "mean_tgc": 0.4225
+            },
+            "m6": {
+              "m": 6,
+              "n": 71,
+              "mean_goal_pass_rate": 0.6897,
+              "mean_tgc": 0.3944
+            },
+            "m7": {
+              "m": 7,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7322,
+              "mean_tgc": 0.4225
+            },
+            "m8": {
+              "m": 8,
+              "n": 71,
+              "mean_goal_pass_rate": 0.719,
+              "mean_tgc": 0.3944
+            },
+            "m9": {
+              "m": 9,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7618,
+              "mean_tgc": 0.493
+            },
+            "m10": {
+              "m": 10,
+              "n": 71,
+              "mean_goal_pass_rate": 0.7439,
+              "mean_tgc": 0.4789
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 71,
+              "diff_pp": -1.92,
+              "ci95_task_pp": [
+                -9.01,
+                5.05
+              ],
+              "ci95_scenario_pp": [
+                -7.71,
+                4.04
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 71,
+              "diff_pp": -2.93,
+              "ci95_task_pp": [
+                -9.67,
+                3.89
+              ],
+              "ci95_scenario_pp": [
+                -8.62,
+                3.17
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 71,
+              "diff_pp": 4.26,
+              "ci95_task_pp": [
+                -3.2,
+                11.8
+              ],
+              "ci95_scenario_pp": [
+                -2.46,
+                11.72
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 71,
+              "diff_pp": -1.32,
+              "ci95_task_pp": [
+                -7.23,
+                4.9
+              ],
+              "ci95_scenario_pp": [
+                -8.22,
+                5.02
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 71,
+              "diff_pp": 4.28,
+              "ci95_task_pp": [
+                -0.37,
+                9.02
+              ],
+              "ci95_scenario_pp": [
+                -0.56,
+                9.23
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": -1.79,
+              "ci95_task_pp": [
+                -7.61,
+                3.55
+              ],
+              "ci95_scenario_pp": [
+                -7.81,
+                2.76
+              ]
+            },
+            "m10_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m10",
+              "n_pairs": 71,
+              "diff_pp": 0.57,
+              "ci95_task_pp": [
+                -5.26,
+                6.17
+              ],
+              "ci95_scenario_pp": [
+                -5.72,
+                7.04
+              ]
+            }
+          }
+        },
+        "source_gt11": {
+          "name": "source_planner_gt_11_actions",
+          "description": "Episodes where source planner trajectory has > 11 executed actions [OBSERVED hj1b_planner_20260915]",
+          "n_keys": 54,
+          "curve": {
+            "m2": {
+              "m": 2,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7042,
+              "mean_tgc": 0.4444
+            },
+            "m4": {
+              "m": 4,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7021,
+              "mean_tgc": 0.4444
+            },
+            "m6": {
+              "m": 6,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6669,
+              "mean_tgc": 0.3704
+            },
+            "m7": {
+              "m": 7,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7352,
+              "mean_tgc": 0.4259
+            },
+            "m8": {
+              "m": 8,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6988,
+              "mean_tgc": 0.3889
+            },
+            "m9": {
+              "m": 9,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7387,
+              "mean_tgc": 0.463
+            },
+            "m10": {
+              "m": 10,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7078,
+              "mean_tgc": 0.4444
+            },
+            "m11": {
+              "m": 11,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7887,
+              "mean_tgc": 0.5556
+            }
+          },
+          "contrasts": {
+            "m4_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m4",
+              "n_pairs": 54,
+              "diff_pp": -0.21,
+              "ci95_task_pp": [
+                -8.35,
+                8.02
+              ],
+              "ci95_scenario_pp": [
+                -6.72,
+                6.22
+              ]
+            },
+            "m6_minus_m4": {
+              "arm_a": "m4",
+              "arm_b": "m6",
+              "n_pairs": 54,
+              "diff_pp": -3.52,
+              "ci95_task_pp": [
+                -12.16,
+                4.89
+              ],
+              "ci95_scenario_pp": [
+                -10.26,
+                4.34
+              ]
+            },
+            "m7_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m7",
+              "n_pairs": 54,
+              "diff_pp": 6.83,
+              "ci95_task_pp": [
+                -0.64,
+                14.35
+              ],
+              "ci95_scenario_pp": [
+                0.43,
+                13.72
+              ]
+            },
+            "m8_minus_m7": {
+              "arm_a": "m7",
+              "arm_b": "m8",
+              "n_pairs": 54,
+              "diff_pp": -3.64,
+              "ci95_task_pp": [
+                -10.17,
+                3.04
+              ],
+              "ci95_scenario_pp": [
+                -10.89,
+                3.6
+              ]
+            },
+            "m9_minus_m8": {
+              "arm_a": "m8",
+              "arm_b": "m9",
+              "n_pairs": 54,
+              "diff_pp": 3.99,
+              "ci95_task_pp": [
+                -1.15,
+                9.44
+              ],
+              "ci95_scenario_pp": [
+                -1.62,
+                9.65
+              ]
+            },
+            "m10_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m10",
+              "n_pairs": 54,
+              "diff_pp": -3.09,
+              "ci95_task_pp": [
+                -10.6,
+                3.81
+              ],
+              "ci95_scenario_pp": [
+                -10.87,
+                2.93
+              ]
+            },
+            "m11_minus_m10": {
+              "arm_a": "m10",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 8.09,
+              "ci95_task_pp": [
+                1.33,
+                16.0
+              ],
+              "ci95_scenario_pp": [
+                2.31,
+                15.04
+              ]
+            },
+            "m11_minus_m2": {
+              "arm_a": "m2",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 8.45,
+              "ci95_task_pp": [
+                1.71,
+                16.72
+              ],
+              "ci95_scenario_pp": [
+                0.52,
+                18.49
+              ]
+            }
+          }
+        }
+      },
+      "decompositions": {
+        "m2_to_m10": {
+          "m_base": 2,
+          "m_target": 10,
+          "total_episodes": 114,
+          "silenced_count": 43,
+          "handoff_count": 71,
+          "weight_silenced": 0.3772,
+          "weight_handoff": 0.6228,
+          "y_base_all": 0.7187,
+          "y_target_all": 0.7906,
+          "delta_total_pp": 7.19,
+          "y_base_silenced_subset": 0.6865,
+          "y_target_silenced_subset": 0.8677,
+          "gain_on_silenced_subset_pp": 18.11,
+          "contribution_silenced_subset_pp": 6.83,
+          "share_of_rise_from_silenced_pct": 95.0,
+          "y_base_handoff_subset": 0.7382,
+          "y_target_handoff_subset": 0.7439,
+          "gain_on_handoff_subset_pp": 0.57,
+          "contribution_handoff_subset_pp": 0.36,
+          "share_of_rise_from_handoff_pct": 5.0,
+          "arithmetic_identity_check_pp": 7.19
+        },
+        "m2_to_m11": {
+          "m_base": 2,
+          "m_target": 11,
+          "total_episodes": 114,
+          "silenced_count": 60,
+          "handoff_count": 54,
+          "weight_silenced": 0.5263,
+          "weight_handoff": 0.4737,
+          "y_base_all": 0.7187,
+          "y_target_all": 0.8307,
+          "delta_total_pp": 11.2,
+          "y_base_silenced_subset": 0.7318,
+          "y_target_silenced_subset": 0.8685,
+          "gain_on_silenced_subset_pp": 13.67,
+          "contribution_silenced_subset_pp": 7.2,
+          "share_of_rise_from_silenced_pct": 64.3,
+          "y_base_handoff_subset": 0.7042,
+          "y_target_handoff_subset": 0.7887,
+          "gain_on_handoff_subset_pp": 8.45,
+          "contribution_handoff_subset_pp": 4.0,
+          "share_of_rise_from_handoff_pct": 35.7,
+          "arithmetic_identity_check_pp": 11.2
+        }
+      }
+    }
+  }
+}

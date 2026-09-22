@@ -1,0 +1,797 @@
+{
+  "generated_by": "scripts/analysis/j13_mechanism.py",
+  "description": "Brief X33 Threshold Mechanism Empirical Measurements",
+  "receiver": "zeroshot",
+  "arms_used": {
+    "primary": {
+      "m6": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m6_20260923/prefix_handoff",
+      "m9": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m9_20260923/prefix_handoff",
+      "m11": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m11_20260923/prefix_handoff"
+    },
+    "comparison": {},
+    "source_planner": "/scratch/n12194778/sidekick/results/hj1b_planner_20260915/planner_alone",
+    "excluded_arms": [
+      {
+        "group": "primary",
+        "m": 2,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m2_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "primary",
+        "m": 3,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m3_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "primary",
+        "m": 4,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m4_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "primary",
+        "m": 5,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m5_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "primary",
+        "m": 7,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m7_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "primary",
+        "m": 8,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m8_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "primary",
+        "m": 10,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m10_20260923/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 2,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m2_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 3,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m3_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 4,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m4_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 5,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m5_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 6,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m6_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 7,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m7_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 8,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m8_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 9,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m9_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 10,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m10_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      },
+      {
+        "group": "comparison",
+        "m": 11,
+        "path": "/scratch/n12194778/sidekick/results/hj13_prefix_zs_m11_20260922/prefix_handoff",
+        "result_count": 0,
+        "reason": "result_count (0) != 114"
+      }
+    ]
+  },
+  "m1_api_novelty": {
+    "n_episodes": 114,
+    "total_first_uses": 673,
+    "mean_first_uses_per_episode": 5.9,
+    "first_use_position_distribution": {
+      "min": 1,
+      "p25": 3,
+      "p50": 5,
+      "p75": 9,
+      "max": 24,
+      "mean": 6.2363
+    },
+    "cumulative_by_position": {
+      "1": {
+        "first_uses_at_pos": 114,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 1.0,
+        "cum_first_uses": 114,
+        "cum_first_uses_share": 0.1694
+      },
+      "2": {
+        "first_uses_at_pos": 44,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.386,
+        "cum_first_uses": 158,
+        "cum_first_uses_share": 0.2348
+      },
+      "3": {
+        "first_uses_at_pos": 81,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.7105,
+        "cum_first_uses": 239,
+        "cum_first_uses_share": 0.3551
+      },
+      "4": {
+        "first_uses_at_pos": 59,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.5175,
+        "cum_first_uses": 298,
+        "cum_first_uses_share": 0.4428
+      },
+      "5": {
+        "first_uses_at_pos": 54,
+        "total_actions_at_pos": 114,
+        "novel_share_at_pos": 0.4737,
+        "cum_first_uses": 352,
+        "cum_first_uses_share": 0.523
+      },
+      "6": {
+        "first_uses_at_pos": 55,
+        "total_actions_at_pos": 112,
+        "novel_share_at_pos": 0.4911,
+        "cum_first_uses": 407,
+        "cum_first_uses_share": 0.6048
+      },
+      "7": {
+        "first_uses_at_pos": 44,
+        "total_actions_at_pos": 111,
+        "novel_share_at_pos": 0.3964,
+        "cum_first_uses": 451,
+        "cum_first_uses_share": 0.6701
+      },
+      "8": {
+        "first_uses_at_pos": 42,
+        "total_actions_at_pos": 106,
+        "novel_share_at_pos": 0.3962,
+        "cum_first_uses": 493,
+        "cum_first_uses_share": 0.7325
+      },
+      "9": {
+        "first_uses_at_pos": 34,
+        "total_actions_at_pos": 94,
+        "novel_share_at_pos": 0.3617,
+        "cum_first_uses": 527,
+        "cum_first_uses_share": 0.7831
+      },
+      "10": {
+        "first_uses_at_pos": 31,
+        "total_actions_at_pos": 83,
+        "novel_share_at_pos": 0.3735,
+        "cum_first_uses": 558,
+        "cum_first_uses_share": 0.8291
+      },
+      "11": {
+        "first_uses_at_pos": 25,
+        "total_actions_at_pos": 74,
+        "novel_share_at_pos": 0.3378,
+        "cum_first_uses": 583,
+        "cum_first_uses_share": 0.8663
+      },
+      "12": {
+        "first_uses_at_pos": 16,
+        "total_actions_at_pos": 59,
+        "novel_share_at_pos": 0.2712,
+        "cum_first_uses": 599,
+        "cum_first_uses_share": 0.89
+      },
+      "13": {
+        "first_uses_at_pos": 18,
+        "total_actions_at_pos": 54,
+        "novel_share_at_pos": 0.3333,
+        "cum_first_uses": 617,
+        "cum_first_uses_share": 0.9168
+      },
+      "14": {
+        "first_uses_at_pos": 9,
+        "total_actions_at_pos": 48,
+        "novel_share_at_pos": 0.1875,
+        "cum_first_uses": 626,
+        "cum_first_uses_share": 0.9302
+      },
+      "15": {
+        "first_uses_at_pos": 7,
+        "total_actions_at_pos": 40,
+        "novel_share_at_pos": 0.175,
+        "cum_first_uses": 633,
+        "cum_first_uses_share": 0.9406
+      },
+      "16": {
+        "first_uses_at_pos": 11,
+        "total_actions_at_pos": 34,
+        "novel_share_at_pos": 0.3235,
+        "cum_first_uses": 644,
+        "cum_first_uses_share": 0.9569
+      },
+      "17": {
+        "first_uses_at_pos": 11,
+        "total_actions_at_pos": 28,
+        "novel_share_at_pos": 0.3929,
+        "cum_first_uses": 655,
+        "cum_first_uses_share": 0.9733
+      },
+      "18": {
+        "first_uses_at_pos": 6,
+        "total_actions_at_pos": 24,
+        "novel_share_at_pos": 0.25,
+        "cum_first_uses": 661,
+        "cum_first_uses_share": 0.9822
+      },
+      "19": {
+        "first_uses_at_pos": 3,
+        "total_actions_at_pos": 20,
+        "novel_share_at_pos": 0.15,
+        "cum_first_uses": 664,
+        "cum_first_uses_share": 0.9866
+      },
+      "20": {
+        "first_uses_at_pos": 2,
+        "total_actions_at_pos": 17,
+        "novel_share_at_pos": 0.1176,
+        "cum_first_uses": 666,
+        "cum_first_uses_share": 0.9896
+      }
+    },
+    "binned": {
+      "1-2": {
+        "first_uses": 158,
+        "total_actions": 228,
+        "share_of_all_first_uses": 0.2348,
+        "novel_share_in_bin": 0.693
+      },
+      "3-4": {
+        "first_uses": 140,
+        "total_actions": 228,
+        "share_of_all_first_uses": 0.208,
+        "novel_share_in_bin": 0.614
+      },
+      "5-6": {
+        "first_uses": 109,
+        "total_actions": 226,
+        "share_of_all_first_uses": 0.162,
+        "novel_share_in_bin": 0.4823
+      },
+      "7-8": {
+        "first_uses": 86,
+        "total_actions": 217,
+        "share_of_all_first_uses": 0.1278,
+        "novel_share_in_bin": 0.3963
+      },
+      "9-10": {
+        "first_uses": 65,
+        "total_actions": 177,
+        "share_of_all_first_uses": 0.0966,
+        "novel_share_in_bin": 0.3672
+      },
+      "11-20": {
+        "first_uses": 108,
+        "total_actions": 398,
+        "share_of_all_first_uses": 0.1605,
+        "novel_share_in_bin": 0.2714
+      }
+    }
+  },
+  "m2_compounding_error": {
+    "primary": {
+      "m6": {
+        "m": 6,
+        "n_episodes": 114,
+        "silenced_episodes": 3,
+        "handoff_episodes": 111,
+        "divergence_count": 0,
+        "divergence_keys": [],
+        "error_episodes": 0,
+        "error_rate_on_handoff": 0.0,
+        "first_error_rel_step_dist": null,
+        "share_first_error_at_step_1": null,
+        "share_first_error_in_steps_1_2": null,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 7,
+          "p50": 17,
+          "p75": 25,
+          "max": 34,
+          "mean": 16.7387
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 6,
+          "p50": 14,
+          "p75": 20,
+          "max": 30,
+          "mean": 13.0976
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 7,
+          "p50": 17,
+          "p75": 32,
+          "max": 34,
+          "mean": 18.8714
+        }
+      },
+      "m9": {
+        "m": 9,
+        "n_episodes": 114,
+        "silenced_episodes": 32,
+        "handoff_episodes": 82,
+        "divergence_count": 1,
+        "divergence_keys": [
+          [
+            "383cbac_2",
+            1
+          ]
+        ],
+        "error_episodes": 0,
+        "error_rate_on_handoff": 0.0,
+        "first_error_rel_step_dist": null,
+        "share_first_error_at_step_1": null,
+        "share_first_error_in_steps_1_2": null,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 5,
+          "p50": 9,
+          "p75": 19,
+          "max": 31,
+          "mean": 12.8537
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 4,
+          "p50": 6,
+          "p75": 12,
+          "max": 28,
+          "mean": 8.6667
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 6,
+          "p50": 16,
+          "p75": 31,
+          "max": 31,
+          "mean": 16.6512
+        }
+      },
+      "m11": {
+        "m": 11,
+        "n_episodes": 114,
+        "silenced_episodes": 60,
+        "handoff_episodes": 54,
+        "divergence_count": 4,
+        "divergence_keys": [
+          [
+            "37a8675_1",
+            2
+          ],
+          [
+            "383cbac_2",
+            1
+          ],
+          [
+            "530b157_2",
+            1
+          ],
+          [
+            "68ee2c9_1",
+            1
+          ]
+        ],
+        "error_episodes": 0,
+        "error_rate_on_handoff": 0.0,
+        "first_error_rel_step_dist": null,
+        "share_first_error_at_step_1": null,
+        "share_first_error_in_steps_1_2": null,
+        "executor_steps_taken_all": {
+          "min": 1,
+          "p25": 3,
+          "p50": 8,
+          "p75": 24,
+          "max": 29,
+          "mean": 12.8704
+        },
+        "executor_steps_taken_success": {
+          "min": 1,
+          "p25": 3,
+          "p50": 6,
+          "p75": 9,
+          "max": 26,
+          "mean": 8.1
+        },
+        "executor_steps_taken_fail": {
+          "min": 1,
+          "p25": 6,
+          "p50": 24,
+          "p75": 29,
+          "max": 29,
+          "mean": 18.8333
+        }
+      }
+    },
+    "comparison": {}
+  },
+  "m3_prefix_exhausted": {
+    "primary": {
+      "all_episodes_curve": {
+        "m6": {
+          "m": 6,
+          "n": 114,
+          "silenced_count": 3,
+          "handoff_count": 111,
+          "divergence_count": 0,
+          "divergence_keys": [],
+          "mean_goal_pass_rate": 0.6825,
+          "mean_tgc": 0.386
+        },
+        "m9": {
+          "m": 9,
+          "n": 114,
+          "silenced_count": 32,
+          "handoff_count": 82,
+          "divergence_count": 1,
+          "divergence_keys": [
+            [
+              "383cbac_2",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.7845,
+          "mean_tgc": 0.5526
+        },
+        "m11": {
+          "m": 11,
+          "n": 114,
+          "silenced_count": 60,
+          "handoff_count": 54,
+          "divergence_count": 4,
+          "divergence_keys": [
+            [
+              "37a8675_1",
+              2
+            ],
+            [
+              "383cbac_2",
+              1
+            ],
+            [
+              "530b157_2",
+              1
+            ],
+            [
+              "68ee2c9_1",
+              1
+            ]
+          ],
+          "mean_goal_pass_rate": 0.8345,
+          "mean_tgc": 0.6228
+        }
+      },
+      "controlled_curves": {
+        "pinned_m6": {
+          "name": "common_handoff_m6",
+          "description": "Episodes where m6 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 111,
+          "curve": {
+            "m6": {
+              "m": 6,
+              "n": 111,
+              "mean_goal_pass_rate": 0.6739,
+              "mean_tgc": 0.3694
+            }
+          },
+          "contrasts": {}
+        },
+        "pinned_m9": {
+          "name": "common_handoff_m9",
+          "description": "Episodes where m9 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 82,
+          "curve": {
+            "m6": {
+              "m": 6,
+              "n": 82,
+              "mean_goal_pass_rate": 0.6221,
+              "mean_tgc": 0.3049
+            },
+            "m9": {
+              "m": 9,
+              "n": 82,
+              "mean_goal_pass_rate": 0.741,
+              "mean_tgc": 0.4756
+            }
+          },
+          "contrasts": {
+            "m9_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m9",
+              "n_pairs": 82,
+              "diff_pp": 11.89,
+              "ci95_task_pp": [
+                3.67,
+                20.24
+              ],
+              "ci95_scenario_pp": [
+                2.9,
+                21.15
+              ]
+            }
+          }
+        },
+        "pinned_m11": {
+          "name": "common_handoff_m11",
+          "description": "Episodes where m11 genuinely hands off (handoff_occurred is True)",
+          "n_keys": 54,
+          "curve": {
+            "m6": {
+              "m": 6,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6044,
+              "mean_tgc": 0.3148
+            },
+            "m9": {
+              "m": 9,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7125,
+              "mean_tgc": 0.4444
+            },
+            "m11": {
+              "m": 11,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7985,
+              "mean_tgc": 0.5556
+            }
+          },
+          "contrasts": {
+            "m9_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m9",
+              "n_pairs": 54,
+              "diff_pp": 10.81,
+              "ci95_task_pp": [
+                0.93,
+                20.64
+              ],
+              "ci95_scenario_pp": [
+                1.12,
+                21.3
+              ]
+            },
+            "m11_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 8.6,
+              "ci95_task_pp": [
+                1.72,
+                15.51
+              ],
+              "ci95_scenario_pp": [
+                1.88,
+                14.78
+              ]
+            },
+            "m11_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 19.41,
+              "ci95_task_pp": [
+                12.39,
+                26.66
+              ],
+              "ci95_scenario_pp": [
+                13.44,
+                26.8
+              ]
+            }
+          }
+        },
+        "source_gt9": {
+          "name": "source_planner_gt_9_actions",
+          "description": "Episodes where source planner trajectory has > 9 executed actions [OBSERVED hj1b_planner_20260915]",
+          "n_keys": 82,
+          "curve": {
+            "m6": {
+              "m": 6,
+              "n": 82,
+              "mean_goal_pass_rate": 0.6221,
+              "mean_tgc": 0.3049
+            },
+            "m9": {
+              "m": 9,
+              "n": 82,
+              "mean_goal_pass_rate": 0.741,
+              "mean_tgc": 0.4756
+            }
+          },
+          "contrasts": {
+            "m9_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m9",
+              "n_pairs": 82,
+              "diff_pp": 11.89,
+              "ci95_task_pp": [
+                3.67,
+                20.24
+              ],
+              "ci95_scenario_pp": [
+                2.9,
+                21.15
+              ]
+            }
+          }
+        },
+        "source_gt11": {
+          "name": "source_planner_gt_11_actions",
+          "description": "Episodes where source planner trajectory has > 11 executed actions [OBSERVED hj1b_planner_20260915]",
+          "n_keys": 54,
+          "curve": {
+            "m6": {
+              "m": 6,
+              "n": 54,
+              "mean_goal_pass_rate": 0.6044,
+              "mean_tgc": 0.3148
+            },
+            "m9": {
+              "m": 9,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7125,
+              "mean_tgc": 0.4444
+            },
+            "m11": {
+              "m": 11,
+              "n": 54,
+              "mean_goal_pass_rate": 0.7985,
+              "mean_tgc": 0.5556
+            }
+          },
+          "contrasts": {
+            "m9_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m9",
+              "n_pairs": 54,
+              "diff_pp": 10.81,
+              "ci95_task_pp": [
+                0.93,
+                20.64
+              ],
+              "ci95_scenario_pp": [
+                1.12,
+                21.3
+              ]
+            },
+            "m11_minus_m9": {
+              "arm_a": "m9",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 8.6,
+              "ci95_task_pp": [
+                1.72,
+                15.51
+              ],
+              "ci95_scenario_pp": [
+                1.88,
+                14.78
+              ]
+            },
+            "m11_minus_m6": {
+              "arm_a": "m6",
+              "arm_b": "m11",
+              "n_pairs": 54,
+              "diff_pp": 19.41,
+              "ci95_task_pp": [
+                12.39,
+                26.66
+              ],
+              "ci95_scenario_pp": [
+                13.44,
+                26.8
+              ]
+            }
+          }
+        }
+      },
+      "decompositions": {
+        "m6_to_m9": {
+          "m_base": 6,
+          "m_target": 9,
+          "total_episodes": 114,
+          "silenced_count": 32,
+          "handoff_count": 82,
+          "weight_silenced": 0.2807,
+          "weight_handoff": 0.7193,
+          "y_base_all": 0.6825,
+          "y_target_all": 0.7845,
+          "delta_total_pp": 10.21,
+          "y_base_silenced_subset": 0.8372,
+          "y_target_silenced_subset": 0.8961,
+          "gain_on_silenced_subset_pp": 5.89,
+          "contribution_silenced_subset_pp": 1.65,
+          "share_of_rise_from_silenced_pct": 16.2,
+          "y_base_handoff_subset": 0.6221,
+          "y_target_handoff_subset": 0.741,
+          "gain_on_handoff_subset_pp": 11.89,
+          "contribution_handoff_subset_pp": 8.55,
+          "share_of_rise_from_handoff_pct": 83.8,
+          "arithmetic_identity_check_pp": 10.21
+        },
+        "m6_to_m11": {
+          "m_base": 6,
+          "m_target": 11,
+          "total_episodes": 114,
+          "silenced_count": 60,
+          "handoff_count": 54,
+          "weight_silenced": 0.5263,
+          "weight_handoff": 0.4737,
+          "y_base_all": 0.6825,
+          "y_target_all": 0.8345,
+          "delta_total_pp": 15.2,
+          "y_base_silenced_subset": 0.7528,
+          "y_target_silenced_subset": 0.8668,
+          "gain_on_silenced_subset_pp": 11.41,
+          "contribution_silenced_subset_pp": 6.0,
+          "share_of_rise_from_silenced_pct": 39.5,
+          "y_base_handoff_subset": 0.6044,
+          "y_target_handoff_subset": 0.7985,
+          "gain_on_handoff_subset_pp": 19.41,
+          "contribution_handoff_subset_pp": 9.19,
+          "share_of_rise_from_handoff_pct": 60.5,
+          "arithmetic_identity_check_pp": 15.2
+        }
+      }
+    },
+    "comparison": {}
+  }
+}

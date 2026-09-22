@@ -91,6 +91,45 @@ def quartiles(xs: list[float | int]) -> dict[str, float | int] | None:
     }
 
 
+def parse_decompose_pairs(val: str | list[tuple[int, int]] | list[str] | None) -> list[tuple[int, int]] | None:
+    """Parse comma-separated base:target decomposition pairs.
+    
+    Accepts:
+    - String like 'm6:m9,m6:m11' or '6:9,6:11'
+    - List of tuples/strings like [(6, 9), (6, 11)] or ['m6:m9', 'm6:m11']
+    - None or empty string -> returns None
+    """
+    if val is None:
+        return None
+    if isinstance(val, list):
+        pairs: list[tuple[int, int]] = []
+        for item in val:
+            if isinstance(item, str):
+                p = parse_decompose_pairs(item)
+                if p:
+                    pairs.extend(p)
+            elif isinstance(item, (tuple, list)) and len(item) == 2:
+                b = int(str(item[0]).strip().lstrip("mM"))
+                t = int(str(item[1]).strip().lstrip("mM"))
+                pairs.append((b, t))
+        return pairs if pairs else None
+    val = val.strip()
+    if not val:
+        return None
+    pairs = []
+    for item in val.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            raise ValueError(f"Invalid decomposition pair {item!r}, expected 'base:target'")
+        b_str, t_str = item.split(":", 1)
+        b = int(b_str.strip().lstrip("mM"))
+        t = int(t_str.strip().lstrip("mM"))
+        pairs.append((b, t))
+    return pairs
+
+
 def paired_diff_task(
     base: dict[tuple[str, int], float],
     other: dict[tuple[str, int], float],
@@ -167,11 +206,210 @@ def paired_diff_scenario(
     }
 
 
-def load_episode_records(root: Path) -> dict[tuple[str, int], dict[str, Any]]:
+def _extract_report_facts_from_events_file(events_path: Path) -> dict[str, Any]:
+    """Extract handoff facts from the last report event of the last attempt in events.jsonl.
+    
+    Mirrors scripts/analysis/j8_frontier.py:747-790 (_handoff_facts_from_events_text).
+    """
+    if not events_path.is_file():
+        return {
+            "has_report": False,
+            "handoff_occurred": None,
+            "effective_m": None,
+            "n_source_actions": None,
+        }
+    try:
+        events = _events_of_last_attempt(events_path)
+    except Exception:
+        events = []
+
+    if not events:
+        try:
+            text = events_path.read_text(encoding="utf-8")
+            raw_events = []
+            for line in text.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    raw_events.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+            last_start = 0
+            for idx, ev in enumerate(raw_events):
+                if isinstance(ev, dict) and ev.get("event_type") == "run_start":
+                    last_start = idx
+            raw_events = raw_events[last_start:]
+            for ev in reversed(raw_events):
+                if isinstance(ev, dict) and ev.get("event_type") == "report":
+                    payload = ev.get("payload") or {}
+                    return {
+                        "has_report": True,
+                        "handoff_occurred": bool(payload["handoff_occurred"]) if payload.get("handoff_occurred") is not None else None,
+                        "effective_m": int(payload["effective_m"]) if payload.get("effective_m") is not None else None,
+                        "n_source_actions": int(payload["n_source_actions"]) if payload.get("n_source_actions") is not None else None,
+                    }
+        except Exception:
+            pass
+
+    for ev in reversed(events):
+        ev_type = getattr(ev, "event_type", None) or (ev.get("event_type") if isinstance(ev, dict) else None)
+        if ev_type == "report":
+            payload = getattr(ev, "payload", None) or (ev.get("payload") if isinstance(ev, dict) else {}) or {}
+            ho = payload.get("handoff_occurred")
+            em = payload.get("effective_m")
+            nsa = payload.get("n_source_actions")
+            return {
+                "has_report": True,
+                "handoff_occurred": bool(ho) if ho is not None else None,
+                "effective_m": int(em) if em is not None else None,
+                "n_source_actions": int(nsa) if nsa is not None else None,
+            }
+
+    return {
+        "has_report": False,
+        "handoff_occurred": None,
+        "effective_m": None,
+        "n_source_actions": None,
+    }
+
+
+def load_handoff_flags(arm_root: Path | str) -> dict[tuple[str, int], dict[str, Any]]:
+    """Load handoff flags from events.jsonl next to each result.json under arm_root.
+    
+    Mirrors scripts/analysis/j8_frontier.py:747-838 (_handoff_facts_from_events_text, attach_handoff_fields).
+    Returns dict[(task_id, seed), {handoff_occurred, effective_m, n_source_actions, has_report}].
+    """
+    root = Path(arm_root)
+    flags: dict[tuple[str, int], dict[str, Any]] = {}
+    if not root.exists():
+        return flags
+
+    for res_path in sorted(root.rglob("result.json")):
+        d = res_path.parent
+        try:
+            seed = int(d.parent.name)
+            task_id = d.name
+        except Exception:
+            seed = 0
+            task_id = d.name
+        try:
+            res = json.loads(res_path.read_text(encoding="utf-8"))
+            task_id = str(res.get("task_id", task_id))
+            seed = int(res.get("seed", seed))
+        except Exception:
+            pass
+
+        events_path = d / "events.jsonl"
+        facts = _extract_report_facts_from_events_file(events_path)
+        flags[(task_id, seed)] = facts
+
+    return flags
+
+
+def extract_handoff_facts(rec: dict[str, Any]) -> dict[str, Any]:
+    """Extract handoff facts from an episode record dict.
+    
+    Checks rec fields first, then falls back to inspecting rec['events'] for a report event.
+    """
+    if "has_report" in rec:
+        return {
+            "has_report": bool(rec["has_report"]),
+            "handoff_occurred": rec.get("handoff_occurred"),
+            "effective_m": rec.get("effective_m"),
+            "n_source_actions": rec.get("n_source_actions"),
+        }
+    events = rec.get("events") or []
+    for ev in reversed(events):
+        ev_type = getattr(ev, "event_type", None) or (ev.get("event_type") if isinstance(ev, dict) else None)
+        if ev_type == "report":
+            payload = getattr(ev, "payload", None) or (ev.get("payload") if isinstance(ev, dict) else {}) or {}
+            ho = payload.get("handoff_occurred")
+            em = payload.get("effective_m")
+            nsa = payload.get("n_source_actions")
+            return {
+                "has_report": True,
+                "handoff_occurred": bool(ho) if ho is not None else None,
+                "effective_m": int(em) if em is not None else None,
+                "n_source_actions": int(nsa) if nsa is not None else None,
+            }
+    if "handoff_occurred" in rec and rec["handoff_occurred"] is not None:
+        return {
+            "has_report": True,
+            "handoff_occurred": bool(rec["handoff_occurred"]),
+            "effective_m": rec.get("effective_m"),
+            "n_source_actions": rec.get("n_source_actions"),
+        }
+    return {
+        "has_report": False,
+        "handoff_occurred": None,
+        "effective_m": None,
+        "n_source_actions": None,
+    }
+
+
+def validate_arm_population(
+    records: dict[tuple[str, int], dict[str, Any]],
+    arm_name: str = "",
+) -> None:
+    """Validate handoff population integrity for a loaded arm.
+    
+    Fatal conditions:
+    1. A missing report event in any episode.
+    2. Zero episodes with handoff_occurred is True while any episode has executor n_calls > 0.
+    3. Any episode with handoff_occurred is True and executor n_calls == 0.
+    """
+    n_total = len(records)
+    if n_total == 0:
+        return
+
+    n_handoff = 0
+    n_exec_calls_gt_0 = 0
+    handoff_true_zero_calls: list[tuple[str, int]] = []
+
+    for (task_id, seed), rec in sorted(records.items()):
+        facts = extract_handoff_facts(rec)
+        if not facts["has_report"] or facts["handoff_occurred"] is None:
+            raise SystemExit(
+                f"Fatal: arm {arm_name!r} episode task_id={task_id!r} seed={seed} "
+                f"is missing a report event in events.jsonl"
+            )
+
+        handoff_occurred = (facts["handoff_occurred"] is True)
+        res = rec.get("result") or {}
+        totals = res.get("totals") or {}
+        per_actor = totals.get("per_actor") or {}
+        exec_actor = per_actor.get("executor") or {}
+        n_calls = exec_actor.get("n_calls", 0)
+
+        if handoff_occurred:
+            n_handoff += 1
+            if n_calls == 0:
+                handoff_true_zero_calls.append((task_id, seed))
+        if n_calls > 0:
+            n_exec_calls_gt_0 += 1
+
+    if n_handoff == 0 and n_exec_calls_gt_0 > 0:
+        raise SystemExit(
+            f"Fatal: arm {arm_name!r} has 0 handoff episodes (handoff_occurred is True) "
+            f"while {n_exec_calls_gt_0}/{n_total} episodes have executor n_calls > 0"
+        )
+
+    if handoff_true_zero_calls:
+        raise SystemExit(
+            f"Fatal: arm {arm_name!r} has {len(handoff_true_zero_calls)}/{n_total} episodes "
+            f"with handoff_occurred is True but executor n_calls == 0: {handoff_true_zero_calls}"
+        )
+
+
+def load_episode_records(root: Path, arm_name: str = "") -> dict[tuple[str, int], dict[str, Any]]:
     """Load all (task_id, seed) records from an arm directory.
     
     Prefers result.json's task_id and seed when present.
+    Loads handoff flags from events.jsonl via load_handoff_flags.
+    Validates population integrity (raising SystemExit on violation).
     """
+    flags = load_handoff_flags(root)
     records = {}
     for res_path in sorted(root.rglob("result.json")):
         d = res_path.parent
@@ -189,13 +427,19 @@ def load_episode_records(root: Path) -> dict[tuple[str, int], dict[str, Any]]:
             continue
         events_path = d / "events.jsonl"
         events = _events_of_last_attempt(events_path) if events_path.is_file() else []
+        ep_flags = flags.get((task_id, seed), {})
         records[(task_id, seed)] = {
             "result": res,
             "events": events,
             "events_path": str(events_path),
             "task_id": task_id,
             "seed": seed,
+            "handoff_occurred": ep_flags.get("handoff_occurred"),
+            "effective_m": ep_flags.get("effective_m"),
+            "n_source_actions": ep_flags.get("n_source_actions"),
+            "has_report": ep_flags.get("has_report", False),
         }
+    validate_arm_population(records, arm_name=arm_name or root.name)
     return records
 
 
@@ -376,6 +620,7 @@ def measure_m2_compounding_error(
         silenced_episodes = 0
         error_episodes = 0
         divergent_keys: list[tuple[str, int]] = []
+        post_complete_keys: list[tuple[str, int]] = []
 
         first_error_rel_steps = []  # 1-based relative to executor start (1 = 1st executor step)
         executor_steps_taken_list = []
@@ -389,11 +634,14 @@ def measure_m2_compounding_error(
             per_actor = totals.get("per_actor") or {}
             exec_actor = per_actor.get("executor") or {}
             n_calls = exec_actor.get("n_calls", 0)
-            handoff_occurred = (res.get("handoff_occurred") is True)
+            handoff_facts = extract_handoff_facts(rec)
+            handoff_occurred = (handoff_facts["handoff_occurred"] is True)
 
             # Diagnostic: check disagreement between handoff_occurred and (n_calls > 0)
             if handoff_occurred != (n_calls > 0):
                 divergent_keys.append((task_id, seed))
+            if not handoff_occurred and n_calls > 0:
+                post_complete_keys.append((task_id, seed))
 
             if not handoff_occurred:
                 silenced_episodes += 1
@@ -403,21 +651,21 @@ def measure_m2_compounding_error(
             events = rec["events"]
 
             # Identify executor events (after handoff)
-            # Find the first error in executor observations
+            # Find the first error in executor observations (emitted by environment)
             first_err_rel = -1
             exec_action_count = 0
 
             for e in events:
                 if e.event_type == "action" and e.actor == "executor":
                     exec_action_count += 1
-                elif e.event_type == "observation" and e.actor == "executor":
+                elif e.event_type == "observation" and e.actor == "environment":
                     is_err = False
                     if e.error_type:
                         is_err = True
                     text = (e.payload or {}).get("text") or ""
                     if text.startswith("Execution failed"):
                         is_err = True
-                    if is_err and first_err_rel < 0:
+                    if is_err and first_err_rel < 0 and exec_action_count > 0:
                         first_err_rel = exec_action_count
 
             executor_steps_taken_list.append(exec_action_count)
@@ -447,6 +695,8 @@ def measure_m2_compounding_error(
             "handoff_episodes": handoff_episodes,
             "divergence_count": len(divergent_keys),
             "divergence_keys": [list(k) for k in sorted(divergent_keys)],
+            "post_complete_executor_actions": len(post_complete_keys),
+            "post_complete_keys": [list(k) for k in sorted(post_complete_keys)],
             "error_episodes": error_episodes,
             "error_rate_on_handoff": round(error_episodes / handoff_episodes, 4) if handoff_episodes else None,
             "first_error_rel_step_dist": quartiles(first_error_rel_steps),
@@ -466,6 +716,8 @@ def measure_m3_prefix_exhausted(
     m_values: list[int],
     n_boot: int = BOOTSTRAP,
     seed: int = SEED,
+    decompose_pairs: str | list[tuple[int, int]] | list[str] | None = None,
+    receiver: str = "",
 ) -> dict[str, Any]:
     """M3 — prefix-exhausted population control & decomposition."""
     gpr_by_arm: dict[str, dict[tuple[str, int], float]] = {}
@@ -473,6 +725,7 @@ def measure_m3_prefix_exhausted(
     silenced_keys_by_arm: dict[str, set[tuple[str, int]]] = {}
     handoff_keys_by_arm: dict[str, set[tuple[str, int]]] = {}
     divergence_keys_by_arm: dict[str, list[tuple[str, int]]] = {}
+    post_complete_keys_by_arm: dict[str, list[tuple[str, int]]] = {}
 
     for m in m_values:
         arm_label = f"m{m}"
@@ -482,6 +735,7 @@ def measure_m3_prefix_exhausted(
         silenced_keys_by_arm[arm_label] = set()
         handoff_keys_by_arm[arm_label] = set()
         divergence_keys_by_arm[arm_label] = []
+        post_complete_keys_by_arm[arm_label] = []
 
         for k, rec in records.items():
             res = rec["result"]
@@ -492,12 +746,15 @@ def measure_m3_prefix_exhausted(
             if tgc is not None:
                 tgc_by_arm[arm_label][k] = float(tgc)
 
-            handoff_occurred = (res.get("handoff_occurred") is True)
+            handoff_facts = extract_handoff_facts(rec)
+            handoff_occurred = (handoff_facts["handoff_occurred"] is True)
             exec_calls = (res.get("totals") or {}).get("per_actor", {}).get("executor", {}).get("n_calls", 0)
 
             # Diagnostic divergence
             if handoff_occurred != (exec_calls > 0):
                 divergence_keys_by_arm[arm_label].append(k)
+            if not handoff_occurred and exec_calls > 0:
+                post_complete_keys_by_arm[arm_label].append(k)
 
             if handoff_occurred:
                 handoff_keys_by_arm[arm_label].add(k)
@@ -511,6 +768,7 @@ def measure_m3_prefix_exhausted(
         gpr_vals = list(gpr_by_arm[arm_label].values())
         tgc_vals = list(tgc_by_arm[arm_label].values())
         divs = divergence_keys_by_arm[arm_label]
+        pcs = post_complete_keys_by_arm[arm_label]
         all_episodes_curve[arm_label] = {
             "m": m,
             "n": len(gpr_vals),
@@ -518,6 +776,8 @@ def measure_m3_prefix_exhausted(
             "handoff_count": len(handoff_keys_by_arm[arm_label]),
             "divergence_count": len(divs),
             "divergence_keys": [list(k) for k in sorted(divs)],
+            "post_complete_executor_actions": len(pcs),
+            "post_complete_keys": [list(k) for k in sorted(pcs)],
             "mean_goal_pass_rate": round(statistics.fmean(gpr_vals), 4) if gpr_vals else None,
             "mean_tgc": round(statistics.fmean(tgc_vals), 4) if tgc_vals else None,
         }
@@ -625,24 +885,43 @@ def measure_m3_prefix_exhausted(
             "contrasts": contrasts,
         }
 
-    # Mathematical Decomposition: from baseline m (first discovered) to discovered target thresholds
+    # Mathematical Decomposition: from baseline m (first discovered) to discovered target thresholds,
+    # or explicitly requested decompose_pairs
     decompositions = {}
-    m_base = sorted_m[0] if sorted_m else 2
-    target_ms = [m for m in derived_thresholds if f"m{m}" in gpr_by_arm and m != m_base]
+    parsed_pairs = parse_decompose_pairs(decompose_pairs)
+    available_m = sorted(set(m_values))
 
-    for target_m in target_ms:
+    if parsed_pairs is not None:
+        for b, t in parsed_pairs:
+            if b not in available_m:
+                raise SystemExit(
+                    f"Fatal: requested decomposition base depth {b} for receiver {receiver!r} "
+                    f"is not among available depths: {available_m}"
+                )
+            if t not in available_m:
+                raise SystemExit(
+                    f"Fatal: requested decomposition target depth {t} for receiver {receiver!r} "
+                    f"is not among available depths: {available_m}"
+                )
+        computed_pairs = parsed_pairs
+    else:
+        m_base = sorted_m[0] if sorted_m else 2
+        target_ms = [m for m in derived_thresholds if f"m{m}" in gpr_by_arm and m != m_base]
+        computed_pairs = [(m_base, target_m) for target_m in target_ms]
+
+    for base_m, target_m in computed_pairs:
         target_label = f"m{target_m}"
-        base_label = f"m{m_base}"
-        S = silenced_keys_by_arm[target_label]
-        H = handoff_keys_by_arm[target_label]
-        N = len(gpr_by_arm[target_label])
+        base_label = f"m{base_m}"
+        S = silenced_keys_by_arm.get(target_label, set())
+        H = handoff_keys_by_arm.get(target_label, set())
+        N = len(gpr_by_arm.get(target_label, {}))
         if N == 0:
             continue
         w_S = len(S) / N
         w_H = len(H) / N
 
-        gpr_base = gpr_by_arm[base_label]
-        gpr_tgt = gpr_by_arm[target_label]
+        gpr_base = gpr_by_arm.get(base_label, {})
+        gpr_tgt = gpr_by_arm.get(target_label, {})
 
         y_base_all = statistics.fmean(gpr_base.values()) if gpr_base else 0.0
         y_tgt_all = statistics.fmean(gpr_tgt.values()) if gpr_tgt else 0.0
@@ -658,8 +937,8 @@ def measure_m3_prefix_exhausted(
         delta_H_pp = (y_tgt_H - y_base_H) * 100
         contrib_H_pp = w_H * delta_H_pp
 
-        decompositions[f"m{m_base}_to_m{target_m}"] = {
-            "m_base": m_base,
+        decompositions[f"m{base_m}_to_m{target_m}"] = {
+            "m_base": base_m,
             "m_target": target_m,
             "total_episodes": N,
             "silenced_count": len(S),
@@ -737,14 +1016,17 @@ def generate_markdown_report(report: dict[str, Any]) -> str:
         "",
     ])
     m2_pri = report.get("m2_compounding_error", {}).get("primary", {})
-    lines.append("| Arm | Handoff Episodes | Silenced | Divergence | Error Rate on Handoff | Error @ Step 1 | Error @ Steps 1-2 |")
-    lines.append("|---|---|---|---|---|---|---|")
+    lines.append("| Arm | Handoff Episodes | Silenced | Divergence | Post-Complete Exec | Error Rate on Handoff | Error @ Step 1 | Error @ Steps 1-2 |")
+    lines.append("|---|---|---|---|---|---|---|---|")
     for arm, data in m2_pri.items():
         lines.append(
             f"| {arm} | {_fmt(data.get('handoff_episodes'))} | {_fmt(data.get('silenced_episodes'))} | {_fmt(data.get('divergence_count'))} | "
+            f"{_fmt(data.get('post_complete_executor_actions'))} | "
             f"{_fmt(data.get('error_rate_on_handoff'), '.2%')} | {_fmt(data.get('share_first_error_at_step_1'), '.2%')} | "
             f"{_fmt(data.get('share_first_error_in_steps_1_2'), '.2%')} |"
         )
+    lines.append("")
+    lines.append("*Note: `post_complete_executor_actions` records episodes with `handoff_occurred is False` and `n_calls > 0` (documented pre-F0(a) replay behaviour).*")
 
     lines.extend([
         "",
@@ -807,6 +1089,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="tailored",
         help="Receiver type for arm discovery: tailored (hj12) or zeroshot (hj13_zs)",
     )
+    p.add_argument(
+        "--decompose-pairs",
+        type=str,
+        default=None,
+        help="Comma-separated base:target pairs for M3 decomposition (e.g. 'm6:m9,m6:m11')",
+    )
     return p.parse_args(argv)
 
 
@@ -838,14 +1126,14 @@ def run_full_analysis(args: argparse.Namespace | None = None) -> dict[str, Any]:
     # Load primary arm records
     primary_records = {}
     for arm_label, path in arm_paths["primary"].items():
-        recs = load_episode_records(path)
+        recs = load_episode_records(path, arm_name=arm_label)
         primary_records[arm_label] = recs
         print(f"Loaded primary {arm_label}: {len(recs)} episodes from {path}")
 
     # Load comparison arm records
     comparison_records = {}
     for arm_label, path in arm_paths["comparison"].items():
-        recs = load_episode_records(path)
+        recs = load_episode_records(path, arm_name=arm_label)
         comparison_records[arm_label] = recs
         print(f"Loaded comparison {arm_label}: {len(recs)} episodes from {path}")
 
@@ -861,11 +1149,27 @@ def run_full_analysis(args: argparse.Namespace | None = None) -> dict[str, Any]:
     # Measure M3
     print("\nMeasuring M3 (Prefix-Exhausted Population & Controlled Sets)...")
     m3_primary = measure_m3_prefix_exhausted(
-        primary_records, source_records, included_m["primary"], n_boot=args.n_boot, seed=args.seed
+        primary_records,
+        source_records,
+        included_m["primary"],
+        n_boot=args.n_boot,
+        seed=args.seed,
+        decompose_pairs=args.decompose_pairs,
+        receiver=args.receiver,
     )
-    m3_comparison = measure_m3_prefix_exhausted(
-        comparison_records, source_records, included_m["comparison"], n_boot=args.n_boot, seed=args.seed
-    ) if comparison_records else {}
+    m3_comparison = (
+        measure_m3_prefix_exhausted(
+            comparison_records,
+            source_records,
+            included_m["comparison"],
+            n_boot=args.n_boot,
+            seed=args.seed,
+            decompose_pairs=args.decompose_pairs,
+            receiver=args.receiver,
+        )
+        if comparison_records
+        else {}
+    )
 
     report = {
         "generated_by": "scripts/analysis/j13_mechanism.py",
