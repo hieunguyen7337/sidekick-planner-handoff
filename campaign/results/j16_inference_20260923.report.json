@@ -1,0 +1,4341 @@
+{
+  "analysis": "J16 small-cluster inference (sign-flip permutation, wild cluster bootstrap) beside the percentile cluster bootstrap; POOL-04 probes",
+  "not_a_registered_analysis": true,
+  "out_json": "campaign/results/j16_inference_20260923.report.json",
+  "seed": 20260924,
+  "bootstrap": 10000,
+  "n_perm_scenario": 524288,
+  "n_perm_task": 100000,
+  "method": [
+    "Per-episode paired differences are rebuilt with the loader and code path that produced each published number (j8_frontier for CHAN-C1-02 / CHAN-PRICE-01 / COST-03, j14_did for POOL-01 / POOL-02 / DID-01); each published point and percentile CI is reproduced first.",
+    "Cluster sign-flip test: statistic = mean of per-episode differences; all differences in a cluster share one sign. Scenario clustering (G = 19) is enumerated exactly over all 2^19 = 524,288 patterns; task clustering (G = 57) uses 100,000 random patterns (seed 20260924) with the +1 correction.",
+    "Wild cluster bootstrap: B = 10,000, seed 20260924, cluster sums of (diff - mean) multiplied by Rademacher or Webb six-point weights; percentile interval of the resampled mean with the repo index rule.",
+    "Non-inferiority rows (POOL-02 ceiling-minus-arm, COST-03 arm-minus-ceiling): one-sided sign-flip test of H0 at the 7.00 pp margin on the shifted series, alpha 0.025 (the one-sided level of a 95% two-sided interval).",
+    "'Any change?' flags a row where the percentile interval, the sign-flip test and the two wild intervals do not all give the same verdict on that clustering."
+  ],
+  "caveats": [
+    "The wild intervals are non-studentized with unrestricted residuals, so their variance is the CR0 cluster variance; they are symmetric about the point by construction and are a sensitivity reading, not a small-G correction. The sign-flip test is the component whose size does not depend on G being large (it assumes cluster sums are symmetric about the null and independent across clusters).",
+    "For the NI rows the sign-flip test is applied at a non-zero null; symmetry of the shifted cluster sums about zero is an assumption, more fragile for bounded, discrete metrics such as TGC than at the zero null.",
+    "POOL-01/POOL-02 pool three planner seeds (171 pairs) but still cluster on 19 scenarios; episodes of one task across seeds are correlated and share a cluster.",
+    "Several rows (DID-01 m6/m9, POOL-01 m9->m11, CHAN-PRICE-01 TGC) are supplementary and carry the multiplicity caveats already in their ledger rows.",
+    "TGC is 0/1 per episode, so TGC cluster sums are integers and every sign pattern keeps the parity of the observed total. An observed total of one episode (e.g. CHAN-PRICE-01 P3 TGC, +1/114 = +0.88 pp) therefore gets p = 1 exactly; that is the test's discreteness, not an error.",
+    "Percentile bounds on TGC sit on atoms (multiples of 1/114 or 1/171), so a bound can be seed-stable and still sit one atom from its threshold (COST-03: -6.1404 = -7/114; the next atom, -8/114 = -7.0175, would fail the -7.00 margin)."
+  ],
+  "headline": {
+    "reproduction": {
+      "all_ok": true,
+      "arm_checks": [
+        {
+          "report": "campaign/results/hj13_c1_matched_trigger_20260923.report.json",
+          "label": "advise_fullctx_k10",
+          "campaign": "hj12_advise_fixed_k_10_fullctx_20260923",
+          "root": "/scratch/n12194778/sidekick/results/hj12_advise_fixed_k_10_fullctx_20260923",
+          "n": 114,
+          "goal_pass_all": 0.73386,
+          "tgc_all": 0.438596,
+          "goal_pass_all_published": 0.73386,
+          "tgc_all_published": 0.438596,
+          "n_published": 114,
+          "error_types_match": true,
+          "ok": true
+        },
+        {
+          "report": "campaign/results/hj13_c1_matched_trigger_20260923.report.json",
+          "label": "takeover_k10",
+          "campaign": "hj12_takeover_fixed_k_10_20260923",
+          "root": "/scratch/n12194778/sidekick/results/hj12_takeover_fixed_k_10_20260923",
+          "n": 114,
+          "goal_pass_all": 0.800719,
+          "tgc_all": 0.517544,
+          "goal_pass_all_published": 0.800719,
+          "tgc_all_published": 0.517544,
+          "n_published": 114,
+          "error_types_match": true,
+          "ok": true
+        },
+        {
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "label": "advise_k1_fullctx",
+          "campaign": "hj13_advise_fixed_k_1_fullctx_20260923",
+          "root": "/scratch/n12194778/sidekick/results/hj13_advise_fixed_k_1_fullctx_20260923",
+          "n": 114,
+          "goal_pass_all": 0.663044,
+          "tgc_all": 0.447368,
+          "goal_pass_all_published": 0.663044,
+          "tgc_all_published": 0.447368,
+          "n_published": 114,
+          "error_types_match": true,
+          "ok": true
+        },
+        {
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "label": "plan_floor",
+          "campaign": "hj8_sft_plan_bplus_20260921iaware",
+          "root": "/scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260921iaware",
+          "n": 114,
+          "goal_pass_all": 0.718149,
+          "tgc_all": 0.394737,
+          "goal_pass_all_published": 0.718149,
+          "tgc_all_published": 0.394737,
+          "n_published": 114,
+          "error_types_match": true,
+          "ok": true
+        },
+        {
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "label": "prefix_m11",
+          "campaign": "hj12_prefix_m11_20260923",
+          "root": "/scratch/n12194778/sidekick/results/hj12_prefix_m11_20260923",
+          "n": 114,
+          "goal_pass_all": 0.809825,
+          "tgc_all": 0.605263,
+          "goal_pass_all_published": 0.809825,
+          "tgc_all_published": 0.605263,
+          "n_published": 114,
+          "error_types_match": true,
+          "ok": true
+        },
+        {
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "label": "advise_k10_fullctx",
+          "campaign": "hj12_advise_fixed_k_10_fullctx_20260923",
+          "root": "/scratch/n12194778/sidekick/results/hj12_advise_fixed_k_10_fullctx_20260923",
+          "n": 114,
+          "goal_pass_all": 0.73386,
+          "tgc_all": 0.438596,
+          "goal_pass_all_published": 0.73386,
+          "tgc_all_published": 0.438596,
+          "n_published": 114,
+          "error_types_match": true,
+          "ok": true
+        },
+        {
+          "report": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+          "label": "prefix_m11",
+          "campaign": "hj12_prefix_m11_20260923",
+          "root": "/scratch/n12194778/sidekick/results/hj12_prefix_m11_20260923",
+          "n": 114,
+          "goal_pass_all": 0.809825,
+          "tgc_all": 0.605263,
+          "n_published": 114,
+          "ok": true
+        },
+        {
+          "report": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+          "label": "ceiling_cap81",
+          "campaign": "hj13_planner_alone_cap81_20260923",
+          "root": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n": 114,
+          "goal_pass_all": 0.763693,
+          "tgc_all": 0.570175,
+          "n_published": 114,
+          "ok": true
+        }
+      ],
+      "rows": [
+        {
+          "row": "CHAN-C1-02.goal_pass",
+          "report": "campaign/results/hj13_c1_matched_trigger_20260923.report.json",
+          "report_key": "contrasts.goal_pass_all_advise_fullctx_k10_minus_takeover_k10",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": -6.69,
+            "ci95_pp_scenario": [
+              -13.48,
+              -1.29
+            ],
+            "ci95_pp_task": [
+              -12.35,
+              -1.47
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": -6.69,
+            "ci95_pp_scenario": [
+              -13.48,
+              -1.29
+            ],
+            "ci95_pp_task": [
+              -12.35,
+              -1.47
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": -6.686,
+          "point_pp_from_published_arm_means": -6.6859,
+          "percentile_scenario_pp": [
+            -13.48,
+            -1.29
+          ],
+          "percentile_task_pp": [
+            -12.35,
+            -1.47
+          ],
+          "point_pp_published_2dp": -6.69,
+          "presented_negated": true,
+          "ok": true
+        },
+        {
+          "row": "CHAN-C1-02.TGC",
+          "report": "campaign/results/hj13_c1_matched_trigger_20260923.report.json",
+          "report_key": "contrasts.tgc_all_advise_fullctx_k10_minus_takeover_k10",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": -7.89,
+            "ci95_pp_scenario": [
+              -15.79,
+              -1.75
+            ],
+            "ci95_pp_task": [
+              -16.67,
+              0.88
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": -7.89,
+            "ci95_pp_scenario": [
+              -15.79,
+              -1.75
+            ],
+            "ci95_pp_task": [
+              -16.67,
+              0.88
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": -7.8947,
+          "point_pp_from_published_arm_means": -7.8948,
+          "percentile_scenario_pp": [
+            -15.79,
+            -1.75
+          ],
+          "percentile_task_pp": [
+            -16.67,
+            0.88
+          ],
+          "point_pp_published_2dp": -7.89,
+          "presented_negated": true,
+          "ok": true
+        },
+        {
+          "row": "CHAN-PRICE-01.P1.goal_pass",
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "report_key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_plan_floor",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": -5.51,
+            "ci95_pp_scenario": [
+              -13.15,
+              2.51
+            ],
+            "ci95_pp_task": [
+              -12.63,
+              1.72
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": -5.51,
+            "ci95_pp_scenario": [
+              -13.15,
+              2.51
+            ],
+            "ci95_pp_task": [
+              -12.63,
+              1.72
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": -5.5105,
+          "point_pp_from_published_arm_means": -5.5105,
+          "percentile_scenario_pp": [
+            -13.15,
+            2.51
+          ],
+          "percentile_task_pp": [
+            -12.63,
+            1.72
+          ],
+          "point_pp_published_2dp": -5.51,
+          "ok": true
+        },
+        {
+          "row": "CHAN-PRICE-01.P1.TGC",
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "report_key": "contrasts.tgc_all_advise_k1_fullctx_minus_plan_floor",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": 5.26,
+            "ci95_pp_scenario": [
+              -7.89,
+              18.42
+            ],
+            "ci95_pp_task": [
+              -6.14,
+              16.67
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": 5.26,
+            "ci95_pp_scenario": [
+              -7.89,
+              18.42
+            ],
+            "ci95_pp_task": [
+              -6.14,
+              16.67
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": 5.2632,
+          "point_pp_from_published_arm_means": 5.2631,
+          "percentile_scenario_pp": [
+            -7.89,
+            18.42
+          ],
+          "percentile_task_pp": [
+            -6.14,
+            16.67
+          ],
+          "point_pp_published_2dp": 5.26,
+          "ok": true
+        },
+        {
+          "row": "CHAN-PRICE-01.P2.goal_pass",
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "report_key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_prefix_m11",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": -14.68,
+            "ci95_pp_scenario": [
+              -22.09,
+              -7.04
+            ],
+            "ci95_pp_task": [
+              -21.56,
+              -7.79
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": -14.68,
+            "ci95_pp_scenario": [
+              -22.09,
+              -7.04
+            ],
+            "ci95_pp_task": [
+              -21.56,
+              -7.79
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": -14.6781,
+          "point_pp_from_published_arm_means": -14.6781,
+          "percentile_scenario_pp": [
+            -22.09,
+            -7.04
+          ],
+          "percentile_task_pp": [
+            -21.56,
+            -7.79
+          ],
+          "point_pp_published_2dp": -14.68,
+          "ok": true
+        },
+        {
+          "row": "CHAN-PRICE-01.P2.TGC",
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "report_key": "contrasts.tgc_all_advise_k1_fullctx_minus_prefix_m11",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": -15.79,
+            "ci95_pp_scenario": [
+              -28.07,
+              -3.51
+            ],
+            "ci95_pp_task": [
+              -25.44,
+              -5.26
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": -15.79,
+            "ci95_pp_scenario": [
+              -28.07,
+              -3.51
+            ],
+            "ci95_pp_task": [
+              -25.44,
+              -5.26
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": -15.7895,
+          "point_pp_from_published_arm_means": -15.7895,
+          "percentile_scenario_pp": [
+            -28.07,
+            -3.51
+          ],
+          "percentile_task_pp": [
+            -25.44,
+            -5.26
+          ],
+          "point_pp_published_2dp": -15.79,
+          "ok": true
+        },
+        {
+          "row": "CHAN-PRICE-01.P3.goal_pass",
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "report_key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_advise_k10_fullctx",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": -7.08,
+            "ci95_pp_scenario": [
+              -14.78,
+              0.67
+            ],
+            "ci95_pp_task": [
+              -14.15,
+              0.01
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": -7.08,
+            "ci95_pp_scenario": [
+              -14.78,
+              0.67
+            ],
+            "ci95_pp_task": [
+              -14.15,
+              0.01
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": -7.0816,
+          "point_pp_from_published_arm_means": -7.0816,
+          "percentile_scenario_pp": [
+            -14.78,
+            0.67
+          ],
+          "percentile_task_pp": [
+            -14.15,
+            0.01
+          ],
+          "point_pp_published_2dp": -7.08,
+          "ok": true
+        },
+        {
+          "row": "CHAN-PRICE-01.P3.TGC",
+          "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+          "report_key": "contrasts.tgc_all_advise_k1_fullctx_minus_advise_k10_fullctx",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": 0.88,
+            "ci95_pp_scenario": [
+              -14.04,
+              15.79
+            ],
+            "ci95_pp_task": [
+              -11.4,
+              13.16
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": 0.88,
+            "ci95_pp_scenario": [
+              -14.04,
+              15.79
+            ],
+            "ci95_pp_task": [
+              -11.4,
+              13.16
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": 0.8772,
+          "point_pp_from_published_arm_means": 0.8772,
+          "percentile_scenario_pp": [
+            -14.04,
+            15.79
+          ],
+          "percentile_task_pp": [
+            -11.4,
+            13.16
+          ],
+          "point_pp_published_2dp": 0.88,
+          "ok": true
+        },
+        {
+          "row": "POOL-01.zs_depth_m6_m11.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.zs_depth_m6_m11.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 7.6988,
+            "ci95_pp_scenario": [
+              3.6895,
+              12.0579
+            ],
+            "ci95_pp_task": [
+              3.1433,
+              12.3029
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.789164,
+              "zs_m6": 0.712175
+            }
+          },
+          "recomputed": {
+            "point_pp": 7.6988,
+            "ci95_pp_scenario": [
+              3.6895,
+              12.0579
+            ],
+            "ci95_pp_task": [
+              3.1433,
+              12.3029
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.789164,
+              "zs_m6": 0.712175
+            }
+          },
+          "episode_diff_point_pp_4dp": 7.6988,
+          "percentile_scenario_pp": [
+            3.6895,
+            12.0579
+          ],
+          "percentile_task_pp": [
+            3.1433,
+            12.3029
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-01.zs_depth_m6_m11.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.zs_depth_m6_m11.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 11.6959,
+            "ci95_pp_scenario": [
+              6.4327,
+              16.9591
+            ],
+            "ci95_pp_task": [
+              4.6784,
+              18.7135
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.561404,
+              "zs_m6": 0.444444
+            }
+          },
+          "recomputed": {
+            "point_pp": 11.6959,
+            "ci95_pp_scenario": [
+              6.4327,
+              16.9591
+            ],
+            "ci95_pp_task": [
+              4.6784,
+              18.7135
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.561404,
+              "zs_m6": 0.444444
+            }
+          },
+          "episode_diff_point_pp_4dp": 11.6959,
+          "percentile_scenario_pp": [
+            6.4327,
+            16.9591
+          ],
+          "percentile_task_pp": [
+            4.6784,
+            18.7135
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-01.t_depth_m6_m11.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.t_depth_m6_m11.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 8.3912,
+            "ci95_pp_scenario": [
+              4.2023,
+              12.6287
+            ],
+            "ci95_pp_task": [
+              4.0912,
+              12.9632
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.813854,
+              "t_m6": 0.729942
+            }
+          },
+          "recomputed": {
+            "point_pp": 8.3912,
+            "ci95_pp_scenario": [
+              4.2023,
+              12.6287
+            ],
+            "ci95_pp_task": [
+              4.0912,
+              12.9632
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.813854,
+              "t_m6": 0.729942
+            }
+          },
+          "episode_diff_point_pp_4dp": 8.3912,
+          "percentile_scenario_pp": [
+            4.2023,
+            12.6287
+          ],
+          "percentile_task_pp": [
+            4.0912,
+            12.9632
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-01.t_depth_m6_m11.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.t_depth_m6_m11.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 15.7895,
+            "ci95_pp_scenario": [
+              8.1871,
+              23.9766
+            ],
+            "ci95_pp_task": [
+              8.7719,
+              23.3918
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.596491,
+              "t_m6": 0.438596
+            }
+          },
+          "recomputed": {
+            "point_pp": 15.7895,
+            "ci95_pp_scenario": [
+              8.1871,
+              23.9766
+            ],
+            "ci95_pp_task": [
+              8.7719,
+              23.3918
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.596491,
+              "t_m6": 0.438596
+            }
+          },
+          "episode_diff_point_pp_4dp": 15.7895,
+          "percentile_scenario_pp": [
+            8.1871,
+            23.9766
+          ],
+          "percentile_task_pp": [
+            8.7719,
+            23.3918
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-01.t_depth_m9_m11.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.t_depth_m9_m11.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 4.2497,
+            "ci95_pp_scenario": [
+              0.1526,
+              8.7474
+            ],
+            "ci95_pp_task": [
+              0.8994,
+              7.8667
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.813854,
+              "t_m9": 0.771357
+            }
+          },
+          "recomputed": {
+            "point_pp": 4.2497,
+            "ci95_pp_scenario": [
+              0.1526,
+              8.7474
+            ],
+            "ci95_pp_task": [
+              0.8994,
+              7.8667
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.813854,
+              "t_m9": 0.771357
+            }
+          },
+          "episode_diff_point_pp_4dp": 4.2497,
+          "percentile_scenario_pp": [
+            0.1526,
+            8.7474
+          ],
+          "percentile_task_pp": [
+            0.8994,
+            7.8667
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-01.t_depth_m9_m11.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.t_depth_m9_m11.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 7.0175,
+            "ci95_pp_scenario": [
+              1.1696,
+              13.4503
+            ],
+            "ci95_pp_task": [
+              1.7544,
+              12.8655
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.596491,
+              "t_m9": 0.526316
+            }
+          },
+          "recomputed": {
+            "point_pp": 7.0175,
+            "ci95_pp_scenario": [
+              1.1696,
+              13.4503
+            ],
+            "ci95_pp_task": [
+              1.7544,
+              12.8655
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "t_m11": 0.596491,
+              "t_m9": 0.526316
+            }
+          },
+          "episode_diff_point_pp_4dp": 7.0175,
+          "percentile_scenario_pp": [
+            1.1696,
+            13.4503
+          ],
+          "percentile_task_pp": [
+            1.7544,
+            12.8655
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-01.zs_depth_m9_m11.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.zs_depth_m9_m11.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 1.4433,
+            "ci95_pp_scenario": [
+              -2.5626,
+              5.5246
+            ],
+            "ci95_pp_task": [
+              -2.5971,
+              5.6415
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.789164,
+              "zs_m9": 0.774731
+            }
+          },
+          "recomputed": {
+            "point_pp": 1.4433,
+            "ci95_pp_scenario": [
+              -2.5626,
+              5.5246
+            ],
+            "ci95_pp_task": [
+              -2.5971,
+              5.6415
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.789164,
+              "zs_m9": 0.774731
+            }
+          },
+          "episode_diff_point_pp_4dp": 1.4433,
+          "percentile_scenario_pp": [
+            -2.5626,
+            5.5246
+          ],
+          "percentile_task_pp": [
+            -2.5971,
+            5.6415
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-01.zs_depth_m9_m11.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.zs_depth_m9_m11.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 2.3392,
+            "ci95_pp_scenario": [
+              -2.3392,
+              7.0175
+            ],
+            "ci95_pp_task": [
+              -2.924,
+              8.1871
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.561404,
+              "zs_m9": 0.538012
+            }
+          },
+          "recomputed": {
+            "point_pp": 2.3392,
+            "ci95_pp_scenario": [
+              -2.3392,
+              7.0175
+            ],
+            "ci95_pp_task": [
+              -2.924,
+              8.1871
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "zs_m11": 0.561404,
+              "zs_m9": 0.538012
+            }
+          },
+          "episode_diff_point_pp_4dp": 2.3392,
+          "percentile_scenario_pp": [
+            -2.3392,
+            7.0175
+          ],
+          "percentile_task_pp": [
+            -2.924,
+            8.1871
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_t_m11.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_t_m11.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": -4.4105,
+            "ci95_pp_scenario": [
+              -10.6614,
+              0.7409
+            ],
+            "ci95_pp_task": [
+              -8.6474,
+              -0.3322
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "t_m11": 0.813854
+            }
+          },
+          "recomputed": {
+            "point_pp": -4.4105,
+            "ci95_pp_scenario": [
+              -10.6614,
+              0.7409
+            ],
+            "ci95_pp_task": [
+              -8.6474,
+              -0.3322
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "t_m11": 0.813854
+            }
+          },
+          "episode_diff_point_pp_4dp": -4.4105,
+          "percentile_scenario_pp": [
+            -10.6614,
+            0.7409
+          ],
+          "percentile_task_pp": [
+            -8.6474,
+            -0.3322
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_t_m11.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_t_m11.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": -0.5848,
+            "ci95_pp_scenario": [
+              -7.6023,
+              5.848
+            ],
+            "ci95_pp_task": [
+              -5.848,
+              4.6784
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "t_m11": 0.596491
+            }
+          },
+          "recomputed": {
+            "point_pp": -0.5848,
+            "ci95_pp_scenario": [
+              -7.6023,
+              5.848
+            ],
+            "ci95_pp_task": [
+              -5.848,
+              4.6784
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "t_m11": 0.596491
+            }
+          },
+          "episode_diff_point_pp_4dp": -0.5848,
+          "percentile_scenario_pp": [
+            -7.6023,
+            5.848
+          ],
+          "percentile_task_pp": [
+            -5.848,
+            4.6784
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_zs_m11.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_zs_m11.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": -1.9415,
+            "ci95_pp_scenario": [
+              -6.3971,
+              2.1743
+            ],
+            "ci95_pp_task": [
+              -5.7485,
+              1.6602
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "zs_m11": 0.789164
+            }
+          },
+          "recomputed": {
+            "point_pp": -1.9415,
+            "ci95_pp_scenario": [
+              -6.3971,
+              2.1743
+            ],
+            "ci95_pp_task": [
+              -5.7485,
+              1.6602
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "zs_m11": 0.789164
+            }
+          },
+          "episode_diff_point_pp_4dp": -1.9415,
+          "percentile_scenario_pp": [
+            -6.3971,
+            2.1743
+          ],
+          "percentile_task_pp": [
+            -5.7485,
+            1.6602
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_zs_m11.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_zs_m11.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 2.924,
+            "ci95_pp_scenario": [
+              -1.1696,
+              7.0175
+            ],
+            "ci95_pp_task": [
+              -1.7544,
+              7.6023
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "zs_m11": 0.561404
+            }
+          },
+          "recomputed": {
+            "point_pp": 2.924,
+            "ci95_pp_scenario": [
+              -1.1696,
+              7.0175
+            ],
+            "ci95_pp_task": [
+              -1.7544,
+              7.6023
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "zs_m11": 0.561404
+            }
+          },
+          "episode_diff_point_pp_4dp": 2.924,
+          "percentile_scenario_pp": [
+            -1.1696,
+            7.0175
+          ],
+          "percentile_task_pp": [
+            -1.7544,
+            7.6023
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_t_m9.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_t_m9.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": -0.1608,
+            "ci95_pp_scenario": [
+              -4.6363,
+              4.0485
+            ],
+            "ci95_pp_task": [
+              -4.707,
+              4.2947
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "t_m9": 0.771357
+            }
+          },
+          "recomputed": {
+            "point_pp": -0.1608,
+            "ci95_pp_scenario": [
+              -4.6363,
+              4.0485
+            ],
+            "ci95_pp_task": [
+              -4.707,
+              4.2947
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "t_m9": 0.771357
+            }
+          },
+          "episode_diff_point_pp_4dp": -0.1608,
+          "percentile_scenario_pp": [
+            -4.6363,
+            4.0485
+          ],
+          "percentile_task_pp": [
+            -4.707,
+            4.2947
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_t_m9.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_t_m9.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 6.4327,
+            "ci95_pp_scenario": [
+              0.5848,
+              12.2807
+            ],
+            "ci95_pp_task": [
+              0.5848,
+              12.8655
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "t_m9": 0.526316
+            }
+          },
+          "recomputed": {
+            "point_pp": 6.4327,
+            "ci95_pp_scenario": [
+              0.5848,
+              12.2807
+            ],
+            "ci95_pp_task": [
+              0.5848,
+              12.8655
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "t_m9": 0.526316
+            }
+          },
+          "episode_diff_point_pp_4dp": 6.4327,
+          "percentile_scenario_pp": [
+            0.5848,
+            12.2807
+          ],
+          "percentile_task_pp": [
+            0.5848,
+            12.8655
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_zs_m9.goal_pass",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_zs_m9.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": -0.4982,
+            "ci95_pp_scenario": [
+              -5.3485,
+              3.0205
+            ],
+            "ci95_pp_task": [
+              -4.7971,
+              3.5023
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "zs_m9": 0.774731
+            }
+          },
+          "recomputed": {
+            "point_pp": -0.4982,
+            "ci95_pp_scenario": [
+              -5.3485,
+              3.0205
+            ],
+            "ci95_pp_task": [
+              -4.7971,
+              3.5023
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.769749,
+              "zs_m9": 0.774731
+            }
+          },
+          "episode_diff_point_pp_4dp": -0.4982,
+          "percentile_scenario_pp": [
+            -5.3485,
+            3.0205
+          ],
+          "percentile_task_pp": [
+            -4.7971,
+            3.5023
+          ],
+          "ok": true
+        },
+        {
+          "row": "POOL-02.ni_ceiling_minus_zs_m9.TGC",
+          "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+          "report_key": "contrasts.ni_ceiling_minus_zs_m9.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 5.2632,
+            "ci95_pp_scenario": [
+              0.5848,
+              9.9415
+            ],
+            "ci95_pp_task": [
+              0.0,
+              10.5263
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "zs_m9": 0.538012
+            }
+          },
+          "recomputed": {
+            "point_pp": 5.2632,
+            "ci95_pp_scenario": [
+              0.5848,
+              9.9415
+            ],
+            "ci95_pp_task": [
+              0.0,
+              10.5263
+            ],
+            "n_pairs": 171,
+            "arm_means": {
+              "ceiling": 0.590643,
+              "zs_m9": 0.538012
+            }
+          },
+          "episode_diff_point_pp_4dp": 5.2632,
+          "percentile_scenario_pp": [
+            0.5848,
+            9.9415
+          ],
+          "percentile_task_pp": [
+            0.0,
+            10.5263
+          ],
+          "ok": true
+        },
+        {
+          "row": "DID-01.m11.goal_pass",
+          "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+          "report_key": "dids.m11.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 6.0877,
+            "ci95_pp_scenario": [
+              1.5553,
+              11.0
+            ],
+            "ci95_pp_task": [
+              0.6254,
+              11.8465
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "exec_t_m11": 0.809825,
+              "exec_u_m11": 0.834456,
+              "narr_t_m11": 0.804886,
+              "narr_u_m11": 0.76864
+            }
+          },
+          "recomputed": {
+            "point_pp": 6.0877,
+            "ci95_pp_scenario": [
+              1.5553,
+              11.0
+            ],
+            "ci95_pp_task": [
+              0.6254,
+              11.8465
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "narr_t_m11": 0.804886,
+              "exec_t_m11": 0.809825,
+              "narr_u_m11": 0.76864,
+              "exec_u_m11": 0.834456
+            }
+          },
+          "episode_diff_point_pp_4dp": 6.0877,
+          "percentile_scenario_pp": [
+            1.5553,
+            11.0
+          ],
+          "percentile_task_pp": [
+            0.6254,
+            11.8465
+          ],
+          "ok": true
+        },
+        {
+          "row": "DID-01.m11.TGC",
+          "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+          "report_key": "dids.m11.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 12.2807,
+            "ci95_pp_scenario": [
+              0.8772,
+              26.3158
+            ],
+            "ci95_pp_task": [
+              2.6316,
+              22.807
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "exec_t_m11": 0.605263,
+              "exec_u_m11": 0.622807,
+              "narr_t_m11": 0.614035,
+              "narr_u_m11": 0.508772
+            }
+          },
+          "recomputed": {
+            "point_pp": 12.2807,
+            "ci95_pp_scenario": [
+              0.8772,
+              26.3158
+            ],
+            "ci95_pp_task": [
+              2.6316,
+              22.807
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "narr_t_m11": 0.614035,
+              "exec_t_m11": 0.605263,
+              "narr_u_m11": 0.508772,
+              "exec_u_m11": 0.622807
+            }
+          },
+          "episode_diff_point_pp_4dp": 12.2807,
+          "percentile_scenario_pp": [
+            0.8772,
+            26.3158
+          ],
+          "percentile_task_pp": [
+            2.6316,
+            22.807
+          ],
+          "ok": true
+        },
+        {
+          "row": "DID-01.m6.goal_pass",
+          "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+          "report_key": "dids.m6.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 4.4535,
+            "ci95_pp_scenario": [
+              -6.7149,
+              14.25
+            ],
+            "ci95_pp_task": [
+              -5.0675,
+              13.9816
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "exec_t_m6": 0.723675,
+              "exec_u_m6": 0.682474,
+              "narr_t_m6": 0.698579,
+              "narr_u_m6": 0.612842
+            }
+          },
+          "recomputed": {
+            "point_pp": 4.4535,
+            "ci95_pp_scenario": [
+              -6.7149,
+              14.25
+            ],
+            "ci95_pp_task": [
+              -5.0675,
+              13.9816
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "narr_t_m6": 0.698579,
+              "exec_t_m6": 0.723675,
+              "narr_u_m6": 0.612842,
+              "exec_u_m6": 0.682474
+            }
+          },
+          "episode_diff_point_pp_4dp": 4.4535,
+          "percentile_scenario_pp": [
+            -6.7149,
+            14.25
+          ],
+          "percentile_task_pp": [
+            -5.0675,
+            13.9816
+          ],
+          "ok": true
+        },
+        {
+          "row": "DID-01.m6.TGC",
+          "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+          "report_key": "dids.m6.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 10.5263,
+            "ci95_pp_scenario": [
+              -2.6316,
+              22.807
+            ],
+            "ci95_pp_task": [
+              -1.7544,
+              22.807
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "exec_t_m6": 0.429825,
+              "exec_u_m6": 0.385965,
+              "narr_t_m6": 0.403509,
+              "narr_u_m6": 0.254386
+            }
+          },
+          "recomputed": {
+            "point_pp": 10.5263,
+            "ci95_pp_scenario": [
+              -2.6316,
+              22.807
+            ],
+            "ci95_pp_task": [
+              -1.7544,
+              22.807
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "narr_t_m6": 0.403509,
+              "exec_t_m6": 0.429825,
+              "narr_u_m6": 0.254386,
+              "exec_u_m6": 0.385965
+            }
+          },
+          "episode_diff_point_pp_4dp": 10.5263,
+          "percentile_scenario_pp": [
+            -2.6316,
+            22.807
+          ],
+          "percentile_task_pp": [
+            -1.7544,
+            22.807
+          ],
+          "ok": true
+        },
+        {
+          "row": "DID-01.m9.goal_pass",
+          "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+          "report_key": "dids.m9.goal_pass_rate",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": -0.1553,
+            "ci95_pp_scenario": [
+              -8.3579,
+              7.1088
+            ],
+            "ci95_pp_task": [
+              -8.507,
+              8.0412
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "exec_t_m9": 0.785184,
+              "exec_u_m9": 0.784535,
+              "narr_t_m9": 0.766746,
+              "narr_u_m9": 0.767649
+            }
+          },
+          "recomputed": {
+            "point_pp": -0.1553,
+            "ci95_pp_scenario": [
+              -8.3579,
+              7.1088
+            ],
+            "ci95_pp_task": [
+              -8.507,
+              8.0412
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "narr_t_m9": 0.766746,
+              "exec_t_m9": 0.785184,
+              "narr_u_m9": 0.767649,
+              "exec_u_m9": 0.784535
+            }
+          },
+          "episode_diff_point_pp_4dp": -0.1553,
+          "percentile_scenario_pp": [
+            -8.3579,
+            7.1088
+          ],
+          "percentile_task_pp": [
+            -8.507,
+            8.0412
+          ],
+          "ok": true
+        },
+        {
+          "row": "DID-01.m9.TGC",
+          "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+          "report_key": "dids.m9.tgc",
+          "code_path": "j14_did (seed 20260924, B=10000)",
+          "published": {
+            "point_pp": 2.6316,
+            "ci95_pp_scenario": [
+              -7.8947,
+              14.0351
+            ],
+            "ci95_pp_task": [
+              -8.7719,
+              14.0351
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "exec_t_m9": 0.561404,
+              "exec_u_m9": 0.552632,
+              "narr_t_m9": 0.526316,
+              "narr_u_m9": 0.491228
+            }
+          },
+          "recomputed": {
+            "point_pp": 2.6316,
+            "ci95_pp_scenario": [
+              -7.8947,
+              14.0351
+            ],
+            "ci95_pp_task": [
+              -8.7719,
+              14.0351
+            ],
+            "n_pairs": 114,
+            "arm_means": {
+              "narr_t_m9": 0.526316,
+              "exec_t_m9": 0.561404,
+              "narr_u_m9": 0.491228,
+              "exec_u_m9": 0.552632
+            }
+          },
+          "episode_diff_point_pp_4dp": 2.6316,
+          "percentile_scenario_pp": [
+            -7.8947,
+            14.0351
+          ],
+          "percentile_task_pp": [
+            -8.7719,
+            14.0351
+          ],
+          "ok": true
+        },
+        {
+          "row": "COST-03.prefix_m11.TGC",
+          "report": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+          "report_key": "non_inferiority.comparisons.prefix_m11.quality_tgc_contrast",
+          "code_path": "j8_frontier.paired_contrast (seed hj1_gate.SEED = 20260915)",
+          "published": {
+            "diff_pp": 3.51,
+            "ci95_pp_scenario": [
+              -6.14,
+              13.16
+            ],
+            "ci95_pp_task": [
+              -5.26,
+              12.28
+            ],
+            "n_pairs": 114
+          },
+          "recomputed": {
+            "diff_pp": 3.51,
+            "ci95_pp_scenario": [
+              -6.14,
+              13.16
+            ],
+            "ci95_pp_task": [
+              -5.26,
+              12.28
+            ],
+            "n_pairs": 114
+          },
+          "episode_diff_point_pp_4dp": 3.5088,
+          "percentile_scenario_pp": [
+            -6.14,
+            13.16
+          ],
+          "percentile_task_pp": [
+            -5.26,
+            12.28
+          ],
+          "point_pp_published_2dp": 3.51,
+          "ok": true
+        }
+      ],
+      "rule": "j14_did-sourced rows: point_pp, both 95% CIs, n_pairs and arm means must equal the published 4-decimal values exactly. j8_frontier-sourced rows: the published report stores only 2-decimal pp, so the registered code path is re-run at the registered seed and diff_pp and both CIs must match exactly, the 4-decimal point from the episode series must round to the published 2-decimal value, and must equal the difference of the published 6-decimal arm means to within 0.0001 pp."
+    },
+    "rows": {
+      "CHAN-C1-02.goal_pass": {
+        "row": "CHAN-C1-02.goal_pass",
+        "ledger_id": "CHAN-C1-02",
+        "role": "headline",
+        "contrast": "takeover_k10 - advise_fullctx_k10",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/hj13_c1_matched_trigger_20260923.report.json",
+        "report_key": "contrasts.goal_pass_all_advise_fullctx_k10_minus_takeover_k10",
+        "presented_negation_of_report_key": true,
+        "point_pp": 6.686,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 6.686,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.046875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              0.8809,
+              12.482
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              0.8383,
+              12.5603
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.01833981660183398,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000424,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              1.2604,
+              12.0913
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              1.2876,
+              12.1045
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              1.29,
+              13.48
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              1.47,
+              12.35
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "CHAN-C1-02.TGC": {
+        "row": "CHAN-C1-02.TGC",
+        "ledger_id": "CHAN-C1-02",
+        "role": "supporting",
+        "contrast": "takeover_k10 - advise_fullctx_k10",
+        "field": "tgc",
+        "report": "campaign/results/hj13_c1_matched_trigger_20260923.report.json",
+        "report_key": "contrasts.tgc_all_advise_fullctx_k10_minus_takeover_k10",
+        "presented_negation_of_report_key": true,
+        "point_pp": 7.8947,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 7.8947,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.078125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              1.2465,
+              14.6353
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              1.0164,
+              14.8633
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.12496875031249688,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001046,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -0.6925,
+              16.5743
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -0.6859,
+              16.5825
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              1.75,
+              15.79
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": false
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -0.88,
+              16.67
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": true,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "CHAN-PRICE-01.P1.goal_pass": {
+        "row": "CHAN-PRICE-01.P1.goal_pass",
+        "ledger_id": "CHAN-PRICE-01",
+        "role": "headline",
+        "contrast": "advise_k1_fullctx - plan_floor",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+        "report_key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_plan_floor",
+        "presented_negation_of_report_key": false,
+        "point_pp": -5.5105,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": -5.5105,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.1960601806640625,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -13.2071,
+              2.192
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -13.3057,
+              2.2851
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.14354856451435485,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001109,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -12.5647,
+              1.6771
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -12.5562,
+              1.7362
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -13.15,
+              2.51
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -12.63,
+              1.72
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "CHAN-PRICE-01.P1.TGC": {
+        "row": "CHAN-PRICE-01.P1.TGC",
+        "ledger_id": "CHAN-PRICE-01",
+        "role": "supporting",
+        "contrast": "advise_k1_fullctx - plan_floor",
+        "field": "tgc",
+        "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+        "report_key": "contrasts.tgc_all_advise_k1_fullctx_minus_plan_floor",
+        "presented_negation_of_report_key": false,
+        "point_pp": 5.2632,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 5.2632,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.5323486328125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -7.8486,
+              18.3749
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -7.7304,
+              18.3869
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.45275547244527553,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001574,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -5.9095,
+              16.4358
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -5.8401,
+              16.6468
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -7.89,
+              18.42
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -6.14,
+              16.67
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "CHAN-PRICE-01.P2.goal_pass": {
+        "row": "CHAN-PRICE-01.P2.goal_pass",
+        "ledger_id": "CHAN-PRICE-01",
+        "role": "headline",
+        "contrast": "advise_k1_fullctx - prefix_m11",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+        "report_key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_prefix_m11",
+        "presented_negation_of_report_key": false,
+        "point_pp": -14.6781,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": -14.6781,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.002399444580078125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              -22.0286,
+              -7.2094
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              -22.0758,
+              -7.1624
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 9.99990000099999e-05,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 3.2e-05,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              -21.468,
+              -7.8143
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              -21.4605,
+              -7.8525
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -22.09,
+              -7.04
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -21.56,
+              -7.79
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "CHAN-PRICE-01.P2.TGC": {
+        "row": "CHAN-PRICE-01.P2.TGC",
+        "ledger_id": "CHAN-PRICE-01",
+        "role": "supporting",
+        "contrast": "advise_k1_fullctx - prefix_m11",
+        "field": "tgc",
+        "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+        "report_key": "contrasts.tgc_all_advise_k1_fullctx_minus_prefix_m11",
+        "presented_negation_of_report_key": false,
+        "point_pp": -15.7895,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": -15.7895,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.0355987548828125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              -27.5162,
+              -3.8781
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              -27.9564,
+              -3.3724
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.005629943700562994,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000237,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              -25.8541,
+              -5.6325
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              -25.8238,
+              -5.8055
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -28.07,
+              -3.51
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -25.44,
+              -5.26
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "CHAN-PRICE-01.P3.goal_pass": {
+        "row": "CHAN-PRICE-01.P3.goal_pass",
+        "ledger_id": "CHAN-PRICE-01",
+        "role": "headline",
+        "contrast": "advise_k1_fullctx - advise_k10_fullctx",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+        "report_key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_advise_k10_fullctx",
+        "presented_negation_of_report_key": false,
+        "point_pp": -7.0816,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": -7.0816,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.098388671875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -14.7031,
+              0.4602
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -14.7214,
+              0.6427
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.05470945290547095,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000719,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -14.104,
+              -0.1124
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              -14.1092,
+              -0.1197
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -14.78,
+              0.67
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -14.15,
+              0.01
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": false
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": true
+        }
+      },
+      "CHAN-PRICE-01.P3.TGC": {
+        "row": "CHAN-PRICE-01.P3.TGC",
+        "ledger_id": "CHAN-PRICE-01",
+        "role": "supporting",
+        "contrast": "advise_k1_fullctx - advise_k10_fullctx",
+        "field": "tgc",
+        "report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+        "report_key": "contrasts.tgc_all_advise_k1_fullctx_minus_advise_k10_fullctx",
+        "presented_negation_of_report_key": false,
+        "point_pp": 0.8772,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 0.8772,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 1.0,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -13.9889,
+              15.651
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -13.661,
+              15.5947
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 1.0,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -10.634,
+              12.3576
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -11.136,
+              12.7907
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -14.04,
+              15.79
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -11.4,
+              13.16
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.zs_depth_m6_m11.goal_pass": {
+        "row": "POOL-01.zs_depth_m6_m11.goal_pass",
+        "ledger_id": "POOL-01",
+        "role": "headline",
+        "contrast": "zs_m11 - zs_m6",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.zs_depth_m6_m11.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": 7.6988,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 7.6988,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.00189208984375,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              3.5167,
+              11.8682
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              3.4736,
+              11.8453
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.0017599824001759982,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000133,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              3.1232,
+              12.2706
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              3.1355,
+              12.3035
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              3.6895,
+              12.0579
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              3.1433,
+              12.3029
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.zs_depth_m6_m11.TGC": {
+        "row": "POOL-01.zs_depth_m6_m11.TGC",
+        "ledger_id": "POOL-01",
+        "role": "supporting",
+        "contrast": "zs_m11 - zs_m6",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.zs_depth_m6_m11.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 11.6959,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 11.6959,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.0010986328125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              6.4635,
+              16.9283
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              6.4688,
+              16.7503
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.0034799652003479967,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000186,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              4.5347,
+              18.8571
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              4.576,
+              18.8083
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              6.4327,
+              16.9591
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              4.6784,
+              18.7135
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.t_depth_m6_m11.goal_pass": {
+        "row": "POOL-01.t_depth_m6_m11.goal_pass",
+        "ledger_id": "POOL-01",
+        "role": "headline",
+        "contrast": "t_m11 - t_m6",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.t_depth_m6_m11.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": 8.3912,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 8.3912,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.001434326171875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              4.1576,
+              12.5031
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              4.189,
+              12.524
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.0005699943000569994,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 7.5e-05,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              3.9812,
+              12.7853
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              3.9906,
+              12.8088
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              4.2023,
+              12.6287
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              4.0912,
+              12.9632
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.t_depth_m6_m11.TGC": {
+        "row": "POOL-01.t_depth_m6_m11.TGC",
+        "ledger_id": "POOL-01",
+        "role": "supporting",
+        "contrast": "t_m11 - t_m6",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.t_depth_m6_m11.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 15.7895,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 15.7895,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.001708984375,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              7.8486,
+              23.6073
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              8.003,
+              23.7148
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.0001799982000179998,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 4.2e-05,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              8.4641,
+              23.1148
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              8.3752,
+              23.2288
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              8.1871,
+              23.9766
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              8.7719,
+              23.3918
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.t_depth_m9_m11.goal_pass": {
+        "row": "POOL-01.t_depth_m9_m11.goal_pass",
+        "ledger_id": "POOL-01",
+        "role": "supplementary (POOL-04 boundary case)",
+        "contrast": "t_m11 - t_m9",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.t_depth_m9_m11.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": 4.2497,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 4.2497,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.07489013671875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -0.029,
+              8.4301
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -0.0425,
+              8.4739
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.01898981010189898,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000432,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              0.764,
+              7.7494
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              0.7271,
+              7.7437
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              0.1526,
+              8.7474
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": false
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              0.8994,
+              7.8667
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": true,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.t_depth_m9_m11.TGC": {
+        "row": "POOL-01.t_depth_m9_m11.TGC",
+        "ledger_id": "POOL-01",
+        "role": "supporting",
+        "contrast": "t_m11 - t_m9",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.t_depth_m9_m11.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 7.0175,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 7.0175,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.05859375,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              1.108,
+              12.9271
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              1.0066,
+              13.033
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.01733982660173398,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000413,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              1.7236,
+              12.2499
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              1.6539,
+              12.2302
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              1.1696,
+              13.4503
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": false
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              1.7544,
+              12.8655
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": true,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.zs_depth_m9_m11.goal_pass": {
+        "row": "POOL-01.zs_depth_m9_m11.goal_pass",
+        "ledger_id": "POOL-01",
+        "role": "supplementary",
+        "contrast": "zs_m11 - zs_m9",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.zs_depth_m9_m11.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": 1.4433,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 1.4433,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.501190185546875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -2.5218,
+              5.365
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -2.5732,
+              5.4391
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.5040149598504015,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001581,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -2.6099,
+              5.5265
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -2.5927,
+              5.5289
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -2.5626,
+              5.5246
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -2.5971,
+              5.6415
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-01.zs_depth_m9_m11.TGC": {
+        "row": "POOL-01.zs_depth_m9_m11.TGC",
+        "ledger_id": "POOL-01",
+        "role": "supporting",
+        "contrast": "zs_m11 - zs_m9",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.zs_depth_m9_m11.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 2.3392,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 2.3392,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.48876953125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -2.4623,
+              7.0791
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -2.4463,
+              7.0262
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.5642243577564224,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001568,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -3.4677,
+              8.1461
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -3.4889,
+              8.0721
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -2.3392,
+              7.0175
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -2.924,
+              8.1871
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "POOL-02.ni_ceiling_minus_t_m11.goal_pass": {
+        "row": "POOL-02.ni_ceiling_minus_t_m11.goal_pass",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - t_m11",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_t_m11.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": -4.4105,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": -4.4105,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.16796875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -9.8826,
+              1.0872
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -9.9036,
+              1.0883
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.0001316070556640625,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.041339586604133956,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.00063,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              -8.5378,
+              -0.3194
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              -8.5676,
+              -0.3182
+            ],
+            "wild_webb_excludes_zero": true,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 9.99990000099999e-06,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -10.6614,
+              0.7409
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -8.6474,
+              -0.3322
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "POOL-02.ni_ceiling_minus_t_m11.TGC": {
+        "row": "POOL-02.ni_ceiling_minus_t_m11.TGC",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - t_m11",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_t_m11.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": -0.5848,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": -0.5848,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 1.0,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -6.9868,
+              5.8787
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -6.9131,
+              5.8275
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.014068603515625,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 1.0,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -5.8377,
+              4.6681
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -5.8149,
+              4.6288
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.0028099719002809974,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -7.6023,
+              5.848
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -5.848,
+              4.6784
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "POOL-02.ni_ceiling_minus_zs_m11.goal_pass": {
+        "row": "POOL-02.ni_ceiling_minus_zs_m11.goal_pass",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - zs_m11",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_zs_m11.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": -1.9415,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": -1.9415,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.4033203125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -6.12,
+              2.1911
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -6.1849,
+              2.2585
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.000232696533203125,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.3181868181318187,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001473,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -5.6613,
+              1.6896
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -5.673,
+              1.7223
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 9.99990000099999e-06,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -6.3971,
+              2.1743
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -5.7485,
+              1.6602
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "POOL-02.ni_ceiling_minus_zs_m11.TGC": {
+        "row": "POOL-02.ni_ceiling_minus_zs_m11.TGC",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - zs_m11",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_zs_m11.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 2.924,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 2.924,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.3125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -1.2619,
+              6.9252
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -1.1414,
+              6.9945
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.03721046447753906,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": false,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.3610063899361006,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001519,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -1.9801,
+              7.9306
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -1.9726,
+              7.834
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.056039439605603945,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": false,
+            "ni_holds_wild_rademacher": false,
+            "ni_holds_wild_webb": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -1.1696,
+              7.0175
+            ],
+            "percentile_ni_holds": false,
+            "signflip_ni_holds": false,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": false
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -1.7544,
+              7.6023
+            ],
+            "percentile_ni_holds": false,
+            "signflip_ni_holds": false,
+            "wild_rademacher_ni_holds": false,
+            "wild_webb_ni_holds": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": true,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "POOL-02.ni_ceiling_minus_t_m9.goal_pass": {
+        "row": "POOL-02.ni_ceiling_minus_t_m9.goal_pass",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - t_m9",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_t_m9.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": -0.1608,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": -0.1608,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.94830322265625,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -4.3073,
+              4.0569
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -4.3204,
+              4.1235
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.0022678375244140625,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.9469405305946941,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000709,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -4.6365,
+              4.2416
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -4.6258,
+              4.213
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.000919990800091999,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -4.6363,
+              4.0485
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -4.707,
+              4.2947
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "POOL-02.ni_ceiling_minus_t_m9.TGC": {
+        "row": "POOL-02.ni_ceiling_minus_t_m9.TGC",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - t_m9",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_t_m9.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 6.4327,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 6.4327,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.07958984375,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              0.6464,
+              12.3423
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              0.5749,
+              12.379
+            ],
+            "wild_webb_excludes_zero": true,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.42615318298339844,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": false,
+            "ni_holds_wild_rademacher": false,
+            "ni_holds_wild_webb": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.06905930940690592,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000802,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              0.3796,
+              12.5269
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              0.4233,
+              12.5572
+            ],
+            "wild_webb_excludes_zero": true,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.4294257057429426,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": false,
+            "ni_holds_wild_rademacher": false,
+            "ni_holds_wild_webb": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              0.5848,
+              12.2807
+            ],
+            "percentile_ni_holds": false,
+            "signflip_ni_holds": false,
+            "wild_rademacher_ni_holds": false,
+            "wild_webb_ni_holds": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              0.5848,
+              12.8655
+            ],
+            "percentile_ni_holds": false,
+            "signflip_ni_holds": false,
+            "wild_rademacher_ni_holds": false,
+            "wild_webb_ni_holds": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "POOL-02.ni_ceiling_minus_zs_m9.goal_pass": {
+        "row": "POOL-02.ni_ceiling_minus_zs_m9.goal_pass",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - zs_m9",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_zs_m9.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": -0.4982,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": -0.4982,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.89971923828125,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -4.2416,
+              3.227
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -4.2862,
+              3.3043
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 9.1552734375e-05,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.8176218237817622,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001221,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -4.6239,
+              3.5455
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -4.5622,
+              3.5097
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.00023999760002399976,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -5.3485,
+              3.0205
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -4.7971,
+              3.5023
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "POOL-02.ni_ceiling_minus_zs_m9.TGC": {
+        "row": "POOL-02.ni_ceiling_minus_zs_m9.TGC",
+        "ledger_id": "POOL-02",
+        "role": "headline (NI)",
+        "contrast": "ceiling - zs_m9",
+        "field": "tgc",
+        "report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+        "report_key": "contrasts.ni_ceiling_minus_zs_m9.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 5.2632,
+        "alternative": {
+          "n_pairs": 171,
+          "point_pp": 5.2632,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.0780029296875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              0.831,
+              9.7568
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              0.6508,
+              9.9603
+            ],
+            "wild_webb_excludes_zero": true,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.23968124389648438,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": false,
+            "ni_holds_wild_rademacher": false,
+            "ni_holds_wild_webb": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.1067289327106729,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000976,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -0.277,
+              10.8033
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -0.2749,
+              10.756
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean >= +7.00 pp",
+            "ni_signflip_p_one_sided": 0.27250727492725074,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": false,
+            "ni_holds_wild_rademacher": false,
+            "ni_holds_wild_webb": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              0.5848,
+              9.9415
+            ],
+            "percentile_ni_holds": false,
+            "signflip_ni_holds": false,
+            "wild_rademacher_ni_holds": false,
+            "wild_webb_ni_holds": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              0.0,
+              10.5263
+            ],
+            "percentile_ni_holds": false,
+            "signflip_ni_holds": false,
+            "wild_rademacher_ni_holds": false,
+            "wild_webb_ni_holds": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "upper",
+          "margin": 0.07
+        }
+      },
+      "DID-01.m11.goal_pass": {
+        "row": "DID-01.m11.goal_pass",
+        "ledger_id": "DID-01",
+        "role": "headline",
+        "contrast": "(narr_t_m11 - exec_t_m11) - (narr_u_m11 - exec_u_m11)",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+        "report_key": "dids.m11.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": 6.0877,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 6.0877,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.02349853515625,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              1.5344,
+              10.6946
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              1.5302,
+              10.7582
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.03944960550394496,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000616,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              0.5029,
+              11.6511
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              0.5366,
+              11.6974
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              1.5553,
+              11.0
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              0.6254,
+              11.8465
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "DID-01.m11.TGC": {
+        "row": "DID-01.m11.TGC",
+        "ledger_id": "DID-01",
+        "role": "headline",
+        "contrast": "(narr_t_m11 - exec_t_m11) - (narr_u_m11 - exec_u_m11)",
+        "field": "tgc",
+        "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+        "report_key": "dids.m11.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 12.2807,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 12.2807,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.099609375,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              0.6464,
+              24.2844
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              0.4566,
+              24.0783
+            ],
+            "wild_webb_excludes_zero": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.026219737802621972,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000505,
+            "signflip_rejects_zero_at_05": true,
+            "wild_rademacher_ci95_pp": [
+              2.8316,
+              22.1607
+            ],
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_ci95_pp": [
+              2.709,
+              21.9889
+            ],
+            "wild_webb_excludes_zero": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              0.8772,
+              26.3158
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": false
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              2.6316,
+              22.807
+            ],
+            "percentile_excludes_zero": true,
+            "signflip_rejects_zero": true,
+            "wild_rademacher_excludes_zero": true,
+            "wild_webb_excludes_zero": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": true,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "DID-01.m6.goal_pass": {
+        "row": "DID-01.m6.goal_pass",
+        "ledger_id": "DID-01",
+        "role": "supplementary",
+        "contrast": "(narr_t_m6 - exec_t_m6) - (narr_u_m6 - exec_u_m6)",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+        "report_key": "dids.m6.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": 4.4535,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 4.4535,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.4364013671875,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -5.52,
+              14.2095
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -5.6378,
+              14.2339
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.3597864021359786,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001518,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -4.7988,
+              13.6833
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -4.6776,
+              13.7573
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -6.7149,
+              14.25
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -5.0675,
+              13.9816
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "DID-01.m6.TGC": {
+        "row": "DID-01.m6.TGC",
+        "ledger_id": "DID-01",
+        "role": "supplementary",
+        "contrast": "(narr_t_m6 - exec_t_m6) - (narr_u_m6 - exec_u_m6)",
+        "field": "tgc",
+        "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+        "report_key": "dids.m6.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 10.5263,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 10.5263,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.16015625,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -1.2004,
+              22.4377
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -1.5269,
+              22.5843
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.11767882321176788,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001019,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -0.9234,
+              22.6223
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -1.1298,
+              22.4514
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -2.6316,
+              22.807
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -1.7544,
+              22.807
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "DID-01.m9.goal_pass": {
+        "row": "DID-01.m9.goal_pass",
+        "ledger_id": "DID-01",
+        "role": "supplementary",
+        "contrast": "(narr_t_m9 - exec_t_m9) - (narr_u_m9 - exec_u_m9)",
+        "field": "goal_pass_rate",
+        "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+        "report_key": "dids.m9.goal_pass_rate",
+        "presented_negation_of_report_key": false,
+        "point_pp": -0.1553,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": -0.1553,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.970611572265625,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -7.5929,
+              7.4824
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -7.5515,
+              7.4918
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.971910280897191,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.000523,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -8.661,
+              8.1608
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -8.6278,
+              8.2326
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -8.3579,
+              7.1088
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -8.507,
+              8.0412
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "DID-01.m9.TGC": {
+        "row": "DID-01.m9.TGC",
+        "ledger_id": "DID-01",
+        "role": "supplementary",
+        "contrast": "(narr_t_m9 - exec_t_m9) - (narr_u_m9 - exec_u_m9)",
+        "field": "tgc",
+        "report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+        "report_key": "dids.m9.tgc",
+        "presented_negation_of_report_key": false,
+        "point_pp": 2.6316,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 2.6316,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.76708984375,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -8.3564,
+              13.8966
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -8.2881,
+              13.7829
+            ],
+            "wild_webb_excludes_zero": false
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.7679623203767962,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001335,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -8.8181,
+              14.2659
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -9.0524,
+              14.2966
+            ],
+            "wild_webb_excludes_zero": false
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -7.8947,
+              14.0351
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -8.7719,
+              14.0351
+            ],
+            "percentile_excludes_zero": false,
+            "signflip_rejects_zero": false,
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_excludes_zero": false,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": false,
+          "conclusion_changes_on_task": false
+        }
+      },
+      "COST-03.prefix_m11.TGC": {
+        "row": "COST-03.prefix_m11.TGC",
+        "ledger_id": "COST-03",
+        "role": "supplementary (NI; probe b)",
+        "contrast": "prefix_m11 - ceiling_cap81",
+        "field": "tgc",
+        "report": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+        "report_key": "non_inferiority.comparisons.prefix_m11.quality_tgc_contrast",
+        "presented_negation_of_report_key": false,
+        "point_pp": 3.5088,
+        "alternative": {
+          "n_pairs": 114,
+          "point_pp": 3.5088,
+          "scenario": {
+            "n_clusters": 19,
+            "signflip_p_two_sided": 0.60791015625,
+            "signflip_method": "exact",
+            "signflip_n_patterns": 524288,
+            "signflip_mc_se": 0.0,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -6.0942,
+              12.8347
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -5.9987,
+              12.9264
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean <= -7.00 pp",
+            "ni_signflip_p_one_sided": 0.0264434814453125,
+            "ni_signflip_method": "exact",
+            "ni_holds_signflip": false,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          },
+          "task": {
+            "n_clusters": 57,
+            "signflip_p_two_sided": 0.5572544274557254,
+            "signflip_method": "monte_carlo",
+            "signflip_n_patterns": 100000,
+            "signflip_mc_se": 0.001571,
+            "signflip_rejects_zero_at_05": false,
+            "wild_rademacher_ci95_pp": [
+              -5.3247,
+              12.096
+            ],
+            "wild_rademacher_excludes_zero": false,
+            "wild_webb_ci95_pp": [
+              -5.3725,
+              12.1159
+            ],
+            "wild_webb_excludes_zero": false,
+            "ni_null": "mean <= -7.00 pp",
+            "ni_signflip_p_one_sided": 0.011909880901190988,
+            "ni_signflip_method": "monte_carlo",
+            "ni_holds_signflip": true,
+            "ni_holds_wild_rademacher": true,
+            "ni_holds_wild_webb": true
+          }
+        },
+        "verdicts": {
+          "scenario": {
+            "percentile_ci95_pp": [
+              -6.14,
+              13.16
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": false,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": false
+          },
+          "task": {
+            "percentile_ci95_pp": [
+              -5.26,
+              12.28
+            ],
+            "percentile_ni_holds": true,
+            "signflip_ni_holds": true,
+            "wild_rademacher_ni_holds": true,
+            "wild_webb_ni_holds": true,
+            "all_methods_agree": true
+          },
+          "conclusion_changes_on_primary": true,
+          "conclusion_changes_on_task": false
+        },
+        "ni": {
+          "bound": "lower",
+          "margin": 0.07
+        }
+      }
+    },
+    "conclusion_changes": [
+      {
+        "row": "CHAN-C1-02.TGC",
+        "role": "supporting",
+        "primary": true,
+        "task": false
+      },
+      {
+        "row": "CHAN-PRICE-01.P3.goal_pass",
+        "role": "headline",
+        "primary": false,
+        "task": true
+      },
+      {
+        "row": "POOL-01.t_depth_m9_m11.goal_pass",
+        "role": "supplementary (POOL-04 boundary case)",
+        "primary": true,
+        "task": false
+      },
+      {
+        "row": "POOL-01.t_depth_m9_m11.TGC",
+        "role": "supporting",
+        "primary": true,
+        "task": false
+      },
+      {
+        "row": "POOL-02.ni_ceiling_minus_zs_m11.TGC",
+        "role": "headline (NI)",
+        "primary": true,
+        "task": false
+      },
+      {
+        "row": "DID-01.m11.TGC",
+        "role": "headline",
+        "primary": true,
+        "task": false
+      },
+      {
+        "row": "COST-03.prefix_m11.TGC",
+        "role": "supplementary (NI; probe b)",
+        "primary": true,
+        "task": false
+      }
+    ]
+  },
+  "probes": {
+    "rule": "POOL-04: seven bootstrap seeds, B = 10,000, same estimand and code path",
+    "note_on_registered_seed": "Both bounds come from j8_frontier, whose registered seed is hj1_gate.SEED = 20260915, not the j14_did seed 20260924. The registered seed is run first so the published value is reproduced, then the seven POOL-04 seeds.",
+    "note_on_j12_seed_flag": "j12_cost_axes records --seed/--n-boot in its report but never passes them to the bootstrap (compute_noninferiority_across_axes accepts seed and n_boot and does not use them), so COST-03 cannot be re-seeded through j12's own flag; this probe re-seeds the j8_frontier.paired_contrast call j12 makes.",
+    "CHAN-PRICE-01.P3.goal_pass.task_upper_bound": {
+      "source_report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+      "report_key": "contrasts.goal_pass_all_advise_k1_fullctx_minus_advise_k10_fullctx.ci95_pp_task",
+      "estimand": "advise_k1_fullctx - advise_k10_fullctx, goal_pass_rate, all-episodes, task-clustered percentile bootstrap, upper bound",
+      "code_path": "j8_frontier.paired_contrast(..., cluster='scenario') with j8_frontier.set_bootstrap_seed(seed)",
+      "registered_seed": 20260915,
+      "published_bound_pp": 0.01,
+      "registered_seed_reproduces_published": true,
+      "threshold_pp": 0.0,
+      "threshold_meaning": "P3 predicts the interval INCLUDES zero; on this bound that means upper >= 0. An upper bound < 0 would exclude zero, i.e. P3 would fail on the task clustering (the registered clustering is scenario).",
+      "n_pairs": 114,
+      "bootstrap": 10000,
+      "seeds_probed": [
+        20260924,
+        1,
+        2,
+        3,
+        7,
+        101,
+        999
+      ],
+      "by_seed": {
+        "20260915": {
+          "code_path_bound_pp_2dp": 0.01,
+          "replicated_bound_pp_4dp": 0.0114,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "20260924": {
+          "code_path_bound_pp_2dp": -0.18,
+          "replicated_bound_pp_4dp": -0.1754,
+          "replication_matches_code_path": true,
+          "passes": false
+        },
+        "1": {
+          "code_path_bound_pp_2dp": -0.16,
+          "replicated_bound_pp_4dp": -0.157,
+          "replication_matches_code_path": true,
+          "passes": false
+        },
+        "2": {
+          "code_path_bound_pp_2dp": -0.01,
+          "replicated_bound_pp_4dp": -0.0105,
+          "replication_matches_code_path": true,
+          "passes": false
+        },
+        "3": {
+          "code_path_bound_pp_2dp": -0.33,
+          "replicated_bound_pp_4dp": -0.3316,
+          "replication_matches_code_path": true,
+          "passes": false
+        },
+        "7": {
+          "code_path_bound_pp_2dp": 0.13,
+          "replicated_bound_pp_4dp": 0.1333,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "101": {
+          "code_path_bound_pp_2dp": -0.08,
+          "replicated_bound_pp_4dp": -0.0754,
+          "replication_matches_code_path": true,
+          "passes": false
+        },
+        "999": {
+          "code_path_bound_pp_2dp": -0.13,
+          "replicated_bound_pp_4dp": -0.1333,
+          "replication_matches_code_path": true,
+          "passes": false
+        }
+      },
+      "range_over_probe_seeds_pp": [
+        -0.33,
+        0.13
+      ],
+      "at_200k_resamples_registered_seed_pp_4dp": -0.1184,
+      "all_replications_match_code_path": true,
+      "verdict_stable_across_probe_seeds": false,
+      "passes_at_every_probe_seed": false
+    },
+    "COST-03.prefix_m11.tgc.scenario_lower_bound": {
+      "source_report": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+      "report_key": "non_inferiority.comparisons.prefix_m11.quality_tgc_contrast.ci95_pp_scenario",
+      "estimand": "prefix_m11 - ceiling_cap81, tgc, all-episodes, scenario-clustered percentile bootstrap, lower bound",
+      "code_path": "j8_frontier.paired_contrast(..., cluster='scenario') with j8_frontier.set_bootstrap_seed(seed)",
+      "registered_seed": 20260915,
+      "published_bound_pp": -6.14,
+      "registered_seed_reproduces_published": true,
+      "threshold_pp": -7.0,
+      "threshold_meaning": "NI holds if lower bound >= -7.00 pp (j12_cost_axes.compute_noninferiority_across_axes: q_ci[0] >= -NONINFERIORITY_MARGIN_PP).",
+      "n_pairs": 114,
+      "bootstrap": 10000,
+      "seeds_probed": [
+        20260924,
+        1,
+        2,
+        3,
+        7,
+        101,
+        999
+      ],
+      "by_seed": {
+        "20260915": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "20260924": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "1": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "2": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "3": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "7": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "101": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        },
+        "999": {
+          "code_path_bound_pp_2dp": -6.14,
+          "replicated_bound_pp_4dp": -6.1404,
+          "replication_matches_code_path": true,
+          "passes": true
+        }
+      },
+      "range_over_probe_seeds_pp": [
+        -6.14,
+        -6.14
+      ],
+      "at_200k_resamples_registered_seed_pp_4dp": -6.1404,
+      "all_replications_match_code_path": true,
+      "verdict_stable_across_probe_seeds": true,
+      "passes_at_every_probe_seed": true
+    }
+  }
+}

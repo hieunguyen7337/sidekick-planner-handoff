@@ -58,6 +58,22 @@ from scripts.setup.hj1_gate import (  # noqa: E402
     scenario_of,
     SEED,
 )
+import scripts.setup.hj1_gate as _hj1_gate  # noqa: E402
+
+
+def set_bootstrap_seed(seed: int) -> None:
+    """Re-seed every percentile bootstrap this script drives (POOL-04 stability probes).
+
+    Task- and pair-resampled intervals come from ``hj1_gate.paired_diff``, which reads
+    ``hj1_gate.SEED`` at call time; scenario-resampled intervals come from
+    ``paired_diff_scenario`` here, which reads this module's ``SEED``. Both are set, so
+    one flag moves every interval in a report together. Never called unless
+    ``--bootstrap-seed`` is given, so the default output is unchanged.
+    """
+    global SEED
+    SEED = int(seed)
+    _hj1_gate.SEED = int(seed)
+
 
 MIN_ROWS = 114
 F1_QUALITY_PP = 7.0
@@ -239,6 +255,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "error_type == 'limit' (censored at the binding call cap), then "
             "emit a second non-inferiority / chord block. The headline "
             "block is never edited."
+        ),
+    )
+    p.add_argument(
+        "--bootstrap-seed",
+        type=int,
+        default=None,
+        help=(
+            "RNG seed for every bootstrap interval (task, pair and scenario). "
+            "Omit to keep the registered hj1_gate.SEED and a byte-identical "
+            "report; when given, the report also records it under "
+            "'bootstrap_seed'. For POOL-04 seed-stability probes only."
         ),
     )
     return p.parse_args(argv)
@@ -2896,6 +2923,8 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(json.dumps({"refused": True, "reason": str(exc)}))
         return 2
+    if args.bootstrap_seed is not None:
+        set_bootstrap_seed(args.bootstrap_seed)
     report, code = build_report(
         arm_dirs,
         seeds,
@@ -2909,6 +2938,8 @@ def main(argv: list[str] | None = None) -> int:
         cluster=args.cluster,
         exclude_reference_limit=args.exclude_reference_limit,
     )
+    if args.bootstrap_seed is not None:
+        report["bootstrap_seed"] = args.bootstrap_seed
     if report.get("refused") and "arms" not in report:
         print(report.get("reason") or "refused")
         text = json.dumps(report, indent=2, default=str) + "\n"

@@ -1,0 +1,33 @@
+{
+  "purpose": "Prove the new j8_frontier --bootstrap-seed flag leaves the default output byte-identical, and that the flag re-seeds the bootstrap end to end.",
+  "not_a_registered_analysis": true,
+  "regenerated_report": "campaign/results/hj13_advice_at_price_20260923.report.json",
+  "command": "j8_frontier.py --arm advise_k1_fullctx=/scratch/n12194778/sidekick/results/hj13_advise_fixed_k_1_fullctx_20260923 --arm plan_floor=/scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260921iaware --arm advise_k10_fullctx=/scratch/n12194778/sidekick/results/hj12_advise_fixed_k_10_fullctx_20260923 --arm prefix_m9=/scratch/n12194778/sidekick/results/hj12_prefix_m9_20260923 --arm prefix_m11=/scratch/n12194778/sidekick/results/hj12_prefix_m11_20260923 --reference-arm prefix_m11 --cluster scenario",
+  "method": "The committed (HEAD) j8_frontier.py, loaded from git show HEAD and executed at its real path, and the working-tree j8_frontier.py (with the flag, default = omitted) were run concurrently in the same PBS job on the same inputs; outputs written to a temp directory, never over the committed report.",
+  "head_code_default_sha256": "3d07fe3bf3e1f7bb0c3f6c93eb55d6aee2968ebf13f3ae74dd566b64450fe452",
+  "worktree_code_default_sha256": "3d07fe3bf3e1f7bb0c3f6c93eb55d6aee2968ebf13f3ae74dd566b64450fe452",
+  "committed_report_sha256": "9bdccf4e7fe04a87f201456ec99a1d144f8caf4bb167581484e4a8bda84f3441",
+  "head_vs_worktree_byte_identical": true,
+  "worktree_vs_committed_byte_identical": false,
+  "worktree_vs_committed_differing_lines": 4,
+  "worktree_vs_committed_differing_keys": [
+    "oracle_semantics",
+    "oracle_semantics_citation"
+  ],
+  "worktree_vs_committed_note": "head_vs_worktree_byte_identical = true shows the flag's default path changes nothing: the committed and working-tree j8_frontier.py produce the same bytes in the same environment. The two keys that differ from the committed report (oracle_semantics, oracle_semantics_citation; 4 lines of the diff) are citation strings holding line numbers in src/sidekick/runner.py and src/sidekick/systems/loop.py, which carry uncommitted edits by other workers; no numeric field differs.",
+  "seed1_cross_check": {
+    "bootstrap_seed_recorded": 1,
+    "p3_contrast": {
+      "ci95_pp_task": [
+        -14.22,
+        -0.16
+      ],
+      "ci95_pp": [
+        -14.64,
+        0.67
+      ]
+    }
+  },
+  "host": "cpu1n041",
+  "generated": "2026-09-23T08:09:45+10:00"
+}
