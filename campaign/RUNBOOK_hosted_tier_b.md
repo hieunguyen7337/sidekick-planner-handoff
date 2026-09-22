@@ -87,3 +87,24 @@ qsub -v ARMS="hj13_advise_fixed_k_1_fullctx",DATE=20260923 scripts/pbs/hj12_live
   the frozen J9 freeze §8.1, which has not been given.
 - Never write under `/scratch/n12194778/sidekick/results/` by hand; `--purge-broken` is the harness
   repairing its own campaign and is the only sanctioned path.
+
+## Addendum 2026-09-22 17:05 — Step 1 is now decisive, not merely tidy
+
+Since this runbook was written, the ceiling sensitivity was measured and it **breaks
+non-inferiority**. Against a reference restricted to the 102 episodes where the capped planner did
+not hit its 25-call cap, `prefix_m11 − planner_alone` is **−5.92 pp** [−10.16, −1.98] task-clustered
+and [−9.80, −2.57] scenario-clustered — a fail, where the same contrast against the reference as run
+is **+0.23 pp** and holds (CEIL-01, CEIL-02 in `docs/claims_ledger.md`).
+
+That exclusion is not neutral either: dropping the 12 cap-censored episodes removes the tasks the
+planner found hardest, which are plausibly where the prefix arms looked best, so −5.92 pp is
+pessimistic for the arm and optimistic for the ceiling.
+
+So dev non-inferiority is currently **unresolved, bracketed between +0.23 pp and −5.92 pp**, and the
+cap-81 ceiling re-run is the only thing that collapses the bracket. Nothing downstream — the headline
+NI claim, the chord results, the frontier figure — can be written until it does. Run Step 1 first and
+do not skip it because it is small.
+
+**Worker scheduling for the window:** `agy` (Gemini) and `cursor-agent` (Grok) do **not** touch the
+luna quota and may keep running. Only `codex`/`gpt-5.6-luna` workers conflict, and those must stay
+parked until every hosted arm above has finished.
