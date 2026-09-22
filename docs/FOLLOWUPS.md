@@ -1039,3 +1039,44 @@ Anyone quoting −1.50 pp without −2.08 pp alongside is quoting a contaminated
 
 
 
+
+## OPEN 2026-09-23 — the replicate noise floor is ~3.3 pp, and no arm has ever been run twice
+
+Re-running `hj12_prefix_m2` under identical settings, as a by-product of the terminal-guard repair,
+produced the first same-arm replicate pair in the campaign:
+
+| run | n | goal_pass | TGC | executor actions |
+|---|---:|---:|---:|---:|
+| `hj12_prefix_m2_20260922` | 114 | 0.7187 | 0.4211 | 1894 |
+| `hj12_prefix_m2_20260923` | 114 | 0.6856 | 0.3596 | 2098 |
+| difference | — | **−3.31 pp** | **−6.15 pp** | +10.8% |
+
+**The guard cannot explain this.** At $m=2$ no episode is prefix-exhausted — the planner's shortest
+dev episode is 5 actions — and direct counting confirms **zero** episodes with no executor action in
+either run [OBSERVED counted from `events.jsonl`, both campaigns]. The terminal-guard policy is
+recorded in all 114 `run_start` payloads of the new run, and it never fired.
+
+**Cause**: `sampling_seed` is `None` in every `run_start` payload and the executor samples at
+`temperature: 0.7` [OBSERVED `configs/hj12_prefix_m2.yaml:29`]. Episodes are therefore not
+reproducible, and every arm in this campaign has been run exactly once.
+
+**Why this matters more than it looks.** The paired task-clustered bootstrap treats each episode's
+observed outcome as fixed, so it prices variation across tasks but not the variation you get by
+re-running the same episode. Two arms compared are each a single draw. A contrast smaller than the
+replicate spread is not interpretable, however tight its interval looks.
+
+Consequences to apply:
+
+1. `advise_fixed_k_10 − advise_fixed_k_3` = −0.48 pp sits far inside this floor. "Indistinguishable"
+   is the only reading; the tight interval does not license anything stronger.
+2. The $m6 \rightarrow m9$ rise of ≈ 9.9 pp is roughly 3× the goal_pass floor, so it survives —
+   and `docs/prereg_hj13_shape_20260923.md` §3 requires exactly this check (rise ≥ 2× the larger
+   replicate difference) before the shape claim stands.
+3. TGC is the noisier metric at 6.15 pp. Every TGC statement in the campaign needs this caveat.
+4. This is **one** replicate pair at **one** $m$. The registered F1b replicates at $m=6$ and $m=9$
+   are still required before the floor is treated as a general figure.
+
+**Options, not yet decided**: set a fixed `sampling_seed` per (task, seed) so replicates are exact;
+or keep sampling stochastic and run every headline arm ≥ 2 times, reporting the spread. The first is
+cheaper and makes re-runs diagnostic; the second is more honest about deployment variance. Either way
+the thesis must state that arms were run once and what that costs.
