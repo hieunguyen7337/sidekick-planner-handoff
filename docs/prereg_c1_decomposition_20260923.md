@@ -172,3 +172,11 @@ Each item below is a point the text above leaves open. The script's reading is r
    counting only events after the last `run_start`. The executor's next action is its first `action` event
    before the next intervention. Both texts have whitespace runs collapsed before they are compared, through
    `format_executor_action`.
+
+### Amendment 3, 2026-09-23 ~09:45 AEST — sign-flip enumeration (appended before any B2 episode)
+
+This replaces Amendment 2 item 6. It was appended while job 25724312 was still queued and before any
+Wave B campaign directory existed. The "routine A1 uses" in item 6 was the code at c137dda. The registered text of A1 r2 §5.5
+specifies exact enumeration up to 2^20 sign patterns, and that code is being aligned to it. B2 has 19 scenario
+clusters, i.e. 2^19 patterns, so its sign-flip p is computed by **exact enumeration**: two-sided at 0, by the same
+shared routine as A1. It remains a sensitivity and is not decision-bearing.
