@@ -40,7 +40,12 @@ echo "  total distinct pp figures: $(wc -l < "$TMP/pp.txt"), missing: $miss"
 [ "$miss" -gt 0 ] && rc=1
 
 echo "=== 4-decimal rates in the preprint that are ABSENT from the ledger ==="
-grep -oE '0\.[0-9]{4}' "$P" | sort -u > "$TMP/rate.txt"
+# Boundary-aware: the plain ERE '0\.[0-9]{4}' also fires inside longer numbers, which made the
+# audit report two figures that do not exist. "arXiv:2510.04618" yielded a phantom 0.0461 and the
+# cost "$0.000674" yielded a phantom 0.0006. A checker that reports figures the paper never claims
+# trains the reader to ignore it, which is worse than having no checker, so require that the match
+# is not preceded by a digit or dot and not followed by a digit.
+grep -oP '(?<![\d.])0\.\d{4}(?!\d)' "$P" | sort -u > "$TMP/rate.txt"
 miss2=0
 while read -r n; do
   [ -z "$n" ] && continue
