@@ -90,6 +90,24 @@ BOTH_LIVE = {
     "configs/hj4_correction.yaml": ("vllm-executor", "CachedPacketPlanner"),
 }
 
+def pending_packet_source(planner_cfg: dict) -> str | None:
+    """Reason a config's packet_source may be absent today, or None if it must resolve now.
+
+    A registered design can name, as its packet source, a campaign that a registered
+    upstream arm has not produced yet (the J10 prefix arms replay arm 3). Such a config
+    declares `planner.packet_source_pending: <reason>`. The exemption holds only while the
+    path does not exist: once the upstream arm has written it, it must resolve like any
+    other. The runner still aborts on a missing packet (`on_missing: fail`), so this can
+    never let an episode run against nothing.
+    """
+    reason = str(planner_cfg.get("packet_source_pending") or "").strip()
+    if not reason:
+        return None
+    if Path(str(planner_cfg.get("packet_source", ""))).exists():
+        return None
+    return reason
+
+
 def main() -> int:
     failures: list[str] = []
     for rel, (want_exec_name, want_ctk) in EXPECTED.items():
@@ -149,6 +167,11 @@ def main() -> int:
         failures.extend(validate_prompt_budget(cfg, rel))
         planner_cfg = cfg.get("planner") or {}
         if not planner_cfg.get("packet_source"):
+            continue
+        pending = pending_packet_source(planner_cfg)
+        if pending is not None:
+            print(f"\n{rel}")
+            print(f"  packet subtree -> PENDING ({pending})")
             continue
         try:
             pl = make_planner(cfg)

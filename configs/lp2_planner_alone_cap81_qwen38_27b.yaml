@@ -1,0 +1,60 @@
+# LP-2 planner_alone ceiling: the LP-1 design with a MID-SIZE local planner, Qwen/Qwen3.8-27B-FP8
+# (plan 2026-09-23 07:30, unit A2/D2). Derived from lp1_planner_alone_cap81_qwen8b.yaml by changing
+# ONLY campaign_id, planner.model and the planner port (8002, so it cannot collide with LP-1 on
+# 8001 if both land on one node). Serve with HF_HOME=/mnt/hpccs01/home/n12194778/.cache/hf_planners:
+# the copy in ~/.cache/huggingface is SPARSE (30.9 GB apparent, 0.02 GB allocated) and reads as zeros.
+# The comments below are inherited from LP-1 and describe its model choice.
+#
+# LP-1 planner_alone ceiling driven by a LOCALLY SERVED open-weight planner (U11).
+#
+# Why this arm exists: every result so far drives or replays one hosted planner family
+# (gpt-5.6-luna). That leaves open the objection that the channel result is a fact about
+# that planner rather than about spending budget as actions. This arm re-runs the ceiling
+# against a second planner family on our own GPUs, at zero hosted cost, so it can run
+# while a hosted quota window is being spent elsewhere.
+#
+# ⚠ Model choice, corrected 2026-09-23. The Wave 3 plan assumed Qwen3-32B or
+# Qwen3.6-27B-FP8 were cached and therefore free. They are NOT: their directories under
+# ~/.cache/huggingface/hub hold metadata only -- all 17 Qwen3-32B shards are present as
+# snapshot symlinks whose blobs are 512-byte LFS pointer stubs (16 MB for the whole
+# model). The only genuinely-present open-weight model large enough to plan is
+# Qwen/Qwen3-8B (16 GB, 5 real shards), which this config uses. Serving a 32B planner
+# requires a real ~65 GB download first, from a job rather than the login node.
+#
+# ⚠ Qwen3-8B is a SMALL planner and is expected to score well below the hosted ceiling.
+# That is not a problem for the question being asked. C81-01 already established that a
+# materially weaker planner sample yields a prefix of statistically indistinguishable
+# value at depth 11, so a weaker second planner still tests whether the CHANNEL result
+# reproduces. Report the absolute ceiling honestly and compare shapes, never claim parity.
+#
+# ⚠ enable_thinking is off. Qwen's chat template defaults it on, and a thinking model
+# spends its whole budget deliberating and returns empty content -- measured on this box
+# for granite-4.2-8b (3072 tokens of reasoning, no action) and again as the root cause
+# hunt for the tailored Qwen executor floor. Leave this off unless deliberately studying it.
+env: appworld
+campaign_id: lp2_planner_alone_cap81_qwen38_27b_20260923
+planner:
+  type: vllm
+  model: Qwen/Qwen3.8-27B-FP8
+  # The PLANNER server, deliberately not port 8000: the executor's vLLM server owns that
+  # one, and planner_alone never constructs an executor, but the prefix-replay arms that
+  # consume this campaign do run both at once.
+  base_url: http://127.0.0.1:8002/v1
+  temperature: 0.7
+  max_tokens: 2048
+  timeout_s: 300
+  chat_template_kwargs:
+    enable_thinking: false
+executor:
+  type: mock          # never called by planner_alone; must not be vllm
+  # Required by scripts/setup/verify_configs.py for every non-exempt config. The mock
+  # executor never generates, so this bound is inert here.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_planner_calls is the real limit
+  per_step_timeout_s: 120
+  # Matched to hj13_planner_alone_cap81 so the two ceilings differ in planner identity
+  # and nothing else.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

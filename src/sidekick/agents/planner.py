@@ -111,6 +111,31 @@ def build_correct_prompt(packet: DelegationPacket, transcript_delta: str) -> str
     )
 
 
+# Advice-prompt styles (plan 2026-09-23, experiment B2). "correction" is the wording every
+# published advise arm used, and returns build_correct_prompt byte-for-byte. "neutral" removes
+# the two features a reviewer called a handicap -- the presumption that the executor has erred
+# ("needs a correction") and the cap ("concise correction text only") -- and keeps the packet
+# and transcript lines identical, so the two styles differ in their first line only.
+CORRECT_PROMPT_STYLES = ("correction", "neutral")
+
+
+def build_advice_prompt(
+    packet: DelegationPacket, transcript_delta: str, style: str = "correction"
+) -> str:
+    if style == "correction":
+        return build_correct_prompt(packet, transcript_delta)
+    if style == "neutral":
+        return (
+            "Advise the executor on how to proceed with this task: say what it should do next. "
+            "You may include code.\n"
+            f"packet:\n{packet.model_dump_json()}\n"
+            f"transcript_delta:\n{transcript_delta}\n"
+        )
+    raise ValueError(
+        f"unknown correct_prompt style {style!r}; expected one of {CORRECT_PROMPT_STYLES}"
+    )
+
+
 def build_act_prompt(task_id: str, transcript: str, allow_handoff: bool = False) -> str:
     prompt = (
         "You are solving the task yourself. Output the next action as either a "
@@ -141,6 +166,8 @@ class CodexExecConfig:
     sandbox: str = "read-only"
     timeout_s: float = DEFAULT_PLANNER_TIMEOUT_S
     scratch_parent: Optional[str] = None
+    # Style of the advice prompt used by correct(); see build_advice_prompt.
+    correct_prompt: str = "correction"
 
 
 SubprocessRunner = Callable[..., subprocess.CompletedProcess]
@@ -361,7 +388,7 @@ class CodexExecPlanner:
         transcript_delta: str,
         timeout_s: float | None = None,
     ) -> PlannerResponse:
-        prompt = build_correct_prompt(packet, transcript_delta)
+        prompt = build_advice_prompt(packet, transcript_delta, self.config.correct_prompt)
         text, usage, thread_id = self._invoke(prompt, schema_path=None, timeout_s=timeout_s)
         return PlannerResponse(
             kind="CORRECTION",

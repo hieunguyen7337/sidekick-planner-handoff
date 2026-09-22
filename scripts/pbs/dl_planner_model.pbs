@@ -1,0 +1,94 @@
+#!/bin/bash
+#PBS -N dl-planner
+#PBS -q cpu_inter
+#PBS -l select=1:ncpus=4:mem=16gb
+#PBS -l walltime=04:00:00
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#PBS -e /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#
+# Download an open-weight planner model into a DEDICATED HF cache and prove the bytes are real
+# before any GPU job is allowed to serve it (plan 2026-09-23 07:30, unit A2).
+#
+#   qsub scripts/pbs/dl_planner_model.pbs                       # Qwen/Qwen3.8-27B-FP8
+#   qsub -v REPO_ID=Qwen/Qwen3-32B scripts/pbs/dl_planner_model.pbs
+#
+# ⚠ Why a dedicated cache and not ~/.cache/huggingface: on 2026-09-23 the home cache held
+# models--Qwen--Qwen3.8-27B-FP8 as 81 blobs with 30.9 GB APPARENT size but 0.02 GB ALLOCATED --
+# 66 of them sparse, reading back as zeros. `ls -l` and `stat %s` pass them; vLLM would load zero
+# weights and serve garbage without an error. And because each sparse blob sits at the real file's
+# hash path with the real size, `hf download` into that cache would treat it as already present and
+# skip it. A fresh HF_HOME sidesteps both. (Qwen3-32B in the same cache is a different failure:
+# 512-byte LFS pointer stubs.)
+#
+# Exit 0 only if (1) every blob is >= 99% allocated and (2) every file listed in the repo's
+# crc32.txt matches its CRC32. A chained job (-W depend=afterok) therefore cannot start on bad bytes.
+set -uo pipefail
+
+SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+REPO_ID="${REPO_ID:-Qwen/Qwen3.8-27B-FP8}"
+export HF_HOME="${HF_HOME:-/mnt/hpccs01/home/n12194778/.cache/hf_planners}"
+unset HF_HUB_OFFLINE
+mkdir -p "${HF_HOME}"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+
+echo "[dl] repo=${REPO_ID} HF_HOME=${HF_HOME} host=$(hostname) start=$(date -Is)"
+timeout 13800 "${SIDEKICK_VENV}/bin/hf" download "${REPO_ID}"
+rc=$?
+echo "[dl] hf download rc=${rc} end=$(date -Is)"
+if [[ "${rc}" -ne 0 ]]; then
+  echo "[dl] FATAL: download failed"; exit "${rc}"
+fi
+
+MODEL_DIR="${HF_HOME}/hub/models--${REPO_ID//\//--}"
+SNAP=$(ls -d "${MODEL_DIR}"/snapshots/*/ 2>/dev/null | head -1)
+if [[ -z "${SNAP}" ]]; then
+  echo "[dl] FATAL: no snapshot under ${MODEL_DIR}"; exit 1
+fi
+echo "[dl] snapshot=${SNAP}"
+
+# (1) Allocation check: apparent size vs allocated blocks for every blob.
+echo "[dl] allocation check:"
+( cd "${MODEL_DIR}/blobs" && for b in *; do stat -c '%s %b %B %n' "$b"; done ) \
+  | awk '{app+=$1; alloc+=$2*$3; n++; if ($1 > 1048576 && $2*$3 < 0.99*$1) {bad++; print "[dl]   SPARSE " $4 " apparent=" $1 " allocated=" $2*$3}}
+         END {printf "[dl]   blobs=%d apparent=%.2fGB allocated=%.2fGB sparse=%d\n", n, app/1e9, alloc/1e9, bad+0; exit (bad>0)}'
+alloc_rc=$?
+if [[ "${alloc_rc}" -ne 0 ]]; then
+  echo "[dl] FATAL: sparse blobs present; the bytes are not real"; exit 2
+fi
+
+# (2) Content check: CRC32 of every file listed in the repo's own crc32.txt.
+if [[ -s "${SNAP}/crc32.txt" ]]; then
+  echo "[dl] crc32 check against ${SNAP}crc32.txt:"
+  timeout 3600 "${SIDEKICK_VENV}/bin/python" - "${SNAP}" <<'PYEOF'
+import sys, zlib, pathlib
+snap = pathlib.Path(sys.argv[1])
+bad = checked = 0
+for line in (snap / "crc32.txt").read_text().splitlines():
+    parts = line.split()
+    if len(parts) < 2:
+        continue
+    want, name = parts[0].lower(), parts[-1]
+    path = snap / name
+    if not path.exists():
+        print(f"[dl]   MISSING {name}"); bad += 1; continue
+    crc = 0
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 24), b""):
+            crc = zlib.crc32(chunk, crc)
+    got = f"{crc & 0xffffffff:08x}"
+    checked += 1
+    if got != want:
+        print(f"[dl]   MISMATCH {name} want={want} got={got}"); bad += 1
+print(f"[dl]   checked={checked} bad={bad}")
+sys.exit(1 if bad or checked == 0 else 0)
+PYEOF
+  crc_rc=$?
+  if [[ "${crc_rc}" -ne 0 ]]; then
+    echo "[dl] FATAL: crc32 verification failed"; exit 3
+  fi
+else
+  echo "[dl] WARNING: no crc32.txt in the repo; only the allocation check ran"
+fi
+
+echo "[dl] DOWNLOAD_VERIFIED repo=${REPO_ID} snapshot=${SNAP}"
+exit 0

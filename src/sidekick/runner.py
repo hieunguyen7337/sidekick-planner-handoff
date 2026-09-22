@@ -10,7 +10,13 @@ from pathlib import Path
 from typing import Any
 
 from sidekick.agents.executor import MockExecutor, VLLMExecutor
-from sidekick.agents.planner import CachedPacketPlanner, CodexExecConfig, CodexExecPlanner, MockPlanner
+from sidekick.agents.planner import (
+    CORRECT_PROMPT_STYLES,
+    CachedPacketPlanner,
+    CodexExecConfig,
+    CodexExecPlanner,
+    MockPlanner,
+)
 from sidekick.agents.vllm_planner import VllmPlanner
 from sidekick.agents.verifier import (
     ConstantVerifier,
@@ -109,6 +115,13 @@ def make_planner(
     """
     planner_cfg = cfg.get("planner") or {}
     kind = str(planner_cfg.get("type") or cfg.get("planner_type") or "mock")
+    # Advice-prompt style (B2). Validated here so a misspelt style fails at startup, not as
+    # an arm that silently ran the registered "correction" wording under a new name.
+    correct_prompt = str(planner_cfg.get("correct_prompt", "correction"))
+    if correct_prompt not in CORRECT_PROMPT_STYLES:
+        raise ValueError(
+            f"unknown planner.correct_prompt {correct_prompt!r}; expected one of {CORRECT_PROMPT_STYLES}"
+        )
     if kind == "codex":
         planner: Any = CodexExecPlanner(
             CodexExecConfig(
@@ -117,6 +130,7 @@ def make_planner(
                 reasoning_effort=str(planner_cfg.get("reasoning_effort", "medium")),
                 timeout_s=float(planner_cfg.get("timeout_s", 300)),
                 scratch_parent=planner_cfg.get("scratch_parent"),
+                correct_prompt=correct_prompt,
             )
         )
     elif kind == "vllm":
@@ -131,6 +145,7 @@ def make_planner(
             gpu_fraction=float(planner_cfg.get("gpu_fraction", 1.0)),
             chat_template_kwargs=planner_cfg.get("chat_template_kwargs"),
             system_prompt=planner_cfg.get("system_prompt"),
+            correct_prompt=correct_prompt,
         )
     else:
         planner = MockPlanner()
@@ -280,6 +295,8 @@ def system_kwargs(name: str, cfg: dict[str, Any], task_id: str, seed: int | None
     if name in ("fixed_k", "sidekick", "router_seq", "oracle_escalation", "action_review", "planner_handoff"):
         if "takeover" in cfg:
             kwargs["takeover"] = bool(cfg["takeover"])
+        if "advice_from_act" in cfg:
+            kwargs["advice_from_act"] = bool(cfg["advice_from_act"])
         if "handoff_allowed" in cfg:
             kwargs["handoff_allowed"] = bool(cfg["handoff_allowed"])
         if "correct_context" in cfg:

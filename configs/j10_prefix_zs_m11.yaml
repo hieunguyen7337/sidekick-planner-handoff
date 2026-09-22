@@ -24,6 +24,8 @@ planner:
   # prefix arms -- the prefix source and the ceiling are the SAME planner run, so the
   # non-inferiority comparison is like-for-like (A1 §4.1, ledger CEIL-05).
   packet_source: /scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924
+  # Produced by J10 arm 3; verify_configs.py treats it as pending only while the path is absent.
+  packet_source_pending: "produced by J10 arm 3 (planner_alone cap-81 on test_normal), not yet run"
   packet_system: planner_alone
   # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss
   # must abort, not fall through to a live Codex call.

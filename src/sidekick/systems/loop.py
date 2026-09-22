@@ -64,6 +64,10 @@ class SystemPolicy:
     verifier_threshold: float = 0.5
     review_proposed_action: bool = False
     takeover: bool = False
+    # B2 "show, don't execute": at a forced review, call planner.act exactly as takeover does
+    # (same prompt, same transcript), but deliver the parsed action to the executor as an
+    # INTERVENTION turn instead of executing it. Isolates execution from content.
+    advice_from_act: bool = False
     handoff_allowed: bool = False
     # None = whole transcript on the forced-review *advise* path only.
     # An integer is that many trailing lines. Default 8 matches every existing arm.
@@ -224,6 +228,8 @@ class ConfigurableSystem:
         base = policy or self.policy_defaults
         overlay = {k: v for k, v in kwargs.items() if hasattr(base, k) and (v is not None or k == "correct_context_lines")}
         self.policy = replace(base, **overlay)
+        if self.policy.takeover and self.policy.advice_from_act:
+            raise ValueError("takeover and advice_from_act are mutually exclusive channels")
 
     def run(
         self,
@@ -631,6 +637,8 @@ def run_episode(
             run_start_payload["policy"]["review_proposed_action"] = True
         if policy.takeover:
             run_start_payload["policy"]["takeover"] = True
+        if policy.advice_from_act:
+            run_start_payload["policy"]["advice_from_act"] = True
         if policy.handoff_allowed:
             run_start_payload["policy"]["handoff_allowed"] = True
         if prefix is not None:
@@ -822,6 +830,55 @@ def run_episode(
                             usage=resp.usage,
                             env_state_hash=env.snapshot_hash(),
                         )
+                    if over_token_limit():
+                        error_type = "limit"
+                        emit(
+                            step=step,
+                            actor="system",
+                            event_type="error",
+                            payload={"limit": "max_tokens_per_episode", "episode_tokens": episode_tokens},
+                            error="limit",
+                        )
+                        break
+                elif policy.advice_from_act:
+                    # Same call as the takeover branch above, argument for argument, so the
+                    # planner sees an identical prompt. Only the delivery differs: the parsed
+                    # action is shown to the executor as text and never reaches env.step.
+                    # An unparseable reply shows nothing, exactly as takeover then executes
+                    # nothing (action_from_planner has already logged it with its usage).
+                    joined = "\n".join(transcript)
+                    resp = call_planner(
+                        "act",
+                        lambda: planner.act(
+                            task_id,
+                            joined,
+                            timeout_s=timeout_s,
+                            allow_handoff=policy.handoff_allowed,
+                        ),
+                        step,
+                    )
+                    if resp is None:
+                        break
+                    shown_action = action_from_planner(resp, step, fatal_parse=False)
+                    if shown_action is not None:
+                        n_interventions += 1
+                        correction = format_executor_action(shown_action)
+                        shown_payload: dict[str, Any] = {
+                            "n_interventions": n_interventions,
+                            "correction": correction,
+                            "forced": True,
+                            "source": "shown_action",
+                            "shown_kind": shown_action.kind,
+                        }
+                        emit(
+                            step=step,
+                            actor="planner",
+                            event_type="intervention",
+                            payload=shown_payload,
+                            usage=resp.usage,
+                        )
+                        transcript.append(f"INTERVENTION: {correction}")
+                        exec_turns.append({"role": "user", "content": f"INTERVENTION: {correction}"})
                     if over_token_limit():
                         error_type = "limit"
                         emit(

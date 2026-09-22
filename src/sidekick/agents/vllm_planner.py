@@ -28,7 +28,8 @@ from typing import Any, Optional
 from sidekick.agents.planner import (
     PacketParseError,
     build_act_prompt,
-    build_correct_prompt,
+    CORRECT_PROMPT_STYLES,
+    build_advice_prompt,
     build_plan_prompt,
     parse_packet_text,
     _maybe_python_fence,
@@ -69,6 +70,7 @@ class VllmPlanner:
         http_client: Any | None = None,
         chat_template_kwargs: Optional[dict] = None,
         system_prompt: Optional[str] = None,
+        correct_prompt: str = "correction",
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -81,6 +83,9 @@ class VllmPlanner:
         # budget reasoning and returns no content.
         self.chat_template_kwargs = chat_template_kwargs or None
         self.system_prompt = system_prompt
+        if correct_prompt not in CORRECT_PROMPT_STYLES:
+            raise ValueError(f"unknown correct_prompt style {correct_prompt!r}")
+        self.correct_prompt = correct_prompt
 
     # --- PlannerClient ------------------------------------------------------------------
 
@@ -115,7 +120,7 @@ class VllmPlanner:
         transcript_delta: str,
         timeout_s: float | None = None,
     ) -> PlannerResponse:
-        text, usage = self._chat(build_correct_prompt(packet, transcript_delta), timeout_s)
+        text, usage = self._chat(build_advice_prompt(packet, transcript_delta, self.correct_prompt), timeout_s)
         return PlannerResponse(
             kind="CORRECTION",
             packet=packet,

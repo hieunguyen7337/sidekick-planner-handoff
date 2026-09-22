@@ -125,7 +125,13 @@ MAX_LORAS=4
 
 N_SMOKE_TASKS=3
 N_FULL_TASKS=57
-N_FULL_SEEDS=2
+# FULL_SEEDS (default 1,2) is overridable so a seed-3 arm (B1/B2, plan 2026-09-23) can run
+# against a packet source that only holds seed 3. The smoke uses the FIRST full seed,
+# never a hard-coded 1: a seed-3-only packet source has no seed-1 plan to replay.
+FULL_SEEDS="${FULL_SEEDS:-1,2}"
+SMOKE_SEED="${FULL_SEEDS%%,*}"
+IFS=, read -r -a _full_seed_list <<<"${FULL_SEEDS}"
+N_FULL_SEEDS=${#_full_seed_list[@]}
 N_PLANNED=$((N_FULL_TASKS * N_FULL_SEEDS))
 # Three smoke episodes are a noisy estimator. The within-arm check only
 # has to catch an order-of-magnitude overrun (planner never hands off →
@@ -162,11 +168,23 @@ LIVE_ARMS=(
   "planner_handoff|${REPO}/configs/hj12_planner_handoff.yaml|hj12_planner_handoff"
 )
 
+# Wave B (plan 2026-09-23 07:30; registered in docs/prereg_c1_decomposition_20260923.md).
+# Selectable ONLY by an explicit ARMS=..., never by ARMSET, so a default run cannot spend on
+# them. Stems ending _s3 replay seed-3 plans and require FULL_SEEDS=3 (checked below).
+WAVE_B_ARMS=(
+  "fixed_k|${REPO}/configs/b2_show_fixed_k_10.yaml|b2_show_fixed_k_10"
+  "fixed_k|${REPO}/configs/b2_advise_neutral_fixed_k_10_fullctx.yaml|b2_advise_neutral_fixed_k_10_fullctx"
+  "fixed_k|${REPO}/configs/b2_show_fixed_k_10_s3.yaml|b2_show_fixed_k_10_s3"
+  "fixed_k|${REPO}/configs/b2_advise_neutral_fixed_k_10_fullctx_s3.yaml|b2_advise_neutral_fixed_k_10_fullctx_s3"
+  "fixed_k|${REPO}/configs/b1_takeover_fixed_k_10_s3.yaml|b1_takeover_fixed_k_10_s3"
+  "fixed_k|${REPO}/configs/b1_advise_fixed_k_10_fullctx_s3.yaml|b1_advise_fixed_k_10_fullctx_s3"
+)
+
 hj12_select_arms () {
   SELECTED_ARMS=()
   local all_specs valid_stems spec sys cfg s matches
   local -a given=()
-  all_specs=("${LIVE_ARMS[@]}")
+  all_specs=("${LIVE_ARMS[@]}" "${WAVE_B_ARMS[@]}")
   valid_stems=()
   for spec in "${all_specs[@]}"; do
     IFS='|' read -r sys cfg s <<<"${spec}"
@@ -190,6 +208,16 @@ hj12_select_arms () {
       fi
       if [[ "${#matches[@]}" -ne 1 ]]; then
         echo "[hj12] FATAL: ARMS stem ${g} matched ${#matches[@]} entries (need exactly one); valid stems: ${valid_stems[*]}"
+        exit 2
+      fi
+      # A seed-3 arm's packet source holds only seed 3; any other seed set would abort at
+      # the first cache miss after the vLLM server had already been paid for.
+      if [[ "${g}" == *_s3 && "${FULL_SEEDS}" != "3" ]]; then
+        echo "[hj12] FATAL: ${g} replays seed-3 plans; run it with FULL_SEEDS=3 (got ${FULL_SEEDS})"
+        exit 2
+      fi
+      if [[ "${g}" != *_s3 && "${FULL_SEEDS}" == "3" ]]; then
+        echo "[hj12] FATAL: FULL_SEEDS=3 is only valid for _s3 stems; ${g} is not one"
         exit 2
       fi
       SELECTED_ARMS+=("${matches[0]}")
@@ -789,6 +817,49 @@ print(1 if could else 0)
 PY
 }
 
+# B2 show arm: count intervention events whose payload.source is "shown_action" (loop.py
+# advice_from_act branch). Zero on a smoke where an episode reached a review step means the
+# config was not honoured and the arm ran the plain advise path -- the show-arm analogue of
+# the takeover guard below.
+hj12_shown_actions () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+n = 0
+if root.is_dir():
+    for path in root.rglob("events.jsonl"):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if ev.get("event_type") == "intervention" and (ev.get("payload") or {}).get("source") == "shown_action":
+                n += 1
+print(n)
+PY
+}
+
+hj12_void_show_if_advise () {
+  local stem="$1" cid="$2" system="$3" cfg="$4"
+  local n_shown could
+  n_shown="$(hj12_shown_actions "${cid}" || echo 0)"
+  n_shown="${n_shown:-0}"
+  if [[ "${n_shown}" -ne 0 ]]; then
+    echo "[hj12] show arm ${stem}: ${n_shown} shown_action interventions on smoke"
+    return 0
+  fi
+  could="$(hj12_smoke_gate_could_trigger "${cid}" "${system}" "${cfg}")" || could=1
+  if [[ "${could:-1}" -eq 1 ]]; then
+    echo "[hj12] FATAL: show arm ${stem} has 0 shown_action interventions on smoke although an episode reached a review step; the advice_from_act branch did not run; not launching the full run"
+    exit 1
+  fi
+  echo "[hj12] WARN: show arm ${stem} has 0 shown_action interventions on smoke — no episode reached a review step"
+}
+
 hj12_warn_or_void_takeover () {
   local stem="$1"
   local cid="$2"
@@ -970,7 +1041,7 @@ run_arm () {
     rm -rf "${OUT:?}/${scid:?}"
     echo "[hj12] ---- smoke gate (${scid}) ----"
     timeout 1800 "${PY}" -m sidekick.runner \
-      --system "${system}" --split dev --tasks "${N_SMOKE_TASKS}" --seeds 1 \
+      --system "${system}" --split dev --tasks "${N_SMOKE_TASKS}" --seeds "${SMOKE_SEED}" \
       --env appworld --workers 3 \
       --config "${cfg}" --campaign-id "${scid}" --out "${OUT}"
     smoke_rc=$?
@@ -997,6 +1068,9 @@ run_arm () {
     if [[ "${stem}" == *takeover* ]]; then
       hj12_warn_or_void_takeover "${stem}" "${scid}" "smoke" "${system}" "${cfg}"
     fi
+    if [[ "${stem}" == *_show_* ]]; then
+      hj12_void_show_if_advise "${stem}" "${scid}" "${system}" "${cfg}"
+    fi
     if [[ "${SMOKE_ONLY}" != "1" ]]; then
       rm -rf "${OUT:?}/${scid:?}"
     fi
@@ -1011,7 +1085,7 @@ run_arm () {
 
   echo "[hj12] ---- full campaign (${cid}) ----"
   timeout 10800 "${PY}" -m sidekick.runner \
-    --system "${system}" --split dev --tasks "${N_FULL_TASKS}" --seeds 1,2 \
+    --system "${system}" --split dev --tasks "${N_FULL_TASKS}" --seeds "${FULL_SEEDS}" \
     --env appworld --workers 6 \
     --config "${cfg}" --out "${OUT}" --campaign-id "${cid}"
   camp_rc=$?
