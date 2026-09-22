@@ -11,6 +11,7 @@ from typing import Any
 
 from sidekick.agents.executor import MockExecutor, VLLMExecutor
 from sidekick.agents.planner import CachedPacketPlanner, CodexExecConfig, CodexExecPlanner, MockPlanner
+from sidekick.agents.vllm_planner import VllmPlanner
 from sidekick.agents.verifier import (
     ConstantVerifier,
     FeatureVerifier,
@@ -117,6 +118,19 @@ def make_planner(
                 timeout_s=float(planner_cfg.get("timeout_s", 300)),
                 scratch_parent=planner_cfg.get("scratch_parent"),
             )
+        )
+    elif kind == "vllm":
+        # Second planner family, served on our own GPUs (U11). Zero hosted calls, so this
+        # lane can run while a hosted quota window is being spent elsewhere.
+        planner = VllmPlanner(
+            model=str(planner_cfg["model"]),
+            base_url=str(planner_cfg.get("base_url", "http://127.0.0.1:8001/v1")),
+            temperature=float(planner_cfg.get("temperature", 0.7)),
+            max_tokens=int(planner_cfg.get("max_tokens", 2048)),
+            timeout_s=float(planner_cfg.get("timeout_s", 300)),
+            gpu_fraction=float(planner_cfg.get("gpu_fraction", 1.0)),
+            chat_template_kwargs=planner_cfg.get("chat_template_kwargs"),
+            system_prompt=planner_cfg.get("system_prompt"),
         )
     else:
         planner = MockPlanner()

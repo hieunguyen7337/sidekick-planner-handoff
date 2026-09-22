@@ -83,6 +83,48 @@ class PlannerClient(Protocol):
     def close(self) -> None: ...
 
 
+# --- prompts, shared by every planner backend -------------------------------------------
+#
+# These are module-level and shared on purpose. The second-planner experiment asks whether
+# the channel result depends on the *planner*, so the prompts the two backends issue must
+# be identical; if each backend spelled its own, a difference in outcome would confound
+# planner identity with prompt wording and the generality claim would be unfalsifiable.
+# `test_vllm_planner` asserts the hosted and local planners produce the same prompt text
+# for the same inputs.
+
+
+def build_plan_prompt(task_id: str, goal: str, context: str) -> str:
+    return (
+        "Produce a DelegationPacket JSON object for this task.\n"
+        f"task_id: {task_id}\n"
+        f"goal: {goal}\n"
+        f"context:\n{context}\n"
+        "Fill every required field. plan_steps should be concrete and ordered."
+    )
+
+
+def build_correct_prompt(packet: DelegationPacket, transcript_delta: str) -> str:
+    return (
+        "The executor needs a correction. Reply with concise correction text only.\n"
+        f"packet:\n{packet.model_dump_json()}\n"
+        f"transcript_delta:\n{transcript_delta}\n"
+    )
+
+
+def build_act_prompt(task_id: str, transcript: str, allow_handoff: bool = False) -> str:
+    prompt = (
+        "You are solving the task yourself. Output the next action as either a "
+        "```python fenced block, a line ASK_PLANNER: reason, REPORT: message, or COMPLETE.\n"
+    )
+    if allow_handoff:
+        prompt += (
+            "You may instead output a line HANDOFF meaning the remaining work is "
+            "routine enough for a smaller local executor to finish.\n"
+        )
+    prompt += f"task_id: {task_id}\ntranscript:\n{transcript}\n"
+    return prompt
+
+
 class PacketParseError(ValueError):
     """Planner text could not be parsed into a DelegationPacket."""
 
@@ -299,13 +341,7 @@ class CodexExecPlanner:
         self._thread_id: Optional[str] = None
 
     def plan(self, task_id: str, goal: str, context: str, timeout_s: float | None = None) -> PlannerResponse:
-        prompt = (
-            "Produce a DelegationPacket JSON object for this task.\n"
-            f"task_id: {task_id}\n"
-            f"goal: {goal}\n"
-            f"context:\n{context}\n"
-            "Fill every required field. plan_steps should be concrete and ordered."
-        )
+        prompt = build_plan_prompt(task_id, goal, context)
         text, usage, thread_id, parse_path = self._invoke_for_packet(prompt, timeout_s=timeout_s)
         packet = parse_packet_text(text)
         if not packet.task_id:
@@ -325,11 +361,7 @@ class CodexExecPlanner:
         transcript_delta: str,
         timeout_s: float | None = None,
     ) -> PlannerResponse:
-        prompt = (
-            "The executor needs a correction. Reply with concise correction text only.\n"
-            f"packet:\n{packet.model_dump_json()}\n"
-            f"transcript_delta:\n{transcript_delta}\n"
-        )
+        prompt = build_correct_prompt(packet, transcript_delta)
         text, usage, thread_id = self._invoke(prompt, schema_path=None, timeout_s=timeout_s)
         return PlannerResponse(
             kind="CORRECTION",
@@ -347,16 +379,7 @@ class CodexExecPlanner:
         timeout_s: float | None = None,
         allow_handoff: bool = False,
     ) -> PlannerResponse:
-        prompt = (
-            "You are solving the task yourself. Output the next action as either a "
-            "```python fenced block, a line ASK_PLANNER: reason, REPORT: message, or COMPLETE.\n"
-        )
-        if allow_handoff:
-            prompt += (
-                "You may instead output a line HANDOFF meaning the remaining work is "
-                "routine enough for a smaller local executor to finish.\n"
-            )
-        prompt += f"task_id: {task_id}\ntranscript:\n{transcript}\n"
+        prompt = build_act_prompt(task_id, transcript, allow_handoff)
         text, usage, thread_id = self._invoke(prompt, schema_path=None, timeout_s=timeout_s)
         code = _maybe_python_fence(text)
         return PlannerResponse(
