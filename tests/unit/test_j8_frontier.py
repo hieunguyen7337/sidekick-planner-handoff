@@ -1006,3 +1006,221 @@ def test_no_handoff_complement_carries_reference_score(tmp_path: Path):
     assert chord_nh["reference_score"] == pytest.approx(1.0)
 
 
+def _two_prefix_handoff_arms(tmp_path: Path):
+    keys = _all_keys()
+    m9_keys = set(keys[:4])
+    m6_keys = set(keys[:6])
+    m9_dir = write_arm_with_handoff(
+        tmp_path / "m9",
+        "prefix_m9",
+        m9_keys,
+        tgc_handoff=0.0,
+        gpr_handoff=0.0,
+        tgc_no=1.0,
+        gpr_no=1.0,
+        calls_handoff=3,
+        calls_no=1,
+    )
+    m6_dir = write_arm_with_handoff(
+        tmp_path / "m6",
+        "prefix_m6",
+        m6_keys,
+        tgc_handoff=0.25,
+        gpr_handoff=0.25,
+        tgc_no=1.0,
+        gpr_no=1.0,
+        calls_handoff=2,
+        calls_no=1,
+    )
+    ref_dir = tmp_path / "planner"
+    floor_dir = tmp_path / "sft"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            ho = (task_id, seed) in m9_keys
+            write_run(
+                ref_dir,
+                "planner_alone",
+                seed,
+                task_id,
+                tgc=0.5 if ho else 1.0,
+                n_planner_calls=4,
+                live_calls=4,
+                goal_pass_rate=0.5 if ho else 1.0,
+            )
+            write_run(
+                floor_dir,
+                "sft_plan",
+                seed,
+                task_id,
+                tgc=0.25,
+                n_planner_calls=1,
+                live_calls=1,
+                goal_pass_rate=0.25,
+            )
+    arms = {}
+    for label, directory in (
+        ("prefix_m9", m9_dir),
+        ("prefix_m6", m6_dir),
+        ("planner_alone", ref_dir),
+        ("sft_plan", floor_dir),
+    ):
+        arm = j8.summarise_arm(
+            label, j10.load_arm_tree(directory), list(SEEDS), root=directory
+        )
+        arm["complete_n"] = True
+        arms[label] = arm
+    return arms, m9_keys, m6_keys
+
+
+def test_handoff_keys_from_second_arm_uses_pinned_set(tmp_path: Path):
+    arms, m9_keys, m6_keys = _two_prefix_handoff_arms(tmp_path)
+    unpinned = j8.noninferiority_block(arms, "planner_alone")
+    pinned = j8.noninferiority_block(
+        arms, "planner_alone", handoff_keys_from="prefix_m9"
+    )
+    assert unpinned is not None and pinned is not None
+    m6_own = unpinned["arms"]["prefix_m6"]["goal_pass_handoff_only"]
+    m6_pin = pinned["arms"]["prefix_m6"]["goal_pass_handoff_only"]
+    m9_pin = pinned["arms"]["prefix_m9"]["goal_pass_handoff_only"]
+    assert m6_own["n_pairs"] == len(m6_keys)
+    assert m6_pin["n_pairs"] == len(m9_keys)
+    assert m6_pin["n_pairs"] == m9_pin["n_pairs"]
+    assert m6_pin["n_pairs"] != m6_own["n_pairs"]
+    assert m6_pin["handoff_keys_from"] == "prefix_m9"
+    assert m9_pin["handoff_keys_from"] == "prefix_m9"
+    chord_own = j8.chord_residual(
+        arms["prefix_m6"],
+        arms["sft_plan"],
+        arms["planner_alone"],
+        "goal_pass_rate",
+        "planner_calls_live",
+        "handoff-only",
+    )
+    chord_pin = j8.chord_residual(
+        arms["prefix_m6"],
+        arms["sft_plan"],
+        arms["planner_alone"],
+        "goal_pass_rate",
+        "planner_calls_live",
+        "handoff-only",
+        arms["prefix_m9"],
+    )
+    assert chord_own["n_pairs"] == len(m6_keys)
+    assert chord_pin["n_pairs"] == len(m9_keys)
+    assert chord_pin["handoff_keys_from"] == "prefix_m9"
+
+
+def test_handoff_keys_from_pinned_arm_rows_unchanged(tmp_path: Path):
+    arms, _, _ = _two_prefix_handoff_arms(tmp_path)
+    unpinned = j8.noninferiority_block(arms, "planner_alone")
+    pinned = j8.noninferiority_block(
+        arms, "planner_alone", handoff_keys_from="prefix_m9"
+    )
+    assert unpinned is not None and pinned is not None
+    for key in (
+        "goal_pass_handoff_only",
+        "tgc_handoff_only",
+        "goal_pass_no_handoff",
+        "tgc_no_handoff",
+    ):
+        assert (
+            unpinned["arms"]["prefix_m9"][key]
+            == pinned["arms"]["prefix_m9"][key]
+        )
+    chord_un = j8.chord_block(
+        arms, "planner_alone", "sft_plan", "planner_calls_live"
+    )
+    chord_pin = j8.chord_block(
+        arms,
+        "planner_alone",
+        "sft_plan",
+        "planner_calls_live",
+        handoff_keys_from="prefix_m9",
+    )
+    assert chord_un is not None and chord_pin is not None
+    for key in (
+        "goal_pass_handoff_only",
+        "tgc_handoff_only",
+        "goal_pass_no_handoff",
+        "tgc_no_handoff",
+    ):
+        assert (
+            chord_un["arms"]["prefix_m9"][key]
+            == chord_pin["arms"]["prefix_m9"][key]
+        )
+
+
+def test_omitting_handoff_keys_from_matches_unpinned(tmp_path: Path):
+    arms, _m9_keys, _m6_keys = _two_prefix_handoff_arms(tmp_path)
+    default = j8.noninferiority_block(arms, "planner_alone")
+    explicit_none = j8.noninferiority_block(
+        arms, "planner_alone", handoff_keys_from=None
+    )
+    assert default == explicit_none
+    m6 = default["arms"]["prefix_m6"]["goal_pass_handoff_only"]
+    m9 = default["arms"]["prefix_m9"]["goal_pass_handoff_only"]
+    assert m6["n_pairs"] == 6
+    assert m9["n_pairs"] == 4
+    assert m6["handoff_keys_from"] == "prefix_m6"
+    assert m9["handoff_keys_from"] == "prefix_m9"
+    parsed = j8.parse_args(
+        [
+            "--arm",
+            "prefix_m9=/tmp/x",
+            "--out",
+            "/tmp/out.json",
+        ]
+    )
+    assert parsed.handoff_keys_from is None
+
+
+def test_unknown_handoff_keys_from_raises_with_valid_names(tmp_path: Path):
+    arms, _, _ = _two_prefix_handoff_arms(tmp_path)
+    with pytest.raises(ValueError, match=r"--handoff-keys-from 'ghost'") as exc:
+        j8.resolve_handoff_keys_arm(arms, "ghost")
+    msg = str(exc.value)
+    assert "not among named arms" in msg
+    for name in ("prefix_m6", "prefix_m9", "planner_alone", "sft_plan"):
+        assert name in msg
+    with pytest.raises(ValueError, match="prefix_m9"):
+        j8.noninferiority_block(
+            arms, "planner_alone", handoff_keys_from="ghost"
+        )
+    with pytest.raises(ValueError, match="named arms"):
+        j8.chord_block(
+            arms,
+            "planner_alone",
+            "sft_plan",
+            "planner_calls_live",
+            handoff_keys_from="ghost",
+        )
+
+
+def test_n_pairs_equals_pinned_key_set_size_on_restricted_rows(tmp_path: Path):
+    arms, m9_keys, _ = _two_prefix_handoff_arms(tmp_path)
+    pinned_n = len(j8.handoff_flag_keys(arms["prefix_m9"]["cleaned"], True))
+    assert pinned_n == len(m9_keys)
+    ni = j8.noninferiority_block(
+        arms, "planner_alone", handoff_keys_from="prefix_m9"
+    )
+    chord = j8.chord_block(
+        arms,
+        "planner_alone",
+        "sft_plan",
+        "planner_calls_live",
+        handoff_keys_from="prefix_m9",
+    )
+    assert ni is not None and chord is not None
+    assert ni["handoff_keys_from"] == "prefix_m9"
+    assert ni["handoff_keys_n"] == pinned_n
+    assert chord["handoff_keys_n"] == pinned_n
+    no_n = len(j8.handoff_flag_keys(arms["prefix_m9"]["cleaned"], False))
+    for label in ("prefix_m6", "prefix_m9"):
+        for key in ("goal_pass_handoff_only", "tgc_handoff_only"):
+            assert ni["arms"][label][key]["n_pairs"] == pinned_n
+            assert chord["arms"][label][key]["n_pairs"] == pinned_n
+        for key in ("goal_pass_no_handoff", "tgc_no_handoff"):
+            assert ni["arms"][label][key]["n_pairs"] == no_n
+            assert chord["arms"][label][key]["n_pairs"] == no_n
+
+

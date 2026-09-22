@@ -201,6 +201,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Floor arm label for the chord test (typically sft_plan).",
     )
+    p.add_argument(
+        "--handoff-keys-from",
+        default=None,
+        metavar="ARM",
+        help=(
+            "Build every arm's handoff-only and no-handoff populations from "
+            "this named arm's handoff_occurred flags, instead of each arm "
+            "using its own. The reference and floor are restricted to the "
+            "same keys. An unknown name is fatal and lists the valid arms. "
+            "Omit to keep per-arm keys (default, unchanged)."
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -447,6 +459,57 @@ def restrict_to_defining_handoff(
     kept = shared & flag_keys
     n_dropped_handoff = len(shared) - len(kept)
     return kept, len(shared), n_dropped_handoff
+
+
+def resolve_handoff_keys_arm(
+    arms: dict[str, dict[str, Any]],
+    handoff_keys_from: str | None,
+) -> dict[str, Any] | None:
+    """Return the named arm, or None when the flag is omitted.
+
+    An unknown name is fatal and lists the valid arms. Never fall back
+    to per-arm keys: that is the misreading this flag exists to prevent.
+    """
+    if handoff_keys_from is None:
+        return None
+    if handoff_keys_from not in arms:
+        valid = ", ".join(sorted(arms))
+        raise ValueError(
+            f"--handoff-keys-from {handoff_keys_from!r} is not among named "
+            f"arms ({valid})"
+        )
+    return arms[handoff_keys_from]
+
+
+def _defining_handoff_arm(
+    arm: dict[str, Any],
+    handoff_keys_arm: dict[str, Any] | None,
+) -> dict[str, Any]:
+    return arm if handoff_keys_arm is None else handoff_keys_arm
+
+
+def _handoff_keep(
+    arm_cleaned: dict[tuple[str, int], dict[str, Any]],
+    other_cleaneds: list[dict[tuple[str, int], dict[str, Any]]],
+    occurred: bool,
+    handoff_keys_arm: dict[str, Any] | None,
+) -> tuple[set[tuple[str, int]], int, int]:
+    """Default path calls restrict_to_defining_handoff exactly as before."""
+    if handoff_keys_arm is None:
+        return restrict_to_defining_handoff(arm_cleaned, other_cleaneds, occurred)
+    others = [arm_cleaned, *other_cleaneds]
+    return restrict_to_defining_handoff(
+        handoff_keys_arm["cleaned"], others, occurred
+    )
+
+
+def handoff_keys_record(defining: dict[str, Any]) -> dict[str, Any]:
+    """Pinned-arm name and handoff-only key-set size for JSON readers."""
+    cleaned = defining["cleaned"]
+    return {
+        "handoff_keys_from": defining["label"],
+        "handoff_keys_n": len(handoff_flag_keys(cleaned, True)),
+    }
 
 
 def total_planner_calls(
@@ -956,13 +1019,16 @@ def paired_contrast(
     arm_b: dict[str, Any],
     field: str,
     population: str = "all",
+    handoff_keys_arm: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Task-clustered paired bootstrap. Delegates to j10_report / hj1_gate.
 
     population='all': every shared (task_id, seed); crashed quality scores 0.
     population='survivors': drop a pair if either side crashed, and count it.
-    population='handoff-only': shared keys where arm_a's handoff_occurred
-    is True; arm_b (and any later arm) is restricted to those same keys.
+    population='handoff-only': shared keys where the defining arm's
+    handoff_occurred is True; arm_b (and any later arm) is restricted to
+    those same keys. The defining arm is arm_a unless handoff_keys_arm is
+    set (CLI --handoff-keys-from).
     population='no-handoff': the complement (handoff_occurred is False).
     Handoff subsets use all-episodes scoring (crash = 0).
     """
@@ -981,8 +1047,8 @@ def paired_contrast(
         pop_name = "all-episodes"
     elif population in HANDOFF_ONLY_ALIASES or population in NO_HANDOFF_ALIASES:
         occurred = population in HANDOFF_ONLY_ALIASES
-        keep, n_shared, n_dropped_handoff = restrict_to_defining_handoff(
-            left, [right], occurred
+        keep, n_shared, n_dropped_handoff = _handoff_keep(
+            left, [right], occurred, handoff_keys_arm
         )
         left = {k: left[k] for k in keep}
         right = {k: right[k] for k in keep}
@@ -1017,8 +1083,9 @@ def paired_contrast(
     out["n_pairs_shared"] = n_shared
     if pop_name in {HANDOFF_ONLY_POPULATION, NO_HANDOFF_POPULATION}:
         out["n_pairs_dropped_handoff"] = n_dropped_handoff
-        out["defining_arm"] = arm_a["label"]
-        out["handoff_keys_from"] = arm_a["label"]
+        defining = _defining_handoff_arm(arm_a, handoff_keys_arm)
+        out["defining_arm"] = defining["label"]
+        out["handoff_keys_from"] = defining["label"]
     return out
 
 
@@ -1693,15 +1760,16 @@ def _attach_side_scores(
 def handoff_reference_ease(
     arm: dict[str, Any],
     reference: dict[str, Any],
+    handoff_keys_arm: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compare the reference on handoff-only vs no-handoff keys."""
     fields: dict[str, Any] = {}
     for field in ("goal_pass_rate", "tgc"):
-        ho, _, _ = restrict_to_defining_handoff(
-            arm["cleaned"], [reference["cleaned"]], True
+        ho, _, _ = _handoff_keep(
+            arm["cleaned"], [reference["cleaned"]], True, handoff_keys_arm
         )
-        nh, _, _ = restrict_to_defining_handoff(
-            arm["cleaned"], [reference["cleaned"]], False
+        nh, _, _ = _handoff_keep(
+            arm["cleaned"], [reference["cleaned"]], False, handoff_keys_arm
         )
         ref_ho = mean_quality(
             [reference["cleaned"][k] for k in ho], field, crash_as_zero=True
@@ -1754,8 +1822,9 @@ def handoff_reference_ease(
             "reference scores higher on no-handoff episodes than on "
             f"handoff-only (gap {gap_pp} pp)"
         )
+    defining = _defining_handoff_arm(arm, handoff_keys_arm)
     return {
-        "defining_arm": arm["label"],
+        "defining_arm": defining["label"],
         "reference_arm": reference["label"],
         "fields": fields,
         "note": note,
@@ -1768,9 +1837,12 @@ def noninferiority_row(
     reference: dict[str, Any],
     field: str,
     population: str = "all",
+    handoff_keys_arm: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Paired task-clustered non-inferiority vs the reference arm."""
-    contrast = paired_contrast(arm, reference, field, population)
+    contrast = paired_contrast(
+        arm, reference, field, population, handoff_keys_arm=handoff_keys_arm
+    )
     ci = contrast.get("ci95_pp")
     holds = None
     deficit_upper_pp = None
@@ -1786,8 +1858,8 @@ def noninferiority_row(
     pop_name = out.get("population")
     if pop_name in {HANDOFF_ONLY_POPULATION, NO_HANDOFF_POPULATION}:
         occurred = pop_name == HANDOFF_ONLY_POPULATION
-        keys, _, _ = restrict_to_defining_handoff(
-            arm["cleaned"], [reference["cleaned"]], occurred
+        keys, _, _ = _handoff_keep(
+            arm["cleaned"], [reference["cleaned"]], occurred, handoff_keys_arm
         )
         _attach_side_scores(out, arm, reference, field, keys)
     return out
@@ -1796,7 +1868,9 @@ def noninferiority_row(
 def noninferiority_block(
     arms: dict[str, dict[str, Any]],
     reference_label: str | None,
+    handoff_keys_from: str | None = None,
 ) -> dict[str, Any] | None:
+    pinned = resolve_handoff_keys_arm(arms, handoff_keys_from)
     if not reference_label:
         return None
     if reference_label not in arms:
@@ -1819,28 +1893,32 @@ def noninferiority_block(
             continue
         rows[label] = {
             "goal_pass_all": noninferiority_row(
-                arm, reference, "goal_pass_rate", "all"
+                arm, reference, "goal_pass_rate", "all", pinned
             ),
             "goal_pass_survivors": noninferiority_row(
-                arm, reference, "goal_pass_rate", "survivors"
+                arm, reference, "goal_pass_rate", "survivors", pinned
             ),
             "goal_pass_handoff_only": noninferiority_row(
-                arm, reference, "goal_pass_rate", HANDOFF_ONLY_POPULATION
+                arm, reference, "goal_pass_rate", HANDOFF_ONLY_POPULATION, pinned
             ),
             "goal_pass_no_handoff": noninferiority_row(
-                arm, reference, "goal_pass_rate", NO_HANDOFF_POPULATION
+                arm, reference, "goal_pass_rate", NO_HANDOFF_POPULATION, pinned
             ),
-            "tgc_all": noninferiority_row(arm, reference, "tgc", "all"),
-            "tgc_survivors": noninferiority_row(arm, reference, "tgc", "survivors"),
+            "tgc_all": noninferiority_row(
+                arm, reference, "tgc", "all", pinned
+            ),
+            "tgc_survivors": noninferiority_row(
+                arm, reference, "tgc", "survivors", pinned
+            ),
             "tgc_handoff_only": noninferiority_row(
-                arm, reference, "tgc", HANDOFF_ONLY_POPULATION
+                arm, reference, "tgc", HANDOFF_ONLY_POPULATION, pinned
             ),
             "tgc_no_handoff": noninferiority_row(
-                arm, reference, "tgc", NO_HANDOFF_POPULATION
+                arm, reference, "tgc", NO_HANDOFF_POPULATION, pinned
             ),
-            "handoff_ease": handoff_reference_ease(arm, reference),
+            "handoff_ease": handoff_reference_ease(arm, reference, pinned),
         }
-    return {
+    out = {
         "reference_arm": reference_label,
         "margin_pp": F1_QUALITY_PP,
         "primary_metric": "goal_pass_rate",
@@ -1848,6 +1926,9 @@ def noninferiority_block(
         "rule": NI_RULE,
         "arms": rows,
     }
+    if pinned is not None:
+        out.update(handoff_keys_record(pinned))
+    return out
 
 
 def chord_residual(
@@ -1857,6 +1938,7 @@ def chord_residual(
     quality_field: str,
     cost_key: str,
     population: str = "all",
+    handoff_keys_arm: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Quality minus the floor-reference chord at this arm's cost fraction.
 
@@ -1890,8 +1972,8 @@ def chord_residual(
         pop_name = "all-episodes"
     elif population in HANDOFF_ONLY_ALIASES or population in NO_HANDOFF_ALIASES:
         occurred = population in HANDOFF_ONLY_ALIASES
-        keep, n_shared, n_dropped_handoff = restrict_to_defining_handoff(
-            left, [mid, right], occurred
+        keep, n_shared, n_dropped_handoff = _handoff_keep(
+            left, [mid, right], occurred, handoff_keys_arm
         )
         left = {k: left[k] for k in keep}
         mid = {k: mid[k] for k in keep}
@@ -1989,8 +2071,9 @@ def chord_residual(
     out["n_pairs_shared"] = n_shared
     if pop_name in {HANDOFF_ONLY_POPULATION, NO_HANDOFF_POPULATION}:
         out["n_pairs_dropped_handoff"] = n_dropped_handoff
-        out["defining_arm"] = arm["label"]
-        out["handoff_keys_from"] = arm["label"]
+        defining = _defining_handoff_arm(arm, handoff_keys_arm)
+        out["defining_arm"] = defining["label"]
+        out["handoff_keys_from"] = defining["label"]
         score_keys = set(usable)
         _attach_side_scores(
             out, arm, reference, quality_field, score_keys, floor=floor
@@ -2008,7 +2091,9 @@ def chord_block(
     reference_label: str | None,
     floor_label: str | None,
     cost_key: str,
+    handoff_keys_from: str | None = None,
 ) -> dict[str, Any] | None:
+    pinned = resolve_handoff_keys_arm(arms, handoff_keys_from)
     if not reference_label or not floor_label:
         return None
     missing = [
@@ -2041,10 +2126,10 @@ def chord_block(
             continue
         rows[label] = {
             "goal_pass_all": chord_residual(
-                arm, floor, reference, "goal_pass_rate", cost_key, "all"
+                arm, floor, reference, "goal_pass_rate", cost_key, "all", pinned
             ),
             "goal_pass_survivors": chord_residual(
-                arm, floor, reference, "goal_pass_rate", cost_key, "survivors"
+                arm, floor, reference, "goal_pass_rate", cost_key, "survivors", pinned
             ),
             "goal_pass_handoff_only": chord_residual(
                 arm,
@@ -2053,6 +2138,7 @@ def chord_block(
                 "goal_pass_rate",
                 cost_key,
                 HANDOFF_ONLY_POPULATION,
+                pinned,
             ),
             "goal_pass_no_handoff": chord_residual(
                 arm,
@@ -2061,25 +2147,43 @@ def chord_block(
                 "goal_pass_rate",
                 cost_key,
                 NO_HANDOFF_POPULATION,
+                pinned,
             ),
-            "tgc_all": chord_residual(arm, floor, reference, "tgc", cost_key, "all"),
+            "tgc_all": chord_residual(
+                arm, floor, reference, "tgc", cost_key, "all", pinned
+            ),
             "tgc_survivors": chord_residual(
-                arm, floor, reference, "tgc", cost_key, "survivors"
+                arm, floor, reference, "tgc", cost_key, "survivors", pinned
             ),
             "tgc_handoff_only": chord_residual(
-                arm, floor, reference, "tgc", cost_key, HANDOFF_ONLY_POPULATION
+                arm,
+                floor,
+                reference,
+                "tgc",
+                cost_key,
+                HANDOFF_ONLY_POPULATION,
+                pinned,
             ),
             "tgc_no_handoff": chord_residual(
-                arm, floor, reference, "tgc", cost_key, NO_HANDOFF_POPULATION
+                arm,
+                floor,
+                reference,
+                "tgc",
+                cost_key,
+                NO_HANDOFF_POPULATION,
+                pinned,
             ),
-            "handoff_ease": handoff_reference_ease(arm, reference),
+            "handoff_ease": handoff_reference_ease(arm, reference, pinned),
         }
-    return {
+    out = {
         "reference_arm": reference_label,
         "floor_arm": floor_label,
         "cost_key": cost_key,
         "arms": rows,
     }
+    if pinned is not None:
+        out.update(handoff_keys_record(pinned))
+    return out
 
 
 def format_handoff_table(arms: dict[str, dict[str, Any]]) -> str:
@@ -2120,6 +2224,11 @@ def format_noninferiority_table(block: dict[str, Any] | None) -> str:
         f"(margin {block.get('margin_pp')} pp; primary {block.get('primary_metric')})",
         NI_RULE,
     ]
+    if block.get("handoff_keys_from"):
+        lines.append(
+            f"handoff keys pinned to {block['handoff_keys_from']} "
+            f"(handoff-only n={block.get('handoff_keys_n')})"
+        )
     header = (
         f"{'arm':<24} {'metric':<16} {'pop':<13} {'holds':>6} "
         f"{'n':>5} {'diff_pp':>8} {'ci95_pp':>18} {'def_up':>8} "
@@ -2160,6 +2269,11 @@ def format_chord_table(block: dict[str, Any] | None) -> str:
         f"cost_key={block.get('cost_key')} "
         "(positive residual = above the chord)",
     ]
+    if block.get("handoff_keys_from"):
+        lines.append(
+            f"handoff keys pinned to {block['handoff_keys_from']} "
+            f"(handoff-only n={block.get('handoff_keys_n')})"
+        )
     header = (
         f"{'arm':<24} {'metric':<16} {'pop':<13} {'frac':>8} "
         f"{'n':>5} {'diff_pp':>8} {'ci95_pp':>18} {'above':>6} "
@@ -2196,6 +2310,7 @@ def build_report(
     floor_arm: str | None = None,
     packet_source: Path | None = DEFAULT_SFT_PLAN_PACKET_SOURCE,
     packet_system: str = DEFAULT_SFT_PLAN_PACKET_SYSTEM,
+    handoff_keys_from: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     for directory in arm_dirs.values():
         marker = j10.heldout_marker_in_path(directory)
@@ -2227,6 +2342,7 @@ def build_report(
         arm["root"] = arm_dirs[label]
         arms[label] = arm
 
+    pinned = resolve_handoff_keys_arm(arms, handoff_keys_from)
     arm_n = {label: arm["n"] for label, arm in arms.items()}
     refusals = refuse_partial_arms(arm_n)
     if reference_arm and reference_arm not in arms:
@@ -2309,8 +2425,10 @@ def build_report(
         f1_rows[label] = row
 
     h3 = h3_calibration(arms, oracle_labels)
-    ni = noninferiority_block(complete, reference_arm)
-    chord = chord_block(complete, reference_arm, floor_arm, cost_key)
+    ni = noninferiority_block(complete, reference_arm, handoff_keys_from)
+    chord = chord_block(
+        complete, reference_arm, floor_arm, cost_key, handoff_keys_from
+    )
 
     report: dict[str, Any] = {
         "headline": headline,
@@ -2383,6 +2501,8 @@ def build_report(
             "(all-episodes scoring: crash = 0)."
         ),
     }
+    if pinned is not None:
+        report.update(handoff_keys_record(pinned))
     code = 0 if headline_ok else 1
     return report, code
 
@@ -2398,6 +2518,14 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         arm_dirs[label] = path
+    if args.handoff_keys_from and args.handoff_keys_from not in arm_dirs:
+        valid = ", ".join(sorted(arm_dirs))
+        reason = (
+            f"--handoff-keys-from {args.handoff_keys_from!r} is not among "
+            f"named arms ({valid})"
+        )
+        print(json.dumps({"refused": True, "reason": reason}))
+        return 2
     try:
         seeds = parse_seeds(args.seeds)
     except ValueError as exc:
@@ -2412,6 +2540,7 @@ def main(argv: list[str] | None = None) -> int:
         floor_arm=args.floor_arm,
         packet_source=args.packet_source,
         packet_system=args.packet_system,
+        handoff_keys_from=args.handoff_keys_from,
     )
     if report.get("refused") and "arms" not in report:
         print(report.get("reason") or "refused")
