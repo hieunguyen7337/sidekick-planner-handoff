@@ -38,6 +38,13 @@ MANDATORY_F5_ANNOTATION = (
 )
 
 # Colour-blind-safe palette distinguishable in greyscale (varying hue, marker, linestyle)
+# F1 marginal bands are computed and stored but NOT drawn. They are per-arm bootstrap
+# intervals, so they carry between-task variance that this paired design removes. Every
+# claim in the paper rests on a paired contrast, which is 2-3x tighter; drawing the wider
+# marginal band beside those claims invites the reader to conclude the opposite of what
+# the contrasts establish. See bootstrap_arm_quality's docstring in hj12_shape.py.
+F1_DRAW_MARGINAL_BANDS = False
+
 PALETTE = {
     "tailored": {"color": "#0072B2", "marker": "o", "linestyle": "-", "label": "Tailored receiver (sft_b_plus)"},
     "zeroshot": {"color": "#D55E00", "marker": "s", "linestyle": "--", "label": "Untailored receiver (granite zero-shot)"},
@@ -165,7 +172,7 @@ def generate_f1_depth_curve(
     apply_style()
 
     # 1. Tailored receiver data from post-guard shape report
-    shape_rep_path = results_dir / "hj13_shape_post_guard_20260923.report.json"
+    shape_rep_path = results_dir / "hj13_shape_post_guard_bands_20260923.report.json"
     shape_data = load_report_json(shape_rep_path, fig_id)
     
     m_tailored = [2, 4, 6, 7, 8, 9, 10, 11]
@@ -296,14 +303,14 @@ def generate_f1_depth_curve(
         label=f"Executor-alone floor ({floor_exec:.4f})", zorder=2,
     )
 
-    # Confidence bands (if interval keys present)
-    if tailored_ci_m:
+    # Confidence bands: suppressed by default, see F1_DRAW_MARGINAL_BANDS.
+    if F1_DRAW_MARGINAL_BANDS and tailored_ci_m:
         ax.fill_between(
             tailored_ci_m, tailored_ci_low, tailored_ci_high,
             color=PALETTE["tailored"]["color"],
             alpha=0.18, zorder=3,
         )
-    if zs_ci_m:
+    if F1_DRAW_MARGINAL_BANDS and zs_ci_m:
         ax.fill_between(
             zs_ci_m, zs_ci_low, zs_ci_high,
             color=PALETTE["zeroshot"]["color"],
@@ -348,7 +355,8 @@ def generate_f1_depth_curve(
     caption = (
         "Goal pass rate against prefix handoff depth $m$ for tailored and untailored receivers, "
         "compared against the cap-25 (0.8284) and cap-81 (0.7637) planner ceilings, plan-only floor (0.7181), "
-        "and executor-alone floor (0.5289). Shaded 95% confidence bands per receiver are drawn from report "
+        "and executor-alone floor (0.5289). No uncertainty band is drawn: the design is paired, so every "
+        "interval the text reports is a paired contrast rather than the wider per-arm marginal interval. "
         "interval keys where present. Quality is flat below a breakpoint and rises above it; the "
         "breakpoint point estimate is $m=8$ on handoff-only populations but its 95% interval spans [4, 9], "
         "so the registered threshold test S3 does not pass and no threshold location is claimed (F1-RESULT-04)."
@@ -367,16 +375,16 @@ def generate_f1_depth_curve(
                 "report_path": str(shape_rep_path),
                 "json_keys": tailored_keys,
                 "n_points": len(y_tailored),
-                "has_confidence_band": len(tailored_ci_m) > 0,
-                "interval_note": None if tailored_ci_m else "No per-arm interval keys present in report; plotted without band",
+                "has_confidence_band": bool(F1_DRAW_MARGINAL_BANDS and tailored_ci_m),
+                "interval_note": "Per-arm marginal intervals are computed and available in the report but are NOT drawn: this is a paired design and every claim rests on a paired contrast, which is 2-3x tighter than the marginal band.",
             },
             {
                 "label": "Untailored receiver (granite zero-shot)",
                 "report_path": f"{zs_m6_m9_path}; {zs_m9_m11_path}",
                 "json_keys": zs_keys,
                 "n_points": len(y_zs),
-                "has_confidence_band": len(zs_ci_m) > 0,
-                "interval_note": None if zs_ci_m else "No per-arm interval keys present in report; plotted without band",
+                "has_confidence_band": bool(F1_DRAW_MARGINAL_BANDS and zs_ci_m),
+                "interval_note": "Per-arm marginal intervals are computed and available in the report but are NOT drawn: this is a paired design and every claim rests on a paired contrast, which is 2-3x tighter than the marginal band.",
             },
             {
                 "label": "Reference ceilings and floors",

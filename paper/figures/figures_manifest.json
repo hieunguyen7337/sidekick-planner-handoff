@@ -5,24 +5,32 @@
     "file_png": "paper/figures/f1_depth_curve.png",
     "width_in": 7.0,
     "column": "two-column",
-    "caption": "Goal pass rate against prefix handoff depth $m$ for tailored and untailored receivers, compared against the cap-25 (0.8284) and cap-81 (0.7637) planner ceilings, plan-only floor (0.7181), and executor-alone floor (0.5289). Shaded 95% confidence bands per receiver are drawn from report interval keys where present. Quality is flat below a breakpoint and rises above it; the breakpoint point estimate is $m=8$ on handoff-only populations but its 95% interval spans [4, 9], so the registered threshold test S3 does not pass and no threshold location is claimed (F1-RESULT-04).",
+    "caption": "Goal pass rate against prefix handoff depth $m$ for tailored and untailored receivers, compared against the cap-25 (0.8284) and cap-81 (0.7637) planner ceilings, plan-only floor (0.7181), and executor-alone floor (0.5289). No uncertainty band is drawn: the design is paired, so every interval the text reports is a paired contrast rather than the wider per-arm marginal interval. interval keys where present. Quality is flat below a breakpoint and rises above it; the breakpoint point estimate is $m=8$ on handoff-only populations but its 95% interval spans [4, 9], so the registered threshold test S3 does not pass and no threshold location is claimed (F1-RESULT-04).",
     "series": [
       {
         "label": "Tailored receiver (sft_b_plus)",
-        "report_path": "campaign/results/hj13_shape_post_guard_20260923.report.json",
+        "report_path": "campaign/results/hj13_shape_post_guard_bands_20260923.report.json",
         "json_keys": [
           "arms.prefix_m2.goal_pass_all",
+          "arms.prefix_m2.goal_pass_all_ci95",
           "arms.prefix_m4.goal_pass_all",
+          "arms.prefix_m4.goal_pass_all_ci95",
           "arms.prefix_m6.goal_pass_all",
+          "arms.prefix_m6.goal_pass_all_ci95",
           "arms.prefix_m7.goal_pass_all",
+          "arms.prefix_m7.goal_pass_all_ci95",
           "arms.prefix_m8.goal_pass_all",
+          "arms.prefix_m8.goal_pass_all_ci95",
           "arms.prefix_m9.goal_pass_all",
+          "arms.prefix_m9.goal_pass_all_ci95",
           "arms.prefix_m10.goal_pass_all",
-          "arms.prefix_m11.goal_pass_all"
+          "arms.prefix_m10.goal_pass_all_ci95",
+          "arms.prefix_m11.goal_pass_all",
+          "arms.prefix_m11.goal_pass_all_ci95"
         ],
         "n_points": 8,
         "has_confidence_band": false,
-        "interval_note": "No per-arm interval keys present in report; plotted without band"
+        "interval_note": "Per-arm marginal intervals are computed and available in the report but are NOT drawn: this is a paired design and every claim rests on a paired contrast, which is 2-3x tighter than the marginal band."
       },
       {
         "label": "Untailored receiver (granite zero-shot)",
@@ -34,7 +42,7 @@
         ],
         "n_points": 3,
         "has_confidence_band": false,
-        "interval_note": "No per-arm interval keys present in report; plotted without band"
+        "interval_note": "Per-arm marginal intervals are computed and available in the report but are NOT drawn: this is a paired design and every claim rests on a paired contrast, which is 2-3x tighter than the marginal band."
       },
       {
         "label": "Reference ceilings and floors",

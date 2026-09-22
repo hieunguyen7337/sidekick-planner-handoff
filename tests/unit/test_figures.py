@@ -180,7 +180,7 @@ def _make_minimal_narrated_untailored_report() -> dict:
 
 def _populate_all_standard_fixtures(results_dir: Path) -> None:
     results_dir.mkdir(parents=True, exist_ok=True)
-    with open(results_dir / "hj13_shape_post_guard_20260923.report.json", "w") as f:
+    with open(results_dir / "hj13_shape_post_guard_bands_20260923.report.json", "w") as f:
         json.dump(_make_minimal_shape_post_guard(), f)
     with open(results_dir / "hj13_zeroshot_depth_m6_m9_20260923.report.json", "w") as f:
         json.dump(_make_minimal_zs_depth_m6_m9(), f)
@@ -212,7 +212,7 @@ def test_missing_report_file_is_fatal(tmp_path: Path) -> None:
     manifest_path = out_dir / "figures_manifest.json"
 
     # Only create one file; the others are missing
-    with open(results_dir / "hj13_shape_post_guard_20260923.report.json", "w") as f:
+    with open(results_dir / "hj13_shape_post_guard_bands_20260923.report.json", "w") as f:
         json.dump(_make_minimal_shape_post_guard(), f)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -231,7 +231,7 @@ def test_missing_json_key_is_fatal(tmp_path: Path) -> None:
     _populate_all_standard_fixtures(results_dir)
 
     # Corrupt shape report by deleting a required key
-    shape_path = results_dir / "hj13_shape_post_guard_20260923.report.json"
+    shape_path = results_dir / "hj13_shape_post_guard_bands_20260923.report.json"
     data = json.loads(shape_path.read_text())
     del data["arms"]["prefix_m6"]
     shape_path.write_text(json.dumps(data))
@@ -345,13 +345,19 @@ def test_f5_mandatory_annotation_present(tmp_path: Path) -> None:
     assert "QWEN-03" in entry["annotation"]
 
 
-def test_f1_confidence_bands_drawn_when_present(tmp_path: Path) -> None:
+def test_f1_marginal_bands_are_suppressed_by_design(tmp_path: Path) -> None:
+    """F1 must NOT shade per-arm marginal intervals even when the report has them.
+
+    They carry between-task variance that this paired design removes, so they are
+    2-3x wider than every contrast the paper claims. Drawing them beside those claims
+    would invite the opposite conclusion. The keys stay in the report; the band stays off.
+    """
     results_dir = tmp_path / "results"
     out_dir = tmp_path / "figures"
     _populate_all_standard_fixtures(results_dir)
 
     # Add interval keys to shape report
-    shape_path = results_dir / "hj13_shape_post_guard_20260923.report.json"
+    shape_path = results_dir / "hj13_shape_post_guard_bands_20260923.report.json"
     data = json.loads(shape_path.read_text())
     for m in (2, 4, 6, 7, 8, 9, 10, 11):
         data["arms"][f"prefix_m{m}"]["goal_pass_all_ci95"] = [0.65, 0.85]
@@ -368,8 +374,10 @@ def test_f1_confidence_bands_drawn_when_present(tmp_path: Path) -> None:
         entry = generate_f1_depth_curve(results_dir, out_dir)
 
     assert entry["figure_id"] == "F1"
-    assert len(fill_between_calls) >= 1
-    assert entry["series"][0]["has_confidence_band"] is True
+    # The interval keys are present in the report, so suppression is a choice, not a gap.
+    assert "goal_pass_all_ci95" in json.loads(shape_path.read_text())["arms"]["prefix_m9"]
+    assert entry["series"][0]["has_confidence_band"] is False
+    assert "paired" in entry["series"][0]["interval_note"]
 
 
 def test_f6_narrated_vs_executed_generation_and_manifest(tmp_path: Path) -> None:

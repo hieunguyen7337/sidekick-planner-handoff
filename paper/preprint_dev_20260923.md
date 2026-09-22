@@ -185,7 +185,7 @@ This establishes the central informational mechanism of this work: **at moderate
 
 ---
 
-## 7. Receivers and Tailoring: Non-Stacking Substitutability
+## 7. Receivers and Tailoring: A Pattern That Does Not Replicate
 
 We investigate whether executor fine-tuning interacts constructively with prefix depth, evaluating three distinct receiver variants across depths $m \in \{6, 9, 11\}$ on identical prefix trajectories (TAILOR-01, TAILOR-04, TAILOR-07, HF-01, HF-02).
 
@@ -213,6 +213,18 @@ The pre-registered hypothesis C3—asking whether training specifically on hando
 Figure F3: Receiver gap (untailored base minus tailored sft_b_plus) across handoff depths
 m = 6, 9, 11 with scenario-clustered 95% bootstrap intervals. (paper/figures/f3_tailoring_gap.pdf).
 ```
+
+---
+
+### 7.1 The Crossover Is Specific to One Planner Sample
+
+The reading above — that depth substitutes for receiver tailoring, because the untailored receiver overtakes the tailored one by $m = 11$ — rests on the *shape* of a three-point sequence, since no individual within-depth receiver gap is resolved at $n = 114$ on either sample (HF-02). We tested that shape on the independent cap-81 trajectories, both receivers, all six arms complete (C81-02).
+
+**It does not reproduce.** On cap-25 the untailored-minus-tailored gap runs −4.12, −0.06, +2.46 pp, monotone, ending with the untailored receiver ahead. On cap-81 it runs **−2.76, +0.31, −1.80 pp** on `goal_pass` (TGC 0.00, +1.75, −4.39): non-monotone, and ending with the **tailored** receiver ahead. All six cap-81 intervals include zero.
+
+The depth effect itself replicates on both receivers of the second sample — the tailored span $m = 6 \rightarrow 11$ is +6.34 pp `goal_pass` (scenario [+0.28, +12.94]) and +14.04 pp TGC ([+3.51, +26.32]), both excluding zero. What fails to replicate is the ordering at the deep end.
+
+We therefore demote "depth substitutes for tailoring" from a finding to **an observation made on one planner sample and not reproduced on a second**. What survives: both tailoring and depth raise the shallow end; no within-depth receiver gap is resolved on either sample; and the deep-end ordering is not stable across samples. ⚠ This is equally not evidence *against* substitutability — the intervals are ±5–11 pp wide and would not resolve the 2–4 pp effects at issue. The claim is simply not robust enough to carry weight.
 
 ---
 
