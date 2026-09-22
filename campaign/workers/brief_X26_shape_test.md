@@ -108,3 +108,51 @@ robustness results; which arms were incomplete if any; the test names; and the s
 
 Tag every claim `[OBSERVED <path>:<line>]` or `[INFERRED]`. Do not interpret beyond reporting the
 registered verdicts — I draw the conclusions.
+
+## Addendum 2026-09-22 — the measured replicate noise floor, and the post-guard arms
+
+`docs/prereg_hj13_shape_20260923.md` §3 registers a withdrawal condition against the replicate noise
+floor. That floor is now measured, so use these numbers rather than assuming one.
+
+**Two clean replicate pairs.** The 20260923 prefix re-runs carry the post-prefix terminal guard, but at
+m=2 and m=4 the guard provably never fires — `executor_silent` is 0 in both the 20260922 and the
+20260923 runs at those depths [OBSERVED result.json `totals.per_actor.executor.n_calls` across
+114 episodes per arm]. Those two pairs are therefore pure replicates of the same configuration,
+differing only in sampling (`sampling_seed` is null and temperature is 0.7, so no arm is deterministic):
+
+| m | 20260922 | 20260923 | Δ goal_pass |
+|---|---|---|---|
+| 2 | 0.7187 | 0.6856 | **−3.31 pp** |
+| 4 | 0.7340 | 0.7190 | **−1.50 pp** |
+
+Treat **3.31 pp** as the observed maximum single-arm replicate deviation on `goal_pass_rate` at n=114,
+and say so explicitly wherever the shape test compares two arms. Two pairs is a floor estimate from a
+very small sample, not a variance estimate — report it as "observed spread across the two available
+replicate pairs", never as a standard error, and do not convert it into a CI.
+
+**Consequence to state in the report:** the pre-guard m6→m9 rise is +9.89 pp and the post-guard rise is
++8.77 pp, both roughly 2.6–3× that maximum deviation, whereas the advice-channel contrast (−0.48 pp) is
+well inside it. The shape test must report both comparisons against the same floor.
+
+**Use the post-guard (20260923) arms as the primary series** and the 20260922 arms as the pre-guard
+comparison, reporting both. Do not pool them: they are different configurations at m ≥ 6.
+
+
+**The guard delta so far, as data — draw no verdict from it, that is my job.** The guard's reach grows
+with m (episodes where the executor never acted, post-guard: 0, 0, 3, 8, 20, 30 at m = 2, 4, 6, 7, 8, 9;
+pre-guard it is 0 at every m). The measured per-arm delta:
+
+| m | pre-guard | post-guard | Δ pp | episodes silenced |
+|---|---|---|---|---|
+| 2 | 0.7187 | 0.6856 | −3.31 | 0 |
+| 4 | 0.7340 | 0.7190 | −1.50 | 0 |
+| 6 | 0.7145 | 0.7237 | +0.92 | 3 |
+| 7 | 0.7514 | 0.7544 | +0.30 | 8 |
+| 8 | 0.7733 | 0.7627 | −1.06 | 20 |
+| 9 | 0.8134 | 0.7904 | −2.30 | 30 |
+
+m=10 and m=11 were still running when this was written; **fill them in from the artifacts and do not
+infer them**. `docs/prereg_hj13_shape_20260923.md` §2.1 predicted these arms would fall, most at large
+m. Report the observed deltas at every m together with the silenced counts and the replicate floor, and
+state whether the registered prediction is met **at each m separately**. Do not summarise it as a single
+pass/fail across the curve, and do not soften or restate the prereg language.

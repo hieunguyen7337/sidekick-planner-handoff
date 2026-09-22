@@ -102,3 +102,18 @@ the pasted `tests/unit/test_handoff_sft.py` result; the pasted full-suite line; 
 of what the new test would report if the fix were reverted.
 
 Tag every claim `[OBSERVED <path>:<line>]` or `[INFERRED]`.
+
+## Addendum after attempt 1 (agy, 2026-09-22 15:36-15:45) returned zero files
+
+The first attempt read the brief, launched a test job in the background, and exited without editing
+anything. `src/sidekick/training/handoff_sft.py` and `tests/unit/test_handoff_sft.py` were byte-identical
+afterwards and no STATUS was written. Do not repeat that shape:
+
+- **Make the source edit within your first three actions.** Edit `handoff_sft.py` first, then the test,
+  then iterate. Do not plan at length before the first edit.
+- **Never background a command and exit.** Run every command in the foreground with `timeout`, and wait
+  for it to return. If a command would exceed your budget, run the single test file rather than the
+  suite, and say so in STATUS.
+- **Write `campaign/workers/STATUS_X30.md` even if you finish only part of the task.** A partial STATUS
+  naming exactly what is done and what is not is worth far more than no file. Write it before you run
+  the tests, then update it with the results.
