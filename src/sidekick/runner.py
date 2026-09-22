@@ -267,6 +267,9 @@ def make_verifier(cfg: dict[str, Any]) -> Any:
     return ConstantVerifier(float(vcfg.get("value", 0.5)))
 
 
+ENV_KINDS = ("appworld", "mock")
+
+
 def make_env(kind: str, experiment_name: str, cfg: dict[str, Any]) -> BaseEnv:
     if kind == "appworld":
         extra = dict(cfg.get("appworld") or {})
@@ -275,7 +278,12 @@ def make_env(kind: str, experiment_name: str, cfg: dict[str, Any]) -> BaseEnv:
         # "AppWorld.__init__() got an unexpected keyword argument 'root'".
         root = extra.pop("root", None)
         return AppWorldEnv(experiment_name=experiment_name, extra_kwargs=extra, root=root)
-    return MockEnv()
+    if kind == "mock":
+        return MockEnv()
+    # An unknown kind used to fall through to MockEnv, so a misspelt `env:` (or a second
+    # environment whose adapter is not wired yet) would run a whole campaign on the mock and
+    # report believable numbers. Refuse instead.
+    raise ValueError(f"unknown env kind {kind!r}; known: {', '.join(ENV_KINDS)}")
 
 
 def parse_correct_context(value: Any) -> int | None:
@@ -428,6 +436,10 @@ def run_campaign(
     out_dir.mkdir(parents=True, exist_ok=True)
     cid = campaign_id or cfg.get("campaign_id") or f"run_{_utc_stamp()}"
     kind = env_kind or cfg.get("env") or "mock"
+    if kind not in ENV_KINDS:
+        # Checked before any job is built: the per-episode make_env would also refuse, but
+        # only after the campaign directory and its first manifests exist.
+        raise ValueError(f"unknown env kind {kind!r}; known: {', '.join(ENV_KINDS)}")
     prices_path = str(cfg.get("prices") or DEFAULT_PRICES)
     if kind == "appworld":
         task_ids = appworld_task_ids(split, tasks)

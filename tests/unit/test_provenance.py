@@ -12,7 +12,13 @@ from pathlib import Path
 
 import pytest
 
-from sidekick.provenance import config_provenance, git_provenance, run_provenance
+from sidekick.provenance import (
+    codex_cli_version,
+    config_provenance,
+    git_provenance,
+    planner_provenance,
+    run_provenance,
+)
 
 
 # --- what the config said --------------------------------------------------------------
@@ -167,3 +173,70 @@ def test_the_block_is_json_serialisable() -> None:
     json.dumps(block)  # must not raise
     assert isinstance(block["config_path"], str)
     assert isinstance(block["handoff_source_campaign"], str)
+
+
+# --- the planner (A5, 2026-09-23) --------------------------------------------------------
+
+
+def _fake_cli(tmp_path: Path, text: str, rc: int = 0) -> str:
+    """A stand-in `codex` that prints a version line, so no test touches the real CLI."""
+    script = tmp_path / "codex"
+    script.write_text(f"#!/bin/sh\necho '{text}'\nexit {rc}\n")
+    script.chmod(0o755)
+    return str(script)
+
+
+def test_a_codex_planner_records_the_cli_version_it_will_invoke(tmp_path: Path) -> None:
+    codex_cli_version.cache_clear()
+    cfg = {"planner": {"type": "codex", "model": "gpt-5.6-luna", "binary": _fake_cli(tmp_path, "codex-cli 9.9.9")}}
+
+    got = planner_provenance(cfg)
+
+    assert got["planner_type"] == "codex"
+    assert got["planner_model_requested"] == "gpt-5.6-luna"
+    assert got["planner_cli_version"] == "codex-cli 9.9.9"
+
+
+def test_a_failing_cli_is_recorded_as_unknown_not_as_a_version(tmp_path: Path) -> None:
+    codex_cli_version.cache_clear()
+    cfg = {"planner": {"type": "codex", "binary": _fake_cli(tmp_path, "boom", rc=3)}}
+
+    assert planner_provenance(cfg)["planner_cli_version"] is None
+
+
+def test_a_missing_cli_does_not_abort_the_episode(tmp_path: Path) -> None:
+    codex_cli_version.cache_clear()
+    cfg = {"planner": {"type": "codex", "binary": str(tmp_path / "no_such_codex")}}
+
+    assert planner_provenance(cfg)["planner_cli_version"] is None
+
+
+def test_a_local_planner_never_shells_out_for_a_codex_version(tmp_path: Path) -> None:
+    codex_cli_version.cache_clear()
+    cfg = {"planner": {"type": "vllm", "model": "Qwen/Qwen3-8B", "binary": _fake_cli(tmp_path, "x")}}
+
+    got = planner_provenance(cfg)
+
+    assert got["planner_cli_version"] is None
+    assert codex_cli_version.cache_info().misses == 0
+
+
+def test_the_b2_arm_fields_are_stamped_with_their_defaults() -> None:
+    """correct_prompt and advice_from_act are what separate the four B2 arms."""
+    assert planner_provenance({})["correct_prompt"] == "correction"
+    assert planner_provenance({})["advice_from_act"] is None
+
+    got = planner_provenance({
+        "planner": {"type": "mock", "correct_prompt": "neutral"},
+        "policy_defaults": {"advice_from_act": True},
+    })
+
+    assert got["correct_prompt"] == "neutral"
+    assert got["advice_from_act"] is True
+
+
+def test_run_provenance_carries_the_planner_block() -> None:
+    block = run_provenance(cfg={"planner": {"type": "mock"}}, config_path=None, split="dev")
+
+    assert block["planner_type"] == "mock"
+    assert "planner_cli_version" in block

@@ -105,6 +105,52 @@ def config_provenance(cfg: dict[str, Any] | None, config_path: str | None) -> di
     }
 
 
+@functools.lru_cache(maxsize=4)
+def codex_cli_version(binary: str = "codex") -> str | None:
+    """`codex --version` of the binary the planner will actually invoke, or None.
+
+    The hosted planner's behaviour depends on the CLI as well as the model id, and a newer
+    luna makes a CLI upgrade mid-campaign more likely. Until now the version reached only
+    some PBS stdout. Cached per process for the same reason as git_provenance.
+    """
+    try:
+        out = subprocess.run(
+            [binary, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=GIT_TIMEOUT_S,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    return out.stdout.strip() or None
+
+
+def planner_provenance(cfg: dict[str, Any] | None) -> dict[str, Any]:
+    """Which planner was asked for, and through which CLI.
+
+    `planner_model_requested` is what the config asked for; the CLI does not report the model
+    it served, so this is a request, not an observation, and is named accordingly.
+    """
+    cfg = cfg or {}
+    planner = cfg.get("planner") or {}
+    defaults = cfg.get("policy_defaults") or {}
+    kind = str(planner.get("type") or "mock")
+    return {
+        "planner_type": kind,
+        "planner_model_requested": planner.get("model"),
+        "planner_reasoning_effort": planner.get("reasoning_effort"),
+        "planner_cli_version": (
+            codex_cli_version(str(planner.get("binary", "codex"))) if kind == "codex" else None
+        ),
+        # B2 (prereg_c1_decomposition): the two fields that separate its four arms.
+        "correct_prompt": planner.get("correct_prompt", "correction"),
+        "advice_from_act": defaults.get("advice_from_act"),
+    }
+
+
 def run_provenance(
     *,
     cfg: dict[str, Any] | None,
@@ -117,6 +163,7 @@ def run_provenance(
     block: dict[str, Any] = {"split": split}
     block.update(git_provenance(repo_hint))
     block.update(config_provenance(cfg, config_path))
+    block.update(planner_provenance(cfg))
 
     declared = block.get("config_campaign_id")
     if resolved_campaign_id is not None:
