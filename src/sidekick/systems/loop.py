@@ -5,7 +5,12 @@ import signal
 from dataclasses import dataclass, replace
 from typing import Any, Callable, Literal, Optional
 
-from sidekick.agents.planner import CodexTimeoutError, PacketParseError, PlannerClient
+from sidekick.agents.planner import (
+    CodexTimeoutError,
+    PacketParseError,
+    PlannerClient,
+    PlannerContextOverflow,
+)
 from sidekick.agents.verifier import ConstantVerifier, SelfVerifier, ThresholdRouter, Verifier
 from sidekick.systems.action_review_gate import run_action_review
 from sidekick.environments.base import BaseEnv
@@ -415,6 +420,30 @@ def run_episode(
                     error="parse_error",
                 )
                 error_type = "parse_error"
+                return None
+            except PlannerContextOverflow as exc:
+                # A planner that cannot fit the episode in its context has exhausted a budget,
+                # like the step or token caps, so this is a `limit` and the episode is still
+                # evaluated and scored. `crash` would drop it from the analysis and resubmit it
+                # forever -- hiding the failure and never terminating. No retry: the thread
+                # only grows, so a second attempt cannot fit where the first did not.
+                usage = exc.usage if exc.usage is not None else Usage(
+                    model=_client_model_id(planner, "planner"),
+                    provider="mock",
+                    n_calls=attempts,
+                    raw={"error_type": "limit"},
+                )
+                usage = usage.model_copy(update={"n_calls": attempts})
+                charge("planner", usage)
+                emit(
+                    step=step,
+                    actor="planner",
+                    event_type="error",
+                    payload={"method": method, "limit": "planner_context", "detail": str(exc)},
+                    usage=usage,
+                    error="limit",
+                )
+                error_type = "limit"
                 return None
             usage = resp.usage.model_copy(update={"n_calls": attempts})
             resp = resp.model_copy(update={"usage": usage})

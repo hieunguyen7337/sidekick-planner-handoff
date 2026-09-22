@@ -158,6 +158,20 @@ class PacketParseError(ValueError):
         self.raw_output = raw_output
 
 
+class PlannerContextOverflow(RuntimeError):
+    """The planner's episode conversation no longer fits its context window.
+
+    Defined here rather than beside the vLLM backend so the loop can catch it without importing
+    that module. A planner that cannot fit the episode has exhausted a budget, like the step or
+    token caps, so the loop scores it as a ``limit`` rather than a ``crash``. Only the vLLM
+    backend raises it; `CodexExecPlanner` never does, so hosted arms are unaffected.
+    """
+
+    def __init__(self, message: str, *, usage: Optional[Usage] = None) -> None:
+        super().__init__(message)
+        self.usage = usage
+
+
 @dataclass
 class CodexExecConfig:
     binary: str = "codex"

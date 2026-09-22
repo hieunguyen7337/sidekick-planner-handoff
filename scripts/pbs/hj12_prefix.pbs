@@ -209,6 +209,20 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m6.yaml|hj18_prefix_c81s3_bplus_m6"
   "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m9.yaml|hj18_prefix_c81s3_bplus_m9"
   "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m11.yaml|hj18_prefix_c81s3_bplus_m11"
+  # LP-1 / LP-2: replays of the local-planner ceilings; submit only after the matching
+  # ceiling has 114 non-crashed episodes.
+  "prefix_handoff|${REPO}/configs/lp1_prefix_zs_m6.yaml|lp1_prefix_zs_m6"
+  "prefix_handoff|${REPO}/configs/lp1_prefix_zs_m9.yaml|lp1_prefix_zs_m9"
+  "prefix_handoff|${REPO}/configs/lp1_prefix_zs_m11.yaml|lp1_prefix_zs_m11"
+  "prefix_handoff|${REPO}/configs/lp1_prefix_bplus_m6.yaml|lp1_prefix_bplus_m6"
+  "prefix_handoff|${REPO}/configs/lp1_prefix_bplus_m9.yaml|lp1_prefix_bplus_m9"
+  "prefix_handoff|${REPO}/configs/lp1_prefix_bplus_m11.yaml|lp1_prefix_bplus_m11"
+  "prefix_handoff|${REPO}/configs/lp2_prefix_zs_m6.yaml|lp2_prefix_zs_m6"
+  "prefix_handoff|${REPO}/configs/lp2_prefix_zs_m9.yaml|lp2_prefix_zs_m9"
+  "prefix_handoff|${REPO}/configs/lp2_prefix_zs_m11.yaml|lp2_prefix_zs_m11"
+  "prefix_handoff|${REPO}/configs/lp2_prefix_bplus_m6.yaml|lp2_prefix_bplus_m6"
+  "prefix_handoff|${REPO}/configs/lp2_prefix_bplus_m9.yaml|lp2_prefix_bplus_m9"
+  "prefix_handoff|${REPO}/configs/lp2_prefix_bplus_m11.yaml|lp2_prefix_bplus_m11"
 )
 
 hj12_select_arms () {
