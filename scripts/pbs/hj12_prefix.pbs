@@ -141,6 +141,9 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj12_prefix_m9.yaml|hj12_prefix_m9"
   "prefix_handoff|${REPO}/configs/hj12_prefix_m10.yaml|hj12_prefix_m10"
   "prefix_handoff|${REPO}/configs/hj12_prefix_m11.yaml|hj12_prefix_m11"
+  "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m6.yaml|hj13_prefix_zs_m6"
+  "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m9.yaml|hj13_prefix_zs_m9"
+  "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m11.yaml|hj13_prefix_zs_m11"
 )
 
 hj12_select_arms () {

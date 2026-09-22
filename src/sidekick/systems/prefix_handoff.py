@@ -43,7 +43,11 @@ class PrefixHandoff(ConfigurableSystem):
         review_every_k=None,
         use_router=False,
         gate_ask_with_verifier=False,
-        adapter_name="sft_plan",
+        # None, not "sft_plan": loop.py complete() sends policy.adapter_name as the
+        # vLLM `model` field. A leftover alias that is not in --lora-modules silently
+        # hits BASE while usage.model still names the alias. Zero-shot configs set
+        # executor.lora_name: null; this default must not re-inject a fake adapter.
+        adapter_name=None,
     )
 
     def __init__(
