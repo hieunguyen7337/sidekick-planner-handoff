@@ -11,6 +11,9 @@
 # and no vLLM server. Planner is gpt-5.6-luna via `codex exec` on the ChatGPT plan
 # subscription (no per-token billing); the real limit is plan quota, which is not
 # observable from a batch job, so the job is written to be resumable and to fail loudly.
+# Do NOT submit from a worker.
+#   CONFIG="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/configs/hj13_planner_alone_cap81.yaml" CID="hj13_planner_alone_cap81_20260923"
+#   qsub -v CONFIG="${CONFIG}",CID="${CID}" scripts/pbs/hj1b_planner_alone.pbs
 
 set -uo pipefail
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
@@ -30,8 +33,8 @@ REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
 # naming none.
 export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
 OUT=/scratch/n12194778/sidekick/results
-CID=hj1b_planner_20260915
-CFG="${REPO}/configs/pilot_planner_alone.yaml"
+CONFIG="${CONFIG:-${REPO}/configs/pilot_planner_alone.yaml}"
+CID="${CID:-hj1b_planner_20260915}"
 PY="${SIDEKICK_VENV}/bin/python"
 SUM="${REPO}/scripts/setup/campaign_summarize.py"
 cd "${REPO}" || exit 1
@@ -68,7 +71,7 @@ echo "[hj1b] ---- smoke slice (3 tasks, seed 1) ----"
 timeout 1800 "${PY}" -m sidekick.runner \
   --system planner_alone --split dev --tasks 3 --seeds 1 \
   --env appworld --workers 3 \
-  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
+  --config "${CONFIG}" --out "${OUT}" --campaign-id "${CID}"
 SMOKE_RC=$?
 echo "[hj1b] smoke runner exit=${SMOKE_RC} at $(date -Iseconds)"
 
@@ -86,14 +89,14 @@ echo "[hj1b] ---- full campaign (57 tasks, seeds 1,2) ----"
 timeout 14400 "${PY}" -m sidekick.runner \
   --system planner_alone --split dev --tasks 57 --seeds 1,2 \
   --env appworld --workers 6 \
-  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
+  --config "${CONFIG}" --out "${OUT}" --campaign-id "${CID}"
 FULL_RC=$?
 echo "[hj1b] full runner exit=${FULL_RC} at $(date -Iseconds)"
 
 # ---- summary + manifest ----------------------------------------------------
 echo "[hj1b] ---- summary + manifest ----"
 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" \
-  --config "${CFG}" --repo "${REPO}" \
+  --config "${CONFIG}" --repo "${REPO}" \
   --manifest "${OUT}/results/${CID}/manifest.json"
 
 echo "[hj1b] codex session transcripts under ~/.codex/sessions modified in this window:"

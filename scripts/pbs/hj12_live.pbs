@@ -155,6 +155,7 @@ fi
 LIVE_ARMS=(
   "fixed_k|${REPO}/configs/hj12_takeover_fixed_k_10.yaml|hj12_takeover_fixed_k_10"
   "fixed_k|${REPO}/configs/hj12_advise_fixed_k_10_fullctx.yaml|hj12_advise_fixed_k_10_fullctx"
+  "fixed_k|${REPO}/configs/hj13_advise_fixed_k_1_fullctx.yaml|hj13_advise_fixed_k_1_fullctx"
   "fixed_k|${REPO}/configs/hj12_takeover_fixed_k_3.yaml|hj12_takeover_fixed_k_3"
   "router_seq|${REPO}/configs/hj12_takeover_exception.yaml|hj12_takeover_exception"
   "router_seq|${REPO}/configs/hj12_advise_exception.yaml|hj12_advise_exception"
