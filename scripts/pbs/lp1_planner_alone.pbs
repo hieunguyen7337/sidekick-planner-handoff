@@ -42,6 +42,12 @@ export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 # are separate and picking the wrong one produces a download attempt, not an error.
 export HF_HOME="${HF_HOME:-${HOME}/.cache/huggingface}"
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+# AppWorld resolves its task directory from APPWORLD_ROOT and otherwise falls back to
+# <cwd>/data/tasks, which does not exist in the worktree. Resubmission 25724293 served the
+# planner correctly and then died in the smoke on exactly that. Same value as hj12_live.pbs.
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+# X16 provenance: the commit the campaign started from, stamped into every run manifest.
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
 
 # CUDA toolchain for vLLM's JIT kernels, copied from hj12_prefix.pbs. Without it the engine
 # loads the weights, captures CUDA graphs, then dies with "Could not find nvcc and default

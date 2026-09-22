@@ -22,7 +22,9 @@
 #
 # Exit 0 only if (1) at least half the apparent bytes are allocated (a screen for the sparse
 # failure; per-blob counts are not exact on this mount) and (2) every file listed in the repo's
-# crc32.txt matches its CRC32. A chained job (-W depend=afterok) therefore cannot start on bad bytes.
+# crc32.txt matches its CRC32 -- or, where the manifest is stale, matches the hub's own blob hash
+# (git sha1 / sha256), which is the stronger check. A chained job (-W depend=afterok) therefore
+# cannot start on bad bytes.
 #
 # VERIFY_ONLY=1 skips the download and re-runs both checks on what is already in HF_HOME.
 set -uo pipefail
@@ -72,9 +74,26 @@ fi
 if [[ -s "${SNAP}/crc32.txt" ]]; then
   echo "[dl] crc32 check against ${SNAP}crc32.txt:"
   timeout 3600 "${SIDEKICK_VENV}/bin/python" - "${SNAP}" <<'PYEOF'
-import sys, zlib, pathlib
+import hashlib, os, sys, zlib, pathlib
 snap = pathlib.Path(sys.argv[1])
-bad = checked = 0
+
+
+def hub_hash_matches(path):
+    # The snapshot entry is a symlink to blobs/<name>, where <name> is the hub's own content
+    # hash: git blob sha1 for a plain file, sha256 for an LFS file. Equality means the bytes
+    # are exactly what the repo holds at this revision.
+    blob = os.path.basename(os.readlink(path)) if path.is_symlink() else ""
+    data = path.read_bytes() if path.stat().st_size < (1 << 26) else None
+    if data is not None and blob == hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest():
+        return "git_sha1"
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 24), b""):
+            h.update(chunk)
+    return "sha256" if blob == h.hexdigest() else ""
+
+
+bad = checked = stale = 0
 for line in (snap / "crc32.txt").read_text().splitlines():
     parts = line.split()
     if len(parts) < 2:
@@ -90,8 +109,16 @@ for line in (snap / "crc32.txt").read_text().splitlines():
     got = f"{crc & 0xffffffff:08x}"
     checked += 1
     if got != want:
-        print(f"[dl]   MISMATCH {name} want={want} got={got}"); bad += 1
-print(f"[dl]   checked={checked} bad={bad}")
+        how = hub_hash_matches(path)
+        if how:
+            # Seen 2026-09-23 on Qwen3.8-27B-FP8: chat_template.jinja, generation_config.json
+            # and tokenizer_config.json disagree with the repo's crc32.txt yet match the hub's
+            # blob hash -- the manifest is stale for files edited after it was written.
+            print(f"[dl]   STALE_MANIFEST {name} crc32.txt={want} got={got}; bytes match hub {how}")
+            stale += 1
+        else:
+            print(f"[dl]   MISMATCH {name} want={want} got={got}"); bad += 1
+print(f"[dl]   checked={checked} bad={bad} stale_manifest={stale}")
 sys.exit(1 if bad or checked == 0 else 0)
 PYEOF
   crc_rc=$?
