@@ -1,7 +1,13 @@
 #!/bin/bash
 #PBS -N train-sft
 #PBS -q gpu_inter
-#PBS -l select=1:ncpus=16:ngpus=1:mem=128gb
+# gpu_id=H100 is load-bearing, not a preference. Both card types sit in gpu_batch_exec and
+# PBS picks whichever is free, so an unpinned job is a coin flip. This recipe (8B base, LoRA
+# rank 64, max_length 32768, gradient checkpointing and bf16 already on) does not fit in the
+# A100's 40 GB: it OOMs in the dry run at about step 8. Measured twice, granite job 25690327
+# and Qwen job 25708421, both on gpu0n* A100 nodes; the same recipe runs at ~61% GPU on an
+# H100. gpu0n* are the A100 nodes, gpu1n* the H100 nodes.
+#PBS -l select=1:ncpus=16:ngpus=1:gpu_id=H100:mem=128gb
 #PBS -l walltime=06:00:00
 #PBS -j oe
 #PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/train_sft.out
