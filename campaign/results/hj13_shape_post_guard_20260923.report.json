@@ -1,0 +1,2927 @@
+{
+  "analysis_status": "exploratory",
+  "analysis_status_note": "Shape test on existing hj12_prefix arms is exploratory (docs/prereg_hj13_shape_20260923.md \u00a71.1). Confirmatory rows are not opened.",
+  "registered_spec": "docs/prereg_hj13_shape_20260923.md \u00a73 plus amendment 2026-09-22 17:25",
+  "series": "post_guard",
+  "date": "20260923",
+  "primary_series_is_post_guard": true,
+  "seeds": "1,2",
+  "m_grid": [
+    0,
+    2,
+    4,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "tau_candidates": [
+    4,
+    6,
+    7,
+    8,
+    9
+  ],
+  "bootstrap": 10000,
+  "seed": 20260915,
+  "primary_cluster": "scenario",
+  "reused_from_j8_frontier": [
+    "j8_frontier.summarise_arm",
+    "j8_frontier.handoff_flag_keys",
+    "j8_frontier.restrict_to_defining_handoff",
+    "j8_frontier.resolve_handoff_keys_arm",
+    "j8_frontier.coerce_crash_quality",
+    "j8_frontier.is_crashed",
+    "j8_frontier.ci_excludes_zero",
+    "j8_frontier.mean_quality",
+    "j8_frontier.paired_diff_scenario (scenario clustering has landed; curve bootstrap reuses the same _draw_task_clusters resampler grouped by scenario_of, rather than writing a second resampler)",
+    "j10_report.load_arm_tree",
+    "hj1_gate._draw_task_clusters",
+    "hj1_gate.scenario_of",
+    "hj1_gate.BOOTSTRAP",
+    "hj1_gate.SEED"
+  ],
+  "incomplete_arms": [],
+  "arms": {
+    "sft_plan": {
+      "label": "sft_plan",
+      "m": 0,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.718149,
+      "tgc_all": 0.394737,
+      "n_handoff_occurred": 0,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 18,
+        "none": 96
+      }
+    },
+    "prefix_m2": {
+      "label": "prefix_m2",
+      "m": 2,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.685579,
+      "tgc_all": 0.359649,
+      "n_handoff_occurred": 114,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 24,
+        "none": 90
+      }
+    },
+    "prefix_m4": {
+      "label": "prefix_m4",
+      "m": 4,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.719035,
+      "tgc_all": 0.421053,
+      "n_handoff_occurred": 114,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 22,
+        "none": 92
+      }
+    },
+    "prefix_m6": {
+      "label": "prefix_m6",
+      "m": 6,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.723675,
+      "tgc_all": 0.429825,
+      "n_handoff_occurred": 111,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 13,
+        "none": 101
+      }
+    },
+    "prefix_m7": {
+      "label": "prefix_m7",
+      "m": 7,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.754395,
+      "tgc_all": 0.45614,
+      "n_handoff_occurred": 106,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      }
+    },
+    "prefix_m8": {
+      "label": "prefix_m8",
+      "m": 8,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.762702,
+      "tgc_all": 0.517544,
+      "n_handoff_occurred": 93,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 12,
+        "none": 102
+      }
+    },
+    "prefix_m9": {
+      "label": "prefix_m9",
+      "m": 9,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.785184,
+      "tgc_all": 0.561404,
+      "n_handoff_occurred": 82,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      }
+    },
+    "prefix_m10": {
+      "label": "prefix_m10",
+      "m": 10,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.806482,
+      "tgc_all": 0.587719,
+      "n_handoff_occurred": 71,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      }
+    },
+    "prefix_m11": {
+      "label": "prefix_m11",
+      "m": 11,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.809825,
+      "tgc_all": 0.605263,
+      "n_handoff_occurred": 54,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 9,
+        "none": 105
+      }
+    },
+    "planner_alone": {
+      "label": "planner_alone",
+      "m": null,
+      "n": 114,
+      "complete_n": true,
+      "goal_pass_all": 0.828395,
+      "tgc_all": 0.684211,
+      "n_handoff_occurred": 0,
+      "n_silenced_executor_n_calls_eq_0": 0,
+      "error_types": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      }
+    }
+  },
+  "step_counts": {
+    "n": 114,
+    "min": 5,
+    "median": 11.0,
+    "max": 23,
+    "source": "n_source_actions from prefix_m11 handoff payload"
+  },
+  "handoff_pin_m10": {
+    "handoff_keys_from": "prefix_m10",
+    "n_keys": 71,
+    "n_shared_before_flag": 114,
+    "n_dropped_handoff": 43,
+    "reused": "j8_frontier.restrict_to_defining_handoff"
+  },
+  "handoff_pin_m11": {
+    "handoff_keys_from": "prefix_m11",
+    "n_keys": 54,
+    "n_shared_before_flag": 114,
+    "n_dropped_handoff": 60,
+    "reused": "j8_frontier.restrict_to_defining_handoff"
+  },
+  "shape04_reconciliation": {
+    "m10": {
+      "item": "SHAPE-04",
+      "definition_used": "handoff_occurred",
+      "reused": [
+        "j8_frontier.handoff_flag_keys",
+        "j8_frontier.restrict_to_defining_handoff"
+      ],
+      "defining_arm": "prefix_m10",
+      "handoff_occurred_n": 71,
+      "executor_n_calls_gt0_n": 73,
+      "n_only_handoff_occurred": 0,
+      "n_only_executor_n_calls": 2,
+      "only_handoff_occurred": [],
+      "only_executor_n_calls": [
+        {
+          "task_id": "37a8675_1",
+          "seed": 2,
+          "handoff_occurred": false,
+          "executor_n_calls": 2,
+          "error_type": null,
+          "goal_pass_rate": 0.167
+        },
+        {
+          "task_id": "383cbac_2",
+          "seed": 1,
+          "handoff_occurred": false,
+          "executor_n_calls": 32,
+          "error_type": "limit",
+          "goal_pass_rate": 0.0
+        }
+      ],
+      "note": "Registered pin uses the harness handoff_occurred flag, the same keys --handoff-keys-from feeds into j8_frontier non-inferiority goal_pass_handoff_only. executor.n_calls > 0 is reported beside it and is not substituted."
+    },
+    "m11": {
+      "item": "SHAPE-04",
+      "definition_used": "handoff_occurred",
+      "reused": [
+        "j8_frontier.handoff_flag_keys",
+        "j8_frontier.restrict_to_defining_handoff"
+      ],
+      "defining_arm": "prefix_m11",
+      "handoff_occurred_n": 54,
+      "executor_n_calls_gt0_n": 58,
+      "n_only_handoff_occurred": 0,
+      "n_only_executor_n_calls": 4,
+      "only_handoff_occurred": [],
+      "only_executor_n_calls": [
+        {
+          "task_id": "37a8675_1",
+          "seed": 2,
+          "handoff_occurred": false,
+          "executor_n_calls": 5,
+          "error_type": null,
+          "goal_pass_rate": 0.167
+        },
+        {
+          "task_id": "383cbac_2",
+          "seed": 1,
+          "handoff_occurred": false,
+          "executor_n_calls": 18,
+          "error_type": null,
+          "goal_pass_rate": 0.0
+        },
+        {
+          "task_id": "530b157_2",
+          "seed": 1,
+          "handoff_occurred": false,
+          "executor_n_calls": 15,
+          "error_type": null,
+          "goal_pass_rate": 0.9
+        },
+        {
+          "task_id": "68ee2c9_1",
+          "seed": 1,
+          "handoff_occurred": false,
+          "executor_n_calls": 29,
+          "error_type": "limit",
+          "goal_pass_rate": 0.2
+        }
+      ],
+      "note": "Registered pin uses the harness handoff_occurred flag, the same keys --handoff-keys-from feeds into j8_frontier non-inferiority goal_pass_handoff_only. executor.n_calls > 0 is reported beside it and is not substituted."
+    }
+  },
+  "populations": {
+    "all_episodes": {
+      "population": "all_episodes",
+      "analysis_status": "exploratory",
+      "n_keys": 114,
+      "n_clusters_scenario": 19,
+      "n_clusters_task": 57,
+      "curve_goal_pass": [
+        {
+          "m": 0,
+          "goal_pass_rate": 0.71814912
+        },
+        {
+          "m": 2,
+          "goal_pass_rate": 0.68557895
+        },
+        {
+          "m": 4,
+          "goal_pass_rate": 0.71903509
+        },
+        {
+          "m": 6,
+          "goal_pass_rate": 0.72367544
+        },
+        {
+          "m": 7,
+          "goal_pass_rate": 0.75439474
+        },
+        {
+          "m": 8,
+          "goal_pass_rate": 0.76270175
+        },
+        {
+          "m": 9,
+          "goal_pass_rate": 0.78518421
+        },
+        {
+          "m": 10,
+          "goal_pass_rate": 0.80648246
+        },
+        {
+          "m": 11,
+          "goal_pass_rate": 0.80982456
+        }
+      ],
+      "curve_tgc": [
+        {
+          "m": 0,
+          "tgc": 0.39473684
+        },
+        {
+          "m": 2,
+          "tgc": 0.35964912
+        },
+        {
+          "m": 4,
+          "tgc": 0.42105263
+        },
+        {
+          "m": 6,
+          "tgc": 0.42982456
+        },
+        {
+          "m": 7,
+          "tgc": 0.45614035
+        },
+        {
+          "m": 8,
+          "tgc": 0.51754386
+        },
+        {
+          "m": 9,
+          "tgc": 0.56140351
+        },
+        {
+          "m": 10,
+          "tgc": 0.5877193
+        },
+        {
+          "m": 11,
+          "tgc": 0.60526316
+        }
+      ],
+      "primary_cluster": "scenario",
+      "scenario": {
+        "point": {
+          "tau": 4,
+          "beta0": 0.70812469,
+          "beta1": -0.00124843,
+          "beta2": 0.01715055,
+          "beta1_plus_beta2": 0.01590211,
+          "rss": 0.00100197,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.71814912,
+          "2": 0.68557895,
+          "4": 0.71903509,
+          "6": 0.72367544,
+          "7": 0.75439474,
+          "8": 0.76270175,
+          "9": 0.78518421,
+          "10": 0.80648246,
+          "11": 0.80982456
+        },
+        "n_keys": 114,
+        "n_clusters": 19,
+        "cluster": "scenario",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 4,
+        "tau_ci95": [
+          4.0,
+          8.0
+        ],
+        "tau_counts": {
+          "4": 4975,
+          "6": 3483,
+          "7": 673,
+          "8": 763,
+          "9": 106
+        },
+        "tau_interval_uninformative": false,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.70812469,
+        "beta1": -0.00124843,
+        "beta1_ci95": [
+          -0.00636642,
+          0.00814718
+        ],
+        "beta2": 0.01715055,
+        "beta1_plus_beta2": 0.01590211,
+        "beta1_plus_beta2_ci95": [
+          0.01010747,
+          0.02909782
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.01159841,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "task": {
+        "point": {
+          "tau": 4,
+          "beta0": 0.70812469,
+          "beta1": -0.00124843,
+          "beta2": 0.01715055,
+          "beta1_plus_beta2": 0.01590211,
+          "rss": 0.00100197,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.71814912,
+          "2": 0.68557895,
+          "4": 0.71903509,
+          "6": 0.72367544,
+          "7": 0.75439474,
+          "8": 0.76270175,
+          "9": 0.78518421,
+          "10": 0.80648246,
+          "11": 0.80982456
+        },
+        "n_keys": 114,
+        "n_clusters": 57,
+        "cluster": "task",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 4,
+        "tau_ci95": [
+          4.0,
+          8.0
+        ],
+        "tau_counts": {
+          "4": 4970,
+          "6": 3359,
+          "7": 701,
+          "8": 764,
+          "9": 206
+        },
+        "tau_interval_uninformative": false,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.70812469,
+        "beta1": -0.00124843,
+        "beta1_ci95": [
+          -0.00822685,
+          0.00930746
+        ],
+        "beta2": 0.01715055,
+        "beta1_plus_beta2": 0.01590211,
+        "beta1_plus_beta2_ci95": [
+          0.00897798,
+          0.02982295
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.01090705,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "verdict_scenario_primary": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": -0.00124843,
+          "beta1_ci95": [
+            -0.00636642,
+            0.00814718
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.01590211,
+          "beta1_plus_beta2_ci95": [
+            0.01010747,
+            0.02909782
+          ],
+          "onesided95_lower": 0.01159841,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 4,
+          "tau_ci95": [
+            4.0,
+            8.0
+          ],
+          "tau_interval_uninformative": false,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "verdict_task_alongside": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": -0.00124843,
+          "beta1_ci95": [
+            -0.00822685,
+            0.00930746
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.01590211,
+          "beta1_plus_beta2_ci95": [
+            0.00897798,
+            0.02982295
+          ],
+          "onesided95_lower": 0.01090705,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 4,
+          "tau_ci95": [
+            4.0,
+            8.0
+          ],
+          "tau_interval_uninformative": false,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "noise_floor": {
+        "replicate_floor_pp": 3.31,
+        "floor_definition": "observed maximum single-arm |delta| on goal_pass_rate across the two available replicate pairs (m=2: 3.31 pp, m=4: 1.50 pp) where the terminal guard never fires. Not a standard error and not a CI.",
+        "m6": 0.72367544,
+        "m9": 0.78518421,
+        "m6_to_m9_rise_pp": 6.150877,
+        "twice_floor_pp": 6.62,
+        "rise_at_least_twice_floor": false,
+        "shape_claim_withdrawn_by_noise_floor": true,
+        "advice_channel_contrast_pp": -0.48,
+        "advice_channel_source": "campaign/results/hj12_unified_frontier_20260922.report.json contrasts.goal_pass_rate_advise_fixed_k_10_minus_advise_fixed_k_3",
+        "advice_channel_inside_floor": true,
+        "rule": "If the observed m6 -> m9 rise is not at least twice the larger replicate difference, the shape claim is withdrawn regardless of S1-S3 (prereg \u00a73)."
+      },
+      "robustness": {
+        "label": "descriptive_uncorrected",
+        "a_isotonic": {
+          "label": "descriptive_uncorrected",
+          "method": "isotonic_pava",
+          "floor": 0.71814912,
+          "exceed_by_pp": 5.0,
+          "first_m_exceeding_floor_plus_5pp": 9,
+          "fitted": [
+            {
+              "m": 0,
+              "q_hat": 0.70186404
+            },
+            {
+              "m": 2,
+              "q_hat": 0.70186404
+            },
+            {
+              "m": 4,
+              "q_hat": 0.71903509
+            },
+            {
+              "m": 6,
+              "q_hat": 0.72367544
+            },
+            {
+              "m": 7,
+              "q_hat": 0.75439474
+            },
+            {
+              "m": 8,
+              "q_hat": 0.76270175
+            },
+            {
+              "m": 9,
+              "q_hat": 0.78518421
+            },
+            {
+              "m": 10,
+              "q_hat": 0.80648246
+            },
+            {
+              "m": 11,
+              "q_hat": 0.80982456
+            }
+          ],
+          "observed": [
+            {
+              "m": 0,
+              "q": 0.71814912
+            },
+            {
+              "m": 2,
+              "q": 0.68557895
+            },
+            {
+              "m": 4,
+              "q": 0.71903509
+            },
+            {
+              "m": 6,
+              "q": 0.72367544
+            },
+            {
+              "m": 7,
+              "q": 0.75439474
+            },
+            {
+              "m": 8,
+              "q": 0.76270175
+            },
+            {
+              "m": 9,
+              "q": 0.78518421
+            },
+            {
+              "m": 10,
+              "q": 0.80648246
+            },
+            {
+              "m": 11,
+              "q": 0.80982456
+            }
+          ]
+        },
+        "b_segmented_on_tgc": {
+          "label": "descriptive_uncorrected",
+          "fit": {
+            "point": {
+              "tau": 6,
+              "beta0": 0.37534113,
+              "beta1": 0.00906433,
+              "beta2": 0.02923977,
+              "beta1_plus_beta2": 0.03830409,
+              "rss": 0.00243579,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.39473684,
+              "2": 0.35964912,
+              "4": 0.42105263,
+              "6": 0.42982456,
+              "7": 0.45614035,
+              "8": 0.51754386,
+              "9": 0.56140351,
+              "10": 0.5877193,
+              "11": 0.60526316
+            },
+            "n_keys": 114,
+            "n_clusters": 19,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 6,
+            "tau_ci95": [
+              4.0,
+              8.0
+            ],
+            "tau_counts": {
+              "4": 2518,
+              "6": 4410,
+              "7": 2641,
+              "8": 311,
+              "9": 120
+            },
+            "tau_interval_uninformative": false,
+            "tau_n_distinct_in_bootstrap": 5,
+            "beta0": 0.37534113,
+            "beta1": 0.00906433,
+            "beta1_ci95": [
+              -0.00519006,
+              0.01982054
+            ],
+            "beta2": 0.02923977,
+            "beta1_plus_beta2": 0.03830409,
+            "beta1_plus_beta2_ci95": [
+              0.01915205,
+              0.06166932
+            ],
+            "beta1_plus_beta2_onesided95_lower": 0.02307283,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": 0.00906433,
+              "beta1_ci95": [
+                -0.00519006,
+                0.01982054
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": true,
+              "beta1_plus_beta2": 0.03830409,
+              "beta1_plus_beta2_ci95": [
+                0.01915205,
+                0.06166932
+              ],
+              "onesided95_lower": 0.02307283,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": false,
+              "tau": 6,
+              "tau_ci95": [
+                4.0,
+                8.0
+              ],
+              "tau_interval_uninformative": false,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": false,
+            "verdict": "no threshold established",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          }
+        },
+        "d_percentile_remap": {
+          "label": "descriptive_uncorrected",
+          "mapping": "p(m) = 100 * #{source planner action counts s_i <= m} / n; s_i is n_source_actions from the handoff payload (HJ-12 \u00a77.3 quantity). Hinge is (p(m)-p(tau))_+; tau candidates remain {4,6,7,8,9}.",
+          "p_of_m": {
+            "0.0": 0.0,
+            "2.0": 0.0,
+            "4.0": 0.0,
+            "6.0": 2.631579,
+            "7.0": 7.017544,
+            "8.0": 18.421053,
+            "9.0": 28.070175,
+            "10.0": 37.719298,
+            "11.0": 52.631579
+          },
+          "fit": {
+            "point": {
+              "tau": 7,
+              "beta0": 0.70736195,
+              "beta1": 0.00661094,
+              "beta2": -0.00523734,
+              "beta1_plus_beta2": 0.0013736,
+              "rss": 0.00093493,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.71814912,
+              "2": 0.68557895,
+              "4": 0.71903509,
+              "6": 0.72367544,
+              "7": 0.75439474,
+              "8": 0.76270175,
+              "9": 0.78518421,
+              "10": 0.80648246,
+              "11": 0.80982456
+            },
+            "n_keys": 114,
+            "n_clusters": 19,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 7,
+            "tau_ci95": [
+              6.0,
+              9.0
+            ],
+            "tau_counts": {
+              "6": 2797,
+              "7": 4211,
+              "8": 1182,
+              "9": 1810
+            },
+            "tau_interval_uninformative": false,
+            "tau_n_distinct_in_bootstrap": 4,
+            "beta0": 0.70736195,
+            "beta1": 0.00661094,
+            "beta1_ci95": [
+              -0.00216934,
+              0.02445293
+            ],
+            "beta2": -0.00523734,
+            "beta1_plus_beta2": 0.0013736,
+            "beta1_plus_beta2_ci95": [
+              -3.32e-05,
+              0.00237212
+            ],
+            "beta1_plus_beta2_onesided95_lower": 0.00017897,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": 0.00661094,
+              "beta1_ci95": [
+                -0.00216934,
+                0.02445293
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": true,
+              "beta1_plus_beta2": 0.0013736,
+              "beta1_plus_beta2_ci95": [
+                -3.32e-05,
+                0.00237212
+              ],
+              "onesided95_lower": 0.00017897,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": true,
+              "tau": 7,
+              "tau_ci95": [
+                6.0,
+                9.0
+              ],
+              "tau_interval_uninformative": false,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": true,
+            "verdict": "shape claim supported",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          },
+          "monotone": true
+        }
+      },
+      "note": "all-episodes; crash scores 0",
+      "n_keys_requested": 114
+    },
+    "survivors_robustness_c": {
+      "population": "survivors_robustness_c",
+      "analysis_status": "exploratory",
+      "n_keys": 114,
+      "n_clusters_scenario": 19,
+      "n_clusters_task": 57,
+      "curve_goal_pass": [
+        {
+          "m": 0,
+          "goal_pass_rate": 0.71814912
+        },
+        {
+          "m": 2,
+          "goal_pass_rate": 0.68557895
+        },
+        {
+          "m": 4,
+          "goal_pass_rate": 0.71903509
+        },
+        {
+          "m": 6,
+          "goal_pass_rate": 0.72367544
+        },
+        {
+          "m": 7,
+          "goal_pass_rate": 0.75439474
+        },
+        {
+          "m": 8,
+          "goal_pass_rate": 0.76270175
+        },
+        {
+          "m": 9,
+          "goal_pass_rate": 0.78518421
+        },
+        {
+          "m": 10,
+          "goal_pass_rate": 0.80648246
+        },
+        {
+          "m": 11,
+          "goal_pass_rate": 0.80982456
+        }
+      ],
+      "curve_tgc": [
+        {
+          "m": 0,
+          "tgc": 0.39473684
+        },
+        {
+          "m": 2,
+          "tgc": 0.35964912
+        },
+        {
+          "m": 4,
+          "tgc": 0.42105263
+        },
+        {
+          "m": 6,
+          "tgc": 0.42982456
+        },
+        {
+          "m": 7,
+          "tgc": 0.45614035
+        },
+        {
+          "m": 8,
+          "tgc": 0.51754386
+        },
+        {
+          "m": 9,
+          "tgc": 0.56140351
+        },
+        {
+          "m": 10,
+          "tgc": 0.5877193
+        },
+        {
+          "m": 11,
+          "tgc": 0.60526316
+        }
+      ],
+      "primary_cluster": "scenario",
+      "scenario": {
+        "point": {
+          "tau": 4,
+          "beta0": 0.70812469,
+          "beta1": -0.00124843,
+          "beta2": 0.01715055,
+          "beta1_plus_beta2": 0.01590211,
+          "rss": 0.00100197,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.71814912,
+          "2": 0.68557895,
+          "4": 0.71903509,
+          "6": 0.72367544,
+          "7": 0.75439474,
+          "8": 0.76270175,
+          "9": 0.78518421,
+          "10": 0.80648246,
+          "11": 0.80982456
+        },
+        "n_keys": 114,
+        "n_clusters": 19,
+        "cluster": "scenario",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 4,
+        "tau_ci95": [
+          4.0,
+          8.0
+        ],
+        "tau_counts": {
+          "4": 4975,
+          "6": 3483,
+          "7": 673,
+          "8": 763,
+          "9": 106
+        },
+        "tau_interval_uninformative": false,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.70812469,
+        "beta1": -0.00124843,
+        "beta1_ci95": [
+          -0.00636642,
+          0.00814718
+        ],
+        "beta2": 0.01715055,
+        "beta1_plus_beta2": 0.01590211,
+        "beta1_plus_beta2_ci95": [
+          0.01010747,
+          0.02909782
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.01159841,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "task": {
+        "point": {
+          "tau": 4,
+          "beta0": 0.70812469,
+          "beta1": -0.00124843,
+          "beta2": 0.01715055,
+          "beta1_plus_beta2": 0.01590211,
+          "rss": 0.00100197,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.71814912,
+          "2": 0.68557895,
+          "4": 0.71903509,
+          "6": 0.72367544,
+          "7": 0.75439474,
+          "8": 0.76270175,
+          "9": 0.78518421,
+          "10": 0.80648246,
+          "11": 0.80982456
+        },
+        "n_keys": 114,
+        "n_clusters": 57,
+        "cluster": "task",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 4,
+        "tau_ci95": [
+          4.0,
+          8.0
+        ],
+        "tau_counts": {
+          "4": 4970,
+          "6": 3359,
+          "7": 701,
+          "8": 764,
+          "9": 206
+        },
+        "tau_interval_uninformative": false,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.70812469,
+        "beta1": -0.00124843,
+        "beta1_ci95": [
+          -0.00822685,
+          0.00930746
+        ],
+        "beta2": 0.01715055,
+        "beta1_plus_beta2": 0.01590211,
+        "beta1_plus_beta2_ci95": [
+          0.00897798,
+          0.02982295
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.01090705,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "verdict_scenario_primary": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": -0.00124843,
+          "beta1_ci95": [
+            -0.00636642,
+            0.00814718
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.01590211,
+          "beta1_plus_beta2_ci95": [
+            0.01010747,
+            0.02909782
+          ],
+          "onesided95_lower": 0.01159841,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 4,
+          "tau_ci95": [
+            4.0,
+            8.0
+          ],
+          "tau_interval_uninformative": false,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "verdict_task_alongside": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": -0.00124843,
+          "beta1_ci95": [
+            -0.00822685,
+            0.00930746
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.01590211,
+          "beta1_plus_beta2_ci95": [
+            0.00897798,
+            0.02982295
+          ],
+          "onesided95_lower": 0.01090705,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 4,
+          "tau_ci95": [
+            4.0,
+            8.0
+          ],
+          "tau_interval_uninformative": false,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "noise_floor": {
+        "replicate_floor_pp": 3.31,
+        "floor_definition": "observed maximum single-arm |delta| on goal_pass_rate across the two available replicate pairs (m=2: 3.31 pp, m=4: 1.50 pp) where the terminal guard never fires. Not a standard error and not a CI.",
+        "m6": 0.72367544,
+        "m9": 0.78518421,
+        "m6_to_m9_rise_pp": 6.150877,
+        "twice_floor_pp": 6.62,
+        "rise_at_least_twice_floor": false,
+        "shape_claim_withdrawn_by_noise_floor": true,
+        "advice_channel_contrast_pp": -0.48,
+        "advice_channel_source": "campaign/results/hj12_unified_frontier_20260922.report.json contrasts.goal_pass_rate_advise_fixed_k_10_minus_advise_fixed_k_3",
+        "advice_channel_inside_floor": true,
+        "rule": "If the observed m6 -> m9 rise is not at least twice the larger replicate difference, the shape claim is withdrawn regardless of S1-S3 (prereg \u00a73)."
+      },
+      "robustness": {
+        "label": "descriptive_uncorrected",
+        "a_isotonic": {
+          "label": "descriptive_uncorrected",
+          "method": "isotonic_pava",
+          "floor": 0.71814912,
+          "exceed_by_pp": 5.0,
+          "first_m_exceeding_floor_plus_5pp": 9,
+          "fitted": [
+            {
+              "m": 0,
+              "q_hat": 0.70186404
+            },
+            {
+              "m": 2,
+              "q_hat": 0.70186404
+            },
+            {
+              "m": 4,
+              "q_hat": 0.71903509
+            },
+            {
+              "m": 6,
+              "q_hat": 0.72367544
+            },
+            {
+              "m": 7,
+              "q_hat": 0.75439474
+            },
+            {
+              "m": 8,
+              "q_hat": 0.76270175
+            },
+            {
+              "m": 9,
+              "q_hat": 0.78518421
+            },
+            {
+              "m": 10,
+              "q_hat": 0.80648246
+            },
+            {
+              "m": 11,
+              "q_hat": 0.80982456
+            }
+          ],
+          "observed": [
+            {
+              "m": 0,
+              "q": 0.71814912
+            },
+            {
+              "m": 2,
+              "q": 0.68557895
+            },
+            {
+              "m": 4,
+              "q": 0.71903509
+            },
+            {
+              "m": 6,
+              "q": 0.72367544
+            },
+            {
+              "m": 7,
+              "q": 0.75439474
+            },
+            {
+              "m": 8,
+              "q": 0.76270175
+            },
+            {
+              "m": 9,
+              "q": 0.78518421
+            },
+            {
+              "m": 10,
+              "q": 0.80648246
+            },
+            {
+              "m": 11,
+              "q": 0.80982456
+            }
+          ]
+        },
+        "b_segmented_on_tgc": {
+          "label": "descriptive_uncorrected",
+          "fit": {
+            "point": {
+              "tau": 6,
+              "beta0": 0.37534113,
+              "beta1": 0.00906433,
+              "beta2": 0.02923977,
+              "beta1_plus_beta2": 0.03830409,
+              "rss": 0.00243579,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.39473684,
+              "2": 0.35964912,
+              "4": 0.42105263,
+              "6": 0.42982456,
+              "7": 0.45614035,
+              "8": 0.51754386,
+              "9": 0.56140351,
+              "10": 0.5877193,
+              "11": 0.60526316
+            },
+            "n_keys": 114,
+            "n_clusters": 19,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 6,
+            "tau_ci95": [
+              4.0,
+              8.0
+            ],
+            "tau_counts": {
+              "4": 2518,
+              "6": 4410,
+              "7": 2641,
+              "8": 311,
+              "9": 120
+            },
+            "tau_interval_uninformative": false,
+            "tau_n_distinct_in_bootstrap": 5,
+            "beta0": 0.37534113,
+            "beta1": 0.00906433,
+            "beta1_ci95": [
+              -0.00519006,
+              0.01982054
+            ],
+            "beta2": 0.02923977,
+            "beta1_plus_beta2": 0.03830409,
+            "beta1_plus_beta2_ci95": [
+              0.01915205,
+              0.06166932
+            ],
+            "beta1_plus_beta2_onesided95_lower": 0.02307283,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": 0.00906433,
+              "beta1_ci95": [
+                -0.00519006,
+                0.01982054
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": true,
+              "beta1_plus_beta2": 0.03830409,
+              "beta1_plus_beta2_ci95": [
+                0.01915205,
+                0.06166932
+              ],
+              "onesided95_lower": 0.02307283,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": false,
+              "tau": 6,
+              "tau_ci95": [
+                4.0,
+                8.0
+              ],
+              "tau_interval_uninformative": false,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": false,
+            "verdict": "no threshold established",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          }
+        },
+        "d_percentile_remap": {
+          "label": "descriptive_uncorrected",
+          "mapping": "p(m) = 100 * #{source planner action counts s_i <= m} / n; s_i is n_source_actions from the handoff payload (HJ-12 \u00a77.3 quantity). Hinge is (p(m)-p(tau))_+; tau candidates remain {4,6,7,8,9}.",
+          "p_of_m": {
+            "0.0": 0.0,
+            "2.0": 0.0,
+            "4.0": 0.0,
+            "6.0": 2.631579,
+            "7.0": 7.017544,
+            "8.0": 18.421053,
+            "9.0": 28.070175,
+            "10.0": 37.719298,
+            "11.0": 52.631579
+          },
+          "fit": {
+            "point": {
+              "tau": 7,
+              "beta0": 0.70736195,
+              "beta1": 0.00661094,
+              "beta2": -0.00523734,
+              "beta1_plus_beta2": 0.0013736,
+              "rss": 0.00093493,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.71814912,
+              "2": 0.68557895,
+              "4": 0.71903509,
+              "6": 0.72367544,
+              "7": 0.75439474,
+              "8": 0.76270175,
+              "9": 0.78518421,
+              "10": 0.80648246,
+              "11": 0.80982456
+            },
+            "n_keys": 114,
+            "n_clusters": 19,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 7,
+            "tau_ci95": [
+              6.0,
+              9.0
+            ],
+            "tau_counts": {
+              "6": 2797,
+              "7": 4211,
+              "8": 1182,
+              "9": 1810
+            },
+            "tau_interval_uninformative": false,
+            "tau_n_distinct_in_bootstrap": 4,
+            "beta0": 0.70736195,
+            "beta1": 0.00661094,
+            "beta1_ci95": [
+              -0.00216934,
+              0.02445293
+            ],
+            "beta2": -0.00523734,
+            "beta1_plus_beta2": 0.0013736,
+            "beta1_plus_beta2_ci95": [
+              -3.32e-05,
+              0.00237212
+            ],
+            "beta1_plus_beta2_onesided95_lower": 0.00017897,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": 0.00661094,
+              "beta1_ci95": [
+                -0.00216934,
+                0.02445293
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": true,
+              "beta1_plus_beta2": 0.0013736,
+              "beta1_plus_beta2_ci95": [
+                -3.32e-05,
+                0.00237212
+              ],
+              "onesided95_lower": 0.00017897,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": true,
+              "tau": 7,
+              "tau_ci95": [
+                6.0,
+                9.0
+              ],
+              "tau_interval_uninformative": false,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": true,
+            "verdict": "shape claim supported",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          },
+          "monotone": true
+        }
+      },
+      "note": "HJ-12 \u00a73.4 survivors; robustness (c)",
+      "n_keys_requested": 114
+    },
+    "handoff_keys_m10": {
+      "population": "handoff_keys_m10",
+      "analysis_status": "exploratory",
+      "n_keys": 71,
+      "n_clusters_scenario": 19,
+      "n_clusters_task": 48,
+      "curve_goal_pass": [
+        {
+          "m": 0,
+          "goal_pass_rate": 0.69343662
+        },
+        {
+          "m": 2,
+          "goal_pass_rate": 0.7144507
+        },
+        {
+          "m": 4,
+          "goal_pass_rate": 0.70519718
+        },
+        {
+          "m": 6,
+          "goal_pass_rate": 0.70532394
+        },
+        {
+          "m": 7,
+          "goal_pass_rate": 0.71391549
+        },
+        {
+          "m": 8,
+          "goal_pass_rate": 0.69914085
+        },
+        {
+          "m": 9,
+          "goal_pass_rate": 0.72819718
+        },
+        {
+          "m": 10,
+          "goal_pass_rate": 0.76943662
+        },
+        {
+          "m": 11,
+          "goal_pass_rate": 0.77480282
+        }
+      ],
+      "curve_tgc": [
+        {
+          "m": 0,
+          "tgc": 0.38028169
+        },
+        {
+          "m": 2,
+          "tgc": 0.42253521
+        },
+        {
+          "m": 4,
+          "tgc": 0.3943662
+        },
+        {
+          "m": 6,
+          "tgc": 0.4084507
+        },
+        {
+          "m": 7,
+          "tgc": 0.3943662
+        },
+        {
+          "m": 8,
+          "tgc": 0.4084507
+        },
+        {
+          "m": 9,
+          "tgc": 0.46478873
+        },
+        {
+          "m": 10,
+          "tgc": 0.50704225
+        },
+        {
+          "m": 11,
+          "tgc": 0.53521127
+        }
+      ],
+      "primary_cluster": "scenario",
+      "scenario": {
+        "point": {
+          "tau": 8,
+          "beta0": 0.70214544,
+          "beta1": 0.00073394,
+          "beta2": 0.02379302,
+          "beta1_plus_beta2": 0.02452695,
+          "rss": 0.00053556,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.69343662,
+          "2": 0.7144507,
+          "4": 0.70519718,
+          "6": 0.70532394,
+          "7": 0.71391549,
+          "8": 0.69914085,
+          "9": 0.72819718,
+          "10": 0.76943662,
+          "11": 0.77480282
+        },
+        "n_keys": 71,
+        "n_clusters": 19,
+        "cluster": "scenario",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 8,
+        "tau_ci95": [
+          4.0,
+          9.0
+        ],
+        "tau_counts": {
+          "4": 722,
+          "6": 1937,
+          "7": 791,
+          "8": 4279,
+          "9": 2271
+        },
+        "tau_interval_uninformative": true,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.70214544,
+        "beta1": 0.00073394,
+        "beta1_ci95": [
+          -0.00895021,
+          0.00615015
+        ],
+        "beta2": 0.02379302,
+        "beta1_plus_beta2": 0.02452695,
+        "beta1_plus_beta2_ci95": [
+          0.00672061,
+          0.0529446
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.00965102,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "task": {
+        "point": {
+          "tau": 8,
+          "beta0": 0.70214544,
+          "beta1": 0.00073394,
+          "beta2": 0.02379302,
+          "beta1_plus_beta2": 0.02452695,
+          "rss": 0.00053556,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.69343662,
+          "2": 0.7144507,
+          "4": 0.70519718,
+          "6": 0.70532394,
+          "7": 0.71391549,
+          "8": 0.69914085,
+          "9": 0.72819718,
+          "10": 0.76943662,
+          "11": 0.77480282
+        },
+        "n_keys": 71,
+        "n_clusters": 48,
+        "cluster": "task",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 8,
+        "tau_ci95": [
+          4.0,
+          9.0
+        ],
+        "tau_counts": {
+          "4": 592,
+          "6": 1863,
+          "7": 835,
+          "8": 4244,
+          "9": 2466
+        },
+        "tau_interval_uninformative": true,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.70214544,
+        "beta1": 0.00073394,
+        "beta1_ci95": [
+          -0.0102955,
+          0.00954964
+        ],
+        "beta2": 0.02379302,
+        "beta1_plus_beta2": 0.02452695,
+        "beta1_plus_beta2_ci95": [
+          0.00332299,
+          0.05068366
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.00903171,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "verdict_scenario_primary": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": 0.00073394,
+          "beta1_ci95": [
+            -0.00895021,
+            0.00615015
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.02452695,
+          "beta1_plus_beta2_ci95": [
+            0.00672061,
+            0.0529446
+          ],
+          "onesided95_lower": 0.00965102,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 8,
+          "tau_ci95": [
+            4.0,
+            9.0
+          ],
+          "tau_interval_uninformative": true,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "verdict_task_alongside": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": 0.00073394,
+          "beta1_ci95": [
+            -0.0102955,
+            0.00954964
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.02452695,
+          "beta1_plus_beta2_ci95": [
+            0.00332299,
+            0.05068366
+          ],
+          "onesided95_lower": 0.00903171,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 8,
+          "tau_ci95": [
+            4.0,
+            9.0
+          ],
+          "tau_interval_uninformative": true,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "noise_floor": {
+        "replicate_floor_pp": 3.31,
+        "floor_definition": "observed maximum single-arm |delta| on goal_pass_rate across the two available replicate pairs (m=2: 3.31 pp, m=4: 1.50 pp) where the terminal guard never fires. Not a standard error and not a CI.",
+        "m6": 0.70532394,
+        "m9": 0.72819718,
+        "m6_to_m9_rise_pp": 2.287324,
+        "twice_floor_pp": 6.62,
+        "rise_at_least_twice_floor": false,
+        "shape_claim_withdrawn_by_noise_floor": true,
+        "advice_channel_contrast_pp": -0.48,
+        "advice_channel_source": "campaign/results/hj12_unified_frontier_20260922.report.json contrasts.goal_pass_rate_advise_fixed_k_10_minus_advise_fixed_k_3",
+        "advice_channel_inside_floor": true,
+        "rule": "If the observed m6 -> m9 rise is not at least twice the larger replicate difference, the shape claim is withdrawn regardless of S1-S3 (prereg \u00a73)."
+      },
+      "robustness": {
+        "label": "descriptive_uncorrected",
+        "a_isotonic": {
+          "label": "descriptive_uncorrected",
+          "method": "isotonic_pava",
+          "floor": 0.69343662,
+          "exceed_by_pp": 5.0,
+          "first_m_exceeding_floor_plus_5pp": 10,
+          "fitted": [
+            {
+              "m": 0,
+              "q_hat": 0.69343662
+            },
+            {
+              "m": 2,
+              "q_hat": 0.70760563
+            },
+            {
+              "m": 4,
+              "q_hat": 0.70760563
+            },
+            {
+              "m": 6,
+              "q_hat": 0.70760563
+            },
+            {
+              "m": 7,
+              "q_hat": 0.70760563
+            },
+            {
+              "m": 8,
+              "q_hat": 0.70760563
+            },
+            {
+              "m": 9,
+              "q_hat": 0.72819718
+            },
+            {
+              "m": 10,
+              "q_hat": 0.76943662
+            },
+            {
+              "m": 11,
+              "q_hat": 0.77480282
+            }
+          ],
+          "observed": [
+            {
+              "m": 0,
+              "q": 0.69343662
+            },
+            {
+              "m": 2,
+              "q": 0.7144507
+            },
+            {
+              "m": 4,
+              "q": 0.70519718
+            },
+            {
+              "m": 6,
+              "q": 0.70532394
+            },
+            {
+              "m": 7,
+              "q": 0.71391549
+            },
+            {
+              "m": 8,
+              "q": 0.69914085
+            },
+            {
+              "m": 9,
+              "q": 0.72819718
+            },
+            {
+              "m": 10,
+              "q": 0.76943662
+            },
+            {
+              "m": 11,
+              "q": 0.77480282
+            }
+          ]
+        },
+        "b_segmented_on_tgc": {
+          "label": "descriptive_uncorrected",
+          "fit": {
+            "point": {
+              "tau": 8,
+              "beta0": 0.39385849,
+              "beta1": 0.00202487,
+              "beta2": 0.04255815,
+              "beta1_plus_beta2": 0.04458302,
+              "rss": 0.00128177,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.38028169,
+              "2": 0.42253521,
+              "4": 0.3943662,
+              "6": 0.4084507,
+              "7": 0.3943662,
+              "8": 0.4084507,
+              "9": 0.46478873,
+              "10": 0.50704225,
+              "11": 0.53521127
+            },
+            "n_keys": 71,
+            "n_clusters": 19,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 8,
+            "tau_ci95": [
+              4.0,
+              9.0
+            ],
+            "tau_counts": {
+              "4": 698,
+              "6": 1773,
+              "7": 2199,
+              "8": 3879,
+              "9": 1451
+            },
+            "tau_interval_uninformative": true,
+            "tau_n_distinct_in_bootstrap": 5,
+            "beta0": 0.39385849,
+            "beta1": 0.00202487,
+            "beta1_ci95": [
+              -0.01727273,
+              0.01264889
+            ],
+            "beta2": 0.04255815,
+            "beta1_plus_beta2": 0.04458302,
+            "beta1_plus_beta2_ci95": [
+              0.01033514,
+              0.08212468
+            ],
+            "beta1_plus_beta2_onesided95_lower": 0.01660517,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": 0.00202487,
+              "beta1_ci95": [
+                -0.01727273,
+                0.01264889
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": true,
+              "beta1_plus_beta2": 0.04458302,
+              "beta1_plus_beta2_ci95": [
+                0.01033514,
+                0.08212468
+              ],
+              "onesided95_lower": 0.01660517,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": false,
+              "tau": 8,
+              "tau_ci95": [
+                4.0,
+                9.0
+              ],
+              "tau_interval_uninformative": true,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": false,
+            "verdict": "no threshold established",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          }
+        },
+        "d_percentile_remap": {
+          "label": "descriptive_uncorrected",
+          "mapping": "p(m) = 100 * #{source planner action counts s_i <= m} / n; s_i is n_source_actions from the handoff payload (HJ-12 \u00a77.3 quantity). Hinge is (p(m)-p(tau))_+; tau candidates remain {4,6,7,8,9}.",
+          "p_of_m": {
+            "0.0": 0.0,
+            "2.0": 0.0,
+            "4.0": 0.0,
+            "6.0": 2.631579,
+            "7.0": 7.017544,
+            "8.0": 18.421053,
+            "9.0": 28.070175,
+            "10.0": 37.719298,
+            "11.0": 52.631579
+          },
+          "fit": {
+            "point": {
+              "tau": 8,
+              "beta0": 0.70564311,
+              "beta1": 0.00015191,
+              "beta2": 0.00207195,
+              "beta1_plus_beta2": 0.00222386,
+              "rss": 0.00078989,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.69343662,
+              "2": 0.7144507,
+              "4": 0.70519718,
+              "6": 0.70532394,
+              "7": 0.71391549,
+              "8": 0.69914085,
+              "9": 0.72819718,
+              "10": 0.76943662,
+              "11": 0.77480282
+            },
+            "n_keys": 71,
+            "n_clusters": 19,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 8,
+            "tau_ci95": [
+              6.0,
+              9.0
+            ],
+            "tau_counts": {
+              "6": 2274,
+              "7": 1463,
+              "8": 4593,
+              "9": 1670
+            },
+            "tau_interval_uninformative": false,
+            "tau_n_distinct_in_bootstrap": 4,
+            "beta0": 0.70564311,
+            "beta1": 0.00015191,
+            "beta1_ci95": [
+              -0.01583055,
+              0.0112561
+            ],
+            "beta2": 0.00207195,
+            "beta1_plus_beta2": 0.00222386,
+            "beta1_plus_beta2_ci95": [
+              -0.0001146,
+              0.00442797
+            ],
+            "beta1_plus_beta2_onesided95_lower": 0.00020391,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": 0.00015191,
+              "beta1_ci95": [
+                -0.01583055,
+                0.0112561
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": true,
+              "beta1_plus_beta2": 0.00222386,
+              "beta1_plus_beta2_ci95": [
+                -0.0001146,
+                0.00442797
+              ],
+              "onesided95_lower": 0.00020391,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": true,
+              "tau": 8,
+              "tau_ci95": [
+                6.0,
+                9.0
+              ],
+              "tau_interval_uninformative": false,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": true,
+            "verdict": "shape claim supported",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          },
+          "monotone": true
+        }
+      },
+      "note": "pinned to prefix_m10 handoff_occurred keys",
+      "n_keys_requested": 71
+    },
+    "handoff_keys_m11": {
+      "population": "handoff_keys_m11",
+      "analysis_status": "exploratory",
+      "n_keys": 54,
+      "n_clusters_scenario": 18,
+      "n_clusters_task": 41,
+      "curve_goal_pass": [
+        {
+          "m": 0,
+          "goal_pass_rate": 0.6762037
+        },
+        {
+          "m": 2,
+          "goal_pass_rate": 0.71185185
+        },
+        {
+          "m": 4,
+          "goal_pass_rate": 0.70007407
+        },
+        {
+          "m": 6,
+          "goal_pass_rate": 0.69674074
+        },
+        {
+          "m": 7,
+          "goal_pass_rate": 0.68390741
+        },
+        {
+          "m": 8,
+          "goal_pass_rate": 0.68009259
+        },
+        {
+          "m": 9,
+          "goal_pass_rate": 0.7167037
+        },
+        {
+          "m": 10,
+          "goal_pass_rate": 0.7487037
+        },
+        {
+          "m": 11,
+          "goal_pass_rate": 0.75575926
+        }
+      ],
+      "curve_tgc": [
+        {
+          "m": 0,
+          "tgc": 0.37037037
+        },
+        {
+          "m": 2,
+          "tgc": 0.42592593
+        },
+        {
+          "m": 4,
+          "tgc": 0.40740741
+        },
+        {
+          "m": 6,
+          "tgc": 0.37037037
+        },
+        {
+          "m": 7,
+          "tgc": 0.37037037
+        },
+        {
+          "m": 8,
+          "tgc": 0.40740741
+        },
+        {
+          "m": 9,
+          "tgc": 0.46296296
+        },
+        {
+          "m": 10,
+          "tgc": 0.48148148
+        },
+        {
+          "m": 11,
+          "tgc": 0.51851852
+        }
+      ],
+      "primary_cluster": "scenario",
+      "scenario": {
+        "point": {
+          "tau": 8,
+          "beta0": 0.69426564,
+          "beta1": -0.00045005,
+          "beta2": 0.02454988,
+          "beta1_plus_beta2": 0.02409983,
+          "rss": 0.00106887,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.6762037,
+          "2": 0.71185185,
+          "4": 0.70007407,
+          "6": 0.69674074,
+          "7": 0.68390741,
+          "8": 0.68009259,
+          "9": 0.7167037,
+          "10": 0.7487037,
+          "11": 0.75575926
+        },
+        "n_keys": 54,
+        "n_clusters": 18,
+        "cluster": "scenario",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 8,
+        "tau_ci95": [
+          4.0,
+          9.0
+        ],
+        "tau_counts": {
+          "4": 493,
+          "6": 961,
+          "7": 1959,
+          "8": 4992,
+          "9": 1595
+        },
+        "tau_interval_uninformative": true,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.69426564,
+        "beta1": -0.00045005,
+        "beta1_ci95": [
+          -0.01041156,
+          0.0083914
+        ],
+        "beta2": 0.02454988,
+        "beta1_plus_beta2": 0.02409983,
+        "beta1_plus_beta2_ci95": [
+          0.00047735,
+          0.0511468
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.00709106,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "task": {
+        "point": {
+          "tau": 8,
+          "beta0": 0.69426564,
+          "beta1": -0.00045005,
+          "beta2": 0.02454988,
+          "beta1_plus_beta2": 0.02409983,
+          "rss": 0.00106887,
+          "n_points": 9,
+          "tie_break": "smallest_tau_on_equal_rss",
+          "candidates": [
+            4,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "means": {
+          "0": 0.6762037,
+          "2": 0.71185185,
+          "4": 0.70007407,
+          "6": 0.69674074,
+          "7": 0.68390741,
+          "8": 0.68009259,
+          "9": 0.7167037,
+          "10": 0.7487037,
+          "11": 0.75575926
+        },
+        "n_keys": 54,
+        "n_clusters": 41,
+        "cluster": "task",
+        "n_boot": 10000,
+        "n_kept": 10000,
+        "n_skipped": 0,
+        "seed": 20260915,
+        "tau": 8,
+        "tau_ci95": [
+          4.0,
+          9.0
+        ],
+        "tau_counts": {
+          "4": 524,
+          "6": 944,
+          "7": 1672,
+          "8": 4773,
+          "9": 2087
+        },
+        "tau_interval_uninformative": true,
+        "tau_n_distinct_in_bootstrap": 5,
+        "beta0": 0.69426564,
+        "beta1": -0.00045005,
+        "beta1_ci95": [
+          -0.0099957,
+          0.01188408
+        ],
+        "beta2": 0.02454988,
+        "beta1_plus_beta2": 0.02409983,
+        "beta1_plus_beta2_ci95": [
+          0.00146659,
+          0.05358782
+        ],
+        "beta1_plus_beta2_onesided95_lower": 0.00576194,
+        "resampler": "hj1_gate._draw_task_clusters"
+      },
+      "verdict_scenario_primary": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": -0.00045005,
+          "beta1_ci95": [
+            -0.01041156,
+            0.0083914
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.02409983,
+          "beta1_plus_beta2_ci95": [
+            0.00047735,
+            0.0511468
+          ],
+          "onesided95_lower": 0.00709106,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 8,
+          "tau_ci95": [
+            4.0,
+            9.0
+          ],
+          "tau_interval_uninformative": true,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "verdict_task_alongside": {
+        "S1_pre_threshold_flatness": {
+          "hypothesis": "beta1 = 0",
+          "rejected": false,
+          "holds": true,
+          "beta1": -0.00045005,
+          "beta1_ci95": [
+            -0.0099957,
+            0.01188408
+          ],
+          "rule": "rejected only if the interval for beta1 excludes zero"
+        },
+        "S2_post_threshold_rise": {
+          "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+          "holds": true,
+          "beta1_plus_beta2": 0.02409983,
+          "beta1_plus_beta2_ci95": [
+            0.00146659,
+            0.05358782
+          ],
+          "onesided95_lower": 0.00576194,
+          "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+        },
+        "S3_threshold_is_real": {
+          "hypothesis": "bootstrap interval for tau excludes m <= 4",
+          "holds": false,
+          "tau": 8,
+          "tau_ci95": [
+            4.0,
+            9.0
+          ],
+          "tau_interval_uninformative": true,
+          "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+        },
+        "shape_claim_supported": false,
+        "verdict": "no threshold established",
+        "family": "S1-S3 one family; robustness descriptive and uncorrected",
+        "analysis_status": "exploratory"
+      },
+      "noise_floor": {
+        "replicate_floor_pp": 3.31,
+        "floor_definition": "observed maximum single-arm |delta| on goal_pass_rate across the two available replicate pairs (m=2: 3.31 pp, m=4: 1.50 pp) where the terminal guard never fires. Not a standard error and not a CI.",
+        "m6": 0.69674074,
+        "m9": 0.7167037,
+        "m6_to_m9_rise_pp": 1.996296,
+        "twice_floor_pp": 6.62,
+        "rise_at_least_twice_floor": false,
+        "shape_claim_withdrawn_by_noise_floor": true,
+        "advice_channel_contrast_pp": -0.48,
+        "advice_channel_source": "campaign/results/hj12_unified_frontier_20260922.report.json contrasts.goal_pass_rate_advise_fixed_k_10_minus_advise_fixed_k_3",
+        "advice_channel_inside_floor": true,
+        "rule": "If the observed m6 -> m9 rise is not at least twice the larger replicate difference, the shape claim is withdrawn regardless of S1-S3 (prereg \u00a73)."
+      },
+      "robustness": {
+        "label": "descriptive_uncorrected",
+        "a_isotonic": {
+          "label": "descriptive_uncorrected",
+          "method": "isotonic_pava",
+          "floor": 0.6762037,
+          "exceed_by_pp": 5.0,
+          "first_m_exceeding_floor_plus_5pp": 10,
+          "fitted": [
+            {
+              "m": 0,
+              "q_hat": 0.6762037
+            },
+            {
+              "m": 2,
+              "q_hat": 0.69453333
+            },
+            {
+              "m": 4,
+              "q_hat": 0.69453333
+            },
+            {
+              "m": 6,
+              "q_hat": 0.69453333
+            },
+            {
+              "m": 7,
+              "q_hat": 0.69453333
+            },
+            {
+              "m": 8,
+              "q_hat": 0.69453333
+            },
+            {
+              "m": 9,
+              "q_hat": 0.7167037
+            },
+            {
+              "m": 10,
+              "q_hat": 0.7487037
+            },
+            {
+              "m": 11,
+              "q_hat": 0.75575926
+            }
+          ],
+          "observed": [
+            {
+              "m": 0,
+              "q": 0.6762037
+            },
+            {
+              "m": 2,
+              "q": 0.71185185
+            },
+            {
+              "m": 4,
+              "q": 0.70007407
+            },
+            {
+              "m": 6,
+              "q": 0.69674074
+            },
+            {
+              "m": 7,
+              "q": 0.68390741
+            },
+            {
+              "m": 8,
+              "q": 0.68009259
+            },
+            {
+              "m": 9,
+              "q": 0.7167037
+            },
+            {
+              "m": 10,
+              "q": 0.7487037
+            },
+            {
+              "m": 11,
+              "q": 0.75575926
+            }
+          ]
+        },
+        "b_segmented_on_tgc": {
+          "label": "descriptive_uncorrected",
+          "fit": {
+            "point": {
+              "tau": 7,
+              "beta0": 0.39963524,
+              "beta1": -0.00283389,
+              "beta2": 0.03796296,
+              "beta1_plus_beta2": 0.03512907,
+              "rss": 0.00272218,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.37037037,
+              "2": 0.42592593,
+              "4": 0.40740741,
+              "6": 0.37037037,
+              "7": 0.37037037,
+              "8": 0.40740741,
+              "9": 0.46296296,
+              "10": 0.48148148,
+              "11": 0.51851852
+            },
+            "n_keys": 54,
+            "n_clusters": 18,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 7,
+            "tau_ci95": [
+              4.0,
+              9.0
+            ],
+            "tau_counts": {
+              "4": 542,
+              "6": 2031,
+              "7": 3875,
+              "8": 2914,
+              "9": 638
+            },
+            "tau_interval_uninformative": true,
+            "tau_n_distinct_in_bootstrap": 5,
+            "beta0": 0.39963524,
+            "beta1": -0.00283389,
+            "beta1_ci95": [
+              -0.02444444,
+              0.02060176
+            ],
+            "beta2": 0.03796296,
+            "beta1_plus_beta2": 0.03512907,
+            "beta1_plus_beta2_ci95": [
+              0.00118259,
+              0.07800078
+            ],
+            "beta1_plus_beta2_onesided95_lower": 0.00956586,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": -0.00283389,
+              "beta1_ci95": [
+                -0.02444444,
+                0.02060176
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": true,
+              "beta1_plus_beta2": 0.03512907,
+              "beta1_plus_beta2_ci95": [
+                0.00118259,
+                0.07800078
+              ],
+              "onesided95_lower": 0.00956586,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": false,
+              "tau": 7,
+              "tau_ci95": [
+                4.0,
+                9.0
+              ],
+              "tau_interval_uninformative": true,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": false,
+            "verdict": "no threshold established",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          }
+        },
+        "d_percentile_remap": {
+          "label": "descriptive_uncorrected",
+          "mapping": "p(m) = 100 * #{source planner action counts s_i <= m} / n; s_i is n_source_actions from the handoff payload (HJ-12 \u00a77.3 quantity). Hinge is (p(m)-p(tau))_+; tau candidates remain {4,6,7,8,9}.",
+          "p_of_m": {
+            "0.0": 0.0,
+            "2.0": 0.0,
+            "4.0": 0.0,
+            "6.0": 2.631579,
+            "7.0": 7.017544,
+            "8.0": 18.421053,
+            "9.0": 28.070175,
+            "10.0": 37.719298,
+            "11.0": 52.631579
+          },
+          "fit": {
+            "point": {
+              "tau": 8,
+              "beta0": 0.69501245,
+              "beta1": -0.00034863,
+              "beta2": 0.00262826,
+              "beta1_plus_beta2": 0.00227964,
+              "rss": 0.00123146,
+              "n_points": 9,
+              "tie_break": "smallest_tau_on_equal_rss",
+              "candidates": [
+                4,
+                6,
+                7,
+                8,
+                9
+              ]
+            },
+            "means": {
+              "0": 0.6762037,
+              "2": 0.71185185,
+              "4": 0.70007407,
+              "6": 0.69674074,
+              "7": 0.68390741,
+              "8": 0.68009259,
+              "9": 0.7167037,
+              "10": 0.7487037,
+              "11": 0.75575926
+            },
+            "n_keys": 54,
+            "n_clusters": 18,
+            "cluster": "scenario",
+            "n_boot": 10000,
+            "n_kept": 10000,
+            "n_skipped": 0,
+            "seed": 20260915,
+            "tau": 8,
+            "tau_ci95": [
+              6.0,
+              9.0
+            ],
+            "tau_counts": {
+              "6": 2104,
+              "7": 2732,
+              "8": 3954,
+              "9": 1210
+            },
+            "tau_interval_uninformative": false,
+            "tau_n_distinct_in_bootstrap": 4,
+            "beta0": 0.69501245,
+            "beta1": -0.00034863,
+            "beta1_ci95": [
+              -0.02121641,
+              0.01199569
+            ],
+            "beta2": 0.00262826,
+            "beta1_plus_beta2": 0.00227964,
+            "beta1_plus_beta2_ci95": [
+              -0.00033939,
+              0.00450198
+            ],
+            "beta1_plus_beta2_onesided95_lower": -2.08e-06,
+            "resampler": "hj1_gate._draw_task_clusters"
+          },
+          "verdict": {
+            "S1_pre_threshold_flatness": {
+              "hypothesis": "beta1 = 0",
+              "rejected": false,
+              "holds": true,
+              "beta1": -0.00034863,
+              "beta1_ci95": [
+                -0.02121641,
+                0.01199569
+              ],
+              "rule": "rejected only if the interval for beta1 excludes zero"
+            },
+            "S2_post_threshold_rise": {
+              "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+              "holds": false,
+              "beta1_plus_beta2": 0.00227964,
+              "beta1_plus_beta2_ci95": [
+                -0.00033939,
+                0.00450198
+              ],
+              "onesided95_lower": -2.08e-06,
+              "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+            },
+            "S3_threshold_is_real": {
+              "hypothesis": "bootstrap interval for tau excludes m <= 4",
+              "holds": true,
+              "tau": 8,
+              "tau_ci95": [
+                6.0,
+                9.0
+              ],
+              "tau_interval_uninformative": false,
+              "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+            },
+            "shape_claim_supported": false,
+            "verdict": "no threshold established",
+            "family": "S1-S3 one family; robustness descriptive and uncorrected",
+            "analysis_status": "exploratory"
+          },
+          "monotone": true
+        }
+      },
+      "note": "pinned to prefix_m11 handoff_occurred keys",
+      "n_keys_requested": 54
+    }
+  },
+  "primary_population": "all_episodes",
+  "primary_verdict": {
+    "S1_pre_threshold_flatness": {
+      "hypothesis": "beta1 = 0",
+      "rejected": false,
+      "holds": true,
+      "beta1": -0.00124843,
+      "beta1_ci95": [
+        -0.00636642,
+        0.00814718
+      ],
+      "rule": "rejected only if the interval for beta1 excludes zero"
+    },
+    "S2_post_threshold_rise": {
+      "hypothesis": "beta1 + beta2 > 0, one-sided 95%",
+      "holds": true,
+      "beta1_plus_beta2": 0.01590211,
+      "beta1_plus_beta2_ci95": [
+        0.01010747,
+        0.02909782
+      ],
+      "onesided95_lower": 0.01159841,
+      "rule": "holds iff the 5th percentile of bootstrap (beta1+beta2) is > 0"
+    },
+    "S3_threshold_is_real": {
+      "hypothesis": "bootstrap interval for tau excludes m <= 4",
+      "holds": false,
+      "tau": 4,
+      "tau_ci95": [
+        4.0,
+        8.0
+      ],
+      "tau_interval_uninformative": false,
+      "rule": "holds iff the 2.5th percentile of bootstrap tau is > 4"
+    },
+    "shape_claim_supported": false,
+    "verdict": "no threshold established",
+    "family": "S1-S3 one family; robustness descriptive and uncorrected",
+    "analysis_status": "exploratory"
+  },
+  "per_m_pre_post_delta": [
+    {
+      "m": 2,
+      "pre_guard_goal_pass": 0.718702,
+      "post_guard_goal_pass": 0.685579,
+      "delta_pp": -3.3123,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": false,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": true,
+      "prediction_met_at_this_m": true,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    },
+    {
+      "m": 4,
+      "pre_guard_goal_pass": 0.733956,
+      "post_guard_goal_pass": 0.719035,
+      "delta_pp": -1.4921,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": true,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": true,
+      "prediction_met_at_this_m": true,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    },
+    {
+      "m": 6,
+      "pre_guard_goal_pass": 0.714474,
+      "post_guard_goal_pass": 0.723675,
+      "delta_pp": 0.9201,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": true,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": false,
+      "prediction_met_at_this_m": false,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    },
+    {
+      "m": 7,
+      "pre_guard_goal_pass": 0.751386,
+      "post_guard_goal_pass": 0.754395,
+      "delta_pp": 0.3009,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": true,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": false,
+      "prediction_met_at_this_m": false,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    },
+    {
+      "m": 8,
+      "pre_guard_goal_pass": 0.773316,
+      "post_guard_goal_pass": 0.762702,
+      "delta_pp": -1.0614,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": true,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": true,
+      "prediction_met_at_this_m": true,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    },
+    {
+      "m": 9,
+      "pre_guard_goal_pass": 0.813439,
+      "post_guard_goal_pass": 0.785184,
+      "delta_pp": -2.8255,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": true,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": true,
+      "prediction_met_at_this_m": true,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    },
+    {
+      "m": 10,
+      "pre_guard_goal_pass": 0.790605,
+      "post_guard_goal_pass": 0.806482,
+      "delta_pp": 1.5877,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": true,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": false,
+      "prediction_met_at_this_m": false,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    },
+    {
+      "m": 11,
+      "pre_guard_goal_pass": 0.830684,
+      "post_guard_goal_pass": 0.809825,
+      "delta_pp": -2.0859,
+      "silenced_post": 0,
+      "replicate_floor_pp": 3.31,
+      "abs_delta_inside_floor": true,
+      "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m",
+      "observed_fall": true,
+      "prediction_met_at_this_m": true,
+      "note": "Reported per m; not summarised as a single pass/fail across the curve. At m=2 and m=4 the guard never fires (silenced=0), so a fall is a replicate movement of the same configuration."
+    }
+  ],
+  "registered_prediction_m11_minus_planner_alone_pp": -1.857,
+  "registered_prediction_m11_minus_planner_alone_positive": false,
+  "registered_prediction_m11_lost_more_than_m9": false,
+  "registered_prediction_verbatim": "the affected arms' scores are expected to fall, most at large m. Specifically we predict prefix_m11 will lose more than prefix_m9, and that prefix_m11 \u2212 planner_alone will no longer be positive."
+}

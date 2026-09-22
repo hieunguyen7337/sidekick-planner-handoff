@@ -204,3 +204,86 @@ finding, and the thesis is written that way.
   prefixes. Existing `hj12_*` artifacts are never overwritten.
 - Exploratory rows in §1.1 are labelled exploratory in every table and figure caption in which they
   appear.
+
+---
+
+## Amendment 2026-09-22 17:25 — complete grid, measured replicate floor, and the three populations the §3 test is run on
+
+This section **appends**. No line above it is edited. The §3 model, breakpoint candidates
+$\{4,6,7,8,9\}$, bootstrap (10,000, seed 20260915, scenario-clustered primary with task-clustered
+alongside, full refit including $\tau$ inside every resample), hypotheses S1–S3, combined verdict
+rule, robustness set (a)–(d), and multiplicity statement are unchanged.
+
+**Grid complete.** Every arm `hj12_prefix_m{2,4,6,7,8,9,10,11}_{20260922,20260923}` has 114/114
+episodes. $m=10$ and $m=11$ now enter the registered $m$-set in §3; they are not inferred. The
+post-guard silenced series (executor never acted) is 0, 0, 3, 8, 20, 31, 41, 56 at
+$m=2,4,6,7,8,9,10,11$. The m=9 count is 31, correcting 30 in an earlier table.
+
+**Primary series.** The §3 test is run on the post-guard `hj12_prefix_m*_20260923` arms as the
+primary series, and separately on the pre-guard `hj12_prefix_m*_20260922` arms as the comparison.
+The two series are **not pooled**: they are different configurations at $m \ge 6$. $m=0$ is the
+existing `sft_plan` arm in both runs.
+
+**Replicate noise floor, now measured.** At $m=2$ and $m=4$ the terminal guard never fires
+(`executor.n_calls = 0` in 0 of 114 episodes in both dates). Those two pairs are therefore pure
+replicates of one configuration, differing only in sampling (`sampling_seed` null, temperature 0.7).
+Observed $|\Delta|$ on `goal_pass_rate`: 3.31 pp at $m=2$ (0.7187 vs 0.6856) and 1.50 pp at $m=4$
+(0.7340 vs 0.7190). **3.31 pp** is the observed maximum single-arm replicate deviation at $n=114$
+across the two available replicate pairs. It is a floor estimate from a very small sample, not a
+variance estimate: it is never called a standard error and is not converted into a CI. The §3
+withdrawal condition — if the observed $m6 \rightarrow m9$ rise is not at least twice the larger
+replicate difference, the shape claim is withdrawn regardless of S1–S3 — uses this 3.31 pp figure.
+The same floor is the comparator for the already-measured advice-channel contrast
+(`advise_fixed_k_10 − advise_fixed_k_3` = −0.48 pp).
+
+**§2.1 prediction, per $m$, no curve-level pass/fail.** The registered prediction is that affected
+arms' scores are expected to **fall**, most at large $m$; specifically `prefix_m11` will lose more
+than `prefix_m9`, and `prefix_m11 − planner_alone` will no longer be positive. Each $m$ is reported
+separately with the observed pre/post $\Delta$, the silenced count, and the 3.31 pp floor. This
+amendment does not restate or soften that language, and it does not summarise the grid as a single
+pass or fail.
+
+**Three populations the §3 test is run on** (all pre-specified here, before this unit's test is
+executed):
+
+1. **All-episodes** ($n=114$), crash scores $0.0$ on `goal_pass_rate` and TGC, matching HJ-12 §3.4
+   headline.
+2. **Pinned to m10's handoff keys**, using `scripts/analysis/j8_frontier.py`'s existing
+   `--handoff-keys-from` path: the defining arm's `handoff_occurred is True` key set, applied to
+   every other arm (`handoff_flag_keys` / `restrict_to_defining_handoff`; the flag takes effect
+   inside the non-inferiority / handoff-only block, not the pairwise `contrasts` block). Expected
+   $n=71$.
+3. **Pinned to m11's handoff keys**, same mechanism. Expected $n=54$.
+
+The HJ-12 §3.4 **survivors** cut remains robustness (c), reported whether or not it agrees.
+Robustness (a)(b)(d) are unchanged.
+
+**Which handoff definition.** Two population definitions differ by two episodes at m10: the
+harness `handoff_occurred` flag gives 71; `totals.per_actor.executor.n_calls > 0` gives 73. The
+registered pin is `handoff_occurred`. The report names the episodes that differ (SHAPE-04) and does
+not silently switch definition.
+
+**Why the pinned sets are in the test.** Pairwise contrasts on the controlled populations are
+underpowered (at $n=54$ over 19 scenarios the intervals span roughly $\pm 8$ pp). The segmented
+model pools the whole curve. If the bootstrap interval for $\tau$ is so wide that it is
+uninformative, that fact is reported as a finding about the design's power.
+
+**Controlled-population curves already seen (exploratory; they do not change the test).** Post-guard
+pinned to m11 keys ($n=54$): 0.7119, 0.7001, 0.6967, 0.6839, 0.6801, 0.7167, 0.7487, 0.7558 at
+$m=2,4,6,7,8,9,10,11$. Pinned to m10 keys ($n=71$): 0.7145, 0.7052, 0.7053, 0.7139, 0.6991, 0.7282,
+0.7694 at $m=2..10$. Seeing them before running §3 is why this run stays **exploratory** on these
+arms (§1.1). Confirmatory rows in §1.1 are not opened.
+
+**Percentile remapping (robustness d), specified.** Let $s_i$ be the source planner's executed
+action count on episode $i$ (the `n_source_actions` handoff payload, which is the same quantity
+prereg HJ-12 §7.3 counted on `hj1b_planner_20260915`). Then $p(m) = 100 \times \#\{i : s_i \le m\}/n$,
+the empirical CDF in percent. The §3 fit is repeated with $x = p(m)$ in place of $m$, profiling the
+same integer $\tau$ candidates mapped through $p$. Ties in residual sum of squares take the smallest
+$\tau$.
+
+**Tie-break, specified.** Among $\tau \in \{4,6,7,8,9\}$, the minimiser of RSS is selected; if two
+candidates share the minimum RSS, the smallest $\tau$ is kept. This is the rule that makes a
+straight line fail S3 (interval includes 4) rather than invent a threshold.
+
+**Status of results from this test.** Exploratory on `hj12_prefix_*_20260922` and
+`hj12_prefix_*_20260923`. Not confirmatory.

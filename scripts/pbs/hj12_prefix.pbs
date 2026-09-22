@@ -171,6 +171,8 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj14_prefix_m9.yaml|hj14_prefix_m9"
   "prefix_handoff|${REPO}/configs/hj14_prefix_m10.yaml|hj14_prefix_m10"
   "prefix_handoff|${REPO}/configs/hj14_prefix_m11.yaml|hj14_prefix_m11"
+  "prefix_handoff|${REPO}/configs/hj15_prefix_zsq_m6.yaml|hj15_prefix_zsq_m6"
+  "prefix_handoff|${REPO}/configs/hj15_prefix_zsq_m9.yaml|hj15_prefix_zsq_m9"
 )
 
 hj12_select_arms () {
@@ -911,6 +913,7 @@ for MODEL in "${SERVE_MODELS[@]}"; do
   if [[ "${MODEL}" == "${MODEL_GRANITE}" ]]; then
     ALLOWED_ALIASES=("${ALIAS_SFT_B_PLUS}" "${ALIAS_SFT_B_PLUS_HANDOFF}")
   fi
+  need_expect=0
   need_handoff=0
   for spec in "${PENDING_ARMS[@]}"; do
     IFS='|' read -r system cfg stem <<<"${spec}"
@@ -933,20 +936,21 @@ for MODEL in "${SERVE_MODELS[@]}"; do
         exit 2
       fi
     fi
+    if [[ "${arm_lora}" == "${EXPECT_ALIAS}" ]]; then
+      need_expect=1
+    fi
     if [[ "${arm_lora}" == "${ALIAS_SFT_B_PLUS_HANDOFF}" ]]; then
       need_handoff=1
     fi
     GROUP_ARMS+=("${spec}")
   done
-  echo "[hj12] serving_record base_model=${MODEL} alias=${EXPECT_ALIAS} adapter=${ADAPTER_PATH} n_arms=${#GROUP_ARMS[@]}"
-  register_lora "${EXPECT_ALIAS}" "${ADAPTER_PATH}"
+  if [[ "${need_expect}" -eq 1 ]]; then
+    echo "[hj12] serving_record base_model=${MODEL} alias=${EXPECT_ALIAS} adapter=${ADAPTER_PATH} n_arms=${#GROUP_ARMS[@]}"
+    register_lora "${EXPECT_ALIAS}" "${ADAPTER_PATH}"
+  fi
   if [[ "${need_handoff}" -eq 1 ]]; then
     echo "[hj12] serving_record base_model=${MODEL} alias=${ALIAS_SFT_B_PLUS_HANDOFF} adapter=${ADAPTER_SFT_B_PLUS_HANDOFF} n_arms=${#GROUP_ARMS[@]}"
     register_lora "${ALIAS_SFT_B_PLUS_HANDOFF}" "${ADAPTER_SFT_B_PLUS_HANDOFF}"
-  fi
-  if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
-    echo "[hj12] FATAL: no LoRA modules registered for base ${MODEL}; set the matching ADAPTER_* path" >&2
-    exit 2
   fi
   if [[ "${#LORA_MODULES[@]}" -gt "${MAX_LORAS}" ]]; then
     echo "[hj12] FATAL: ${#LORA_MODULES[@]} LoRA modules exceeds --max-loras ${MAX_LORAS}: ${LORA_MODULES[*]}" >&2
@@ -960,19 +964,25 @@ for MODEL in "${SERVE_MODELS[@]}"; do
   VLOG="${LOGDIR}/${JOB_CID}.${JOBTAG}_vllm_${model_tag}.log"
   echo "[hj12] vlog=${VLOG}"
   # The --lora-modules line. Alias comes from ALIAS_* / executor.lora_name, not the directory name.
+  LORA_SERVE_FLAGS=()
+  if [[ "${#LORA_MODULES[@]}" -gt 0 ]]; then
+    LORA_SERVE_FLAGS=(
+      --enable-lora
+      --max-loras "${MAX_LORAS}"
+      --max-lora-rank 64
+      --lora-modules "${LORA_MODULES[@]}"
+    )
+  fi
   setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
     --served-model-name "${MODEL}" \
     --dtype bfloat16 \
     --max-model-len 32768 \
     --host 127.0.0.1 --port "${VLLM_PORT}" \
     --gpu-memory-utilization 0.85 \
-    --enable-lora \
-    --max-loras "${MAX_LORAS}" \
-    --max-lora-rank 64 \
-    --lora-modules "${LORA_MODULES[@]}" \
+    ${LORA_SERVE_FLAGS[@]+"${LORA_SERVE_FLAGS[@]}"} \
     > "${VLOG}" 2>&1 &
   VLLM_PID=$!
-  echo "[hj12] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+  echo "[hj12] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} ${LORA_SERVE_FLAGS[*]}"
   t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
   while (( $(date +%s) < deadline )); do
     if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
