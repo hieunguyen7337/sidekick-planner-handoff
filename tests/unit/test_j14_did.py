@@ -275,3 +275,103 @@ def test_missing_arm_directory_is_fatal(tmp_path: Path) -> None:
         "--out", str(tmp_path / "x.json"),
     ])
     assert rc == 2
+
+
+# --- pooling several campaigns into one arm (the 171-pair curve) ---------------------
+
+
+def test_pooled_arm_merges_campaigns_that_differ_in_seed(tmp_path: Path) -> None:
+    from scripts.analysis.j14_did import load_pooled_arm
+
+    seeds12 = {(f"s1_{t}", seed): 0.5 for t in (1, 2, 3) for seed in (1, 2)}
+    seed3 = {(f"s1_{t}", 3): 0.9 for t in (1, 2, 3)}
+    write_arm(tmp_path, "a_12", seeds12)
+    write_arm(tmp_path, "a_3", seed3)
+
+    pooled = load_pooled_arm([tmp_path / "a_12", tmp_path / "a_3"])
+
+    assert len(pooled) == 9
+    assert sorted({s for _, s in pooled}) == [1, 2, 3]
+
+
+def test_pooling_campaigns_that_share_a_seed_is_fatal(tmp_path: Path) -> None:
+    """Silently dropping half of a colliding pair would look like a well-formed arm."""
+    from scripts.analysis.j14_did import load_pooled_arm
+
+    write_arm(tmp_path, "b_1", {("s1_1", 1): 0.5})
+    write_arm(tmp_path, "b_2", {("s1_1", 1): 0.9})
+
+    with pytest.raises(ValueError, match="share 1 episode keys"):
+        load_pooled_arm([tmp_path / "b_1", tmp_path / "b_2"])
+
+
+def test_pooling_raises_the_pair_count_of_a_contrast(tmp_path: Path) -> None:
+    """The whole point of U4: the same contrast, measured on more episodes."""
+    from scripts.analysis.j14_did import compute_contrast, load_pooled_arm
+
+    keys12 = [(f"s{s}_{t}", seed) for s in (1, 2) for t in (1, 2, 3) for seed in (1, 2)]
+    keys3 = [(f"s{s}_{t}", 3) for s in (1, 2) for t in (1, 2, 3)]
+
+    write_arm(tmp_path, "hi_12", {k: 0.8 for k in keys12})
+    write_arm(tmp_path, "lo_12", {k: 0.5 for k in keys12})
+    write_arm(tmp_path, "hi_3", {k: 0.8 for k in keys3})
+    write_arm(tmp_path, "lo_3", {k: 0.5 for k in keys3})
+
+    unpooled = {
+        "hi": load_pooled_arm([tmp_path / "hi_12"]),
+        "lo": load_pooled_arm([tmp_path / "lo_12"]),
+    }
+    pooled = {
+        "hi": load_pooled_arm([tmp_path / "hi_12", tmp_path / "hi_3"]),
+        "lo": load_pooled_arm([tmp_path / "lo_12", tmp_path / "lo_3"]),
+    }
+
+    a = compute_contrast(unpooled, "hi", "lo", "goal_pass_rate", n_boot=200, seed=1)
+    b = compute_contrast(pooled, "hi", "lo", "goal_pass_rate", n_boot=200, seed=1)
+
+    assert a["n_pairs"] == 12 and a["n_seeds"] == 2
+    assert b["n_pairs"] == 18 and b["n_seeds"] == 3
+    # Same underlying effect, so the point estimate must not move.
+    assert a["scenario"]["point_pp"] == pytest.approx(b["scenario"]["point_pp"])
+    assert b["scenario"]["point_pp"] == pytest.approx(30.0)
+
+
+def test_parse_arm_spec_accepts_several_directories() -> None:
+    from scripts.analysis.j14_did import parse_arm_spec
+
+    label, paths = parse_arm_spec("x=/a/b,/c/d")
+    assert label == "x"
+    assert [str(p) for p in paths] == ["/a/b", "/c/d"]
+
+    label, paths = parse_arm_spec("y=/only/one")
+    assert len(paths) == 1
+
+
+def test_parse_contrast_spec() -> None:
+    from scripts.analysis.j14_did import parse_contrast_spec
+
+    assert parse_contrast_spec("d:a,b") == ("d", "a", "b")
+    with pytest.raises(Exception):
+        parse_contrast_spec("d:a,b,c")
+    with pytest.raises(Exception):
+        parse_contrast_spec("nocolon")
+
+
+def test_cli_contrast_mode_writes_a_report(tmp_path: Path) -> None:
+    write_arm(tmp_path, "hi", const(0.8))
+    write_arm(tmp_path, "lo", const(0.5))
+    out = tmp_path / "c.json"
+
+    rc = main([
+        "--arm", f"hi={tmp_path / 'hi'}",
+        "--arm", f"lo={tmp_path / 'lo'}",
+        "--contrast", "depth:hi,lo",
+        "--bootstrap", "200",
+        "--out", str(out),
+    ])
+
+    assert rc == 0
+    report = json.loads(out.read_text(encoding="utf-8"))
+    block = report["contrasts"]["depth"]["goal_pass_rate"]
+    assert block["scenario"]["point_pp"] == pytest.approx(30.0)
+    assert block["n_pairs"] == 12

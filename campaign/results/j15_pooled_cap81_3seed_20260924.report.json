@@ -1,0 +1,868 @@
+{
+  "analysis": "difference-in-differences, cluster bootstrap",
+  "arm_n_loaded": {
+    "ceiling": 171,
+    "t_m11": 171,
+    "t_m6": 171,
+    "t_m9": 171,
+    "zs_m11": 171,
+    "zs_m6": 171,
+    "zs_m9": 171
+  },
+  "arm_seeds": {
+    "ceiling": [
+      1,
+      2,
+      3
+    ],
+    "t_m11": [
+      1,
+      2,
+      3
+    ],
+    "t_m6": [
+      1,
+      2,
+      3
+    ],
+    "t_m9": [
+      1,
+      2,
+      3
+    ],
+    "zs_m11": [
+      1,
+      2,
+      3
+    ],
+    "zs_m6": [
+      1,
+      2,
+      3
+    ],
+    "zs_m9": [
+      1,
+      2,
+      3
+    ]
+  },
+  "arm_sources": {
+    "ceiling": [
+      "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+      "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924"
+    ],
+    "t_m11": [
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m11_20260923",
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m11_20260924"
+    ],
+    "t_m6": [
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m6_20260923",
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m6_20260924"
+    ],
+    "t_m9": [
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m9_20260923",
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m9_20260924"
+    ],
+    "zs_m11": [
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m11_20260923",
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m11_20260924"
+    ],
+    "zs_m6": [
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m6_20260923",
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m6_20260924"
+    ],
+    "zs_m9": [
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m9_20260923",
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m9_20260924"
+    ]
+  },
+  "bootstrap": 10000,
+  "contrasts": {
+    "ni_ceiling_minus_t_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "ceiling": 0.769749,
+          "t_m11": 0.813854
+        },
+        "definition": "ceiling - t_m11",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -10.6614,
+            0.7409
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -4.4105,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -8.6474,
+            -0.3322
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": -4.4105,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "ceiling": 0.590643,
+          "t_m11": 0.596491
+        },
+        "definition": "ceiling - t_m11",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -7.6023,
+            5.848
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -0.5848,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -5.848,
+            4.6784
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": -0.5848,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "ni_ceiling_minus_t_m9": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "ceiling": 0.769749,
+          "t_m9": 0.771357
+        },
+        "definition": "ceiling - t_m9",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.6363,
+            4.0485
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -0.1608,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.707,
+            4.2947
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": -0.1608,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "ceiling": 0.590643,
+          "t_m9": 0.526316
+        },
+        "definition": "ceiling - t_m9",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.5848,
+            12.2807
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 6.4327,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.5848,
+            12.8655
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 6.4327,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "ni_ceiling_minus_zs_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "ceiling": 0.769749,
+          "zs_m11": 0.789164
+        },
+        "definition": "ceiling - zs_m11",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -6.3971,
+            2.1743
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -1.9415,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -5.7485,
+            1.6602
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": -1.9415,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "ceiling": 0.590643,
+          "zs_m11": 0.561404
+        },
+        "definition": "ceiling - zs_m11",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -1.1696,
+            7.0175
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 2.924,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -1.7544,
+            7.6023
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 2.924,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "ni_ceiling_minus_zs_m9": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "ceiling": 0.769749,
+          "zs_m9": 0.774731
+        },
+        "definition": "ceiling - zs_m9",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -5.3485,
+            3.0205
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": -0.4982,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.7971,
+            3.5023
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": -0.4982,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "ceiling": 0.590643,
+          "zs_m9": 0.538012
+        },
+        "definition": "ceiling - zs_m9",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.5848,
+            9.9415
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 5.2632,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.0,
+            10.5263
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 5.2632,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "t_depth_m6_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "t_m11": 0.813854,
+          "t_m6": 0.729942
+        },
+        "definition": "t_m11 - t_m6",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            4.2023,
+            12.6287
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 8.3912,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            4.0912,
+            12.9632
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 8.3912,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "t_m11": 0.596491,
+          "t_m6": 0.438596
+        },
+        "definition": "t_m11 - t_m6",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            8.1871,
+            23.9766
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 15.7895,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            8.7719,
+            23.3918
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 15.7895,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "t_depth_m9_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "t_m11": 0.813854,
+          "t_m9": 0.771357
+        },
+        "definition": "t_m11 - t_m9",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.1526,
+            8.7474
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 4.2497,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            0.8994,
+            7.8667
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 4.2497,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "t_m11": 0.596491,
+          "t_m9": 0.526316
+        },
+        "definition": "t_m11 - t_m9",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            1.1696,
+            13.4503
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 7.0175,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            1.7544,
+            12.8655
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 7.0175,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "zs_depth_m6_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "zs_m11": 0.789164,
+          "zs_m6": 0.712175
+        },
+        "definition": "zs_m11 - zs_m6",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            3.6895,
+            12.0579
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 7.6988,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            3.1433,
+            12.3029
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 7.6988,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "zs_m11": 0.561404,
+          "zs_m6": 0.444444
+        },
+        "definition": "zs_m11 - zs_m6",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            6.4327,
+            16.9591
+          ],
+          "excludes_zero": true,
+          "n_clusters": 19,
+          "point_pp": 11.6959,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            4.6784,
+            18.7135
+          ],
+          "excludes_zero": true,
+          "n_clusters": 57,
+          "point_pp": 11.6959,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "zs_depth_m9_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "zs_m11": 0.789164,
+          "zs_m9": 0.774731
+        },
+        "definition": "zs_m11 - zs_m9",
+        "field": "goal_pass_rate",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.5626,
+            5.5246
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 1.4433,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.5971,
+            5.6415
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 1.4433,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "zs_m11": 0.561404,
+          "zs_m9": 0.538012
+        },
+        "definition": "zs_m11 - zs_m9",
+        "field": "tgc",
+        "n_dropped_not_in_both": 0,
+        "n_pairs": 171,
+        "n_seeds": 3,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.3392,
+            7.0175
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 2.3392,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.924,
+            8.1871
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 2.3392,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    }
+  },
+  "dids": {
+    "tailoring_x_depth_m6_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "t_m11": 0.813854,
+          "t_m6": 0.729942,
+          "zs_m11": 0.789164,
+          "zs_m6": 0.712175
+        },
+        "arms": {
+          "a_neg": "t_m6",
+          "a_pos": "t_m11",
+          "b_neg": "zs_m6",
+          "b_pos": "zs_m11"
+        },
+        "crashed_episodes": {
+          "t_m11": 0,
+          "t_m6": 0,
+          "zs_m11": 0,
+          "zs_m6": 0
+        },
+        "definition": "(t_m11 - t_m6) - (zs_m11 - zs_m6)",
+        "field": "goal_pass_rate",
+        "gap_a_pp": 8.3912,
+        "gap_b_pp": 7.6988,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 171,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.3971,
+            5.9164
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 0.6924,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.4947,
+            5.8936
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 0.6924,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "t_m11": 0.596491,
+          "t_m6": 0.438596,
+          "zs_m11": 0.561404,
+          "zs_m6": 0.444444
+        },
+        "arms": {
+          "a_neg": "t_m6",
+          "a_pos": "t_m11",
+          "b_neg": "zs_m6",
+          "b_pos": "zs_m11"
+        },
+        "crashed_episodes": {
+          "t_m11": 0,
+          "t_m6": 0,
+          "zs_m11": 0,
+          "zs_m6": 0
+        },
+        "definition": "(t_m11 - t_m6) - (zs_m11 - zs_m6)",
+        "field": "tgc",
+        "gap_a_pp": 15.7895,
+        "gap_b_pp": 11.6959,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 171,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.6784,
+            13.4503
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 4.0936,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -4.6784,
+            12.8655
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 4.0936,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    },
+    "tailoring_x_depth_m9_m11": {
+      "goal_pass_rate": {
+        "arm_means": {
+          "t_m11": 0.813854,
+          "t_m9": 0.771357,
+          "zs_m11": 0.789164,
+          "zs_m9": 0.774731
+        },
+        "arms": {
+          "a_neg": "t_m9",
+          "a_pos": "t_m11",
+          "b_neg": "zs_m9",
+          "b_pos": "zs_m11"
+        },
+        "crashed_episodes": {
+          "t_m11": 0,
+          "t_m9": 0,
+          "zs_m11": 0,
+          "zs_m9": 0
+        },
+        "definition": "(t_m11 - t_m9) - (zs_m11 - zs_m9)",
+        "field": "goal_pass_rate",
+        "gap_a_pp": 4.2497,
+        "gap_b_pp": 1.4433,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 171,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.5661,
+            8.9649
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 2.8064,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.0544,
+            7.9491
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 2.8064,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      },
+      "tgc": {
+        "arm_means": {
+          "t_m11": 0.596491,
+          "t_m9": 0.526316,
+          "zs_m11": 0.561404,
+          "zs_m9": 0.538012
+        },
+        "arms": {
+          "a_neg": "t_m9",
+          "a_pos": "t_m11",
+          "b_neg": "zs_m9",
+          "b_pos": "zs_m11"
+        },
+        "crashed_episodes": {
+          "t_m11": 0,
+          "t_m9": 0,
+          "zs_m11": 0,
+          "zs_m9": 0
+        },
+        "definition": "(t_m11 - t_m9) - (zs_m11 - zs_m9)",
+        "field": "tgc",
+        "gap_a_pp": 7.0175,
+        "gap_b_pp": 2.3392,
+        "n_dropped_not_in_all_four": 0,
+        "n_pairs": 171,
+        "scenario": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.3392,
+            12.2807
+          ],
+          "excludes_zero": false,
+          "n_clusters": 19,
+          "point_pp": 4.6784,
+          "resample_unit": "scenario",
+          "seed": 20260924
+        },
+        "task": {
+          "bootstrap": 10000,
+          "ci95_pp": [
+            -2.3392,
+            12.2807
+          ],
+          "excludes_zero": false,
+          "n_clusters": 57,
+          "point_pp": 4.6784,
+          "resample_unit": "task",
+          "seed": 20260924
+        }
+      }
+    }
+  },
+  "note": "U4 pooled: three planner seeds on the cap-81 sample, 171 paired episodes per contrast instead of 114. NI contrasts are reported as ceiling MINUS arm, so non-inferiority holds when the UPPER bound sits below +7.00 pp.",
+  "population": "all (crashed episode scores 0; error_type 'limit' is not a crash)",
+  "primary_resample_unit": "scenario",
+  "seed": 20260924
+}

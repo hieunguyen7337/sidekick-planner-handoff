@@ -1,0 +1,97 @@
+{
+  "purpose": "Monte Carlo stability of the percentile bootstrap for intervals whose decision-relevant bound sits within ~1 pp of its threshold. Re-runs the SAME estimand on the SAME episodes at seven RNG seeds and once at 200,000 resamples. A bound that changes sign across seeds is Monte Carlo noise, not a result.",
+  "registered_seed": 20260924,
+  "bootstrap_default": 10000,
+  "seeds_probed": [
+    20260924,
+    1,
+    2,
+    3,
+    7,
+    101,
+    999
+  ],
+  "not_a_registered_analysis": true,
+  "probes": {
+    "pooled_t_depth_m9_m11.goal_pass.scenario_lower_bound": {
+      "source_report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+      "threshold": 0.0,
+      "threshold_meaning": "excludes zero if lower bound > 0",
+      "by_seed": {
+        "20260924": 0.1526,
+        "1": 0.0801,
+        "2": 0.0544,
+        "3": -0.014,
+        "7": 0.1468,
+        "101": 0.1953,
+        "999": 0.1088
+      },
+      "at_200k_resamples": 0.1041,
+      "verdict": "FRAGILE - sign flips across seeds (seed 3 gives a negative lower bound). Must not be reported as resolved."
+    },
+    "pooled_ni_ceiling_minus_t_m11.goal_pass.task_upper_bound": {
+      "source_report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+      "threshold": 0.0,
+      "threshold_meaning": "excludes zero if upper bound < 0",
+      "by_seed": {
+        "20260924": -0.3322,
+        "1": -0.445,
+        "2": -0.3713,
+        "3": -0.4152,
+        "7": -0.3181,
+        "101": -0.4105,
+        "999": -0.2883
+      },
+      "at_200k_resamples": -0.3906,
+      "verdict": "STABLE - negative at every seed. The secondary clustering does exclude zero; the primary (scenario) does not, so the reported verdict is unchanged."
+    },
+    "pooled_ni_ceiling_minus_zs_m11.tgc.scenario_upper_bound": {
+      "source_report": "campaign/results/j15_pooled_cap81_3seed_20260924.report.json",
+      "threshold": 7.0,
+      "threshold_meaning": "non-inferiority holds if upper bound < 7.00",
+      "by_seed": {
+        "20260924": 7.0175,
+        "1": 7.0175,
+        "2": 7.0175,
+        "3": 7.0175,
+        "7": 7.0175,
+        "101": 7.0175,
+        "999": 7.0175
+      },
+      "at_200k_resamples": 7.0175,
+      "verdict": "STABLE AT AN ATOM - identical at every seed because TGC is discrete and the 97.5th percentile lands on the same attainable value. Stable, but it fails the 7.00 margin by 0.0175 pp, which no amount of resampling can adjudicate."
+    },
+    "did01_m11_narration_x_receiver.goal_pass.task_lower_bound": {
+      "source_report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+      "threshold": 0.0,
+      "threshold_meaning": "excludes zero if lower bound > 0",
+      "by_seed": {
+        "20260924": 0.6254,
+        "1": 0.5219,
+        "2": 0.5351,
+        "3": 0.4544,
+        "7": 0.6018,
+        "101": 0.464,
+        "999": 0.6
+      },
+      "at_200k_resamples": 0.5921,
+      "verdict": "STABLE - strictly positive at every seed and at 200k. DID-01 survives the probe."
+    },
+    "did01_m11_narration_x_receiver.goal_pass.scenario_lower_bound": {
+      "source_report": "campaign/results/j14_did_narration_receiver_20260924.report.json",
+      "threshold": 0.0,
+      "threshold_meaning": "excludes zero if lower bound > 0",
+      "by_seed": {
+        "20260924": 1.5553,
+        "1": 1.55,
+        "2": 1.4763,
+        "3": 1.4965,
+        "7": 1.4605,
+        "101": 1.464,
+        "999": 1.5026
+      },
+      "at_200k_resamples": 1.493,
+      "verdict": "STABLE - strictly positive at every seed and at 200k."
+    }
+  }
+}

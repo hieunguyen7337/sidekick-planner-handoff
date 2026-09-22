@@ -207,15 +207,97 @@ def excludes_zero(block: dict[str, Any]) -> bool | None:
     return ci[0] > 0.0 or ci[1] < 0.0
 
 
-def parse_arm_spec(spec: str) -> tuple[str, Path]:
-    """LABEL=DIR, matching the convention in j8_frontier.parse_arm_spec."""
+def parse_arm_spec(spec: str) -> tuple[str, list[Path]]:
+    """LABEL=DIR[,DIR...], extending j8_frontier.parse_arm_spec with pooling.
+
+    Several directories pool into one logical arm. This exists so a depth contrast can be
+    computed over three planner seeds at once: the seeds-1,2 campaign and the seed-3
+    campaign are separate directories, and episode keys are ``(task_id, seed)``, so they
+    cannot collide. Pooling raises a contrast from 114 to 171 paired episodes without
+    re-running anything.
+
+    ⚠ Only pool campaigns that differ in SEED. Pooling two campaigns that share a seed
+    silently drops one of every colliding episode, which ``compute_contrast`` cannot detect
+    because the result still looks like a well-formed arm. The loader refuses that case.
+    """
     if "=" not in spec:
-        raise argparse.ArgumentTypeError(f"arm spec must be LABEL=DIR, got {spec!r}")
+        raise argparse.ArgumentTypeError(f"arm spec must be LABEL=DIR[,DIR...], got {spec!r}")
     label, raw = spec.split("=", 1)
     label = label.strip()
     if not label:
         raise argparse.ArgumentTypeError(f"empty label in arm spec {spec!r}")
-    return label, Path(raw).expanduser()
+    paths = [Path(p.strip()).expanduser() for p in raw.split(",") if p.strip()]
+    if not paths:
+        raise argparse.ArgumentTypeError(f"no directory in arm spec {spec!r}")
+    return label, paths
+
+
+def load_pooled_arm(roots: list[Path]) -> dict[tuple[str, int], dict[str, Any]]:
+    """Load one or more campaign directories into a single arm, refusing key collisions."""
+    merged: dict[tuple[str, int], dict[str, Any]] = {}
+    for root in roots:
+        loaded = load_arm(root)
+        clash = set(merged) & set(loaded)
+        if clash:
+            example = sorted(clash)[:3]
+            raise ValueError(
+                f"pooled campaigns share {len(clash)} episode keys (e.g. {example}); "
+                "pool only campaigns that differ in seed, or one episode of each "
+                "colliding pair is silently discarded"
+            )
+        merged.update(loaded)
+    return merged
+
+
+def compute_contrast(
+    arms: dict[str, dict[tuple[str, int], dict[str, Any]]],
+    a: str,
+    b: str,
+    field: str,
+    n_boot: int = BOOTSTRAP,
+    seed: int = DID_SEED,
+) -> dict[str, Any]:
+    """Plain paired contrast (a - b), same estimator and clustering as the DiD."""
+    for label in (a, b):
+        if label not in arms:
+            raise KeyError(f"arm {label!r} was not loaded; have {sorted(arms)}")
+    shared = sorted(set(arms[a]) & set(arms[b]))
+    union = sorted(set(arms[a]) | set(arms[b]))
+    diffs = {
+        k: episode_value(arms[a][k], field) - episode_value(arms[b][k], field)
+        for k in shared
+    }
+
+    def arm_mean(label: str) -> float | None:
+        if not shared:
+            return None
+        return round(
+            statistics.fmean(episode_value(arms[label][k], field) for k in shared), 6
+        )
+
+    return {
+        "field": field,
+        "definition": f"{a} - {b}",
+        "n_pairs": len(shared),
+        "n_dropped_not_in_both": len(union) - len(shared),
+        "n_seeds": len({s for _, s in shared}),
+        "arm_means": {a: arm_mean(a), b: arm_mean(b)},
+        "scenario": _cluster_bootstrap(diffs, "scenario", n_boot, seed),
+        "task": _cluster_bootstrap(diffs, "task", n_boot, seed),
+    }
+
+
+def parse_contrast_spec(spec: str) -> tuple[str, str, str]:
+    """NAME:A,B"""
+    if ":" not in spec:
+        raise argparse.ArgumentTypeError(f"contrast spec must be NAME:A,B, got {spec!r}")
+    name, rest = spec.split(":", 1)
+    parts = [p.strip() for p in rest.split(",")]
+    if len(parts) != 2 or not all(parts):
+        raise argparse.ArgumentTypeError(
+            f"contrast spec needs exactly two arm labels, got {spec!r}"
+        )
+    return (name.strip(), parts[0], parts[1])
 
 
 def parse_did_spec(spec: str) -> tuple[str, str, str, str, str]:
@@ -234,9 +316,12 @@ def parse_did_spec(spec: str) -> tuple[str, str, str, str, str]:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--arm", action="append", default=[], type=parse_arm_spec,
-                   metavar="LABEL=DIR", help="repeatable; every label used by --did")
+                   metavar="LABEL=DIR[,DIR]",
+                   help="repeatable; several comma-separated dirs pool into one arm")
     p.add_argument("--did", action="append", default=[], type=parse_did_spec,
                    metavar="NAME:A_POS,A_NEG,B_POS,B_NEG", help="repeatable")
+    p.add_argument("--contrast", action="append", default=[], type=parse_contrast_spec,
+                   metavar="NAME:A,B", help="repeatable; plain paired contrast a - b")
     p.add_argument("--out", required=True, type=Path)
     p.add_argument("--bootstrap", type=int, default=BOOTSTRAP)
     p.add_argument("--seed", type=int, default=DID_SEED)
@@ -246,23 +331,31 @@ def main(argv: list[str] | None = None) -> int:
     if not a.arm:
         print("FATAL: at least one --arm is required", file=sys.stderr)
         return 2
-    if not a.did:
-        print("FATAL: at least one --did is required", file=sys.stderr)
+    if not a.did and not a.contrast:
+        print("FATAL: at least one --did or --contrast is required", file=sys.stderr)
         return 2
 
     arms: dict[str, dict[tuple[str, int], dict[str, Any]]] = {}
-    sources: dict[str, str] = {}
-    for label, root in a.arm:
-        if not root.is_dir():
-            print(f"FATAL: arm {label} directory does not exist: {root}", file=sys.stderr)
+    sources: dict[str, list[str]] = {}
+    for label, roots in a.arm:
+        for root in roots:
+            if not root.is_dir():
+                print(f"FATAL: arm {label} directory does not exist: {root}",
+                      file=sys.stderr)
+                return 2
+        try:
+            loaded = load_pooled_arm(roots)
+        except ValueError as exc:
+            print(f"FATAL: arm {label}: {exc}", file=sys.stderr)
             return 2
-        loaded = load_arm(root)
         if not loaded:
-            print(f"FATAL: arm {label} loaded 0 episodes from {root}", file=sys.stderr)
+            print(f"FATAL: arm {label} loaded 0 episodes from {roots}", file=sys.stderr)
             return 2
         arms[label] = loaded
-        sources[label] = str(root)
-        print(f"[j14] {label}: {len(loaded)} episodes from {root}")
+        sources[label] = [str(r) for r in roots]
+        seeds = sorted({s for _, s in loaded})
+        print(f"[j14] {label}: {len(loaded)} episodes, seeds {seeds}, "
+              f"from {len(roots)} campaign(s)")
 
     report: dict[str, Any] = {
         "analysis": "difference-in-differences, cluster bootstrap",
@@ -273,10 +366,32 @@ def main(argv: list[str] | None = None) -> int:
         "primary_resample_unit": "scenario",
         "arm_sources": sources,
         "arm_n_loaded": {k: len(v) for k, v in arms.items()},
+        "arm_seeds": {k: sorted({s for _, s in v}) for k, v in arms.items()},
+        "contrasts": {},
         "dids": {},
     }
 
     rc = 0
+    for name, left, right in a.contrast:
+        report["contrasts"][name] = {}
+        for field in FIELDS:
+            try:
+                block = compute_contrast(
+                    arms, left, right, field, n_boot=a.bootstrap, seed=a.seed,
+                )
+            except KeyError as exc:
+                print(f"FATAL: {exc}", file=sys.stderr)
+                return 2
+            block["scenario"]["excludes_zero"] = excludes_zero(block["scenario"])
+            block["task"]["excludes_zero"] = excludes_zero(block["task"])
+            report["contrasts"][name][field] = block
+            print(
+                f"[j14] {name} {field}: {block['scenario']['point_pp']} pp "
+                f"scenario {block['scenario']['ci95_pp']} "
+                f"task {block['task']['ci95_pp']} "
+                f"(n={block['n_pairs']}, seeds={block['n_seeds']})"
+            )
+
     for name, a_pos, a_neg, b_pos, b_neg in a.did:
         report["dids"][name] = {}
         for field in FIELDS:

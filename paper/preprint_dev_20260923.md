@@ -219,6 +219,68 @@ Doing so withdraws one statement. Under the mismatched pairing, the untailored $
 
 What survives is the weaker and correct claim: both $m = 11$ arms are **non-inferior** to a hosted planner that acts at every step for up to 81 calls, at the registered 7.00 pp margin. We report this correction because the mismatch was flagged in our own records before it was measured, and measuring it changed the answer. The arm carrying this paper's primary result is unaffected: the channel contrast against the cap-81-sourced tailored prefix is **−14.81 pp [−21.20, −7.96]**, against −14.68 pp under the original sourcing.
 
+
+### 5.5 A Third Planner Seed: 171 Paired Episodes, and a Step That Does Not Survive It
+
+Because prefix arms replay a *recorded* planner campaign, additional statistical power on the cap-81
+sample is nearly free: a third planner seed costs one hosted ceiling run (CEIL-06), after which the six
+replay arms — two receivers $\times$ three depths — spend no hosted calls at all. We ran them
+(`hj18_prefix_c81s3_*`, 57/57 episodes each, zero crashes) and pooled them with their two-seed
+counterparts. Episode keys are `(task_id, seed)`, so the campaigns cannot collide; every arm loads
+**171** episodes across seeds $\{1, 2, 3\}$ and no episode is dropped from any contrast (POOL-01).
+
+**The span survives and tightens.** Over $m = 6 \rightarrow 11$ the untailored receiver gains
+**+7.70 pp** (scenario [+3.69, +12.06], task [+3.14, +12.30]) and the tailored receiver **+8.39 pp**
+([+4.20, +12.63], task [+4.09, +12.96]). Both lower bounds sit three to four points clear of zero.
+This is the depth claim the paper makes, and a 50 % increase in pair count leaves it intact.
+
+**The adjacent step does not.** At two seeds the tailored $m = 9 \rightarrow 11$ step was +4.92 pp with
+an interval that included zero; at three seeds the point estimate falls to **+4.25 pp** and the scenario
+interval becomes [+0.15, +8.75] — nominally excluding zero, by fifteen hundredths of a point. We do
+**not** report that as a resolution, for a reason we think generalises beyond this paper. At
+$B = 10{,}000$ resamples the Monte Carlo error on a percentile bound is itself a few tenths of a point,
+which is larger than the margin in question. Re-running the identical estimand on the identical
+episodes at seven bootstrap seeds gives lower bounds of +0.20, +0.08, +0.15, +0.05, **−0.01**, +0.15
+and +0.11: **the verdict flips on one seed in seven.** A 200,000-resample run puts the bound at +0.10.
+The same fragility was visible before we probed it — two independent implementations of the *same*
+two-seed estimand disagreed by 0.24 pp on this bound, a spread wider than the margin by which the
+pooled interval clears zero. We therefore report the tailored $m = 9 \rightarrow 11$ step as
+**unresolved, sitting on the decision boundary**, and the honest description of what the third seed
+bought is a narrower interval (width 10.57 $\rightarrow$ 8.59 pp) around a slightly smaller estimate,
+not a null converted into a finding. The untailored step is unambiguously unresolved and its estimate
+roughly halves under pooling (+2.82 $\rightarrow$ +1.44 pp, [−2.56, +5.52]), consistent with the
+seed-3 untailored curve being non-monotone at the top (0.6963, 0.7942, 0.7811 at $m = 6, 9, 11$).
+
+**Non-inferiority at 171 pairs.** Against the pooled cap-81 ceiling (0.7698), and reporting ceiling
+minus arm so that non-inferiority requires the *upper* bound below +7.00 pp, all four `goal_pass`
+verdicts hold and none is a boundary case: tailored $m = 11$ −4.41 [−10.66, **+0.74**], untailored
+$m = 11$ −1.94 [−6.40, **+2.17**], tailored $m = 9$ −0.16 [−4.64, **+4.05**], untailored $m = 9$
+−0.50 [−5.35, **+3.02**]. Pooling tightened every interval without changing a verdict. On TGC the
+picture is unchanged from the two-seed analysis: non-inferiority holds at $m = 11$ tailored
+(−0.58 [−7.60, +5.85]), and fails at $m = 9$ on both receivers. The untailored $m = 11$ TGC bound is
++7.0175 against a 7.00 margin — identical at every bootstrap seed, because TGC is discrete and the
+percentile lands on an attainable value — which we record as *undetermined* rather than refuted; a
+gap of 0.0175 pp is not something more resampling can adjudicate. We note one clustering disagreement
+rather than rounding it away: the tailored $m = 11$ contrast excludes zero under task clustering
+([−8.65, −0.33], stable across seeds) but not under scenario clustering, which is the registered
+primary. The licensed statement is non-inferiority, never superiority (§5.4).
+
+**The tailoring $\times$ depth interaction remains unmeasured**, and now demonstrably so rather than
+by assertion: at 171 pairs it is +2.81 pp, scenario [−2.57, +8.96], task [−2.05, +7.95], with the
+wider $m = 6 \rightarrow 11$ contrast at +0.69 pp [−4.40, +5.92] (POOL-03). Both components of the
+narrow contrast are themselves unresolved, so this is a difference between two quantities the data
+cannot pin down. Fifty-seven additional episodes per arm at zero hosted cost moved the point estimate
+by 0.7 pp and left an interval nearly six points wide in each direction.
+
+**A protocol adopted mid-study, and applied backwards.** Prompted by the step above, we now require
+that any interval bound falling within 1 pp of its decision threshold be re-run at seven bootstrap
+seeds before its verdict is reported, with the range disclosed. Applied retrospectively to this
+paper's other thin bound, the $m = 11$ narration $\times$ receiver interaction of §6 survives cleanly:
+its lower bound is strictly positive at every seed on both clusterings (scenario 1.46–1.56, task
+0.45–0.63) and at 200,000 resamples. One thin margin elsewhere in our records — the task-clustered
+upper bound of +0.01 pp on the H2 review-frequency contrast (§3.3) — is computed by a different script
+and has not yet been probed; we flag it here rather than let its near-miss read as a finding.
+
 ---
 
 ## 6. What the Prefix Actually Conveys: The Narrated Control
@@ -510,9 +572,14 @@ We document the boundary conditions of our study and the analytical defects iden
    reproduce on an independent planner sample, where the sequence is non-monotone and ends with the
    opposite ordering. The corresponding difference-in-differences is now measured on both samples and
    resolves on neither: cap-25 **−2.53 pp** (scenario [−7.66, +2.53]) against cap-81 **+2.10 pp**
-   ([−4.71, +9.01]) — opposite in sign, both spanning zero. The honest statement is that an effect of
-   this size is **unmeasurable at $n = 114$**, not that it is absent, and the paper does not explain
-   the crossover it cannot resolve.
+   ([−4.71, +9.01]) — opposite in sign, both spanning zero. Pooling a third planner seed into the
+   cap-81 sample (§5.5) raises this to $n = 171$ and does not help: the estimate moves to **+2.81 pp**
+   (scenario [−2.57, +8.96], task [−2.05, +7.95]) and the interval is still nearly six points wide in
+   each direction, while the wider $m = 6 ightarrow 11$ version sits essentially on zero
+   (+0.69 pp [−4.40, +5.92]). Both components of the narrow contrast are themselves unresolved, so
+   this is a difference between two quantities the data cannot pin down. The honest statement is that
+   an effect of this size is **unmeasurable at the power available here**, not that it is absent, and
+   the paper does not explain the crossover it cannot resolve.
 7. **Deviation from a Frozen Pre-Registration (CHAN-PRICE-02):** H2's cost prediction P4 specified
    non-cached planner tokens in [300k, 700k]; the arm spent 1,414,410. The remedy attached to a P4
    failure is written for the opposite case, an arm priced *below* the action channel's budget, in
@@ -630,6 +697,16 @@ dev tasks form only 19 scenario groups and tasks within a scenario are not indep
 episode scores 0 under the all-episodes population; `error_type == "limit"` is not a crash and keeps
 its recorded score. Difference-in-differences contrasts are formed **per episode** before averaging,
 so the pairing between the two gaps survives into the bootstrap (§6.1).
+
+**Bootstrap stability for thin bounds.** At $B = 10{,}000$ the Monte Carlo error on a percentile
+bound is itself a few tenths of a percentage point, so a bound that clears its threshold by less than
+that is not a verdict. We therefore re-run any interval whose decision-relevant bound falls within
+1 pp of zero or of the 7.00 pp non-inferiority margin at seven bootstrap seeds
+$\{20260924, 1, 2, 3, 7, 101, 999\}$ and report the range; if the sign changes across seeds the
+quantity is reported as unresolved. This rule was adopted mid-study after it changed one verdict
+(§5.5) and was then applied retrospectively to the other thin bounds in the paper, which survived it.
+Note that TGC is discrete, so a TGC percentile bound can be identical at every seed without being
+precise — stability there reflects the attainable value grid, not resolution.
 
 ### A.5 Provenance and what is not yet automated
 
