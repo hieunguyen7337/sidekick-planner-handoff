@@ -69,6 +69,51 @@ Finally, we confirm that the poor performance of prose advice is not an artifact
 
 ---
 
+### 3.1 Advice at the Action Channel's Price
+
+The obvious objection to Section 3 is that the action channel simply buys more planner effort. We
+pre-registered a test of it (`docs/prereg_h2_advice_at_price_20260923.md`), naming the arm, the four
+predictions, the analysis script and the output path before the run. The arm, `advise_fixed_k_1_fullctx`,
+reviews the executor's work at **every step** with full context — ten times the review frequency of the
+$k = 10$ advice arm.
+
+Table 1b: Advice bought at the action channel's budget (n = 114 paired, scenario 95% CI).
+
+| Arm | `goal_pass` | Non-cached planner tokens / episode | Hosted calls / episode |
+|---|---|---|---|
+| `advise_fixed_k_10_fullctx` | 0.7339 | 49,819 | 2.46 |
+| `advise_fixed_k_1_fullctx` | **0.6630** | **1,414,410** | **19.02** |
+| `prefix_m9` | 0.7852 | 357,448 | 9.77 |
+| `prefix_m11` | 0.8098 | 443,361 | 11.25 |
+
+Advice at every step consumes **3.2× the non-cached tokens** and **1.7× the hosted calls** of the deepest
+action prefix, and scores **14.68 pp lower** on `goal_pass` (scenario [−22.09, −7.04], task
+[−21.56, −7.79]) and 15.79 pp lower on TGC ([−28.07, −3.51]). Against `prefix_m9` the gap is −12.21 pp
+([−19.81, −3.72]).
+
+Three of the four registered predictions held. **P1** (advice minus the one-plan floor includes zero) held
+at −5.51 pp ([−13.15, +2.51]), though the registered *point* prediction of [−2, +5] pp was missed on the
+low side: reviewing every step leaves the executor numerically *below* the one-plan floor. **P2** (advice
+minus `prefix_m11` negative, excluding zero) held decisively. **P3** (ten times the review frequency does
+not buy quality) held at −7.08 pp ([−14.78, +0.67]); we note it is marginal on the task clustering, where
+the upper bound is +0.01.
+
+**P4 failed, and we report the failure and our handling of it explicitly.** P4 predicted non-cached
+tokens in [300k, 700k]; the observed 1,414,410 is roughly twice the top of that range. The prereg's remedy
+for a P4 failure is written for the *opposite* case — an arm that lands below 300k and so was never
+actually priced at the action channel's budget, in which case P2 must be reported as untested. That hazard
+is excluded here *a fortiori*: advice was bought far above the action channel's budget, not below it. We
+therefore report P2 as tested and supported, while flagging that this is a deviation from the literal text
+of a frozen prereg. A reader who declines that judgement should treat P2 as untested at the registered
+budget and rely on Section 4, which establishes the same channel ordering at **matched trigger and matched
+context**, where no budget question arises.
+
+By the prereg's own decision rule, P1 and P2 both holding establishes the channel claim at matched budget:
+**advice does not reach the action channel's quality even when priced at or above it; the difference is the
+channel, not the budget.**
+
+---
+
 ## 4. Economic Dominance and Multi-Currency Cost Frontiers
 
 We evaluate whether supervisory critique is cheaper across three cost currencies: non-cached input/output tokens, provider dollars billed under published price cards, and total hosted API calls (COST-01, COST-02, COST-03).
@@ -169,7 +214,7 @@ Untailored TGC                  0.5526           0.4912     +6.14     [-2.63, +1
 
 Across all eight comparisons in Table 2, **every confidence interval includes zero** (NARR-01). Physical execution cannot be distinguished from plain-text narration at $n = 114$.
 
-**This equivalence is measured at $m = 9$, and $m = 9$ is where the two curves are closest.** The narrated curve has since completed at $m = 6$ and $m = 11$ on the untailored receiver, and execution beats narration **significantly** at both, on both clusterings: narrated versus executed `goal_pass` is 0.6128 against 0.6825 at $m = 6$, 0.7676 against 0.7845 at $m = 9$, and 0.7686 against 0.8345 at $m = 11$. Same-depth contrasts (NARR-03): at $m = 6$ TGC is −13.16 pp (scenario [−21.05, −5.26]); at $m = 9$ everything spans zero; at $m = 11$ `goal_pass` is −6.58 pp ([−9.98, −3.64]) and TGC −11.40 pp ([−22.81, −2.63]). The narrated curve also saturates: it gains +0.10 pp from $m = 9$ to $m = 11$ ([−4.75, +5.14]) while the executed curve climbs 0.7845 to 0.8345. **The claim of this section is therefore that information, not state, carries the prefix benefit at moderate depth — not that state never matters.** Beyond $m \approx 9$ the executed environment contributes something text does not. One practical corollary does survive at every depth measured: narration at $m = 9$ and at $m = 11$ beats *execution* at $m = 6$ (+8.52 pp [+2.32, +14.75] and +8.62 pp [+2.24, +15.02]), so deeper narration is worth more than shallower execution.
+**This equivalence is measured at $m = 9$, and $m = 9$ is where the two curves are closest.** The narrated curve has since completed at $m = 6$ and $m = 11$ on the untailored receiver, and execution beats narration **significantly** at both, on both clusterings: narrated versus executed `goal_pass` is 0.6128 against 0.6825 at $m = 6$, 0.7676 against 0.7845 at $m = 9$, and 0.7686 against 0.8345 at $m = 11$. Same-depth contrasts (NARR-03): at $m = 6$ TGC is −13.16 pp (scenario [−21.05, −5.26]); at $m = 9$ everything spans zero; at $m = 11$ `goal_pass` is −6.58 pp ([−9.98, −3.64]) and TGC −11.40 pp ([−22.81, −2.63]). The narrated curve also saturates: it gains +0.10 pp from $m = 9$ to $m = 11$ ([−4.75, +5.14]) while the executed curve climbs 0.7845 to 0.8345. **The claim of this section is therefore that information, not state, carries the prefix benefit at moderate depth — not that state never matters.** Beyond $m \approx 9$ the executed environment contributes something text does not. One practical corollary does survive at every depth measured: narration at $m = 9$ and at $m = 11$ beats *execution* at $m = 6$ (+8.52 pp [+2.32, +14.75] and +8.62 pp [+2.24, +15.02]), so deeper narration is worth more than shallower execution. **This paragraph describes the untailored receiver; §6.1 shows the tailored receiver does not share either the deep-end gap or the saturation.**
 
 Evaluating narration against the single-plan floor demonstrates that at $m = 9$ text alone in a fresh environment captures nearly the entire gain of prefix execution (NARR-02); the shares below are specific to that depth. For the untailored receiver, plain-text narration provides **+47.92 pp** in `goal_pass` (scenario [+38.67, +56.27]) and **+43.86 pp** in TGC (scenario [+30.70, +56.14]) over the base floor (0.2885 `goal_pass` / 0.0526 TGC), capturing **97%** of the `goal_pass` gain and **88%** of the TGC gain achieved by physical execution. For the tailored receiver, narration provides **+13.16 pp** on TGC ([+5.26, +21.93]) over the plan floor, capturing **79%** of the execution TGC gain (the tailored `goal_pass` difference over floor is +4.86 pp [−0.56, +10.61], including zero).
 
@@ -178,10 +223,50 @@ Figure F6: Narrated versus executed prefix at m = 9, both receivers, on goal pas
 each against the one-plan floor with 95 percent bootstrap intervals. Asterisks mark lift over the
 floor whose interval excludes zero; the tailored goal-pass narrated point carries none, because its
 interval includes zero. The narrated and executed intervals overlap across both metrics and both
-receivers AT THIS DEPTH. Note the depth: at m = 6 and m = 11 execution beats narration significantly (NARR-03), so m = 9 is a crossing point and not a general equivalence.
+receivers AT THIS DEPTH. Note the depth AND the receiver: on the UNTAILORED receiver execution beats narration at m = 6 and m = 11 (NARR-03), so m = 9 is a crossing point there; on the TAILORED receiver no depth shows a resolved gap (NARR-04).
 ```
 
 This establishes the central informational mechanism of this work: **at moderate depth the prefix operates as concrete, executable programming instructions rather than as an environment mutator.** Prose critique fails (CHAN-C1-02, −6.69 pp), but the exact same actions delivered as text in a fresh environment succeed.
+
+---
+
+### 6.1 The Substitution Is Receiver-Dependent
+
+The paragraph above is measured on the **untailored** receiver. The tailored narrated curve has since
+completed at all three depths (NARR-04), and it does not behave the same way.
+
+Table 2b: Narrated minus executed `goal_pass`, by receiver and depth (n = 114 paired, scenario 95% CI).
+
+| $m$ | Untailored | Tailored |
+|---|---|---|
+| 6 | −6.96 [−13.67, +0.63] | −2.51 [−8.68, +3.41] |
+| 9 | −1.69 [−7.10, +4.16] | −1.84 [−6.76, +2.68] |
+| 11 | **−6.58 [−9.98, −3.64]** | −0.49 [−4.10, +3.21] |
+
+On the tailored receiver **every** same-depth contrast includes zero, on both metrics: `goal_pass`
+−2.51, −1.84, −0.49 pp and TGC −2.63, −3.51, +0.88 pp at $m = 6, 9, 11$. Against the pre-registered
+7.00 pp non-inferiority margin, narration is **non-inferior to execution at $m = 9$ and $m = 11$ on the
+tailored receiver** (`goal_pass` lower bounds −6.76 and −4.10), and fails only at $m = 6$ (−8.68). On the
+untailored receiver NI fails at every depth (−13.67, −7.10, −9.98).
+
+The two narrated curves also differ in shape. The untailored narrated curve **saturates** after $m = 9$,
+gaining +0.10 pp to $m = 11$ ([−5.14, +4.75]). The tailored one does not: +6.82 pp from $m = 6$ to $m = 9$
+([+0.63, +12.61]), a further **+3.81 pp** to $m = 11$ ([+0.79, +6.97]), and +10.63 pp across the span
+([+4.91, +16.34]) — all excluding zero. The practical corollary from the untailored receiver holds here
+too: tailored narration at $m = 11$ beats tailored *execution* at $m = 6$ by +8.12 pp ([+3.18, +13.67]).
+
+The natural reading is that **receiver tailoring is what allows a description of the planner's actions to
+substitute for having executed them**: a receiver trained on the planner's own trajectories reconstructs
+from text what an untrained one cannot, and the untrained receiver stops extracting additional value from
+deeper narration past $m = 9$.
+
+⚠ **We do not claim the interaction is established.** These are six independent paired contrasts, not a
+difference-in-differences. "No resolved gap on the tailored receiver" is a weaker statement than "a
+significantly smaller gap than on the untailored receiver", and the DiD (+6.09 pp at $m = 11$) carries no
+interval in our analysis. What is measured is that the two receivers differ in *which* contrasts resolve
+and in whether the narrated curve saturates; a DiD contrast is the test that would settle whether the
+interaction itself is real. The receiver × depth grid was planned in advance, but this reading was formed
+after seeing it, so we treat it as exploratory.
 
 ---
 
