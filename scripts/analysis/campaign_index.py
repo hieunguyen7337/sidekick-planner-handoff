@@ -214,6 +214,10 @@ def read_run_manifest(campaign_dir: Path) -> dict[str, Any]:
         "env": m.get("env"),
         "python_version": m.get("python_version"),
         "schema_version": m.get("schema_version"),
+        # Present only for campaigns run after X16 landed. When it is there it is the
+        # authoritative record and beats anything reconstructed from the repository;
+        # every campaign in this paper predates it, so all of them fall back.
+        "provenance": m.get("provenance"),
     }
 
 

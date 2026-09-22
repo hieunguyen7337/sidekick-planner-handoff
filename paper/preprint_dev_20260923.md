@@ -740,4 +740,13 @@ is missing.
 
 None of this affects any number reported here — the index's per-campaign aggregates were cross-checked
 against the published values and match exactly — but it is the part of the reproducibility story that
-a reader should not take on trust, and it is the gap we are closing next.
+a reader should not take on trust.
+
+The runner now stamps all of it at run time: each episode manifest carries a `provenance` block with
+the git SHA, branch and a dirty flag, the config path and the campaign id that config declares, an
+explicit flag when the command line overrode that id, the adapter, the executor model, the replayed
+source campaign, and the split. **We state plainly that every campaign behind this paper predates that
+change** and therefore still relies on the reconstruction described above; the stamping closes the gap
+for the confirmatory read and for anything run afterwards, not retrospectively. Recording the split
+matters most: it is a command-line argument that no config carries, so before this change nothing in
+an episode's artifacts distinguished a development episode from a test one.

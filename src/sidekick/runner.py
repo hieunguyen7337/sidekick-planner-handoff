@@ -23,6 +23,7 @@ from sidekick.cost.prices import PriceSchedule
 from sidekick.environments.appworld_env import AppWorldEnv
 from sidekick.environments.base import BaseEnv
 from sidekick.environments.mock_env import MockEnv
+from sidekick.provenance import run_provenance
 from sidekick.systems import SYSTEM_NAMES, get_system
 from sidekick.systems.loop import RunLimits
 from sidekick.trajectories.eventlog import EventLog
@@ -321,6 +322,14 @@ def run_single(job: dict[str, Any]) -> dict[str, Any]:
                 "campaign_id": job["campaign_id"],
                 "experiment_name": job["experiment_name"],
                 "executor_base_url": resolve_executor_base_url(cfg.get("executor") or {}),
+                # X16: what produced this episode. Kept under one key so a reader can tell
+                # recorded provenance from anything reconstructed after the fact.
+                "provenance": run_provenance(
+                    cfg=cfg,
+                    config_path=job.get("config_path"),
+                    split=job.get("split"),
+                    resolved_campaign_id=job["campaign_id"],
+                ),
             }
         )
         result = system.run(env, job["task_id"], job["seed"], log, ledger)
@@ -368,6 +377,7 @@ def run_campaign(
     workers: int = 8,
     env_kind: str | None = None,
     campaign_id: str | None = None,
+    config_path: str | Path | None = None,
 ) -> dict[str, Any]:
     cfg = dict(config or {})
     out_dir = Path(out)
@@ -399,6 +409,11 @@ def run_campaign(
                     "env_kind": kind,
                     "campaign_id": cid,
                     "experiment_name": f"{cid}/{system}/{seed}/{task_id}",
+                    # X16: `split` is a CLI argument only, so without stamping it here
+                    # nothing in the artifacts records whether an episode came from dev
+                    # or test — the one fact a confirmatory read must not get wrong.
+                    "split": split,
+                    "config_path": str(config_path) if config_path else None,
                 }
             )
     n_workers = max(1, int(workers))
@@ -448,6 +463,7 @@ def main(argv: list[str] | None = None) -> int:
         workers=args.workers,
         env_kind=args.env,
         campaign_id=args.campaign_id,
+        config_path=args.config,
     )
     print(json.dumps({k: v for k, v in summary.items() if k != "results"}, indent=2))
     return 0
