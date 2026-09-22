@@ -1659,7 +1659,9 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "right": "sft_plan",
         "rule": "not_positive_excluding_zero",
         "threshold_pp": 0.0,
-        "holm_family": True,
+        # A1 r2 §5.3: outside the Holm family. P5 is SUPPORTED by a non-rejection, so a Holm
+        # adjustment would make it easier to support; it is judged on the unadjusted interval.
+        "holm_family": False,
         "statement": "advise_k1_fullctx − sft_plan on goal_pass is NOT positive with a CI excluding zero",
         "citation": f"{A1_PREREG}:253-265",
         "dev_reference": {
@@ -1736,7 +1738,11 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
             "§5.3 applies Holm 'across the five predictions on goal_pass', but P2 is a "
             "cost predicate, so P1-P5 contain four goal_pass predictions."
         ),
-        "script_behaviour": "Family = every prediction with holm_family=True (P1, P3, P4, P5, P6 → m = 5).",
+        "script_behaviour": (
+            "Resolved by A1 r2 §5.3: family = the goal_pass predictions whose support needs a "
+            "rejection (P1, P3, P4, P6 → m = 4, plus any registered P7 component). P2 (cost) "
+            "and P5 (support by non-rejection) are outside it."
+        ),
     },
     {
         "id": "holm_vs_ci_rules",

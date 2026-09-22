@@ -716,7 +716,8 @@ def test_a1_registry_is_data_and_matches_the_registration():
         "takeover_k10", "advise_k10_fullctx", "primary")
     assert preds["P2"]["kind"] == "cost_ratio" and preds["P2"]["min_ratio"] == 2.0
     family = [p["id"] for p in j10.A1_PREDICTIONS if p["holm_family"]]
-    assert family == ["P1", "P3", "P4", "P5", "P6"]
+    # A1 r2 §5.3: P5 is supported by a NON-rejection, so Holm would make it easier; it is out.
+    assert family == ["P1", "P3", "P4", "P6"]
     for p in j10.A1_PREDICTIONS:
         assert p["rule"] in j10.A1_RULES
     assert j10.A1_BOOTSTRAP_N == 10_000 and j10.A1_BOOTSTRAP_SEED == 20260924
@@ -741,9 +742,10 @@ def test_a1_constructed_matrix_verdicts_and_holm_by_hand(tmp_path: Path):
     assert p["P4"]["p_value"] == 1.0 and p["P5"]["p_value"] == 1.0
     # P6: 0.75 − 0.5 = +25 pp → p = 0.
     assert p["P6"]["contrast"]["scenario"]["ci95_pp"] == [25.0, 25.0]
-    # Holm, m = 5, raw [0, 0, 1, 1, 0] → adjusted [0, 0, 1, 1, 0].
-    assert report["multiplicity"]["family"] == ["P1", "P3", "P4", "P5", "P6"]
-    assert [p[i]["holm"]["p_adjusted"] for i in ("P1", "P3", "P4", "P5", "P6")] == [0, 0, 1, 1, 0]
+    # Holm, m = 4, raw [0, 0, 1, 0] → adjusted [0, 0, 1, 0]. P5 is outside the family (A1 r2 §5.3).
+    assert report["multiplicity"]["family"] == ["P1", "P3", "P4", "P6"]
+    assert [p[i]["holm"]["p_adjusted"] for i in ("P1", "P3", "P4", "P6")] == [0, 0, 1, 0]
+    assert "holm" not in p["P5"]
     assert report["verdicts"] == {
         "P1": "supported",
         "P2": "supported",
@@ -898,7 +900,7 @@ def test_a_p7_is_a_registry_entry_not_code(tmp_path: Path):
     preds, support = j10.load_predictions(path)
     report, rc = a1_report(dirs, predictions=preds, supporting=support, cost_report=A1_COST_REPORT)
     assert rc == 0
-    assert report["multiplicity"]["m"] == 6
+    assert report["multiplicity"]["m"] == 5  # P1, P3, P4, P6 + the added P7 (P5 is outside, A1 r2 §5.3)
     assert report["verdicts"]["P7"] == "supported"  # 0.625 − 0.25 = +37.5 pp
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps([dict(p7, rule="no_such_rule")]), encoding="utf-8")
