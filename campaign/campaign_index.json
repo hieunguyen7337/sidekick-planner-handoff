@@ -1,0 +1,2552 @@
+{
+  "campaigns": {
+    "hj12_prefix_m10_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m10.yaml",
+        "declared_campaign_id": "hj12_prefix_m10_20260922",
+        "handoff_m": 10,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.790605,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m10_20260922",
+        "created_at": "2026-09-21T12:12:24.635148+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.561404,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m10_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m10_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m10.yaml",
+        "declared_campaign_id": "hj12_prefix_m10_20260922",
+        "handoff_m": 10,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.806482,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m10_20260923",
+        "created_at": "2026-09-22T06:09:23.479179+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.587719,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m11_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 4,
+        "none": 110
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m11.yaml",
+        "declared_campaign_id": "hj12_prefix_m11_20260922",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.830684,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m11_20260922",
+        "created_at": "2026-09-21T12:51:38.922900+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.614035,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m11_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 9,
+        "none": 105
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m11_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m11.yaml",
+        "declared_campaign_id": "hj12_prefix_m11_20260922",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.809825,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m11_20260923",
+        "created_at": "2026-09-22T06:33:38.494590+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.605263,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json",
+        "j14_did_narration_receiver_20260924.report.json",
+        "j14_did_tailoring_depth_20260924.report.json"
+      ]
+    },
+    "hj12_prefix_m2_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 18,
+        "none": 96
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m2.yaml",
+        "declared_campaign_id": "hj12_prefix_m2_20260922",
+        "handoff_m": 2,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.718702,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m2_20260922",
+        "created_at": "2026-09-21T06:27:27.660553+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.421053,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m2_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 24,
+        "none": 90
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m2_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m2.yaml",
+        "declared_campaign_id": "hj12_prefix_m2_20260922",
+        "handoff_m": 2,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.685579,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m2_20260923",
+        "created_at": "2026-09-22T04:41:15.690621+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.359649,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m3_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj12_prefix_m3_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj12_prefix_m4_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 17,
+        "none": 97
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m4.yaml",
+        "declared_campaign_id": "hj12_prefix_m4_20260922",
+        "handoff_m": 4,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.733956,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m4_20260922",
+        "created_at": "2026-09-21T06:26:19.089443+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.429825,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m4_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 22,
+        "none": 92
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m4_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m4.yaml",
+        "declared_campaign_id": "hj12_prefix_m4_20260922",
+        "handoff_m": 4,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.719035,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m4_20260923",
+        "created_at": "2026-09-22T05:02:08.476804+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.421053,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m5_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj12_prefix_m5_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj12_prefix_m6_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 12,
+        "none": 102
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m6.yaml",
+        "declared_campaign_id": "hj12_prefix_m6_20260922",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.714474,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m6_20260922",
+        "created_at": "2026-09-21T07:24:49.173515+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.429825,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m6_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 13,
+        "none": 101
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m6_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m6.yaml",
+        "declared_campaign_id": "hj12_prefix_m6_20260922",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.723675,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m6_20260923",
+        "created_at": "2026-09-22T05:19:44.142678+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.429825,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json",
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj12_prefix_m7_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 15,
+        "none": 99
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m7.yaml",
+        "declared_campaign_id": "hj12_prefix_m7_20260922",
+        "handoff_m": 7,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.751386,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m7_20260922",
+        "created_at": "2026-09-21T12:13:41.385248+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.464912,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m7_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m7_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m7.yaml",
+        "declared_campaign_id": "hj12_prefix_m7_20260922",
+        "handoff_m": 7,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.754395,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m7_20260923",
+        "created_at": "2026-09-22T05:34:36.079124+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.45614,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m8_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m8.yaml",
+        "declared_campaign_id": "hj12_prefix_m8_20260922",
+        "handoff_m": 8,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.773316,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m8_20260922",
+        "created_at": "2026-09-21T13:13:39.223958+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.5,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m8_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 12,
+        "none": 102
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m8_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m8.yaml",
+        "declared_campaign_id": "hj12_prefix_m8_20260922",
+        "handoff_m": 8,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.762702,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m8_20260923",
+        "created_at": "2026-09-22T04:46:20.614042+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.517544,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m9_20260922": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 3,
+        "none": 111
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj12_prefix_m9.yaml",
+        "declared_campaign_id": "hj12_prefix_m9_20260922",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.813439,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m9_20260922",
+        "created_at": "2026-09-21T07:29:54.531031+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.587719,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json"
+      ]
+    },
+    "hj12_prefix_m9_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj12_prefix_m9_20260922",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj12_prefix_m9.yaml",
+        "declared_campaign_id": "hj12_prefix_m9_20260922",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.785184,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj12_prefix_m9_20260923",
+        "created_at": "2026-09-22T05:19:40.431745+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.561404,
+      "used_by": [
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json",
+        "j14_did_narration_receiver_20260924.report.json",
+        "j14_did_tailoring_depth_20260924.report.json"
+      ]
+    },
+    "hj13_planner_alone_cap81_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 18,
+        "none": 96
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj13_planner_alone_cap81.yaml",
+        "declared_campaign_id": "hj13_planner_alone_cap81_20260923",
+        "handoff_m": null,
+        "handoff_source_campaign": null,
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.763693,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj13_planner_alone_cap81_20260923",
+        "created_at": "2026-09-22T04:54:55.685193+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "planner_alone"
+      ],
+      "tgc_mean": 0.570175,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json",
+        "j15_unpooled_cap81_2seed_20260924.report.json"
+      ]
+    },
+    "hj13_planner_alone_cap81_seed3_20260924": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 9,
+        "none": 48
+      },
+      "from_config": {
+        "config_match": "none"
+      },
+      "goal_pass_mean": 0.78186,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 57,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj13_planner_alone_cap81_seed3_20260924",
+        "created_at": "2026-09-22T13:51:45.899190+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        3
+      ],
+      "systems": [
+        "planner_alone"
+      ],
+      "tgc_mean": 0.631579,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json"
+      ]
+    },
+    "hj13_prefix_zs_m10_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m10_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m11_20260922": {
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj13_prefix_zs_m11_20260923",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj13_prefix_zs_m11.yaml",
+        "declared_campaign_id": "hj13_prefix_zs_m11_20260923",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": null,
+        "takeover": null
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m11_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 8,
+        "none": 105,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj13_prefix_zs_m11.yaml",
+        "declared_campaign_id": "hj13_prefix_zs_m11_20260923",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.834456,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj13_prefix_zs_m11_20260923",
+        "created_at": "2026-09-22T08:01:30.205417+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.622807,
+      "used_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json",
+        "j14_did_narration_receiver_20260924.report.json",
+        "j14_did_tailoring_depth_20260924.report.json"
+      ]
+    },
+    "hj13_prefix_zs_m2_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m2_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m3_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m3_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m4_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m4_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m5_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m5_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m6_20260922": {
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj13_prefix_zs_m6_20260923",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj13_prefix_zs_m6.yaml",
+        "declared_campaign_id": "hj13_prefix_zs_m6_20260923",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": null,
+        "takeover": null
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m6_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 14,
+        "none": 98,
+        "parse_error": 2
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj13_prefix_zs_m6.yaml",
+        "declared_campaign_id": "hj13_prefix_zs_m6_20260923",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.682474,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj13_prefix_zs_m6_20260923",
+        "created_at": "2026-09-22T06:21:00.601198+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.385965,
+      "used_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json",
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj13_prefix_zs_m7_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m7_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m8_20260922": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m8_20260923": {
+      "from_config": {
+        "config_match": "none"
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m9_20260922": {
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj13_prefix_zs_m9_20260923",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj13_prefix_zs_m9.yaml",
+        "declared_campaign_id": "hj13_prefix_zs_m9_20260923",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": null,
+        "takeover": null
+      },
+      "is_dependency": false,
+      "listed_as_excluded_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json"
+      ],
+      "present": false,
+      "used_by": []
+    },
+    "hj13_prefix_zs_m9_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 10,
+        "none": 103,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj13_prefix_zs_m9.yaml",
+        "declared_campaign_id": "hj13_prefix_zs_m9_20260923",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.784535,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj13_prefix_zs_m9_20260923",
+        "created_at": "2026-09-22T07:18:41.544933+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.552632,
+      "used_by": [
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json",
+        "j14_did_narration_receiver_20260924.report.json",
+        "j14_did_tailoring_depth_20260924.report.json"
+      ]
+    },
+    "hj16_narrated_m11_bplus_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 8,
+        "none": 106
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj16_narrated_m11_bplus.yaml",
+        "declared_campaign_id": "hj16_narrated_m11_bplus_20260923",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj16_narrated_m11",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.804886,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj16_narrated_m11_bplus_20260923",
+        "created_at": "2026-09-22T11:19:01.819973+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "sft_plan"
+      ],
+      "tgc_mean": 0.614035,
+      "used_by": [
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj16_narrated_m11_zs_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 15,
+        "none": 98,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj16_narrated_m11_zs.yaml",
+        "declared_campaign_id": "hj16_narrated_m11_zs_20260923",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj16_narrated_m11",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.76864,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj16_narrated_m11_zs_20260923",
+        "created_at": "2026-09-22T10:39:46.058058+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prompt_only"
+      ],
+      "tgc_mean": 0.508772,
+      "used_by": [
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj16_narrated_m6_bplus_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 21,
+        "none": 93
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj16_narrated_m6_bplus.yaml",
+        "declared_campaign_id": "hj16_narrated_m6_bplus_20260923",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj16_narrated_m6",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.698579,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj16_narrated_m6_bplus_20260923",
+        "created_at": "2026-09-22T11:02:18.343806+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "sft_plan"
+      ],
+      "tgc_mean": 0.403509,
+      "used_by": [
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj16_narrated_m6_zs_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 18,
+        "none": 95,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj16_narrated_m6_zs.yaml",
+        "declared_campaign_id": "hj16_narrated_m6_zs_20260923",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj16_narrated_m6",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.612842,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj16_narrated_m6_zs_20260923",
+        "created_at": "2026-09-22T10:15:30.408373+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prompt_only"
+      ],
+      "tgc_mean": 0.254386,
+      "used_by": [
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj16_narrated_m9_bplus_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 11,
+        "none": 103
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj16_narrated_m9_bplus.yaml",
+        "declared_campaign_id": "hj16_narrated_m9_bplus_20260923",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj16_narrated_m9",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.766746,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj16_narrated_m9_bplus_20260923",
+        "created_at": "2026-09-22T09:16:23.692661+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "sft_plan"
+      ],
+      "tgc_mean": 0.526316,
+      "used_by": [
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj16_narrated_m9_zs_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 11,
+        "none": 103
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj16_narrated_m9_zs.yaml",
+        "declared_campaign_id": "hj16_narrated_m9_zs_20260923",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj16_narrated_m9",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.767649,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj16_narrated_m9_zs_20260923",
+        "created_at": "2026-09-22T09:32:11.852301+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prompt_only"
+      ],
+      "tgc_mean": 0.491228,
+      "used_by": [
+        "j14_did_narration_receiver_20260924.report.json"
+      ]
+    },
+    "hj17_prefix_c81_bplus_m11_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 8,
+        "none": 106
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj17_prefix_c81_bplus_m11.yaml",
+        "declared_campaign_id": "hj17_prefix_c81_bplus_m11_20260923",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_20260923",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.811149,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj17_prefix_c81_bplus_m11_20260923",
+        "created_at": "2026-09-22T11:04:12.126319+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.596491,
+      "used_by": [
+        "j14_did_tailoring_depth_20260924.report.json",
+        "j15_pooled_cap81_3seed_20260924.report.json",
+        "j15_unpooled_cap81_2seed_20260924.report.json"
+      ]
+    },
+    "hj17_prefix_c81_bplus_m6_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 9,
+        "none": 105
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj17_prefix_c81_bplus_m6.yaml",
+        "declared_campaign_id": "hj17_prefix_c81_bplus_m6_20260923",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_20260923",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.747711,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj17_prefix_c81_bplus_m6_20260923",
+        "created_at": "2026-09-22T10:37:26.224714+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.45614,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json",
+        "j15_unpooled_cap81_2seed_20260924.report.json"
+      ]
+    },
+    "hj17_prefix_c81_bplus_m9_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 8,
+        "none": 106
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj17_prefix_c81_bplus_m9.yaml",
+        "declared_campaign_id": "hj17_prefix_c81_bplus_m9_20260923",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_20260923",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.761904,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj17_prefix_c81_bplus_m9_20260923",
+        "created_at": "2026-09-22T10:56:46.494357+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.508772,
+      "used_by": [
+        "j14_did_tailoring_depth_20260924.report.json",
+        "j15_pooled_cap81_3seed_20260924.report.json",
+        "j15_unpooled_cap81_2seed_20260924.report.json"
+      ]
+    },
+    "hj17_prefix_c81_zs_m11_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 9,
+        "none": 104,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj17_prefix_c81_zs_m11.yaml",
+        "declared_campaign_id": "hj17_prefix_c81_zs_m11_20260923",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_20260923",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.793184,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj17_prefix_c81_zs_m11_20260923",
+        "created_at": "2026-09-22T10:23:04.599509+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.552632,
+      "used_by": [
+        "j14_did_tailoring_depth_20260924.report.json",
+        "j15_pooled_cap81_3seed_20260924.report.json",
+        "j15_unpooled_cap81_2seed_20260924.report.json"
+      ]
+    },
+    "hj17_prefix_c81_zs_m6_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 18,
+        "none": 96
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj17_prefix_c81_zs_m6.yaml",
+        "declared_campaign_id": "hj17_prefix_c81_zs_m6_20260923",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_20260923",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.720123,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj17_prefix_c81_zs_m6_20260923",
+        "created_at": "2026-09-22T09:53:39.454531+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.45614,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json",
+        "j15_unpooled_cap81_2seed_20260924.report.json"
+      ]
+    },
+    "hj17_prefix_c81_zs_m9_20260923": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 7,
+        "none": 106,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj17_prefix_c81_zs_m9.yaml",
+        "declared_campaign_id": "hj17_prefix_c81_zs_m9_20260923",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_20260923",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.764974,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj17_prefix_c81_zs_m9_20260923",
+        "created_at": "2026-09-22T10:12:28.185427+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.526316,
+      "used_by": [
+        "j14_did_tailoring_depth_20260924.report.json",
+        "j15_pooled_cap81_3seed_20260924.report.json",
+        "j15_unpooled_cap81_2seed_20260924.report.json"
+      ]
+    },
+    "hj18_prefix_c81s3_bplus_m11_20260924": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 3,
+        "none": 54
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj18_prefix_c81s3_bplus_m11.yaml",
+        "declared_campaign_id": "hj18_prefix_c81s3_bplus_m11_20260924",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_seed3_20260924",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.819263,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 57,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj18_prefix_c81s3_bplus_m11_20260924",
+        "created_at": "2026-09-22T15:06:04.341292+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        3
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.596491,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json"
+      ]
+    },
+    "hj18_prefix_c81s3_bplus_m6_20260924": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 11,
+        "none": 46
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj18_prefix_c81s3_bplus_m6.yaml",
+        "declared_campaign_id": "hj18_prefix_c81s3_bplus_m6_20260924",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_seed3_20260924",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.694404,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 57,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj18_prefix_c81s3_bplus_m6_20260924",
+        "created_at": "2026-09-22T14:46:31.593671+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        3
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.403509,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json"
+      ]
+    },
+    "hj18_prefix_c81s3_bplus_m9_20260924": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 7,
+        "none": 50
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj18_prefix_c81s3_bplus_m9.yaml",
+        "declared_campaign_id": "hj18_prefix_c81s3_bplus_m9_20260924",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_seed3_20260924",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.790263,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 57,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj18_prefix_c81s3_bplus_m9_20260924",
+        "created_at": "2026-09-22T14:57:25.212772+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        3
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.561404,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json"
+      ]
+    },
+    "hj18_prefix_c81s3_zs_m11_20260924": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 1,
+        "none": 56
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj18_prefix_c81s3_zs_m11.yaml",
+        "declared_campaign_id": "hj18_prefix_c81s3_zs_m11_20260924",
+        "handoff_m": 11,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_seed3_20260924",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.781123,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 57,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj18_prefix_c81s3_zs_m11_20260924",
+        "created_at": "2026-09-22T15:02:51.562560+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        3
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.578947,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json"
+      ]
+    },
+    "hj18_prefix_c81s3_zs_m6_20260924": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 10,
+        "none": 47
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj18_prefix_c81s3_zs_m6.yaml",
+        "declared_campaign_id": "hj18_prefix_c81s3_zs_m6_20260924",
+        "handoff_m": 6,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_seed3_20260924",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.696281,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 57,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj18_prefix_c81s3_zs_m6_20260924",
+        "created_at": "2026-09-22T14:46:12.682748+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        3
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.421053,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json"
+      ]
+    },
+    "hj18_prefix_c81s3_zs_m9_20260924": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 3,
+        "none": 54
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj18_prefix_c81s3_zs_m9.yaml",
+        "declared_campaign_id": "hj18_prefix_c81s3_zs_m9_20260924",
+        "handoff_m": 9,
+        "handoff_source_campaign": "hj13_planner_alone_cap81_seed3_20260924",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.794246,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 57,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj18_prefix_c81s3_zs_m9_20260924",
+        "created_at": "2026-09-22T14:56:31.062048+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        3
+      ],
+      "systems": [
+        "prefix_handoff"
+      ],
+      "tgc_mean": 0.561404,
+      "used_by": [
+        "j15_pooled_cap81_3seed_20260924.report.json"
+      ]
+    },
+    "hj1b_planner_20260915": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 12,
+        "none": 101,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/pilot_planner_alone.yaml",
+        "declared_campaign_id": "hj1b_planner_20260915",
+        "handoff_m": null,
+        "handoff_source_campaign": null,
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.828395,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj1b_planner_20260915",
+        "created_at": "2026-09-15T13:24:33.768297+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "planner_alone"
+      ],
+      "tgc_mean": 0.684211,
+      "used_by": [
+        "failure_anatomy_dev_20260921.json",
+        "hj12_prefix_frontier_20260922.report.json",
+        "hj12_prefix_frontier_full_20260922.report.json",
+        "hj12_prefix_frontier_pinned_m11_20260922.report.json",
+        "hj12_prefix_frontier_pinned_m9_20260922.report.json",
+        "hj12_unified_frontier_20260922.report.json",
+        "hj12_unified_frontier_scenario_20260923.report.json",
+        "hj12_unified_frontier_scenario_nolimit_20260923.report.json",
+        "hj13_advice_at_price_20260923.report.json",
+        "hj13_advice_fullctx_20260923.report.json",
+        "hj13_advice_fullctx_matched_20260923.report.json",
+        "hj13_arms_vs_cap81_20260923.report.json",
+        "hj13_c1_matched_trigger_20260923.report.json",
+        "hj13_ceiling_cap25_vs_cap81_20260923.report.json",
+        "hj13_mechanism_tailored_20260923.report.json",
+        "hj13_mechanism_tailored_20260923c.report.json",
+        "hj13_mechanism_tailored_matched_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923.report.json",
+        "hj13_mechanism_zeroshot_20260923b.report.json",
+        "hj13_mechanism_zeroshot_20260923c.report.json",
+        "hj13_mechanism_zeroshot_matched_20260923.report.json",
+        "hj13_pinned_curve_m10keys_20260923.report.json",
+        "hj13_pinned_curve_m11keys_20260923.report.json",
+        "hj13_receiver_contrast_m11_20260923.report.json",
+        "hj13_receiver_contrast_m6_20260923.report.json",
+        "hj13_receiver_contrast_m9_20260923.report.json",
+        "hj13_receiver_threeway_20260923.report.json",
+        "hj13_replicate_m6_contrast_20260923.report.json",
+        "hj13_replicate_m9_contrast_20260923.report.json",
+        "hj13_zeroshot_depth_m6_m9_20260923.report.json",
+        "hj13_zeroshot_depth_m9_m11_20260923.report.json",
+        "hj15_qwen_curve_20260923.report.json",
+        "hj15_qwen_zeroshot_curve_20260923.report.json",
+        "hj16_narrated_curve_bplus_20260923.report.json",
+        "hj16_narrated_curve_zs_20260923.report.json",
+        "hj16_narrated_obs_20260923.report.json",
+        "hj16_narrated_tailored_complete_20260923.report.json",
+        "hj16_narrated_untailored_complete_20260923.report.json",
+        "hj17_c81_tailoring_20260923.report.json",
+        "hj17_prefix_c81_zs_curve_20260923.report.json",
+        "hj1b_planner_20260915.manifest.json",
+        "j10_a1_registered_dev_basis_20260924.report.json",
+        "x19_check_default.report.json"
+      ]
+    },
+    "hj1c_fixed_k_20260916": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "crash": 4,
+        "limit": 96,
+        "none": 2,
+        "parse_error": 12
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/pilot_fixed_k.yaml",
+        "declared_campaign_id": "hj1c_fixed_k_20260916",
+        "handoff_m": null,
+        "handoff_source_campaign": null,
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.243377,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 4,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj1c_fixed_k_20260916",
+        "created_at": "2026-09-15T16:11:06.409371+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "fixed_k"
+      ],
+      "tgc_mean": 0.0,
+      "used_by": [
+        "hj1c_fixed_k_20260916.manifest.json"
+      ]
+    },
+    "hj1c_prompt_only_20260916": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "crash": 1,
+        "limit": 113
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/pilot_prompt_only.yaml",
+        "declared_campaign_id": "hj1c_prompt_only_20260916",
+        "handoff_m": null,
+        "handoff_source_campaign": null,
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.248053,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 1,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj1c_prompt_only_20260916",
+        "created_at": "2026-09-15T15:08:41.361280+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prompt_only"
+      ],
+      "tgc_mean": 0.0,
+      "used_by": [
+        "hj1c_prompt_only_20260916.manifest.json"
+      ]
+    },
+    "hj1r_exec8b_20260916": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 37,
+        "none": 77
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj1r_exec8b.yaml",
+        "declared_campaign_id": "hj1r_exec8b_20260916",
+        "handoff_m": null,
+        "handoff_source_campaign": null,
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.190289,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj1r_exec8b_20260916",
+        "created_at": "2026-09-16T10:17:04.229674+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "executor_alone"
+      ],
+      "tgc_mean": 0.017544,
+      "used_by": [
+        "hj1r_exec8b_20260916.manifest.json"
+      ]
+    },
+    "hj1r_prompt_only_20260916": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 40,
+        "none": 74
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj1r_prompt_only.yaml",
+        "declared_campaign_id": "hj1r_prompt_only_20260916",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.288474,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj1r_prompt_only_20260916",
+        "created_at": "2026-09-16T11:40:48.371058+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "prompt_only"
+      ],
+      "tgc_mean": 0.052632,
+      "used_by": [
+        "hj1r_prompt_only_20260916.manifest.json"
+      ]
+    },
+    "hj2b_planner_train_20260916": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 12,
+        "none": 258
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/train_planner_alone.yaml",
+        "declared_campaign_id": "hj2b_planner_train_20260916",
+        "handoff_m": null,
+        "handoff_source_campaign": null,
+        "lora_name": null,
+        "takeover": null
+      },
+      "goal_pass_mean": 0.888922,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 270,
+      "n_tasks": 90,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj2b_planner_train_20260916",
+        "created_at": "2026-09-16T09:26:50.920322+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "systems": [
+        "planner_alone"
+      ],
+      "tgc_mean": 0.725926,
+      "used_by": [
+        "hj2b_planner_train_20260916.manifest.json",
+        "hj2b_planner_train_20260916_s123.manifest.json"
+      ]
+    },
+    "hj4_correction_train_20260917": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 18,
+        "none": 252
+      },
+      "from_config": {
+        "config_match": "campaign_id",
+        "config_path": "configs/hj4b_fixed_k_dev.yaml",
+        "declared_campaign_id": "hj4_correction_train_20260917",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.831274,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 270,
+      "n_tasks": 90,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj4_correction_train_20260917",
+        "created_at": "2026-09-16T20:33:47.731751+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "systems": [
+        "fixed_k"
+      ],
+      "tgc_mean": 0.574074,
+      "used_by": [
+        "b1_error_trigger_20260920.json",
+        "hj4_correction_train_20260917_s123.manifest.json"
+      ]
+    },
+    "hj4b_fixed_k_dev_20260917": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 7,
+        "none": 107
+      },
+      "from_config": {
+        "config_match": "none"
+      },
+      "goal_pass_mean": 0.765474,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj4b_fixed_k_dev_20260917",
+        "created_at": "2026-09-17T01:05:00.855996+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "fixed_k"
+      ],
+      "tgc_mean": 0.5,
+      "used_by": [
+        "hj4b_fixed_k_dev_20260917.manifest.json"
+      ]
+    },
+    "hj8_fixed_k_10_20260921iaware": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 14,
+        "none": 99,
+        "parse_error": 1
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj8_fixed_k_10_20260919",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj8_fixed_k_10.yaml",
+        "declared_campaign_id": "hj8_fixed_k_10_20260919",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.69643,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj8_fixed_k_10_20260921iaware",
+        "created_at": "2026-09-20T16:00:46.968472+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "fixed_k"
+      ],
+      "tgc_mean": 0.412281,
+      "used_by": [
+        "failure_anatomy_dev_20260921.json"
+      ]
+    },
+    "hj8_sft_plan_bplus_20260921iaware": {
+      "adapters": [],
+      "configs": [],
+      "error_types": {
+        "limit": 18,
+        "none": 96
+      },
+      "from_config": {
+        "config_declares_a_different_campaign_id": "hj8_sft_plan_bplus_20260919",
+        "config_match": "arm_stem",
+        "config_path": "configs/hj8_sft_plan_bplus.yaml",
+        "declared_campaign_id": "hj8_sft_plan_bplus_20260919",
+        "handoff_m": null,
+        "handoff_source_campaign": "hj1b_planner_20260915",
+        "lora_name": "sft_b_plus",
+        "takeover": null
+      },
+      "goal_pass_mean": 0.718149,
+      "handoff_source_campaigns": [],
+      "is_dependency": true,
+      "listed_as_excluded_by": [],
+      "n_crashed": 0,
+      "n_episodes": 114,
+      "n_tasks": 57,
+      "present": true,
+      "run_manifest": {
+        "campaign_id_recorded": "hj8_sft_plan_bplus_20260921iaware",
+        "created_at": "2026-09-20T15:42:11.362751+00:00",
+        "env": "appworld",
+        "python_version": "3.12.13 (main, May 10 2026, 19:30:01) [Clang 22.1.3 ]",
+        "schema_version": 1
+      },
+      "seeds": [
+        1,
+        2
+      ],
+      "systems": [
+        "sft_plan"
+      ],
+      "tgc_mean": 0.394737,
+      "used_by": [
+        "failure_anatomy_dev_20260921.json"
+      ]
+    }
+  },
+  "config_id_mismatches": [
+    "hj12_prefix_m10_20260923",
+    "hj12_prefix_m11_20260923",
+    "hj12_prefix_m2_20260923",
+    "hj12_prefix_m4_20260923",
+    "hj12_prefix_m6_20260923",
+    "hj12_prefix_m7_20260923",
+    "hj12_prefix_m8_20260923",
+    "hj12_prefix_m9_20260923",
+    "hj8_fixed_k_10_20260921iaware",
+    "hj8_sft_plan_bplus_20260921iaware"
+  ],
+  "missing_dependencies": [],
+  "n_campaigns_referenced": 70,
+  "n_dependencies": 49,
+  "n_dependencies_present": 49,
+  "note_on_config_id_mismatches": "These campaigns ran under an id their config does not declare, because the PBS wrapper passes the campaign id as an argument and overrides the file. Re-running such a config verbatim writes to the id in the file, not the published one.",
+  "note_on_excluded": "A campaign listed only under a report's excluded/candidate keys was considered and not used; most such paths never existed. Those are reported for completeness and are NOT provenance gaps.",
+  "purpose": "Campaign-granularity provenance for every campaign referenced by a report under campaign/results/. Generated by scripts/analysis/campaign_index.py; do not hand-edit. Per-episode git SHA is still missing (X16) and this index does not supply it.",
+  "results_root": "/scratch/n12194778/sidekick/results"
+}

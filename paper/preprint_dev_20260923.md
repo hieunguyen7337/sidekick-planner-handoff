@@ -710,8 +710,34 @@ precise — stability there reflects the attainable value grid, not resolution.
 
 ### A.5 Provenance and what is not yet automated
 
-The results in this draft were produced at commit `c448a8d` of the analysis tree. ⚠ Per-episode
-`result.json` files do **not** yet carry the git SHA of the code that produced them, so provenance is
-established at campaign granularity through `campaign/RUNS.md` rather than per episode. That is a
-known gap, it is tracked, and it is the one piece of the reproducibility story we cannot currently
-check mechanically.
+The results in this draft were produced at commit `8fcc848` of the analysis tree. Campaign-granularity
+provenance for every campaign any report depends on is generated, not hand-maintained, by
+`scripts/analysis/campaign_index.py` into `campaign/campaign_index.{json,md}`: episode count, tasks,
+seeds, the full `error_type` distribution, the adapter, the replayed source campaign and the config
+behind each of the 49 campaigns the reports read from. All 49 are present; nothing a report depends on
+is missing.
+
+⚠ Three gaps remain, and the first two are wider than earlier drafts of this appendix admitted.
+
+1. **The run record stores less than the index reports.** An episode's `manifest.json` carries the
+   campaign id, run id, host, environment, Python version and timestamp — but **no config path, no
+   adapter, no replayed source campaign and no git SHA**. Every one of those fields in the index is
+   therefore *reconstructed* from the repository by matching the `campaign_id` a config declares
+   against the directory a run wrote to. The reconstruction is reliable, because the runner derives
+   that directory from the same value, but it is not the same as the run having recorded it, and it
+   would mislead for a campaign whose config was edited after the run.
+2. **Ten campaigns ran under an id their config does not declare, including all eight dev prefix
+   arms.** The runner resolves the id as `cid = campaign_id or cfg.get("campaign_id")`, so the
+   `--campaign-id` command-line flag overrides the file, and our PBS wrapper passes it per arm.
+   Concretely, `configs/hj12_prefix_m11.yaml` declares `hj12_prefix_m11_20260922` while the arm used
+   throughout this paper is `hj12_prefix_m11_20260923`: **re-running that config verbatim writes to a
+   different directory**, and a reproducer must pass the published id explicitly. The index flags
+   every such case rather than matching it silently.
+3. **Two dependencies have no committed config at all**, including the third planner sample behind the
+   pooled analysis of §5.5, which was produced by supplying both the campaign id and `--seeds 3` on
+   the command line. We have deliberately not back-filled configs for them: a file that was never
+   executed is not provenance.
+
+None of this affects any number reported here — the index's per-campaign aggregates were cross-checked
+against the published values and match exactly — but it is the part of the reproducibility story that
+a reader should not take on trust, and it is the gap we are closing next.

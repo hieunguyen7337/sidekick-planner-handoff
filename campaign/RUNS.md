@@ -2618,3 +2618,81 @@ The unified frontier shows that `executor_alone` is below the plan-only floor, w
 4. No advice arm is *below* the plan-only floor — `advise_fixed_k_3 − sft_plan` is about −1.7 pp with a confidence interval including zero [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "contrasts.goal_pass_rate_sft_plan_minus_advise_fixed_k_3"]. The correct phrase is **indistinguishable from the floor**, never “never reaches it” [INFERRED].
 5. `prefix_m11`'s non-inferiority holds on all-episodes `goal_pass_rate` only [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m11.goal_pass_all"]. On TGC it is −7.02 pp [−14.04, +0.88] and fails [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m11.tgc_all"]. 53% of its pairs replay the comparator's own recording [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m11.n_no_handoff", "arms.prefix_m11.n"].
 6. `m7`, `m8`, `m10`, and `m11` were chosen after seeing the first grid and are exploratory; Gate G1 failed as registered [OBSERVED docs/prereg_hj12_dev_20260922.md:314-331].
+
+---
+
+## Campaign provenance index (added 2026-09-23)
+
+Appendix A.5 of the preprint tells readers that provenance is established "at campaign
+granularity through `campaign/RUNS.md`". Until now that was only half true: the narrative
+sections above cover the hj8/hj12 era and name **none** of the hj13–hj19 campaigns that
+most of the paper's current claims rest on. Rather than hand-write ~50 entries that would
+drift from the artifacts, the index is now generated:
+
+| artifact | what it is |
+|---|---|
+| `scripts/analysis/campaign_index.py` | the generator (23 unit tests in `tests/unit/test_campaign_index.py`) |
+| `campaign/campaign_index.json` | machine-readable, one record per campaign |
+| `campaign/campaign_index.md` | the same as a table, for reading |
+
+**Re-generate after any new campaign:**
+
+```
+python scripts/analysis/campaign_index.py --out campaign/campaign_index.json
+python scripts/analysis/campaign_index.py --out campaign/campaign_index.md --markdown
+```
+
+It covers the campaigns *referenced by a report* under `campaign/results/`, not every
+directory on scratch, so smoke runs and superseded dates do not bury the load-bearing
+arms. For each it records episode count, tasks, seeds, the full `error_type` distribution
+(`crash` only is a crash; `limit` is not), the adapter, the replayed source campaign, the
+config, and the arms' aggregate `goal_pass` — the last as a cross-check against the
+reports, never as a substitute for one.
+
+### What it found
+
+**1. There are no missing dependencies.** 70 campaigns are referenced; **49 are real
+dependencies and all 49 are present**. The other 21 appear only under the mechanism
+reports' `arms_used.excluded_arms[]` — candidate paths that were considered and not used,
+most of which never existed. An earlier draft of the generator counted those as citations
+and announced 21 "missing" campaigns; an index that invents a provenance gap is worse than
+no index, so the generator now classifies a reference by its JSON key path.
+
+**2. 🔺 Ten campaigns ran under a campaign id their config does not declare — including
+all eight published dev prefix arms.** `src/sidekick/runner.py:375` resolves the id as
+`cid = campaign_id or cfg.get("campaign_id")`, so the `--campaign-id` CLI flag **overrides
+the file**, and `scripts/pbs/hj12_prefix.pbs` passes it per arm. The consequence for a
+reproducer is concrete: `configs/hj12_prefix_m11.yaml` declares
+`campaign_id: hj12_prefix_m11_20260922`, but the arm the paper uses is
+`hj12_prefix_m11_20260923`. **Running that config verbatim writes to the other
+directory and does not reproduce the published campaign**; the id must be passed
+explicitly. Affected: `hj12_prefix_m{2,4,6,7,8,9,10,11}_20260923`,
+`hj8_fixed_k_10_20260921iaware`, `hj8_sft_plan_bplus_20260921iaware`. The index flags
+these rather than matching them silently.
+
+**3. Two dependencies have no config in the repository at all.**
+`hj13_planner_alone_cap81_seed3_20260924` — the third planner sample behind CEIL-06 and
+therefore behind POOL-01/02 — was produced from `configs/hj13_planner_alone_cap81.yaml`
+with the campaign id *and* `--seeds 3` supplied on the command line, so no committed file
+describes the run that happened. `hj4b_fixed_k_dev_20260917` is likewise unmatched. The
+index reports these as `config_match: none` rather than guessing a nearby file. No config
+has been back-filled for them: a config that was never executed is not provenance, and
+writing one after the fact would assert more than is known.
+
+**4. The run record itself carries much less than the index shows.** An episode's
+`manifest.json` holds campaign id, run id, host, pid, env, python version, schema version
+and timestamp — and **no config path, no adapter, no replayed source campaign and no git
+SHA**. Everything in the index's `from_config` block is therefore *reconstructed* from the
+repository by matching `campaign_id`, not read from the run. That reconstruction is
+reliable (the runner derives the output directory from the same value) but it is not the
+same thing, and it would mislead for a campaign whose config was edited after the run.
+This widens task X16 from "stamp the git SHA" to "stamp config path, adapter, source
+campaign and SHA", and the preprint's Appendix A.5 has been corrected to state the fuller
+gap rather than the SHA alone.
+
+### Cross-checks performed when the index was built
+
+The index's aggregate `goal_pass` was compared against published ledger values for four
+arms and matched exactly: `hj13_planner_alone_cap81_20260923` 0.763693 (paper 0.7637),
+`hj12_prefix_m11_20260923` 0.809825 (DID-01), `hj13_prefix_zs_m11_20260923` 0.834456
+(DID-01/CHAN-ZS-04), `hj17_prefix_c81_bplus_m11_20260923` 0.811149 (C81-02, 0.8111).
