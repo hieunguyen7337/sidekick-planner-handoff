@@ -149,7 +149,7 @@ pre-guard it is 0 at every m). The measured per-arm delta:
 | 6 | 0.7145 | 0.7237 | +0.92 | 3 |
 | 7 | 0.7514 | 0.7544 | +0.30 | 8 |
 | 8 | 0.7733 | 0.7627 | −1.06 | 20 |
-| 9 | 0.8134 | 0.7904 | −2.30 | 30 |
+| 9 | 0.8134 | 0.7852 | −2.82 | 30 |
 
 m=10 and m=11 were still running when this was written; **fill them in from the artifacts and do not
 infer them**. `docs/prereg_hj13_shape_20260923.md` §2.1 predicted these arms would fall, most at large
