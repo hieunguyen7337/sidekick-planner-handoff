@@ -163,3 +163,86 @@ def test_holm_matches_a_hand_worked_example():
     assert abs(adj["c_p040"]["p_adjusted"] - 0.060) < 1e-6
     assert adj["c_p040"]["survives"] is False
 
+
+def _make_dummy_arm(n_scenarios: int = 10, base_gp: float = 0.70, base_tgc: float = 0.50) -> dict:
+    cleaned = {}
+    for i in range(n_scenarios):
+        scen = f"{i:07x}"
+        for v in (1, 2):
+            for seed in (1, 2):
+                key = (f"{scen}_{v}", seed)
+                # Vary slightly around base
+                offset = 0.02 * ((i + v + seed) % 5 - 2)
+                gp = max(0.0, min(1.0, base_gp + offset))
+                tgc = max(0.0, min(1.0, base_tgc + offset))
+                cleaned[key] = {
+                    "task_id": key[0],
+                    "seed": seed,
+                    "goal_pass_rate": gp,
+                    "tgc": tgc,
+                    "error_type": None,
+                    "executor_n_calls": 5,
+                }
+    return {
+        "label": "prefix_m6",
+        "n": len(cleaned),
+        "complete_n": True,
+        "n_handoff_occurred": len(cleaned),
+        "error_types": {"none": len(cleaned)},
+        "cleaned": cleaned,
+    }
+
+
+def test_arm_snapshot_contains_all_four_ci_keys():
+    arm = _make_dummy_arm(n_scenarios=8)
+    snap = shape.arm_snapshot(arm, m=6, n_boot=200, seed=shape.SEED)
+    for k in ("goal_pass_all_ci95", "goal_pass_all_ci95_pp", "tgc_all_ci95", "tgc_all_ci95_pp"):
+        assert k in snap
+        assert snap[k] is not None
+        assert isinstance(snap[k], list)
+        assert len(snap[k]) == 2
+        assert snap[k][0] <= snap[k][1]
+
+
+def test_arm_ci_brackets_point_estimate():
+    arm = _make_dummy_arm(n_scenarios=12, base_gp=0.75, base_tgc=0.60)
+    snap = shape.arm_snapshot(arm, m=8, n_boot=1000, seed=shape.SEED)
+    gp = snap["goal_pass_all"]
+    gp_ci = snap["goal_pass_all_ci95"]
+    gp_ci_pp = snap["goal_pass_all_ci95_pp"]
+    assert gp_ci[0] <= gp <= gp_ci[1]
+    assert gp_ci_pp[0] <= gp * 100.0 <= gp_ci_pp[1]
+
+    tgc = snap["tgc_all"]
+    tgc_ci = snap["tgc_all_ci95"]
+    tgc_ci_pp = snap["tgc_all_ci95_pp"]
+    assert tgc_ci[0] <= tgc <= tgc_ci[1]
+    assert tgc_ci_pp[0] <= tgc * 100.0 <= tgc_ci_pp[1]
+
+
+def test_arm_bootstrap_seed_reproducible():
+    arm = _make_dummy_arm(n_scenarios=6)
+    ci1, ci_pp1 = shape.bootstrap_arm_quality(
+        arm, "goal_pass_rate", n_boot=300, seed=shape.SEED
+    )
+    ci2, ci_pp2 = shape.bootstrap_arm_quality(
+        arm, "goal_pass_rate", n_boot=300, seed=shape.SEED
+    )
+    assert ci1 == ci2
+    assert ci_pp1 == ci_pp2
+
+
+def test_arm_bootstrap_single_cluster_does_not_crash():
+    # Only a single scenario cluster
+    arm = _make_dummy_arm(n_scenarios=1)
+    ci, ci_pp = shape.bootstrap_arm_quality(
+        arm, "goal_pass_rate", n_boot=100, seed=shape.SEED
+    )
+    assert ci is not None
+    assert len(ci) == 2
+    assert ci[0] <= ci[1]
+    snap = shape.arm_snapshot(arm, m=2, n_boot=100, seed=shape.SEED)
+    assert snap["goal_pass_all_ci95"] is not None
+    assert len(snap["goal_pass_all_ci95"]) == 2
+
+

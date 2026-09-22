@@ -861,17 +861,82 @@ def step_counts_from_series(series: dict[str, Any]) -> tuple[list[int], str]:
     return vals, "planner_alone cleaned.steps fallback"
 
 
-def arm_snapshot(arm: dict[str, Any], m: int | None) -> dict[str, Any]:
-    cleaned_rows = list(arm["cleaned"].values())
+def bootstrap_arm_quality(
+    arm: dict[str, Any],
+    field: str,
+    *,
+    crash_as_zero: bool = True,
+    cluster: str = "scenario",
+    n_boot: int = BOOTSTRAP,
+    seed: int = SEED,
+) -> tuple[Optional[list[float]], Optional[list[float]]]:
+    """One-sample clustered percentile bootstrap for a single arm's quality metric.
+
+    WARNING: These are per-arm intervals for plotting. They are not a
+    significance test and must not be used as one: MULT-01 established that
+    no adjacent-depth step is significant, and two overlapping per-arm
+    bands are not evidence about a paired contrast.
+    """
+    cleaned = arm.get("cleaned") or {}
+    if not cleaned:
+        return None, None
+    scores: dict[tuple[str, int], float] = {}
+    valid_keys: list[tuple[str, int]] = []
+    for key, row in cleaned.items():
+        val = episode_quality(row, field, crash_as_zero)
+        if val is not None:
+            scores[key] = val
+            valid_keys.append(key)
+    if not valid_keys:
+        return None, None
+
+    grouped = cluster_keys(valid_keys, cluster)
+    if not grouped:
+        return None, None
+
+    rng = random.Random(seed)
+    boot_means: list[float] = []
+    for _ in range(n_boot):
+        drawn = _draw_task_clusters(grouped, rng)
+        vals = [scores[k] for k in drawn if k in scores]
+        if vals:
+            boot_means.append(sum(vals) / len(vals))
+
+    ci = percentile_interval(boot_means)
+    if ci is None:
+        return None, None
+    ci_rate = [ci[0], ci[1]]
+    ci_pp = [ci[0] * 100.0, ci[1] * 100.0]
+    return ci_rate, ci_pp
+
+
+def arm_snapshot(
+    arm: dict[str, Any],
+    m: int | None,
+    *,
+    n_boot: int = BOOTSTRAP,
+    seed: int = SEED,
+) -> dict[str, Any]:
+    cleaned_rows = list(arm.get("cleaned", {}).values())
     gp = j8.mean_quality(cleaned_rows, "goal_pass_rate", crash_as_zero=True)
     tgc = j8.mean_quality(cleaned_rows, "tgc", crash_as_zero=True)
+    gp_ci, gp_ci_pp = bootstrap_arm_quality(
+        arm, "goal_pass_rate", crash_as_zero=True, n_boot=n_boot, seed=seed, cluster="scenario"
+    )
+    tgc_ci, tgc_ci_pp = bootstrap_arm_quality(
+        arm, "tgc", crash_as_zero=True, n_boot=n_boot, seed=seed, cluster="scenario"
+    )
     return {
-        "label": arm["label"],
+        "label": arm.get("label"),
         "m": m,
         "n": arm.get("n"),
         "complete_n": arm.get("complete_n"),
         "goal_pass_all": gp,
+        "goal_pass_all_ci95": gp_ci,
+        "goal_pass_all_ci95_pp": gp_ci_pp,
         "tgc_all": tgc,
+        "tgc_all_ci95": tgc_ci,
+        "tgc_all_ci95_pp": tgc_ci_pp,
         "n_handoff_occurred": arm.get("n_handoff_occurred"),
         "n_silenced_executor_n_calls_eq_0": silenced_count(arm),
         "error_types": arm.get("error_types"),
@@ -985,19 +1050,19 @@ def build_series_report(
         pops[name] = block
 
     snapshots = {
-        "sft_plan": arm_snapshot(series["arms"]["sft_plan"], 0),
+        "sft_plan": arm_snapshot(series["arms"]["sft_plan"], 0, n_boot=n_boot, seed=SEED),
         **{
-            f"prefix_m{m}": arm_snapshot(series["arms"][f"prefix_m{m}"], m)
+            f"prefix_m{m}": arm_snapshot(series["arms"][f"prefix_m{m}"], m, n_boot=n_boot, seed=SEED)
             for m in PREFIX_M
             if f"prefix_m{m}" in series["arms"]
         },
-        "planner_alone": arm_snapshot(series["arms"]["planner_alone"], None),
+        "planner_alone": arm_snapshot(series["arms"]["planner_alone"], None, n_boot=n_boot, seed=SEED),
     }
     other_snaps = {}
     if other is not None:
         other_snaps = {
             **{
-                f"prefix_m{m}": arm_snapshot(other["arms"][f"prefix_m{m}"], m)
+                f"prefix_m{m}": arm_snapshot(other["arms"][f"prefix_m{m}"], m, n_boot=n_boot, seed=SEED)
                 for m in PREFIX_M
                 if f"prefix_m{m}" in other["arms"]
             }

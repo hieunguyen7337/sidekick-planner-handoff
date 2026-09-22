@@ -337,8 +337,12 @@ def generate_f1_depth_curve(
     ax.set_xlim(1.5, 11.5)
     ax.set_ylim(0.48, 0.88)
     ax.set_xticks(range(2, 12))
-    ax.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="#cccccc", framealpha=0.9)
+    ax.legend(
+        loc="upper left", bbox_to_anchor=(1.02, 1.0),
+        frameon=True, facecolor="white", edgecolor="#cccccc", framealpha=0.9, fontsize=8,
+    )
 
+    plt.tight_layout()
     pdf_path, png_path = save_figure(fig, out_dir, "f1_depth_curve", dpi=dpi)
 
     caption = (
@@ -729,10 +733,22 @@ def generate_f4_mechanism(
             idx = positions.index(hm)
             val = cum_shares[idx]
             ax_left.scatter([hm], [val], color="#D55E00", s=45, zorder=5)
+            if hm == 6:
+                xytext = (8, -18)
+                ha = "left"
+                va = "top"
+            elif hm == 9:
+                xytext = (-8, 8)
+                ha = "right"
+                va = "bottom"
+            else:  # hm == 11
+                xytext = (8, -18)
+                ha = "left"
+                va = "top"
             ax_left.annotate(
                 f"$m={hm}$\n({val:.1f}%)", (hm, val),
-                textcoords="offset points", xytext=(0, -22 if hm == 6 else (8 if hm == 11 else -22)),
-                ha="center", fontsize=8, color="#882200",
+                textcoords="offset points", xytext=xytext,
+                ha=ha, va=va, fontsize=8, color="#882200",
             )
 
     ax_left.set_xlabel("Planner action position $k$")
@@ -1114,7 +1130,6 @@ def generate_f6_narrated_vs_executed(
         t_exec_gp, t_exec_tgc, t_exec_gp_ci, t_exec_tgc_ci,
         n_gp_sig=False, n_tgc_sig=True, e_gp_sig=True, e_tgc_sig=True,
     )
-    ax1.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8)
 
     # Right panel: Untailored (all 4 comparisons exclude zero -> all sig True)
     _plot_panel(
@@ -1124,7 +1139,10 @@ def generate_f6_narrated_vs_executed(
         u_exec_gp, u_exec_tgc, u_exec_gp_ci, u_exec_tgc_ci,
         n_gp_sig=True, n_tgc_sig=True, e_gp_sig=True, e_tgc_sig=True,
     )
-    ax2.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8)
+    ax2.legend(
+        loc="upper left", bbox_to_anchor=(1.02, 1.0),
+        frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8,
+    )
 
     plt.tight_layout()
     pdf_path, png_path = save_figure(fig, out_dir, "f6_narrated_vs_executed", dpi=dpi)

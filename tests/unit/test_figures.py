@@ -421,3 +421,73 @@ def test_no_breakpoint_marker_in_depth_curve(tmp_path: Path) -> None:
     assert entry["figure_id"] == "F1"
     # Verify no vertical lines were drawn
     assert len(axvline_calls) == 0, f"Expected 0 axvline calls in F1, found {len(axvline_calls)}: {axvline_calls}"
+
+
+def test_f1_legend_placed_outside_axes(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_all_standard_fixtures(results_dir)
+
+    legend_calls = []
+    original_legend = plt.Axes.legend
+
+    def mocked_legend(self, *args, **kwargs):
+        legend_calls.append((args, kwargs))
+        return original_legend(self, *args, **kwargs)
+
+    with patch.object(plt.Axes, "legend", mocked_legend):
+        generate_f1_depth_curve(results_dir, out_dir)
+
+    assert len(legend_calls) >= 1
+    # Check that bbox_to_anchor was used to place legend outside axes
+    _, kwargs = legend_calls[0]
+    assert "bbox_to_anchor" in kwargs
+    assert kwargs["bbox_to_anchor"][0] > 1.0
+
+
+def test_f4_annotations_offset_from_curve(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_all_standard_fixtures(results_dir)
+
+    annotate_calls = []
+    original_annotate = plt.Axes.annotate
+
+    def mocked_annotate(self, *args, **kwargs):
+        annotate_calls.append((args, kwargs))
+        return original_annotate(self, *args, **kwargs)
+
+    with patch.object(plt.Axes, "annotate", mocked_annotate):
+        generate_f4_mechanism(results_dir, out_dir)
+
+    # Find annotations for m=9 and m=11 in panel 1
+    m9_ann = next((kwargs for args, kwargs in annotate_calls if args and "$m=9$" in str(args[0])), None)
+    m11_ann = next((kwargs for args, kwargs in annotate_calls if args and "$m=11$" in str(args[0])), None)
+    assert m9_ann is not None
+    assert m11_ann is not None
+    # m=9 should be offset left/up (xytext=(-8, 8), ha='right')
+    assert m9_ann["xytext"][0] < 0 and m9_ann["xytext"][1] > 0
+    # m=11 should be offset right/down (xytext=(8, -18), ha='left')
+    assert m11_ann["xytext"][0] > 0 and m11_ann["xytext"][1] < 0
+
+
+def test_f6_legend_placed_outside_axes(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_all_standard_fixtures(results_dir)
+
+    legend_calls = []
+    original_legend = plt.Axes.legend
+
+    def mocked_legend(self, *args, **kwargs):
+        legend_calls.append((args, kwargs))
+        return original_legend(self, *args, **kwargs)
+
+    with patch.object(plt.Axes, "legend", mocked_legend):
+        generate_f6_narrated_vs_executed(results_dir, out_dir)
+
+    assert len(legend_calls) == 1
+    _, kwargs = legend_calls[0]
+    assert "bbox_to_anchor" in kwargs
+    assert kwargs["bbox_to_anchor"][0] > 1.0
+
