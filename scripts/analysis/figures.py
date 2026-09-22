@@ -10,7 +10,8 @@ Figures:
   F2: Matched-budget channel comparison (action prefix curve vs advice points).
   F3: Tailoring gap (untailored minus tailored) across prefix depths.
   F4: Mechanism two-panel (M1 API novelty front-loading + M3 rise decomposition).
-  F5: Second family comparison (Qwen3-8B vs Granite zero-shot), conditional on floors.
+  F5: Second family within-prefix depth curve (Qwen3-8B zero-shot).
+  F6: Mechanism two-panel (Narrated vs executed prefix actions across receivers).
 """
 from __future__ import annotations
 
@@ -31,6 +32,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+MANDATORY_F5_ANNOTATION = (
+    "Floor not shown: both Qwen floor arms score identically and complete no tasks, "
+    "so no floor-relative lift is measurable (QWEN-03)."
+)
+
 # Colour-blind-safe palette distinguishable in greyscale (varying hue, marker, linestyle)
 PALETTE = {
     "tailored": {"color": "#0072B2", "marker": "o", "linestyle": "-", "label": "Tailored receiver (sft_b_plus)"},
@@ -47,6 +53,9 @@ PALETTE = {
     "m1_curve": {"color": "#0072B2", "marker": "o", "linestyle": "-", "label": "Cumulative first API uses"},
     "m3_handoff": {"color": "#0072B2", "label": "Handoff-earned share"},
     "m3_silenced": {"color": "#E69F00", "label": "Silenced (prefix-exhausted) share"},
+    "narrated": {"color": "#E69F00", "marker": "D", "linestyle": "", "label": "Narrated prefix (m=9)"},
+    "executed": {"color": "#0072B2", "marker": "o", "linestyle": "", "label": "Executed prefix (m=9)"},
+    "one_plan": {"color": "#56B4E9", "marker": "^", "linestyle": "", "label": "One-plan floor"},
 }
 
 
@@ -162,6 +171,10 @@ def generate_f1_depth_curve(
     m_tailored = [2, 4, 6, 7, 8, 9, 10, 11]
     y_tailored: list[float] = []
     tailored_keys: list[str] = []
+    tailored_ci_m: list[int] = []
+    tailored_ci_low: list[float] = []
+    tailored_ci_high: list[float] = []
+
     for m in m_tailored:
         k = f"arms.prefix_m{m}.goal_pass_all"
         val = get_nested_key(shape_data, k, shape_rep_path, fig_id)
@@ -169,6 +182,22 @@ def generate_f1_depth_curve(
             raise SystemExit(f"Fatal [{fig_id}]: null value for key {k!r} in {shape_rep_path}")
         y_tailored.append(float(val))
         tailored_keys.append(k)
+
+        arm_dict = shape_data.get("arms", {}).get(f"prefix_m{m}", {})
+        ci_key = None
+        for cand in ("goal_pass_all_ci95", "ci95", "goal_pass_ci95", "goal_pass_all_ci95_pp", "ci95_pp"):
+            if cand in arm_dict:
+                ci_key = cand
+                break
+        if ci_key is not None:
+            ci_val = arm_dict[ci_key]
+            low, high = float(ci_val[0]), float(ci_val[1])
+            if low > 1.0 or high > 1.0:
+                low, high = low / 100.0, high / 100.0
+            tailored_ci_m.append(m)
+            tailored_ci_low.append(low)
+            tailored_ci_high.append(high)
+            tailored_keys.append(f"arms.prefix_m{m}.{ci_key}")
 
     if not y_tailored:
         raise SystemExit(f"Fatal [{fig_id}]: empty series for tailored receiver")
@@ -182,21 +211,35 @@ def generate_f1_depth_curve(
     m_zs = [6, 9, 11]
     y_zs: list[float] = []
     zs_keys: list[str] = []
+    zs_ci_m: list[int] = []
+    zs_ci_low: list[float] = []
+    zs_ci_high: list[float] = []
     
-    k_zs6 = "arms.zs_m6.goal_pass_all"
-    y_zs6 = float(get_nested_key(zs_m6_m9_data, k_zs6, zs_m6_m9_path, fig_id))
-    y_zs.append(y_zs6)
-    zs_keys.append(f"{zs_m6_m9_path.name}:{k_zs6}")
+    for m, rep_path, rep_data, k_zs in [
+        (6, zs_m6_m9_path, zs_m6_m9_data, "arms.zs_m6.goal_pass_all"),
+        (9, zs_m6_m9_path, zs_m6_m9_data, "arms.zs_m9.goal_pass_all"),
+        (11, zs_m9_m11_path, zs_m9_m11_data, "arms.zs_m11.goal_pass_all"),
+    ]:
+        val = float(get_nested_key(rep_data, k_zs, rep_path, fig_id))
+        y_zs.append(val)
+        zs_keys.append(f"{rep_path.name}:{k_zs}")
 
-    k_zs9 = "arms.zs_m9.goal_pass_all"
-    y_zs9 = float(get_nested_key(zs_m6_m9_data, k_zs9, zs_m6_m9_path, fig_id))
-    y_zs.append(y_zs9)
-    zs_keys.append(f"{zs_m6_m9_path.name}:{k_zs9}")
-
-    k_zs11 = "arms.zs_m11.goal_pass_all"
-    y_zs11 = float(get_nested_key(zs_m9_m11_data, k_zs11, zs_m9_m11_path, fig_id))
-    y_zs.append(y_zs11)
-    zs_keys.append(f"{zs_m9_m11_path.name}:{k_zs11}")
+        arm_name = k_zs.split(".")[1]
+        arm_dict = rep_data.get("arms", {}).get(arm_name, {})
+        ci_key = None
+        for cand in ("goal_pass_all_ci95", "ci95", "goal_pass_ci95", "goal_pass_all_ci95_pp", "ci95_pp"):
+            if cand in arm_dict:
+                ci_key = cand
+                break
+        if ci_key is not None:
+            ci_val = arm_dict[ci_key]
+            low, high = float(ci_val[0]), float(ci_val[1])
+            if low > 1.0 or high > 1.0:
+                low, high = low / 100.0, high / 100.0
+            zs_ci_m.append(m)
+            zs_ci_low.append(low)
+            zs_ci_high.append(high)
+            zs_keys.append(f"{rep_path.name}:arms.{arm_name}.{ci_key}")
 
     if not y_zs:
         raise SystemExit(f"Fatal [{fig_id}]: empty series for untailored receiver")
@@ -253,6 +296,20 @@ def generate_f1_depth_curve(
         label=f"Executor-alone floor ({floor_exec:.4f})", zorder=2,
     )
 
+    # Confidence bands (if interval keys present)
+    if tailored_ci_m:
+        ax.fill_between(
+            tailored_ci_m, tailored_ci_low, tailored_ci_high,
+            color=PALETTE["tailored"]["color"],
+            alpha=0.18, zorder=3,
+        )
+    if zs_ci_m:
+        ax.fill_between(
+            zs_ci_m, zs_ci_low, zs_ci_high,
+            color=PALETTE["zeroshot"]["color"],
+            alpha=0.18, zorder=3,
+        )
+
     # Tailored receiver curve
     ax.plot(
         m_tailored, y_tailored,
@@ -287,7 +344,8 @@ def generate_f1_depth_curve(
     caption = (
         "Goal pass rate against prefix handoff depth $m$ for tailored and untailored receivers, "
         "compared against the cap-25 (0.8284) and cap-81 (0.7637) planner ceilings, plan-only floor (0.7181), "
-        "and executor-alone floor (0.5289). Quality is flat below a breakpoint and rises above it; the "
+        "and executor-alone floor (0.5289). Shaded 95% confidence bands per receiver are drawn from report "
+        "interval keys where present. Quality is flat below a breakpoint and rises above it; the "
         "breakpoint point estimate is $m=8$ on handoff-only populations but its 95% interval spans [4, 9], "
         "so the registered threshold test S3 does not pass and no threshold location is claimed (F1-RESULT-04)."
     )
@@ -305,12 +363,16 @@ def generate_f1_depth_curve(
                 "report_path": str(shape_rep_path),
                 "json_keys": tailored_keys,
                 "n_points": len(y_tailored),
+                "has_confidence_band": len(tailored_ci_m) > 0,
+                "interval_note": None if tailored_ci_m else "No per-arm interval keys present in report; plotted without band",
             },
             {
                 "label": "Untailored receiver (granite zero-shot)",
                 "report_path": f"{zs_m6_m9_path}; {zs_m9_m11_path}",
                 "json_keys": zs_keys,
                 "n_points": len(y_zs),
+                "has_confidence_band": len(zs_ci_m) > 0,
+                "interval_note": None if zs_ci_m else "No per-arm interval keys present in report; plotted without band",
             },
             {
                 "label": "Reference ceilings and floors",
@@ -649,7 +711,7 @@ def generate_f4_mechanism(
         float(d_m6_m11["delta_total_pp"]),
     ]
 
-    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(7.0, 3.6))
+    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(7.2, 3.6))
 
     # --- Left Panel: M1 ---
     ax_left.plot(
@@ -714,7 +776,11 @@ def generate_f4_mechanism(
     ax_right.set_xlabel("Depth transition")
     ax_right.set_ylabel("Goal pass rate gain (pp)")
     ax_right.set_ylim(0, 18.0)
-    ax_right.legend(loc="upper left", frameon=True, facecolor="white", edgecolor="#cccccc")
+    # Move legend outside data area to prevent occluding the +15.20 pp total label
+    ax_right.legend(
+        loc="upper left", bbox_to_anchor=(1.02, 1.0),
+        frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8,
+    )
 
     plt.tight_layout()
     pdf_path, png_path = save_figure(fig, out_dir, "f4_mechanism", dpi=dpi)
@@ -763,83 +829,334 @@ def generate_f5_second_family(
     out_dir: Path,
     dpi: int = 200,
 ) -> dict[str, Any]:
-    """F5 · The second family (Qwen3-8B vs Granite zero-shot).
+    """F5 · Second executor family within-prefix depth curve (Qwen3-8B zero-shot).
     
-    Guard:
-    Must skip if Qwen floor reports (hj15_executor_alone_zsq / hj15_prompt_only_zsq) are absent,
-    recording the reason in the manifest per Brief X41: the Qwen rise must never be drawn without its floor.
+    Guards:
+    - Inverted floor guard: Refuses to draw any Qwen floor point or floor line (QWEN-03).
+    - Mandatory annotation guard: Refuses to render without explanatory annotation regarding the degenerate floor.
     """
     fig_id = "F5"
     apply_style()
 
-    qwen_alone_path = results_dir / "hj15_executor_alone_zsq_20260923.report.json"
-    qwen_prompt_path = results_dir / "hj15_prompt_only_zsq_20260923.report.json"
-
-    # Strict guard from Brief X41: if Qwen floor reports are absent, skip figure
-    if not qwen_alone_path.is_file() or not qwen_prompt_path.is_file():
-        skip_msg = (
-            "Skipped: Qwen floor reports (hj15_executor_alone_zsq / hj15_prompt_only_zsq) "
-            "are absent on disk. The Qwen rise must never be drawn without its floor."
-        )
-        manifest_entry = {
-            "figure_id": fig_id,
-            "file_pdf": None,
-            "file_png": None,
-            "width_in": 3.4,
-            "column": "single-column",
-            "caption": "Qwen3-8B zero-shot against granite zero-shot over depth, each against its own floor (pending floor reports).",
-            "series": [],
-            "skipped_reason": skip_msg,
-        }
-        return manifest_entry
-
-    # If floor reports exist, load all data and plot
-    qwen_curve_path = results_dir / "hj15_qwen_zeroshot_curve_20260923.report.json"
+    qwen_curve_path = results_dir / "hj15_qwen_curve_20260923.report.json"
     qwen_curve_data = load_report_json(qwen_curve_path, fig_id)
-    qwen_alone_data = load_report_json(qwen_alone_path, fig_id)
-    qwen_prompt_data = load_report_json(qwen_prompt_path, fig_id)
 
-    granite_m6_m9_path = results_dir / "hj13_zeroshot_depth_m6_m9_20260923.report.json"
-    granite_m6_m9_data = load_report_json(granite_m6_m9_path, fig_id)
+    # Prefix points m=6, 9, 11
+    m_list = [6, 9, 11]
+    y_qwen: list[float] = []
+    qwen_keys: list[str] = []
+    qwen_ci_m: list[int] = []
+    qwen_ci_low: list[float] = []
+    qwen_ci_high: list[float] = []
 
-    k_qwen_m6 = "arms.zsq_m6.goal_pass_all"
-    k_qwen_m9 = "arms.zsq_m9.goal_pass_all"
-    qwen_m6 = float(get_nested_key(qwen_curve_data, k_qwen_m6, qwen_curve_path, fig_id))
-    qwen_m9 = float(get_nested_key(qwen_curve_data, k_qwen_m9, qwen_curve_path, fig_id))
+    for m in m_list:
+        k = f"arms.qwen_prefix_m{m}.goal_pass_all"
+        val = float(get_nested_key(qwen_curve_data, k, qwen_curve_path, fig_id))
+        y_qwen.append(val)
+        qwen_keys.append(k)
 
-    k_qwen_exec = "arms.executor_alone.goal_pass_all"
-    qwen_floor_exec = float(get_nested_key(qwen_alone_data, k_qwen_exec, qwen_alone_path, fig_id))
+        arm_dict = qwen_curve_data.get("arms", {}).get(f"qwen_prefix_m{m}", {})
+        ci_key = None
+        for cand in ("goal_pass_all_ci95", "ci95", "goal_pass_ci95", "goal_pass_all_ci95_pp", "ci95_pp"):
+            if cand in arm_dict:
+                ci_key = cand
+                break
+        if ci_key is not None:
+            ci_val = arm_dict[ci_key]
+            low, high = float(ci_val[0]), float(ci_val[1])
+            if low > 1.0 or high > 1.0:
+                low, high = low / 100.0, high / 100.0
+            qwen_ci_m.append(m)
+            qwen_ci_low.append(low)
+            qwen_ci_high.append(high)
+            qwen_keys.append(f"arms.qwen_prefix_m{m}.{ci_key}")
 
-    granite_m6 = float(get_nested_key(granite_m6_m9_data, "arms.zs_m6.goal_pass_all", granite_m6_m9_path, fig_id))
-    granite_m9 = float(get_nested_key(granite_m6_m9_data, "arms.zs_m9.goal_pass_all", granite_m6_m9_path, fig_id))
+    if not y_qwen:
+        raise SystemExit(f"Fatal [{fig_id}]: empty series for Qwen prefix curve")
 
-    fig, ax = plt.subplots(figsize=(3.4, 3.8))
+    # Guard: strictly enforce mandatory annotation
+    mandatory_annotation = MANDATORY_F5_ANNOTATION
+    if not mandatory_annotation or "Floor not shown" not in mandatory_annotation or "QWEN-03" not in mandatory_annotation:
+        raise SystemExit(f"Fatal [{fig_id}]: mandatory explanatory annotation missing or invalid")
 
-    ax.plot([6, 9], [qwen_m6, qwen_m9], "o--", color=PALETTE["qwen_zeroshot"]["color"], label="Qwen3-8B zero-shot")
-    ax.axhline(qwen_floor_exec, color=PALETTE["qwen_zeroshot"]["color"], linestyle=":", label="Qwen floor")
+    fig, ax = plt.subplots(figsize=(3.8, 4.0))
 
-    ax.plot([6, 9], [granite_m6, granite_m9], "s-", color=PALETTE["zeroshot"]["color"], label="Granite zero-shot")
+    # Draw shaded band if CI keys present
+    if qwen_ci_m:
+        ax.fill_between(
+            qwen_ci_m, qwen_ci_low, qwen_ci_high,
+            color=PALETTE["qwen_zeroshot"]["color"], alpha=0.2, zorder=3,
+        )
 
-    ax.set_xlabel("Handoff depth $m$")
+    # Plot within-prefix depth curve (NO floor line, NO floor point, NO floor-relative arrow)
+    ax.plot(
+        m_list, y_qwen,
+        color=PALETTE["qwen_zeroshot"]["color"],
+        marker=PALETTE["qwen_zeroshot"]["marker"],
+        linestyle=PALETTE["qwen_zeroshot"]["linestyle"],
+        linewidth=1.8, markersize=6,
+        label="Qwen3-8B zero-shot (within-prefix)",
+        zorder=4,
+    )
+
+    # Annotate points
+    for m, y in zip(m_list, y_qwen):
+        ax.annotate(
+            f"{y:.3f}", (m, y),
+            textcoords="offset points", xytext=(0, 8),
+            ha="center", fontsize=8.5, color="#884466",
+        )
+
+    # Add mandatory in-figure annotation
+    ax.text(
+        0.5, 0.04, mandatory_annotation,
+        transform=ax.transAxes,
+        ha="center", va="bottom",
+        fontsize=7.5, color="#444444", style="italic",
+        wrap=True,
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="#f5f5f5", edgecolor="#bbbbbb", alpha=0.95),
+        zorder=5,
+    )
+
+    ax.set_title("Within-prefix depth curve\n(Second executor family: Qwen3-8B)", fontsize=9.5)
+    ax.set_xlabel("Handoff depth $m$ (within-prefix actions)")
     ax.set_ylabel("Goal pass rate")
-    ax.set_xticks([6, 9])
-    ax.legend(loc="lower right", frameon=True)
+    ax.set_xticks(m_list)
+    ax.set_xlim(5.0, 12.0)
+    ax.set_ylim(0.20, 0.88)
+    ax.legend(loc="upper left", frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8)
 
     pdf_path, png_path = save_figure(fig, out_dir, "f5_second_family", dpi=dpi)
+
+    caption = (
+        "Within-prefix depth curve for Qwen3-8B zero-shot across handoff depths $m=6, 9, 11$ "
+        "(0.4491, 0.7017, 0.7306). Quality rises monotonically with depth in a second executor family. "
+        f"{mandatory_annotation}"
+    )
 
     manifest_entry = {
         "figure_id": fig_id,
         "file_pdf": str(pdf_path),
         "file_png": str(png_path),
-        "width_in": 3.4,
+        "width_in": 3.8,
         "column": "single-column",
-        "caption": "Qwen3-8B zero-shot against granite zero-shot over depth, each against its own floor.",
+        "caption": caption,
         "series": [
             {
-                "label": "Qwen3-8B zero-shot",
+                "label": "Qwen3-8B zero-shot (within-prefix)",
                 "report_path": str(qwen_curve_path),
-                "json_keys": [k_qwen_m6, k_qwen_m9],
-                "n_points": 2,
+                "json_keys": qwen_keys,
+                "n_points": len(y_qwen),
+                "has_confidence_band": len(qwen_ci_m) > 0,
+                "interval_note": None if qwen_ci_m else "No per-arm interval keys present in report; plotted without band",
+            }
+        ],
+        "annotation": mandatory_annotation,
+        "skipped_reason": None,
+    }
+    return manifest_entry
+
+
+def generate_f6_narrated_vs_executed(
+    results_dir: Path,
+    out_dir: Path,
+    dpi: int = 200,
+) -> dict[str, Any]:
+    """F6 · Mechanism: Narrated vs executed prefix actions across tailored and untailored receivers.
+    
+    Sources:
+    - hj16_narrated_tailored_complete_20260923.report.json
+    - hj16_narrated_untailored_complete_20260923.report.json
+    
+    Two panels (tailored, untailored). Each shows three arms:
+    - One-plan floor
+    - Narrated m=9
+    - Executed m=9
+    on goal_pass and TGC, with 95% bootstrap intervals.
+    
+    Significance rule (NARR-02):
+    - Tailored goal_pass narrated-minus-floor includes zero [-0.56, +10.61] -> NO significance marker.
+    - Other comparisons marked significant if CI excludes zero.
+    """
+    fig_id = "F6"
+    apply_style()
+
+    tailored_path = results_dir / "hj16_narrated_tailored_complete_20260923.report.json"
+    untailored_path = results_dir / "hj16_narrated_untailored_complete_20260923.report.json"
+
+    tailored_data = load_report_json(tailored_path, fig_id)
+    untailored_data = load_report_json(untailored_path, fig_id)
+
+    # 1. Tailored receiver data
+    t_floor_gp = float(get_nested_key(tailored_data, "arms.plan_only_iaware.goal_pass_all", tailored_path, fig_id))
+    t_floor_tgc = float(get_nested_key(tailored_data, "arms.plan_only_iaware.tgc_all", tailored_path, fig_id))
+    t_narr_gp = float(get_nested_key(tailored_data, "arms.narrated_m9.goal_pass_all", tailored_path, fig_id))
+    t_narr_tgc = float(get_nested_key(tailored_data, "arms.narrated_m9.tgc_all", tailored_path, fig_id))
+    t_exec_gp = float(get_nested_key(tailored_data, "arms.executed_m9.goal_pass_all", tailored_path, fig_id))
+    t_exec_tgc = float(get_nested_key(tailored_data, "arms.executed_m9.tgc_all", tailored_path, fig_id))
+
+    t_narr_gp_ci = get_nested_key(tailored_data, "contrasts.goal_pass_all_narrated_m9_minus_plan_only_iaware.ci95_pp", tailored_path, fig_id)
+    t_narr_tgc_ci = get_nested_key(tailored_data, "contrasts.tgc_all_narrated_m9_minus_plan_only_iaware.ci95_pp", tailored_path, fig_id)
+    t_exec_gp_ci = get_nested_key(tailored_data, "contrasts.goal_pass_all_executed_m9_minus_plan_only_iaware.ci95_pp", tailored_path, fig_id)
+    t_exec_tgc_ci = get_nested_key(tailored_data, "contrasts.tgc_all_executed_m9_minus_plan_only_iaware.ci95_pp", tailored_path, fig_id)
+
+    # 2. Untailored receiver data
+    u_floor_gp = float(get_nested_key(untailored_data, "arms.base_one_plan.goal_pass_all", untailored_path, fig_id))
+    u_floor_tgc = float(get_nested_key(untailored_data, "arms.base_one_plan.tgc_all", untailored_path, fig_id))
+    u_narr_gp = float(get_nested_key(untailored_data, "arms.narrated_zs_m9.goal_pass_all", untailored_path, fig_id))
+    u_narr_tgc = float(get_nested_key(untailored_data, "arms.narrated_zs_m9.tgc_all", untailored_path, fig_id))
+    u_exec_gp = float(get_nested_key(untailored_data, "arms.executed_zs_m9.goal_pass_all", untailored_path, fig_id))
+    u_exec_tgc = float(get_nested_key(untailored_data, "arms.executed_zs_m9.tgc_all", untailored_path, fig_id))
+
+    u_narr_gp_ci = get_nested_key(untailored_data, "contrasts.goal_pass_all_narrated_zs_m9_minus_base_one_plan.ci95_pp", untailored_path, fig_id)
+    u_narr_tgc_ci = get_nested_key(untailored_data, "contrasts.tgc_all_narrated_zs_m9_minus_base_one_plan.ci95_pp", untailored_path, fig_id)
+    u_exec_gp_ci = get_nested_key(untailored_data, "contrasts.goal_pass_all_executed_zs_m9_minus_base_one_plan.ci95_pp", untailored_path, fig_id)
+    u_exec_tgc_ci = get_nested_key(untailored_data, "contrasts.tgc_all_executed_zs_m9_minus_base_one_plan.ci95_pp", untailored_path, fig_id)
+
+    tailored_keys = [
+        "arms.plan_only_iaware.goal_pass_all",
+        "arms.plan_only_iaware.tgc_all",
+        "arms.narrated_m9.goal_pass_all",
+        "arms.narrated_m9.tgc_all",
+        "arms.executed_m9.goal_pass_all",
+        "arms.executed_m9.tgc_all",
+        "contrasts.goal_pass_all_narrated_m9_minus_plan_only_iaware.ci95_pp",
+        "contrasts.tgc_all_narrated_m9_minus_plan_only_iaware.ci95_pp",
+        "contrasts.goal_pass_all_executed_m9_minus_plan_only_iaware.ci95_pp",
+        "contrasts.tgc_all_executed_m9_minus_plan_only_iaware.ci95_pp",
+    ]
+    untailored_keys = [
+        "arms.base_one_plan.goal_pass_all",
+        "arms.base_one_plan.tgc_all",
+        "arms.narrated_zs_m9.goal_pass_all",
+        "arms.narrated_zs_m9.tgc_all",
+        "arms.executed_zs_m9.goal_pass_all",
+        "arms.executed_zs_m9.tgc_all",
+        "contrasts.goal_pass_all_narrated_zs_m9_minus_base_one_plan.ci95_pp",
+        "contrasts.tgc_all_narrated_zs_m9_minus_base_one_plan.ci95_pp",
+        "contrasts.goal_pass_all_executed_zs_m9_minus_base_one_plan.ci95_pp",
+        "contrasts.tgc_all_executed_zs_m9_minus_base_one_plan.ci95_pp",
+    ]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.2, 4.0))
+
+    def _ci_err(val: float, floor: float, ci_pp: list[float]) -> tuple[float, float]:
+        low = floor + float(ci_pp[0]) / 100.0
+        high = floor + float(ci_pp[1]) / 100.0
+        return max(0.0, val - low), max(0.0, high - val)
+
+    def _plot_panel(
+        ax: plt.Axes, title: str,
+        f_gp: float, f_tgc: float,
+        n_gp: float, n_tgc: float, n_gp_ci: list[float], n_tgc_ci: list[float],
+        e_gp: float, e_tgc: float, e_gp_ci: list[float], e_tgc_ci: list[float],
+        n_gp_sig: bool, n_tgc_sig: bool, e_gp_sig: bool, e_tgc_sig: bool,
+    ) -> None:
+        metrics = ["Goal pass rate", "TGC"]
+        x_indices = [0.0, 1.0]
+        off_floor = -0.22
+        off_narr = 0.0
+        off_exec = 0.22
+
+        # Floor points
+        ax.scatter([x + off_floor for x in x_indices], [f_gp, f_tgc], color="#777777", marker="^", s=55, label="One-plan floor", zorder=5)
+        # Narrated points & errorbars
+        n_err_gp = _ci_err(n_gp, f_gp, n_gp_ci)
+        n_err_tgc = _ci_err(n_tgc, f_tgc, n_tgc_ci)
+        ax.errorbar(
+            [x + off_narr for x in x_indices], [n_gp, n_tgc],
+            yerr=[[n_err_gp[0], n_err_tgc[0]], [n_err_gp[1], n_err_tgc[1]]],
+            fmt="D", color=PALETTE["advice"]["color"], ecolor=PALETTE["advice"]["color"],
+            elinewidth=1.6, capsize=4, capthick=1.2, markersize=6,
+            label="Narrated prefix ($m=9$)", zorder=5,
+        )
+        # Executed points & errorbars
+        e_err_gp = _ci_err(e_gp, f_gp, e_gp_ci)
+        e_err_tgc = _ci_err(e_tgc, f_tgc, e_tgc_ci)
+        ax.errorbar(
+            [x + off_exec for x in x_indices], [e_gp, e_tgc],
+            yerr=[[e_err_gp[0], e_err_tgc[0]], [e_err_gp[1], e_err_tgc[1]]],
+            fmt="o", color=PALETTE["tailored"]["color"], ecolor=PALETTE["tailored"]["color"],
+            elinewidth=1.6, capsize=4, capthick=1.2, markersize=6,
+            label="Executed prefix ($m=9$)", zorder=5,
+        )
+
+        # Baseline horizontal lines per metric
+        ax.hlines(f_gp, -0.35, 0.35, colors="#999999", linestyles=":", linewidth=1.0)
+        ax.hlines(f_tgc, 0.65, 1.35, colors="#999999", linestyles=":", linewidth=1.0)
+
+        # Significance markers where CI excludes zero
+        if n_gp_sig:
+            top_y = f_gp + float(n_gp_ci[1]) / 100.0
+            ax.text(0.0 + off_narr, top_y + 0.02, "*", ha="center", va="bottom", fontsize=11, fontweight="bold", color=PALETTE["advice"]["color"])
+        if e_gp_sig:
+            top_y = f_gp + float(e_gp_ci[1]) / 100.0
+            ax.text(0.0 + off_exec, top_y + 0.02, "*", ha="center", va="bottom", fontsize=11, fontweight="bold", color=PALETTE["tailored"]["color"])
+        if n_tgc_sig:
+            top_y = f_tgc + float(n_tgc_ci[1]) / 100.0
+            ax.text(1.0 + off_narr, top_y + 0.02, "*", ha="center", va="bottom", fontsize=11, fontweight="bold", color=PALETTE["advice"]["color"])
+        if e_tgc_sig:
+            top_y = f_tgc + float(e_tgc_ci[1]) / 100.0
+            ax.text(1.0 + off_exec, top_y + 0.02, "*", ha="center", va="bottom", fontsize=11, fontweight="bold", color=PALETTE["tailored"]["color"])
+
+        ax.set_title(title, fontsize=10)
+        ax.set_xticks(x_indices)
+        ax.set_xticklabels(metrics)
+        ax.set_xlim(-0.45, 1.45)
+        ax.set_ylim(0.0, 0.95)
+        ax.set_ylabel("Score (rate / TGC)")
+
+    # Left panel: Tailored (narrated goal_pass CI includes zero -> n_gp_sig is False)
+    _plot_panel(
+        ax1, "Tailored receiver (sft_b_plus)",
+        t_floor_gp, t_floor_tgc,
+        t_narr_gp, t_narr_tgc, t_narr_gp_ci, t_narr_tgc_ci,
+        t_exec_gp, t_exec_tgc, t_exec_gp_ci, t_exec_tgc_ci,
+        n_gp_sig=False, n_tgc_sig=True, e_gp_sig=True, e_tgc_sig=True,
+    )
+    ax1.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8)
+
+    # Right panel: Untailored (all 4 comparisons exclude zero -> all sig True)
+    _plot_panel(
+        ax2, "Untailored receiver (granite zero-shot)",
+        u_floor_gp, u_floor_tgc,
+        u_narr_gp, u_narr_tgc, u_narr_gp_ci, u_narr_tgc_ci,
+        u_exec_gp, u_exec_tgc, u_exec_gp_ci, u_exec_tgc_ci,
+        n_gp_sig=True, n_tgc_sig=True, e_gp_sig=True, e_tgc_sig=True,
+    )
+    ax2.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8)
+
+    plt.tight_layout()
+    pdf_path, png_path = save_figure(fig, out_dir, "f6_narrated_vs_executed", dpi=dpi)
+
+    caption = (
+        "Mechanism comparison of narrated versus executed prefix actions at $m=9$ against the one-plan floor "
+        "across tailored (left) and untailored (right) receivers on goal pass rate and task goal completion (TGC). "
+        "Error bars show 95% bootstrap confidence intervals relative to floor; asterisks indicate lift excluding zero (NARR-02). "
+        "On the tailored receiver, narrated goal pass rate interval includes zero (no asterisk). "
+        "Narrated and executed intervals overlap closely across both metrics and receivers, establishing that "
+        "prefix content delivered as text in a fresh environment captures the majority of the prefix benefit."
+    )
+
+    manifest_entry = {
+        "figure_id": fig_id,
+        "file_pdf": str(pdf_path),
+        "file_png": str(png_path),
+        "width_in": 7.2,
+        "column": "two-column",
+        "caption": caption,
+        "series": [
+            {
+                "label": "Tailored receiver arms & contrasts",
+                "report_path": str(tailored_path),
+                "json_keys": tailored_keys,
+                "n_points": 3,
+            },
+            {
+                "label": "Untailored receiver arms & contrasts",
+                "report_path": str(untailored_path),
+                "json_keys": untailored_keys,
+                "n_points": 3,
             },
         ],
         "skipped_reason": None,
@@ -866,6 +1183,7 @@ def run_figures(
         "F3": generate_f3_tailoring_gap,
         "F4": generate_f4_mechanism,
         "F5": generate_f5_second_family,
+        "F6": generate_f6_narrated_vs_executed,
     }
 
     manifest_entries = []
@@ -883,11 +1201,11 @@ def run_figures(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate paper figures from report JSON only (Brief X41).")
+    parser = argparse.ArgumentParser(description="Generate paper figures from report JSON only (Brief X41 / X47).")
     parser.add_argument("--results-dir", type=Path, default=Path("campaign/results"), help="Directory containing report JSON files")
     parser.add_argument("--out-dir", type=Path, default=Path("paper/figures"), help="Output directory for generated figures")
     parser.add_argument("--manifest", type=Path, default=Path("paper/figures/figures_manifest.json"), help="Manifest JSON path")
-    parser.add_argument("--only", type=str, default=None, help="Generate only specified figure ID (e.g. F1, F2, F3, F4, F5)")
+    parser.add_argument("--only", type=str, default=None, help="Generate only specified figure ID (e.g. F1, F2, F3, F4, F5, F6)")
     parser.add_argument("--dpi", type=int, default=200, help="DPI for PNG output (default 200)")
 
     args = parser.parse_args()

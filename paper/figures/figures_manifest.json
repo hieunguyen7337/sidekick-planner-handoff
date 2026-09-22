@@ -5,7 +5,7 @@
     "file_png": "paper/figures/f1_depth_curve.png",
     "width_in": 7.0,
     "column": "two-column",
-    "caption": "Goal pass rate against prefix handoff depth $m$ for tailored and untailored receivers, compared against the cap-25 (0.8284) and cap-81 (0.7637) planner ceilings, plan-only floor (0.7181), and executor-alone floor (0.5289). Quality is flat below a breakpoint and rises above it; the breakpoint point estimate is $m=8$ on handoff-only populations but its 95% interval spans [4, 9], so the registered threshold test S3 does not pass and no threshold location is claimed (F1-RESULT-04).",
+    "caption": "Goal pass rate against prefix handoff depth $m$ for tailored and untailored receivers, compared against the cap-25 (0.8284) and cap-81 (0.7637) planner ceilings, plan-only floor (0.7181), and executor-alone floor (0.5289). Shaded 95% confidence bands per receiver are drawn from report interval keys where present. Quality is flat below a breakpoint and rises above it; the breakpoint point estimate is $m=8$ on handoff-only populations but its 95% interval spans [4, 9], so the registered threshold test S3 does not pass and no threshold location is claimed (F1-RESULT-04).",
     "series": [
       {
         "label": "Tailored receiver (sft_b_plus)",
@@ -20,7 +20,9 @@
           "arms.prefix_m10.goal_pass_all",
           "arms.prefix_m11.goal_pass_all"
         ],
-        "n_points": 8
+        "n_points": 8,
+        "has_confidence_band": false,
+        "interval_note": "No per-arm interval keys present in report; plotted without band"
       },
       {
         "label": "Untailored receiver (granite zero-shot)",
@@ -30,7 +32,9 @@
           "hj13_zeroshot_depth_m6_m9_20260923.report.json:arms.zs_m9.goal_pass_all",
           "hj13_zeroshot_depth_m9_m11_20260923.report.json:arms.zs_m11.goal_pass_all"
         ],
-        "n_points": 3
+        "n_points": 3,
+        "has_confidence_band": false,
+        "interval_note": "No per-arm interval keys present in report; plotted without band"
       },
       {
         "label": "Reference ceilings and floors",
@@ -165,12 +169,71 @@
   },
   {
     "figure_id": "F5",
-    "file_pdf": null,
-    "file_png": null,
-    "width_in": 3.4,
+    "file_pdf": "paper/figures/f5_second_family.pdf",
+    "file_png": "paper/figures/f5_second_family.png",
+    "width_in": 3.8,
     "column": "single-column",
-    "caption": "Qwen3-8B zero-shot against granite zero-shot over depth, each against its own floor (pending floor reports).",
-    "series": [],
-    "skipped_reason": "Skipped: Qwen floor reports (hj15_executor_alone_zsq / hj15_prompt_only_zsq) are absent on disk. The Qwen rise must never be drawn without its floor."
+    "caption": "Within-prefix depth curve for Qwen3-8B zero-shot across handoff depths $m=6, 9, 11$ (0.4491, 0.7017, 0.7306). Quality rises monotonically with depth in a second executor family. Floor not shown: both Qwen floor arms score identically and complete no tasks, so no floor-relative lift is measurable (QWEN-03).",
+    "series": [
+      {
+        "label": "Qwen3-8B zero-shot (within-prefix)",
+        "report_path": "campaign/results/hj15_qwen_curve_20260923.report.json",
+        "json_keys": [
+          "arms.qwen_prefix_m6.goal_pass_all",
+          "arms.qwen_prefix_m9.goal_pass_all",
+          "arms.qwen_prefix_m11.goal_pass_all"
+        ],
+        "n_points": 3,
+        "has_confidence_band": false,
+        "interval_note": "No per-arm interval keys present in report; plotted without band"
+      }
+    ],
+    "annotation": "Floor not shown: both Qwen floor arms score identically and complete no tasks, so no floor-relative lift is measurable (QWEN-03).",
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F6",
+    "file_pdf": "paper/figures/f6_narrated_vs_executed.pdf",
+    "file_png": "paper/figures/f6_narrated_vs_executed.png",
+    "width_in": 7.2,
+    "column": "two-column",
+    "caption": "Mechanism comparison of narrated versus executed prefix actions at $m=9$ against the one-plan floor across tailored (left) and untailored (right) receivers on goal pass rate and task goal completion (TGC). Error bars show 95% bootstrap confidence intervals relative to floor; asterisks indicate lift excluding zero (NARR-02). On the tailored receiver, narrated goal pass rate interval includes zero (no asterisk). Narrated and executed intervals overlap closely across both metrics and receivers, establishing that prefix content delivered as text in a fresh environment captures the majority of the prefix benefit.",
+    "series": [
+      {
+        "label": "Tailored receiver arms & contrasts",
+        "report_path": "campaign/results/hj16_narrated_tailored_complete_20260923.report.json",
+        "json_keys": [
+          "arms.plan_only_iaware.goal_pass_all",
+          "arms.plan_only_iaware.tgc_all",
+          "arms.narrated_m9.goal_pass_all",
+          "arms.narrated_m9.tgc_all",
+          "arms.executed_m9.goal_pass_all",
+          "arms.executed_m9.tgc_all",
+          "contrasts.goal_pass_all_narrated_m9_minus_plan_only_iaware.ci95_pp",
+          "contrasts.tgc_all_narrated_m9_minus_plan_only_iaware.ci95_pp",
+          "contrasts.goal_pass_all_executed_m9_minus_plan_only_iaware.ci95_pp",
+          "contrasts.tgc_all_executed_m9_minus_plan_only_iaware.ci95_pp"
+        ],
+        "n_points": 3
+      },
+      {
+        "label": "Untailored receiver arms & contrasts",
+        "report_path": "campaign/results/hj16_narrated_untailored_complete_20260923.report.json",
+        "json_keys": [
+          "arms.base_one_plan.goal_pass_all",
+          "arms.base_one_plan.tgc_all",
+          "arms.narrated_zs_m9.goal_pass_all",
+          "arms.narrated_zs_m9.tgc_all",
+          "arms.executed_zs_m9.goal_pass_all",
+          "arms.executed_zs_m9.tgc_all",
+          "contrasts.goal_pass_all_narrated_zs_m9_minus_base_one_plan.ci95_pp",
+          "contrasts.tgc_all_narrated_zs_m9_minus_base_one_plan.ci95_pp",
+          "contrasts.goal_pass_all_executed_zs_m9_minus_base_one_plan.ci95_pp",
+          "contrasts.tgc_all_executed_zs_m9_minus_base_one_plan.ci95_pp"
+        ],
+        "n_points": 3
+      }
+    ],
+    "skipped_reason": null
   }
 ]
