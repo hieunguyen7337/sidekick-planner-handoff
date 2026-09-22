@@ -43,7 +43,7 @@ def run_pbs(tmp_path: Path, **env_extra: str) -> subprocess.CompletedProcess[str
     env = os.environ.copy()
     for key in ("SPLIT", "TASKS", "SEEDS", "CID", "DRYRUN", "SYSTEM", "EXPECTED_CODEX_VERSION",
                 "J10_CONFIRM", "J10_PREREG", "J10_SELFTEST_STAGE", "PBS_JOBID",
-                "ADAPTER_SFT_B_PLUS", "ALIAS_SFT_B_PLUS"):
+                "ADAPTER_SFT_B_PLUS", "ALIAS_SFT_B_PLUS", "J10_GUARD_CID"):
         env.pop(key, None)
     env.update(
         J10_SELFTEST="1",
@@ -369,3 +369,108 @@ def test_test_normal_serves_sft_b_plus_only_from_the_registered_adapter(tmp_path
     proc = run_pbs(tmp_path, CFG="configs/j10_executor_alone_bplus.yaml", DRYRUN="1",
                    ADAPTER_SFT_B_PLUS=older)
     assert proc.returncode == 0, _out(proc)
+
+
+# ---- (e2) smoke-time branch guards, ported from hj12_live.pbs ------------------------------
+
+RUN_START = {"event_type": "run_start", "actor": "system"}
+EXEC_ACT = {"event_type": "action", "actor": "executor"}
+PLANNER_ACT = {"event_type": "action", "actor": "planner"}  # loop.py takeover branch
+ADVICE = {"event_type": "intervention", "actor": "planner", "payload": {"forced": True}}
+SHOWN = {"event_type": "intervention", "actor": "planner",
+         "payload": {"forced": True, "source": "shown_action"}}  # loop.py advice_from_act branch
+
+
+def _smoke(root: Path, episodes: list[tuple[int, list[dict]]]) -> None:
+    """A smoke campaign in runner layout: one (steps, events) pair per episode."""
+    for i, (steps, events) in enumerate(episodes):
+        ep = root / "fixed_k" / "1" / f"t{i}"
+        ep.mkdir(parents=True, exist_ok=True)
+        (ep / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+        (ep / "result.json").write_text(json.dumps(
+            {"task_id": f"t{i}", "seed": 1, "steps": steps, "error_type": None}) + "\n", encoding="utf-8")
+
+
+def _guard(tmp_path: Path, name: str, episodes, cfg: Path | None = None) -> subprocess.CompletedProcess[str]:
+    if cfg is None:
+        cfg, _src = _replay_variant(tmp_path, name)
+    _complete(tmp_path / "out" / "j10_planner_alone_cap81_20260924_dryrun", 2)
+    _smoke(tmp_path / "out" / "smoke_x", episodes)
+    return run_pbs(tmp_path, CFG=str(cfg), DRYRUN="1", TASKS="2",
+                   J10_SELFTEST_STAGE="branch_guard", J10_GUARD_CID="smoke_x")
+
+
+REACHED = 12  # >= fixed_k: 10, so the review step was reached
+SHORT = 4     # < 10: no review step was reached, the channel never had a chance to fire
+
+BRANCH_CASES = [
+    # takeover: zero planner actions is fatal once a review step was reached, a warning before.
+    ("takeover-fire", "j10_takeover_k10.yaml", [(REACHED, [RUN_START, EXEC_ACT, ADVICE]), (SHORT, [RUN_START])],
+     1, "0 planner-authored action events on smoke and at least one episode could have triggered"),
+    ("takeover-warn", "j10_takeover_k10.yaml", [(SHORT, [RUN_START, EXEC_ACT]), (3, [RUN_START])],
+     0, "WARN: takeover arm j10_takeover_k10 has 0 planner-authored action events on smoke"),
+    ("takeover-pass", "j10_takeover_k10.yaml", [(REACHED, [RUN_START, EXEC_ACT, PLANNER_ACT])],
+     0, "planner_actions=1 shown_action_interventions=0"),
+    # an action from an attempt before the episode's last run_start does not count (hj12's rule)
+    ("takeover-stale-attempt", "j10_takeover_k10.yaml",
+     [(REACHED, [RUN_START, PLANNER_ACT, RUN_START, EXEC_ACT])], 1, "ran the advise path"),
+    ("takeover-ran-show", "j10_takeover_k10.yaml", [(REACHED, [RUN_START, SHOWN, PLANNER_ACT])],
+     1, "it ran the show channel"),
+    # show: zero shown_action interventions is fatal once a review step was reached.
+    ("show-fire", "j10_show_k10.yaml", [(REACHED, [RUN_START, EXEC_ACT, ADVICE])],
+     1, "the advice_from_act branch did not run"),
+    ("show-warn", "j10_show_k10.yaml", [(SHORT, [RUN_START, EXEC_ACT])],
+     0, "WARN: show arm j10_show_k10 has 0 shown_action interventions on smoke"),
+    ("show-pass", "j10_show_k10.yaml", [(REACHED, [RUN_START, SHOWN, EXEC_ACT])],
+     0, "planner_actions=0 shown_action_interventions=1"),
+    ("show-ran-takeover", "j10_show_k10.yaml", [(REACHED, [RUN_START, SHOWN, PLANNER_ACT])],
+     1, "it executed the planner's actions"),
+    # advise: any shown action or planner action is fatal, review step reached or not.
+    ("advise-shown", "j10_advise_k10_fullctx.yaml", [(SHORT, [RUN_START, SHOWN])],
+     1, "advise arm j10_advise_k10_fullctx has 0 planner-authored action events and 1 shown_action"),
+    ("advise-takeover", "j10_advise_k1_fullctx.yaml", [(REACHED, [RUN_START, PLANNER_ACT])],
+     1, "a takeover/advice_from_act setting made it another channel"),
+    ("advise-neutral-shown", "j10_advise_k10_neutral.yaml", [(REACHED, [RUN_START, ADVICE, SHOWN])],
+     1, "shown_action interventions on smoke"),
+    ("advise-pass", "j10_advise_k10_fullctx.yaml", [(REACHED, [RUN_START, EXEC_ACT, ADVICE])],
+     0, "planner_actions=0 shown_action_interventions=0"),
+]
+
+
+@pytest.mark.parametrize("name,episodes,rc,text", [c[1:] for c in BRANCH_CASES],
+                         ids=[c[0] for c in BRANCH_CASES])
+def test_branch_guard_on_constructed_smoke_trees(tmp_path: Path, name: str, episodes, rc: int, text: str):
+    proc = _guard(tmp_path, name, episodes)
+    assert proc.returncode == rc, _out(proc)
+    assert text in _out(proc)
+    if rc:
+        assert "[j10] FATAL:" in _out(proc) and "not launching the full run" in _out(proc)
+        assert "selftest: branch guard passed" not in _out(proc)
+    else:
+        assert "selftest: branch guard passed" in _out(proc)
+
+
+def test_branch_guard_refuses_when_it_cannot_read_k(tmp_path: Path):
+    # A smoke that would only warn must refuse when fixed_k cannot be read: a guard that cannot
+    # tell whether the channel had a chance to fire does not wave the arm through.
+    cfg, _src = _replay_variant(tmp_path, "j10_takeover_k10.yaml")
+    text = cfg.read_text(encoding="utf-8")
+    assert "\nfixed_k: 10" in text
+    cfg.write_text(text.replace("\nfixed_k: 10", "\n"), encoding="utf-8")
+    proc = _guard(tmp_path, "j10_takeover_k10.yaml", [(SHORT, [RUN_START, EXEC_ACT])], cfg=cfg)
+    assert proc.returncode == 1, _out(proc)
+    assert "could have triggered" in _out(proc)
+
+
+def test_branch_guard_is_a_no_op_for_arms_without_a_review_channel(tmp_path: Path):
+    proc = _guard(tmp_path, "j10_sft_plan.yaml", [(REACHED, [RUN_START, SHOWN, PLANNER_ACT])])
+    assert proc.returncode == 0, _out(proc)
+    assert "branch guard j10_sft_plan" not in _out(proc)
+    assert "selftest: branch guard passed" in _out(proc)
+
+
+def test_the_real_run_calls_the_branch_guard_on_the_smoke_before_the_dev_tree_is_deleted():
+    text = PBS.read_text(encoding="utf-8")
+    call = text.index('j10_branch_guard "${CFG_STEM}" "${SCID}" "${CFG_EFF}"')
+    assert text.index("GATE_RC=$?") < call < text.index('rm -rf "${OUT:?}/${SCID:?}"')
+    assert call < text.index("# ---- (f) the arm")

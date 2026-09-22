@@ -44,7 +44,8 @@
 #   (arms 4-7) or planner.packet_source (arms 2, 8-12) -- while that source is incomplete for the
 #   requested tasks/seeds (A1 r2 §4.1, §10: arm 3 completes first), another live job holding the CID.
 # Exit codes: 0 arm complete (target non-crashed episodes, 0 crashes) | 2 refused |
-#   3 crashes or missing episodes remain -> resubmit next quota window | other: smoke/gate/infra.
+#   3 crashes or missing episodes remain -> resubmit next quota window | other: smoke/gate/infra,
+#   including 1 when the smoke of a takeover / show / advise arm shows the wrong channel (e2).
 #
 # Do NOT add reasoning-parser flags to vLLM (G3). The --lora-modules alias MUST equal
 # executor.lora_name or requests silently hit the base model.
@@ -494,11 +495,176 @@ PY
   return 0
 }
 
+# ---- (e2) branch guards: the smoke must show the channel the config asks for ----------------
+# A takeover or show arm whose flag was not honoured runs the plain advise path, and an advise
+# arm that a stray takeover / advice_from_act key turned into another channel runs that one.
+# Either still scores believable goal_pass, and P6/P7 would then compare an arm with itself.
+# The smoke is the last point where the mistake costs three episodes instead of an arm, so it is
+# checked there. Logic and python bodies ported from scripts/pbs/hj12_live.pbs
+# (hj12_planner_authored_actions, hj12_smoke_gate_could_trigger, hj12_shown_actions,
+# hj12_void_show_if_advise, hj12_warn_or_void_takeover), which guarded the dev arms; copied,
+# not sourced, because hj12_live.pbs is a job script with side effects at top level.
+j10_branch_fatal () { echo "[j10] FATAL: $*"; exit 1; }
+
+# Planner-authored `action` events after each episode's last run_start: only takeover (or a
+# planner-driven arm) emits them (src/sidekick/systems/loop.py:825-832).
+j10_planner_authored_actions () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+n = 0
+if root.is_dir():
+    for path in root.rglob("events.jsonl"):
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        last_start = -1
+        events = []
+        for raw in lines:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                ev = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(ev, dict):
+                continue
+            events.append(ev)
+            if ev.get("event_type") == "run_start":
+                last_start = len(events) - 1
+        for ev in events[last_start + 1 :]:
+            if ev.get("event_type") == "action" and ev.get("actor") == "planner":
+                n += 1
+print(n)
+PY
+}
+
+# `intervention` events whose payload.source is "shown_action": only the advice_from_act branch
+# emits them (src/sidekick/systems/loop.py:866-879).
+j10_shown_actions () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+n = 0
+if root.is_dir():
+    for path in root.rglob("events.jsonl"):
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(ev, dict):
+                continue
+            if ev.get("event_type") == "intervention" and (ev.get("payload") or {}).get("source") == "shown_action":
+                n += 1
+print(n)
+PY
+}
+
+# 1 when some smoke episode reached the first review step (result.json steps >= fixed_k), i.e.
+# the channel had a chance to fire; 0 when none did. An unreadable k answers 1, so a guard
+# that cannot tell refuses rather than waves the arm through (hj12's rule).
+j10_smoke_gate_could_trigger () {
+  local cid="$1" cfg="$2"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" "${cfg}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+cfg = Path(sys.argv[3]) if sys.argv[3] else None
+k = None
+if cfg is not None and cfg.is_file():
+    for line in cfg.read_text(encoding="utf-8").splitlines():
+        if line.startswith("fixed_k:"):
+            try:
+                k = int(line.split(":", 1)[1].strip().split()[0])
+            except (IndexError, TypeError, ValueError):
+                k = None
+            break
+if k is None:
+    print(1)
+    raise SystemExit(0)
+could = False
+for result in root.rglob("result.json") if root.is_dir() else []:
+    try:
+        row = json.loads(result.read_text(encoding="utf-8"))
+        steps = int(row.get("steps") or 0)
+    except (OSError, AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        continue
+    if steps >= k:
+        could = True
+        break
+print(1 if could else 0)
+PY
+}
+
+j10_branch_guard () {
+  local stem="$1" cid="$2" cfg="$3"
+  local channel n_act n_shown could
+  case "${stem}" in
+    j10_takeover_*) channel=takeover;;
+    j10_show_*) channel=show;;
+    j10_advise_*) channel=advise;;
+    *) return 0;;
+  esac
+  # A helper that fails refuses the arm: a guard that cannot count must not pass it.
+  n_act="$(j10_planner_authored_actions "${cid}")" && [[ "${n_act}" =~ ^[0-9]+$ ]] \
+    || j10_branch_fatal "branch guard could not count planner actions in ${cid}"
+  n_shown="$(j10_shown_actions "${cid}")" && [[ "${n_shown}" =~ ^[0-9]+$ ]] \
+    || j10_branch_fatal "branch guard could not count shown_action interventions in ${cid}"
+  echo "[j10] branch guard ${stem} (${channel}) on ${cid}: planner_actions=${n_act} shown_action_interventions=${n_shown}"
+  case "${channel}" in
+    advise)
+      # No review step is needed to tell: an advise arm emits neither event at any step.
+      if (( n_act > 0 || n_shown > 0 )); then
+        j10_branch_fatal "advise arm ${stem} has ${n_act} planner-authored action events and ${n_shown} shown_action interventions on smoke; a takeover/advice_from_act setting made it another channel; ${cid} kept; not launching the full run"
+      fi
+      return 0;;
+    takeover)
+      (( n_shown == 0 )) || j10_branch_fatal "takeover arm ${stem} has ${n_shown} shown_action interventions on smoke; it ran the show channel; ${cid} kept; not launching the full run"
+      (( n_act > 0 )) && return 0
+      could="$(j10_smoke_gate_could_trigger "${cid}" "${cfg}")" || could=1
+      if [[ "${could:-1}" != "0" ]]; then
+        j10_branch_fatal "takeover arm ${stem} has 0 planner-authored action events on smoke and at least one episode could have triggered the fixed_k steps>=k gate; ran the advise path; ${cid} kept; not launching the full run"
+      fi
+      echo "[j10] WARN: takeover arm ${stem} has 0 planner-authored action events on smoke -- smoke was uninformative (no episode reached the fixed_k steps>=k gate)";;
+    show)
+      (( n_act == 0 )) || j10_branch_fatal "show arm ${stem} has ${n_act} planner-authored action events on smoke; it executed the planner's actions; ${cid} kept; not launching the full run"
+      (( n_shown > 0 )) && return 0
+      could="$(j10_smoke_gate_could_trigger "${cid}" "${cfg}")" || could=1
+      if [[ "${could:-1}" != "0" ]]; then
+        j10_branch_fatal "show arm ${stem} has 0 shown_action interventions on smoke although an episode reached a review step; the advice_from_act branch did not run; ${cid} kept; not launching the full run"
+      fi
+      echo "[j10] WARN: show arm ${stem} has 0 shown_action interventions on smoke -- no episode reached a review step";;
+  esac
+  return 0
+}
+
 if [[ "${SELFTEST}" == "1" ]]; then
   echo "[j10] selftest: preflight passed system=${SYSTEM} cid=${CID} split=${SPLIT} target=${TARGET} cfg_eff=${CFG_EFF} gate=${GATE_ARGS[*]}"
   if [[ "${J10_SELFTEST_STAGE:-preflight}" == "tally" ]]; then
     tally_campaign
     exit $?
+  fi
+  if [[ "${J10_SELFTEST_STAGE:-preflight}" == "branch_guard" ]]; then
+    j10_branch_guard "${CFG_STEM}" "${J10_GUARD_CID:?J10_GUARD_CID names a smoke campaign under J10_OUT}" "${CFG_EFF}"
+    echo "[j10] selftest: branch guard passed"
+    exit 0
   fi
   exit 0
 fi
@@ -752,6 +918,8 @@ if [[ "${N_EXISTING}" -eq 0 ]]; then
     --config "${CFG_EFF}" --repo "${REPO}" "${GATE_ARGS[@]}" --expect-split "${SPLIT}"
   GATE_RC=$?
   [[ "${GATE_RC}" -eq 0 ]] || { echo "[j10] FATAL: smoke gate failed (rc=${GATE_RC}); ${SCID} kept for inspection"; exit "${GATE_RC}"; }
+  # (e2) before the dev smoke tree is deleted, so a refused arm leaves its evidence.
+  j10_branch_guard "${CFG_STEM}" "${SCID}" "${CFG_EFF}"
   if [[ "${SPLIT}" == "dev" ]]; then
     rm -rf "${OUT:?}/${SCID:?}"
   else
