@@ -15,10 +15,12 @@
 #PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
 #PBS -e /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
 #
-# HJ-12 prefix-handoff: serve granite-4.2-8b with the intervention-aware
-# sft_b_plus LoRA (sft_b_plus_iaware_granite8b, alias sft_b_plus) and run
-# four free arms (m=2,4,6,9). Zero hosted planner calls. ARMS="<stem> <stem>"
-# overrides the full set. Never pattern-kill another job's vLLM server.
+# HJ-12 prefix-handoff: serve one base model at a time with its LoRA.
+# Granite-4.2-8b uses sft_b_plus_iaware_granite8b (alias sft_b_plus).
+# Qwen/Qwen3-8B uses sft_b_plus_iaware_qwen8b (alias sft_b_plus_qwen8b).
+# Pending arms are grouped by executor.model; vLLM is restarted between
+# groups. Zero hosted planner calls. ARMS="<stem> <stem>" overrides the
+# full set. Never pattern-kill another job's vLLM server.
 # Alias launched via --lora-modules MUST equal executor.lora_name or requests
 # silently hit the base model.
 #
@@ -41,7 +43,9 @@
 #
 # Job variables (override at qsub time):
 #   ARMSET (free|all), ARMS (space-separated cid stems; overrides ARMSET),
-#   DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS, SYSTEM (default prefix_handoff)
+#   DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS,
+#   ADAPTER_SFT_B_PLUS_QWEN, ALIAS_SFT_B_PLUS_QWEN, MODEL_QWEN, MODEL_GRANITE,
+#   SYSTEM (default prefix_handoff)
 #   SMOKE_ONLY=1 (default 0): each pending arm runs its 3-task smoke and
 #   gate, then stops before the 57×2 campaign. Job rc is the first failed
 #   smoke/gate. Unset or 0 leaves the full run unchanged.
@@ -97,7 +101,9 @@ OUT=/scratch/n12194778/sidekick/results
 LOGDIR=/scratch/n12194778/sidekick/logs
 PY="${PY:-${SIDEKICK_VENV}/bin/python}"
 SUM="${REPO}/scripts/setup/campaign_summarize.py"
-MODEL=ibm-granite/granite-4.2-8b
+MODEL_GRANITE="${MODEL_GRANITE:-ibm-granite/granite-4.2-8b}"
+MODEL_QWEN="${MODEL_QWEN:-Qwen/Qwen3-8B}"
+MODEL="${MODEL:-${MODEL_GRANITE}}"
 VLOG="${LOGDIR}/${JOB_CID}.${JOBTAG}_vllm.log"
 echo "[hj12] vlog=${VLOG}"
 
@@ -107,6 +113,10 @@ echo "[hj12] vlog=${VLOG}"
 # loadable PEFT dir (adapter_config.json + weights), not merely a directory.
 ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
 ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b}"
+ALIAS_SFT_B_PLUS_QWEN="${ALIAS_SFT_B_PLUS_QWEN:-sft_b_plus_qwen8b}"
+ADAPTER_SFT_B_PLUS_QWEN="${ADAPTER_SFT_B_PLUS_QWEN:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_qwen8b}"
+QWEN_HF_HOME="${QWEN_HF_HOME:-${HOME}/.cache/huggingface}"
+GRANITE_HF_HOME="${GRANITE_HF_HOME:-/scratch/n12194778/hf}"
 MAX_LORAS=4
 
 N_SMOKE_TASKS=3
@@ -144,6 +154,16 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m6.yaml|hj13_prefix_zs_m6"
   "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m9.yaml|hj13_prefix_zs_m9"
   "prefix_handoff|${REPO}/configs/hj13_prefix_zs_m11.yaml|hj13_prefix_zs_m11"
+  "executor_alone|${REPO}/configs/hj14_executor_alone.yaml|hj14_executor_alone"
+  "sft_plan|${REPO}/configs/hj14_sft_plan.yaml|hj14_sft_plan"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m2.yaml|hj14_prefix_m2"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m4.yaml|hj14_prefix_m4"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m6.yaml|hj14_prefix_m6"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m7.yaml|hj14_prefix_m7"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m8.yaml|hj14_prefix_m8"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m9.yaml|hj14_prefix_m9"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m10.yaml|hj14_prefix_m10"
+  "prefix_handoff|${REPO}/configs/hj14_prefix_m11.yaml|hj14_prefix_m11"
 )
 
 hj12_select_arms () {
@@ -212,8 +232,9 @@ hj12_assert_selected_configs_exist () {
   done
   if [[ "${cfg_missing}" -ne 0 ]]; then
     echo "[hj12] not starting vLLM. Static LoRA line that will be used:"
-    echo "[hj12] --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}"
-    echo "[hj12] alias source: ALIAS_SFT_B_PLUS, which must equal executor.lora_name"
+    echo "[hj12] granite: --lora-modules ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}"
+    echo "[hj12] qwen:    --lora-modules ${ALIAS_SFT_B_PLUS_QWEN}=${ADAPTER_SFT_B_PLUS_QWEN}"
+    echo "[hj12] alias source: ALIAS_SFT_B_PLUS / ALIAS_SFT_B_PLUS_QWEN, must equal executor.lora_name"
     exit 2
   fi
 }
@@ -341,6 +362,68 @@ register_lora () {
   echo "[hj12] lora-module ${alias}=${path}"
 }
 
+hj12_executor_fields () {
+  local cfg="$1"
+  timeout 60 "${PY}" - "${cfg}" <<'PY'
+import sys
+from pathlib import Path
+try:
+    import yaml
+except ImportError:
+    print("[hj12] FATAL: PyYAML missing; cannot read executor.model", file=sys.stderr)
+    sys.exit(2)
+data = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+if not isinstance(data, dict):
+    print(f"[hj12] FATAL: {sys.argv[1]} is not a mapping", file=sys.stderr)
+    sys.exit(2)
+ex = data.get("executor") or {}
+if not isinstance(ex, dict):
+    ex = {}
+model = str(ex.get("model") or "").strip()
+lora = ex.get("lora_name")
+if lora is None or str(lora).strip() in ("", "null", "None"):
+    lora = ""
+else:
+    lora = str(lora).strip()
+if not model:
+    print(f"[hj12] FATAL: {sys.argv[1]} missing executor.model", file=sys.stderr)
+    sys.exit(2)
+print(f"{model}|{lora}")
+PY
+}
+
+hj12_alias_adapter_for_model () {
+  case "$1" in
+    "${MODEL_GRANITE}")
+      EXPECT_ALIAS="${ALIAS_SFT_B_PLUS}"
+      ADAPTER_PATH="${ADAPTER_SFT_B_PLUS}"
+      ;;
+    "${MODEL_QWEN}")
+      EXPECT_ALIAS="${ALIAS_SFT_B_PLUS_QWEN}"
+      ADAPTER_PATH="${ADAPTER_SFT_B_PLUS_QWEN}"
+      ;;
+    *)
+      echo "[hj12] FATAL: unknown executor base model $1 (known: ${MODEL_GRANITE} ${MODEL_QWEN})"
+      exit 2
+      ;;
+  esac
+}
+
+hj12_hf_home_for_model () {
+  case "$1" in
+    "${MODEL_QWEN}")
+      export HF_HOME="${QWEN_HF_HOME}"
+      export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+      ;;
+    *)
+      export HF_HOME="${GRANITE_HF_HOME}"
+      unset HF_HUB_OFFLINE || true
+      ;;
+  esac
+  echo "[hj12] HF_HOME=${HF_HOME} HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-} for base=$1"
+}
+
+
 VLLM_PID=""
 SMOKE_TREES=()
 
@@ -442,6 +525,11 @@ print("\n".join(ids))
 ' > "${ids_file}" || hj12_vllm_fatal "/v1/models body is not JSON"
   missing=()
   have="$(tr '\n' ' ' < "${ids_file}")"
+  if ! grep -Fxq "${MODEL}" "${ids_file}"; then
+    rm -f "${ids_file}"
+    hj12_vllm_fatal "vLLM /v1/models missing served base model ${MODEL} (have: ${have})"
+  fi
+  echo "[hj12] vllm identity: base_model=${MODEL} present in /v1/models"
   for spec in "${LORA_MODULES[@]}"; do
     alias="${spec%%=*}"
     if ! grep -Fxq "${alias}" "${ids_file}"; then
@@ -763,18 +851,6 @@ if [[ "${#PENDING_ARMS[@]}" -eq 0 ]]; then
 fi
 echo "[hj12] pending_arms=${#PENDING_ARMS[@]} pending_live=${PENDING_LIVE}"
 
-echo "[hj12] resolved adapter path=${ADAPTER_SFT_B_PLUS} alias=${ALIAS_SFT_B_PLUS}"
-register_lora "${ALIAS_SFT_B_PLUS}" "${ADAPTER_SFT_B_PLUS}"
-if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
-  echo "[hj12] FATAL: no LoRA modules registered; set ADAPTER_SFT_B_PLUS" >&2
-  exit 2
-fi
-if [[ "${#LORA_MODULES[@]}" -gt "${MAX_LORAS}" ]]; then
-  echo "[hj12] FATAL: ${#LORA_MODULES[@]} LoRA modules exceeds --max-loras ${MAX_LORAS}: ${LORA_MODULES[*]}" >&2
-  exit 2
-fi
-echo "[hj12] lora count ${#LORA_MODULES[@]} <= max-loras ${MAX_LORAS}"
-
 # ---- preflight: live planner before a GPU is held. Skipped for ARMSET=free
 # (and for all/live when the only remaining work is already complete, above).
 if [[ "${PENDING_LIVE}" -eq 1 ]]; then
@@ -792,52 +868,108 @@ else
   echo "[hj12] ---- preflight skipped (no pending live arm; free set must not call the planner) ----"
 fi
 
-# ---- vLLM: LoRA registered statically at launch --------------------------------
-kill_vllm
-hj12_choose_vllm_port
-# The --lora-modules line. Alias comes from ALIAS_SFT_B_PLUS / executor.lora_name, not the directory name.
-setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
-  --served-model-name "${MODEL}" \
-  --dtype bfloat16 \
-  --max-model-len 32768 \
-  --host 127.0.0.1 --port "${VLLM_PORT}" \
-  --gpu-memory-utilization 0.85 \
-  --enable-lora \
-  --max-loras "${MAX_LORAS}" \
-  --max-lora-rank 64 \
-  --lora-modules "${LORA_MODULES[@]}" \
-  > "${VLOG}" 2>&1 &
-VLLM_PID=$!
-echo "[hj12] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
-t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
-while (( $(date +%s) < deadline )); do
-  if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
-    echo "[hj12] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+# Group pending arms by executor.model. One vLLM process cannot serve granite
+# and Qwen together; restart between groups. The --lora-modules alias must
+# equal executor.lora_name or requests silently hit BASE.
+SERVE_MODELS=()
+for spec in "${PENDING_ARMS[@]}"; do
+  IFS='|' read -r _system cfg _stem <<<"${spec}"
+  fields="$(hj12_executor_fields "${cfg}")" || exit $?
+  arm_model="${fields%%|*}"
+  seen=0
+  for already in "${SERVE_MODELS[@]+"${SERVE_MODELS[@]}"}"; do
+    if [[ "${already}" == "${arm_model}" ]]; then
+      seen=1
+      break
+    fi
+  done
+  if [[ "${seen}" -eq 0 ]]; then
+    SERVE_MODELS+=("${arm_model}")
   fi
-  if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
-    echo "[hj12] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
-  fi
-  sleep 5
 done
-if [[ "${healthy}" -ne 1 ]]; then
-  echo "[hj12] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
-fi
-hj12_vllm_identity_check
 
 # A gate that can pass or fail on cached results is not a gate. Separate _smoke
 # campaign id, purge, then full run + manifest. Continue after an arm failure so
 # a later arm still gets walltime; the first non-zero rc is the job exit.
 job_rc=0
-for spec in "${PENDING_ARMS[@]}"; do
-  IFS='|' read -r system cfg stem <<<"${spec}"
-  cid="${stem}_${DATE}"
-  arm_rc=125
-  run_arm "${system}" "${cfg}" "${cid}" "${stem}"
-  arm_rc=$?
-  echo "[hj12] arm (${cid}) rc=${arm_rc}"
-  if [[ "${arm_rc}" -ne 0 && "${job_rc}" -eq 0 ]]; then
-    job_rc="${arm_rc}"
+for MODEL in "${SERVE_MODELS[@]}"; do
+  export MODEL
+  hj12_hf_home_for_model "${MODEL}"
+  hj12_alias_adapter_for_model "${MODEL}"
+  LORA_MODULES=()
+  GROUP_ARMS=()
+  for spec in "${PENDING_ARMS[@]}"; do
+    IFS='|' read -r system cfg stem <<<"${spec}"
+    fields="$(hj12_executor_fields "${cfg}")" || exit $?
+    arm_model="${fields%%|*}"
+    arm_lora="${fields#*|}"
+    if [[ "${arm_model}" != "${MODEL}" ]]; then
+      continue
+    fi
+    if [[ -n "${arm_lora}" && "${arm_lora}" != "${EXPECT_ALIAS}" ]]; then
+      echo "[hj12] FATAL: ${cfg} executor.lora_name=${arm_lora} != served alias ${EXPECT_ALIAS} for base ${MODEL}"
+      exit 2
+    fi
+    GROUP_ARMS+=("${spec}")
+  done
+  echo "[hj12] serving_record base_model=${MODEL} alias=${EXPECT_ALIAS} adapter=${ADAPTER_PATH} n_arms=${#GROUP_ARMS[@]}"
+  register_lora "${EXPECT_ALIAS}" "${ADAPTER_PATH}"
+  if [[ "${#LORA_MODULES[@]}" -eq 0 ]]; then
+    echo "[hj12] FATAL: no LoRA modules registered for base ${MODEL}; set the matching ADAPTER_* path" >&2
+    exit 2
   fi
+  if [[ "${#LORA_MODULES[@]}" -gt "${MAX_LORAS}" ]]; then
+    echo "[hj12] FATAL: ${#LORA_MODULES[@]} LoRA modules exceeds --max-loras ${MAX_LORAS}: ${LORA_MODULES[*]}" >&2
+    exit 2
+  fi
+  echo "[hj12] lora count ${#LORA_MODULES[@]} <= max-loras ${MAX_LORAS}"
+
+  kill_vllm
+  hj12_choose_vllm_port
+  model_tag="${MODEL//\//_}"
+  VLOG="${LOGDIR}/${JOB_CID}.${JOBTAG}_vllm_${model_tag}.log"
+  echo "[hj12] vlog=${VLOG}"
+  # The --lora-modules line. Alias comes from ALIAS_* / executor.lora_name, not the directory name.
+  setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+    --served-model-name "${MODEL}" \
+    --dtype bfloat16 \
+    --max-model-len 32768 \
+    --host 127.0.0.1 --port "${VLLM_PORT}" \
+    --gpu-memory-utilization 0.85 \
+    --enable-lora \
+    --max-loras "${MAX_LORAS}" \
+    --max-lora-rank 64 \
+    --lora-modules "${LORA_MODULES[@]}" \
+    > "${VLOG}" 2>&1 &
+  VLLM_PID=$!
+  echo "[hj12] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} --enable-lora --max-loras ${MAX_LORAS} --max-lora-rank 64 --lora-modules ${LORA_MODULES[*]}"
+  t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+  while (( $(date +%s) < deadline )); do
+    if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+      echo "[hj12] FATAL: vllm died before healthy; log tail:"; tail -n 60 "${VLOG}"; exit 1
+    fi
+    if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
+      echo "[hj12] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+    fi
+    sleep 5
+  done
+  if [[ "${healthy}" -ne 1 ]]; then
+    echo "[hj12] FATAL: vllm not healthy within 300s"; tail -n 60 "${VLOG}"; kill_vllm; exit 1
+  fi
+  hj12_vllm_identity_check
+
+  for spec in "${GROUP_ARMS[@]}"; do
+    IFS='|' read -r system cfg stem <<<"${spec}"
+    cid="${stem}_${DATE}"
+    arm_rc=125
+    run_arm "${system}" "${cfg}" "${cid}" "${stem}"
+    arm_rc=$?
+    echo "[hj12] arm (${cid}) rc=${arm_rc} served_base=${MODEL} served_alias=${EXPECT_ALIAS}"
+    if [[ "${arm_rc}" -ne 0 && "${job_rc}" -eq 0 ]]; then
+      job_rc="${arm_rc}"
+    fi
+  done
+  kill_vllm
 done
 
 if [[ "${SMOKE_ONLY}" == "1" ]]; then

@@ -30,6 +30,26 @@ HELDOUT_SPLITS = ("dev", "test_normal", "test_challenge")
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 _DEFAULT_TOKENIZER_ID = "ibm-granite/granite-4.2-8b"
 
+
+def resolve_tokenizer_id(name: str | None = None) -> str:
+    """Single source for the tokenizer / base-model identifier.
+
+    An explicit ``name`` wins, then ``SIDEKICK_TOKENIZER_ID``, then granite.
+    A run that sets nothing keeps today's granite default.
+    """
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    env = os.environ.get("SIDEKICK_TOKENIZER_ID", "").strip()
+    if env:
+        return env
+    return _DEFAULT_TOKENIZER_ID
+
+
+def tokenizer_label(tokenizer: Any | None, name: str | None = None) -> str:
+    if tokenizer is None:
+        return "whitespace_fallback"
+    return resolve_tokenizer_id(name)
+
 # Trajectories dropped for these reasons are counted in the manifest.
 DROP_UNSOLVED = "unsolved"
 DROP_BELOW_GOAL_PASS_RATE = "below_goal_pass_rate"
@@ -447,12 +467,13 @@ def _check_budget(
     return tokenized
 
 
-def _try_tokenizer() -> Any | None:
+def _try_tokenizer(name: str | None = None) -> Any | None:
+    ident = resolve_tokenizer_id(name)
     try:
         from transformers import AutoTokenizer
 
         return AutoTokenizer.from_pretrained(
-            _DEFAULT_TOKENIZER_ID,
+            ident,
             trust_remote_code=True,
             local_files_only=True,
         )
@@ -501,6 +522,7 @@ def build_sft_dataset(
     solved_only=True,
     min_goal_pass_rate: float | None = None,
     quiet: bool = False,
+    tokenizer_id: str | None = None,
 ) -> dict:
     """Emit one JSONL line per solved trajectory, rendered with ``render_executor_messages``.
 
@@ -522,7 +544,7 @@ def build_sft_dataset(
     dropped_counts: dict[str, int] = {}
     records: list[dict[str, Any]] = []
     token_lengths: list[int] = []
-    tokenizer = _try_tokenizer()
+    tokenizer = _try_tokenizer(tokenizer_id)
     system_root = campaign_root / system
     n_missing_api_docs = 0
     n_truncated = 0
@@ -690,7 +712,7 @@ def build_sft_dataset(
             "p50": _percentile(token_lengths, 50),
             "p90": _percentile(token_lengths, 90),
             "max": max(token_lengths) if token_lengths else 0,
-            "tokenizer": _DEFAULT_TOKENIZER_ID if tokenizer is not None else "whitespace_fallback",
+            "tokenizer": tokenizer_label(tokenizer, tokenizer_id),
         },
         "system": system,
         "solved_only": solved_only,
@@ -925,6 +947,7 @@ def build_correction_dataset(
     strip_interventions: bool = True,
     system: str = "fixed_k",
     quiet: bool = False,
+    tokenizer_id: str | None = None,
 ) -> dict:
     """Emit one JSONL line per episode; every post-intervention action is a target.
 
@@ -940,6 +963,7 @@ def build_correction_dataset(
         strip_interventions=strip_interventions,
         system=system,
         quiet=quiet,
+        tokenizer_id=tokenizer_id,
     )
     campaign_root = Path(campaign_root)  # pragma: no cover — unreachable, kept for the old body
     out_path = Path(out_jsonl)
@@ -1145,6 +1169,7 @@ def build_sft_b_plus(
     """Frozen teacher jsonl plus per-episode J4 correction sequences. No ASK targets."""
     from sidekick.training.matched_sft import build_sft_b_plus as _impl
 
+    tokenizer_id = kwargs.get("tokenizer_id")
     _ = (teacher_system, solved_only, kwargs)
     return _impl(
         correction_campaign_root,
@@ -1153,6 +1178,7 @@ def build_sft_b_plus(
         teacher_jsonl=teacher_jsonl,
         correction_system=correction_system,
         strip_interventions=strip_interventions,
+        tokenizer_id=tokenizer_id,
         quiet=quiet,
     )
     out_path = Path(out_jsonl)  # pragma: no cover — unreachable, kept for the old body
@@ -1311,6 +1337,11 @@ def main(argv: Iterable[str] | None = None) -> int:
         action="store_true",
         help="Keep INTERVENTION: turns in correction context (default: strip them).",
     )
+    parser.add_argument(
+        "--tokenizer-id",
+        default=None,
+        help="Tokenizer / base-model id. Default: ibm-granite/granite-4.2-8b.",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
     split_ids = load_split_ids(args.split)
     strip = not args.no_strip_interventions
@@ -1324,6 +1355,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             correction_system=args.correction_system,
             strip_interventions=strip,
             solved_only=not args.no_solved_only,
+            tokenizer_id=args.tokenizer_id,
         )
         return 0
     if args.mode == "correction":
@@ -1333,6 +1365,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             args.out,
             strip_interventions=strip,
             system=args.correction_system,
+            tokenizer_id=args.tokenizer_id,
         )
         return 0
     build_sft_dataset(
@@ -1342,6 +1375,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         system=args.system,
         solved_only=not args.no_solved_only,
         min_goal_pass_rate=args.min_goal_pass_rate,
+        tokenizer_id=args.tokenizer_id,
     )
     return 0
 

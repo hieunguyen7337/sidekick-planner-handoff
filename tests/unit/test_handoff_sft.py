@@ -325,7 +325,7 @@ def test_builder_records_too_short_drops_per_m(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
         "sidekick.training.sft_data._api_docs_from_appworld", lambda task_id: API_DOCS
     )
-    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda: None)
+    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda *_a, **_k: None)
     camp = tmp_path / "camp"
     _write_planner_run(camp, task_id="copy_hello", seed=1, events=_four_action_events())
     out = tmp_path / "handoff.jsonl"
@@ -351,7 +351,7 @@ def test_builder_records_cut_offset_when_non_executed_actions_present(tmp_path, 
     monkeypatch.setattr(
         "sidekick.training.sft_data._api_docs_from_appworld", lambda task_id: API_DOCS
     )
-    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda: None)
+    monkeypatch.setattr("sidekick.training.sft_data._try_tokenizer", lambda *_a, **_k: None)
     camp = tmp_path / "camp"
     _write_planner_run(
         camp,

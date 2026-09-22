@@ -1,0 +1,33 @@
+# HJ-14 executor_alone: Qwen3-8B confirmatory replicate of granite
+# configs/hj8_executor_alone_bplus.yaml. Zero hosted planner calls. Copied from
+# that frozen file; only this header, campaign_id, executor.model, and
+# executor.lora_name differ.
+env: appworld
+campaign_id: hj14_executor_alone_20260924
+planner:
+  type: mock          # never called by executor_alone; must not be codex
+executor:
+  type: vllm
+  model: Qwen/Qwen3-8B
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus_qwen8b  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  # End generation at the close of the first action. Without this the model writes an
+  # action, invents the output it expects and reasons over the invention for the rest
+  # of the budget. Never add a bare "```": it matches the opening fence.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false   # Granite 4.2 template defaults it True and then
+    # spends the whole budget reasoning without ever emitting an action
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

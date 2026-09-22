@@ -316,6 +316,7 @@ def _build_correction_records(
     strip_interventions: bool = True,
     system: str = "fixed_k",
     labels: dict[tuple[Any, str, int], dict[str, Any]] | None = None,
+    tokenizer_id: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     campaign_root = Path(campaign_root)
     train_ids = {str(x) for x in split_ids}
@@ -326,7 +327,7 @@ def _build_correction_records(
     dropped_counts: dict[str, int] = {}
     records: list[dict[str, Any]] = []
     token_lengths: list[int] = []
-    tokenizer = _sft._try_tokenizer()
+    tokenizer = _sft._try_tokenizer(tokenizer_id)
     n_missing_api_docs = 0
     n_truncated = 0
     n_messages_dropped_total = 0
@@ -533,6 +534,7 @@ def build_correction_dataset(
     strip_interventions: bool = True,
     system: str = "fixed_k",
     quiet: bool = False,
+    tokenizer_id: str | None = None,
 ) -> dict:
     """Emit one JSONL line per episode, all post-intervention actions as targets."""
     records, summary = _build_correction_records(
@@ -541,14 +543,13 @@ def build_correction_dataset(
         strip_interventions=strip_interventions,
         system=system,
         labels=None,
+        tokenizer_id=tokenizer_id,
     )
     out_path = Path(out_jsonl)
     digest = _sft._emit_jsonl(out_path, records)
     token_lengths = list(summary.pop("_token_lengths") or [])
     summary.pop("_records", None)
-    tokenizer_name = "whitespace_fallback"
-    if _sft._try_tokenizer() is not None:
-        tokenizer_name = "ibm-granite/granite-4.2-8b"
+    tokenizer_name = _sft.tokenizer_label(_sft._try_tokenizer(tokenizer_id), tokenizer_id)
     summary.update(
         {
             "out_jsonl": str(out_path),
@@ -557,14 +558,9 @@ def build_correction_dataset(
                 "p50": _sft._percentile(token_lengths, 50),
                 "p90": _sft._percentile(token_lengths, 90),
                 "max": max(token_lengths) if token_lengths else 0,
-                "tokenizer": tokenizer_name if token_lengths else tokenizer_name,
+                "tokenizer": tokenizer_name,
             },
         }
-    )
-    # Prefer the actual tokenizer used during the build if lengths were measured.
-    tok = _sft._try_tokenizer()
-    summary["token_length_percentiles"]["tokenizer"] = (
-        "ibm-granite/granite-4.2-8b" if tok is not None else "whitespace_fallback"
     )
     _sft._write_manifest(out_path, summary, quiet=quiet)
     return summary
@@ -591,6 +587,7 @@ def _combine_teacher_and_correction(
     extra_summary: dict[str, Any] | None = None,
     adapter_manifest: Path = DEFAULT_ADAPTER_MANIFEST,
     allow_interventions: bool = False,
+    tokenizer_id: str | None = None,
 ) -> dict:
     teacher_rows = _load_jsonl_rows(teacher_jsonl)
     records = list(teacher_rows) + list(correction_records)
@@ -627,7 +624,7 @@ def _combine_teacher_and_correction(
         for row in correction_records:
             fh.write((json.dumps(row, sort_keys=True) + "\n").encode("utf-8"))
     digest = hashlib.sha256(out_jsonl.read_bytes()).hexdigest()
-    tokenizer = _sft._try_tokenizer()
+    tokenizer = _sft._try_tokenizer(tokenizer_id)
     token_lengths = [
         _sft._conversation_token_length(row["messages"], tokenizer) for row in records
     ]
@@ -685,11 +682,7 @@ def _combine_teacher_and_correction(
             "p50": _sft._percentile(token_lengths, 50),
             "p90": _sft._percentile(token_lengths, 90),
             "max": max(token_lengths) if token_lengths else 0,
-            "tokenizer": (
-                "ibm-granite/granite-4.2-8b"
-                if tokenizer is not None
-                else "whitespace_fallback"
-            ),
+            "tokenizer": _sft.tokenizer_label(tokenizer, tokenizer_id),
         },
         "n_ask_planner_targets": int(correction_summary.get("n_ask_planner_targets") or 0),
         "n_action_targets": n_action,
@@ -716,6 +709,7 @@ def build_sft_b_plus(
     strip_interventions: bool = True,
     quiet: bool = False,
     adapter_manifest: Path | str = DEFAULT_ADAPTER_MANIFEST,
+    tokenizer_id: str | None = None,
     **_ignored: Any,
 ) -> dict:
     """Frozen teacher jsonl plus per-episode J4 correction sequences. No ASK targets."""
@@ -728,6 +722,7 @@ def build_sft_b_plus(
         strip_interventions=strip_interventions,
         system=correction_system,
         labels=None,
+        tokenizer_id=tokenizer_id,
     )
     corr_summary.pop("_token_lengths", None)
     corr_summary.pop("_records", None)
@@ -740,6 +735,7 @@ def build_sft_b_plus(
         extra_summary=None,
         adapter_manifest=Path(adapter_manifest),
         allow_interventions=not strip_interventions,
+        tokenizer_id=tokenizer_id,
     )
 
 
@@ -754,6 +750,7 @@ def build_ask_dataset(
     strip_interventions: bool = True,
     quiet: bool = False,
     adapter_manifest: Path | str = DEFAULT_ADAPTER_MANIFEST,
+    tokenizer_id: str | None = None,
     **_ignored: Any,
 ) -> dict:
     """sft_c: same episodes as sft_b_plus; ASK only at complete needed points."""
@@ -767,6 +764,7 @@ def build_ask_dataset(
         strip_interventions=strip_interventions,
         system=correction_system,
         labels=labels,
+        tokenizer_id=tokenizer_id,
     )
     extra = {
         "n_needed": corr_summary.get("n_needed"),
@@ -791,6 +789,7 @@ def build_ask_dataset(
         extra_summary=extra,
         adapter_manifest=Path(adapter_manifest),
         allow_interventions=not strip_interventions,
+        tokenizer_id=tokenizer_id,
     )
 
 
@@ -807,6 +806,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--correction-system", default="fixed_k")
     parser.add_argument("--no-strip-interventions", action="store_true")
+    parser.add_argument("--tokenizer-id", default=None)
     args = parser.parse_args(list(argv) if argv is not None else None)
     split_ids = load_split_ids(args.split)
     corr_root = args.correction_campaign_root or args.campaign_root
@@ -822,6 +822,7 @@ def main(argv: list[str] | None = None) -> int:
             teacher_jsonl=args.teacher_jsonl,
             correction_system=args.correction_system,
             strip_interventions=strip,
+            tokenizer_id=args.tokenizer_id,
         )
         return 0
     build_sft_b_plus(
@@ -831,6 +832,7 @@ def main(argv: list[str] | None = None) -> int:
         teacher_jsonl=args.teacher_jsonl,
         correction_system=args.correction_system,
         strip_interventions=strip,
+        tokenizer_id=args.tokenizer_id,
     )
     return 0
 

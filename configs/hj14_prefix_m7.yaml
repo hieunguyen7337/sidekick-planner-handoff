@@ -1,0 +1,49 @@
+# HJ-14 prefix-handoff m=7: Qwen3-8B confirmatory replicate of granite
+# configs/hj12_prefix_m7.yaml. Zero hosted planner calls. Copied from that
+# frozen file; only this header, campaign_id, executor.model, and executor.lora_name differ.
+env: appworld
+campaign_id: hj14_prefix_m7_20260924
+handoff:
+  source_campaign: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  source_system: planner_alone
+  m: 7
+# HJ-8 Class C. luna's HJ-1 plan is replayed; Qwen executes it under sft_b_plus_qwen8b.
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays HJ-1 packets: this arm spends zero hosted planner calls, so every arm sees
+  # the identical plan per task and plan-sampling noise is removed from the comparison.
+  packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
+  # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss
+  # must abort, not fall through to a live Codex call.
+  on_missing: fail
+executor:
+  type: vllm
+  model: Qwen/Qwen3-8B
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus_qwen8b  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  # See pilot_exec_8b.yaml: ends generation at the first action instead of paying for the
+  # model to invent the environment's reply. Never a bare "```" -- it matches the opener.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # prompt_only/sft_plan calls the planner once per episode (plan_first, planner_drives=False), so
+  # this is nowhere near binding here. It IS binding for planner_alone, where the planner
+  # takes every step -- see docs/FOLLOWUPS.md.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

@@ -11,7 +11,6 @@
 
 set -uo pipefail
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
-export HF_HOME=/scratch/n12194778/hf
 export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
 export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
 export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
@@ -39,11 +38,21 @@ DATA="${DATA_JSONL:-/scratch/n12194778/sidekick/artifacts/sft/sft_b.jsonl}"
 OUT="${ADAPTER_OUT:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_granite8b}"
 DRY_OUT="${OUT}_dryrun"
 BASE_MODEL="${BASE_MODEL:-ibm-granite/granite-4.2-8b}"
+# Granite lives under scratch. Qwen/Qwen3-8B is in the home hub
+# ($HOME/.cache/huggingface/hub/models--Qwen--Qwen3-8B). Honour a caller
+# HF_HOME; otherwise pick the cache that actually contains BASE_MODEL.
+# Never download.
+if [[ "${BASE_MODEL:-}" == "Qwen/Qwen3-8B" ]]; then
+  export HF_HOME="${HF_HOME:-${HOME}/.cache/huggingface}"
+  export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+else
+  export HF_HOME=/scratch/n12194778/hf
+fi
 cd "${REPO}" || exit 1
 mkdir -p "$(dirname "${OUT}")" /scratch/n12194778/sidekick/logs
 
 echo "[sft] host=$(hostname) job=${PBS_JOBID:-none} start=$(date -Iseconds)"
-echo "[sft] data=${DATA} out=${OUT} base=${BASE_MODEL}"
+echo "[sft] data=${DATA} out=${OUT} base=${BASE_MODEL} hf_home=${HF_HOME}"
 if [[ ! -s "${DATA}" ]]; then
   echo "[sft] FATAL: training JSONL missing or empty: ${DATA}" >&2
   exit 2
