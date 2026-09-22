@@ -1,5 +1,5 @@
-"""Within-arm spend projection and smoke takeover FATAL in hj12_live.pbs, and the
-replay-source completeness refusal in hj12_prefix.pbs.
+"""Within-arm spend projection, smoke takeover FATAL and the crash-only resume purge in
+hj12_live.pbs, and the replay-source completeness refusal in hj12_prefix.pbs.
 
 Invokes HJ12_GUARD_SELFTEST cases. No live planner, no GPU, no writes under
 /scratch/n12194778/sidekick/results/ (the real-source cases only read it).
@@ -210,6 +210,97 @@ def test_exception_smoke_warns_without_marker(tmp_path):
         "— smoke was uninformative (no episode reached the exception marker gate)"
     ) in out, out
     assert "takeover_smoke_exception_uninformative reached" in out
+
+
+# ---- hj12_live.pbs resume: refill ONLY crashed episodes (#56) --------------------------------------
+# timeout / parse_error are scored outcomes (B2 prereg §3, A1 r2): a resubmission that deleted and
+# re-ran them would reroll the arm's failures. Only error_type == "crash" (or an unreadable
+# result.json) may be purged, and an arm with 0 crashes is complete whatever else it scored.
+
+RESUME_PLANNED = 4
+
+
+def _episode(root: Path, task_id: str, error_type: str | None, *, body: str | None = None) -> Path:
+    dest = root / "sft_plan" / "1" / task_id
+    dest.mkdir(parents=True, exist_ok=True)
+    row = {"task_id": task_id, "system": "sft_plan", "seed": 1, "success": False, "error_type": error_type}
+    (dest / "result.json").write_text(json.dumps(row) + "\n" if body is None else body, encoding="utf-8")
+    (dest / "events.jsonl").write_text(json.dumps({"event_type": "run_start"}) + "\n", encoding="utf-8")
+    return dest
+
+
+def _campaign_manifest(out_root: Path, cid: str) -> None:
+    # A prior full run always writes one, crashes or not; with it present, only the counts decide.
+    dest = out_root / "results" / cid
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "manifest.json").write_text("{}\n", encoding="utf-8")
+
+
+def _run_resume_purge(out_root: Path, cid: str) -> str:
+    proc = _run_case("resume_purge", out_root, cid, extra={"GUARD_N_PLANNED": str(RESUME_PLANNED)})
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 0, out
+    return out
+
+
+def test_resume_purges_exactly_the_crashed_episode_and_arm_is_not_complete(tmp_path):
+    cid = "resume_crash"
+    root = tmp_path / cid
+    kept = [_episode(root, f"t{i}", None) for i in range(3)]
+    crashed = _episode(root, "t3", "crash")
+    _campaign_manifest(tmp_path, cid)
+    out = _run_resume_purge(tmp_path, cid)
+    assert (
+        f"[purge-crashed-only] campaign={cid} removed crash=1 unreadable_result=0 no_result=0 kept=3"
+    ) in out, out
+    assert (
+        f"[hj12] selftest: resume_purge cid={cid} complete_before=0 n_runs=3 n_crashed=0 "
+        f"n_planned={RESUME_PLANNED} complete_after=0"
+    ) in out, out
+    assert not crashed.exists(), out  # the whole directory: EventLog appends on a retry
+    assert all((d / "result.json").is_file() for d in kept), out
+
+
+def test_resume_keeps_scored_parse_error_and_timeout_and_arm_is_complete(tmp_path):
+    cid = "resume_scored"
+    root = tmp_path / cid
+    eps = [
+        _episode(root, "t0", None),
+        _episode(root, "t1", "limit"),
+        _episode(root, "t2", "parse_error"),
+        _episode(root, "t3", "timeout"),
+    ]
+    before = {p: p.read_bytes() for d in eps for p in sorted(d.iterdir())}
+    _campaign_manifest(tmp_path, cid)
+    out = _run_resume_purge(tmp_path, cid)
+    assert (
+        f"[purge-crashed-only] campaign={cid} removed crash=0 unreadable_result=0 no_result=0 kept=4"
+    ) in out, out
+    # complete_before=1 is the resume scan skipping the arm; n_crashed=0 with n_runs=n_planned is
+    # the branch in run_arm that writes a missing manifest.
+    assert (
+        f"[hj12] selftest: resume_purge cid={cid} complete_before=1 n_runs={RESUME_PLANNED} n_crashed=0 "
+        f"n_planned={RESUME_PLANNED} complete_after=1"
+    ) in out, out
+    after = {p: p.read_bytes() for d in eps for p in sorted(d.iterdir())}
+    assert after == before, out
+
+
+def test_resume_counts_an_empty_result_json_as_needing_a_refill(tmp_path):
+    # A write killed mid-flight: the runner only checks that result.json exists, so left alone
+    # this episode would never be re-run and the arm would be "complete" with a hole in it.
+    cid = "resume_empty"
+    root = tmp_path / cid
+    kept = [_episode(root, f"t{i}", None) for i in range(3)]
+    empty = _episode(root, "t3", None, body="")
+    _campaign_manifest(tmp_path, cid)
+    out = _run_resume_purge(tmp_path, cid)
+    assert (
+        f"[hj12] selftest: resume_purge cid={cid} complete_before=0 n_runs=3 n_crashed=0 "
+        f"n_planned={RESUME_PLANNED} complete_after=0"
+    ) in out, out
+    assert not empty.exists(), out
+    assert all((d / "result.json").is_file() for d in kept), out
 
 
 # ---- hj12_prefix.pbs: every selected prefix_handoff arm's replay source must be complete ----------
