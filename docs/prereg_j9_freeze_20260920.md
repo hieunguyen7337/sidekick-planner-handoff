@@ -231,3 +231,22 @@ The following four specific items are flagged for final user review prior to lau
 1. **Zero Exclusions**: Every one of the $504 \times 5 = 2,520$ initialized test episodes is included in all metric denominators. No run may be pruned, filtered, or excluded post-hoc [OBSERVED docs/prereg_v1.md:191-192].
 2. **Error Accounting**: Runs ending in `limit`, `timeout`, `crash`, `parse_error`, or `api_error` score $0.0$ for both `goal_pass_rate` and TGC in the headline population [OBSERVED docs/prereg_v1.md:193-194, campaign/RUNS.md:2238]. Survivor contrasts will be reported alongside for transparent accounting [OBSERVED campaign/RUNS.md:2238].
 3. **Single Evaluation Commitment**: Milestone J10 will be evaluated strictly once. No retuning, prompt modification, threshold re-selection, or re-running is permitted following test evaluation [OBSERVED docs/prereg_v1.md:209-211].
+
+---
+
+## 11. Amendment Record (appended 2026-09-24; nothing above this line is edited)
+
+**Amendment A1** — `docs/prereg_j10_amendment_20260924.md`.
+
+A1 supersedes the J10 primary claim (§4, Claim F1 selective escalation), the five-arm list (§5.1), the
+drop of `planner_alone` (§5.2 item 1) and the three-seed design (§9.1). It reinstates `planner_alone` at
+cap 81 as both ceiling and prefix trajectory source, registers a nine-arm J10 whose primary is a channel
+contrast (action prefix versus full-context prose advice at adverse budget), and fixes two seeds.
+
+The J9 gate at §8.1 was satisfied on 2026-09-24: the user authorised the test read itself and signed off
+§8.1 explicitly. A1 was written before any `test_normal` file was read.
+
+§10 item 3 above — the single-evaluation commitment — is **retained in full** and restated in A1 §8, which
+additionally registers what may and may not happen if a defect is found after the read.
+
+Do not plan a J10 run from §5.1 of this document. Read A1 first.
