@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 import pytest
 
+from _pbs_arrays import read_bash_array
 from sidekick.agents.planner import MockPlanner
 from sidekick.runner import load_config, make_executor, system_kwargs
 from sidekick.systems import get_system
@@ -96,16 +96,7 @@ def test_qwen_zeroshot_configs_have_null_lora() -> None:
 
 
 def test_untailored_qwen_plan_arm_is_not_registered_under_sft_plan() -> None:
-    text = PBS.read_text(encoding="utf-8")
-    free_arms_match = re.search(r"FREE_ARMS=\((.*?)\)", text, re.DOTALL)
-    assert free_arms_match, "FREE_ARMS array not found in PBS script"
-    free_arms_content = free_arms_match.group(1)
-
-    lines = [
-        line.strip().strip('"')
-        for line in free_arms_content.splitlines()
-        if line.strip() and not line.strip().startswith("#")
-    ]
+    lines = read_bash_array(PBS, "FREE_ARMS")
     qwen_lines = [l for l in lines if "hj15_prompt_only_zsq" in l]
     assert len(qwen_lines) == 1, f"Expected 1 FREE_ARMS line for hj15_prompt_only_zsq, found {len(qwen_lines)}"
     assert qwen_lines[0].startswith("prompt_only|"), f"hj15_prompt_only_zsq line must start with prompt_only|, got: {qwen_lines[0]}"
@@ -125,14 +116,7 @@ def test_untailored_qwen_plan_arm_is_not_registered_under_sft_plan() -> None:
 
 
 def test_all_free_arms_configs_exist() -> None:
-    text = PBS.read_text(encoding="utf-8")
-    free_arms_match = re.search(r"FREE_ARMS=\((.*?)\)", text, re.DOTALL)
-    assert free_arms_match, "FREE_ARMS array not found in PBS script"
-    lines = [
-        line.strip().strip('"')
-        for line in free_arms_match.group(1).splitlines()
-        if line.strip() and not line.strip().startswith("#")
-    ]
+    lines = read_bash_array(PBS, "FREE_ARMS")
     assert len(lines) > 0, "No entries in FREE_ARMS"
     for line in lines:
         parts = line.split("|")

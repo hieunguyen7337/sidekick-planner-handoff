@@ -47,7 +47,10 @@
 #   DATE, ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS,
 #   ADAPTER_SFT_B_PLUS_HANDOFF, ALIAS_SFT_B_PLUS_HANDOFF,
 #   ADAPTER_SFT_B_PLUS_QWEN, ALIAS_SFT_B_PLUS_QWEN, MODEL_QWEN, MODEL_GRANITE,
-#   SYSTEM (default prefix_handoff)
+#   SYSTEM (default prefix_handoff), SEEDS (default 1,2; the HJ-18 arms need SEEDS=3)
+#   Every selected prefix_handoff arm's handoff.source_campaign must already be complete for
+#   SEEDS (hj12_require_complete_sources), so the default ARMSET=free refuses while any source
+#   is partial or absent (the LP ceilings) -- select arms with ARMS=... instead.
 #   SMOKE_ONLY=1 (default 0): each pending arm runs its 3-task smoke and
 #   gate, then stops before the 57×2 campaign. Job rc is the first failed
 #   smoke/gate. Unset or 0 leaves the full run unchanged.
@@ -353,6 +356,117 @@ if [[ "${HJ12_GUARD_SELFTEST:-0}" != "1" ]]; then
     assert_free_configs_cannot_spend || exit $?
   fi
 fi
+
+# ---- replay sources: a prefix arm re-executes the first m actions of handoff.source_campaign.
+# The default ARMSET=free selects every FREE_ARMS entry, including arms whose source does not
+# exist yet (the LP ceilings) or holds only seed 3 (HJ-18, which must be submitted with SEEDS=3).
+# Against a partial source a replay episode either finds no events.jsonl -- effective_m=0, a
+# handoff that silently never happened -- or replays an episode that crashed, which the source's
+# next resubmission purges and re-plans, leaving this arm paired with a trajectory nobody scored.
+# So every selected prefix_handoff arm's source must exist and hold, for EACH requested seed,
+# >= N_FULL_TASKS result.json whose error_type is not "crash", with 0 crashed and 0 unreadable.
+# Counted per seed rather than pooled: 114 seed-1 rows would pass a pooled >= 114 with seed 2
+# absent. Rule and python body are require_complete_source in scripts/pbs/j10_arm.pbs, copied
+# rather than sourced (sourcing that script would run its job). The full-campaign count applies
+# under SMOKE_ONLY=1 too: a count cannot show that the three smoke tasks are among the rows
+# present, and a smoke that passes on a partial source is a gate passing for the wrong reason.
+# Returns 2 after one FATAL line per failing arm; the caller exits before any vLLM starts.
+hj12_require_complete_sources () {
+  local -a specs=()
+  local spec system cfg stem rc
+  for spec in "${SELECTED_ARMS[@]}"; do
+    IFS='|' read -r system cfg stem <<<"${spec}"
+    # SYSTEM overrides the system at run time (run_arm), so judge what will actually run too.
+    if [[ "${system}" == "prefix_handoff" || "${SYSTEM:-}" == "prefix_handoff" ]]; then
+      specs+=("${stem}|${cfg}")
+    fi
+  done
+  if [[ "${#specs[@]}" -eq 0 ]]; then
+    echo "[hj12] replay sources: no selected prefix_handoff arm; nothing to check"
+    return 0
+  fi
+  echo "[hj12] ---- replay sources (${#specs[@]} prefix_handoff arms; need >= ${N_FULL_TASKS} non-crashed per seed, SEEDS=${SEEDS}) ----"
+  timeout 600 "${PY}" - "${SEEDS}" "${N_FULL_TASKS}" "${specs[@]}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("[hj12] FATAL: PyYAML missing; cannot read handoff.source_campaign; not starting vLLM")
+    sys.exit(2)
+
+seeds = [s.strip() for s in sys.argv[1].split(",") if s.strip()]
+need = int(sys.argv[2])
+if not seeds:
+    print(f"[hj12] FATAL: SEEDS={sys.argv[1]!r} names no seed; cannot judge the replay sources")
+    sys.exit(2)
+
+
+def inspect(src):
+    # require_complete_source (scripts/pbs/j10_arm.pbs), with the non-crashed count kept per seed.
+    root = Path(src)
+    ok = {s: 0 for s in seeds}
+    crash = bad = 0
+    if root.is_dir():
+        for path in root.rglob("result.json"):
+            try:
+                row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                bad += 1
+                continue
+            if not isinstance(row, dict):
+                bad += 1
+            elif row.get("error_type") == "crash":
+                crash += 1
+            elif str(row.get("seed")) in ok:
+                ok[str(row.get("seed"))] += 1
+    return root.is_dir(), ok, crash, bad
+
+
+seen = {}
+failed = 0
+for arg in sys.argv[3:]:
+    stem, cfg = arg.split("|", 1)
+    try:
+        data = yaml.safe_load(Path(cfg).read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        print(f"[hj12] FATAL: arm {stem} config {cfg} is unreadable ({exc}); not starting vLLM")
+        failed = 1
+        continue
+    handoff = data.get("handoff") if isinstance(data, dict) else None
+    src = handoff.get("source_campaign") if isinstance(handoff, dict) else None
+    src = str(src).strip() if src else ""
+    if not src:
+        print(f"[hj12] FATAL: arm {stem} config {cfg} has no handoff.source_campaign; not starting vLLM")
+        failed = 1
+        continue
+    if src not in seen:
+        seen[src] = inspect(src)
+    exists, ok, crash, bad = seen[src]
+    counts = (
+        f"exists={int(exists)} non_crashed="
+        + ",".join(f"seed{s}:{n}" for s, n in ok.items())
+        + f" crashed={crash} unreadable={bad}"
+    )
+    if exists and crash == 0 and bad == 0 and all(n >= need for n in ok.values()):
+        print(f"[hj12] replay source ok: arm {stem} source {src} {counts}")
+        continue
+    print(
+        f"[hj12] FATAL: arm {stem} replay source {src} is not complete: {counts} "
+        f"(need >= {need} non-crashed per seed for SEEDS={','.join(seeds)}, 0 crashed, "
+        "0 unreadable); not starting vLLM"
+    )
+    failed = 1
+sys.exit(2 if failed else 0)
+PY
+  rc=$?
+  if [[ "${rc}" -ne 0 && "${rc}" -ne 2 ]]; then
+    echo "[hj12] FATAL: could not inspect the replay sources (rc=${rc}); not starting vLLM"
+  fi
+  [[ "${rc}" -eq 0 ]] || return 2
+}
 
 # n_runs / n_broken over <OUT>/<cid>/**/result.json. BROKEN matches
 # campaign_summarize.BROKEN [OBSERVED scripts/setup/campaign_summarize.py:33].
@@ -748,6 +862,18 @@ hj12_run_guard_selftest () {
       echo "[hj12] UNREACHABLE: health_foreign_pgid should have been FATAL"
       exit 99
       ;;
+    source_check)
+      # GUARD_SPECS ("system|config|stem" ..., space-separated) stands in for SELECTED_ARMS so a
+      # test can point an arm at a synthetic source; unset, the real ARMS / ARMSET selection is
+      # judged against the real sources (read-only).
+      if [[ -n "${GUARD_SPECS:-}" ]]; then
+        read -r -a SELECTED_ARMS <<< "${GUARD_SPECS}"
+      else
+        hj12_select_arms
+      fi
+      hj12_require_complete_sources || exit 2
+      echo "[hj12] selftest: source_check passed (${#SELECTED_ARMS[@]} selected arms)"
+      ;;
     *)
       echo "[hj12] FATAL: unknown GUARD_CASE=${GUARD_CASE}"
       exit 2
@@ -762,6 +888,7 @@ fi
 
 hj12_select_arms
 hj12_assert_selected_configs_exist
+hj12_require_complete_sources || exit 2
 
 # Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
 # SMOKE_ONLY=1 returns after smoke+gate (scid is still removed). Does not

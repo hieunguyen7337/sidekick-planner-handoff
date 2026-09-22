@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import pytest
 
+from _pbs_arrays import read_bash_array
 from sidekick.agents.planner import CachedPacketPlanner, MockPlanner
 from sidekick.environments.mock_env import MockEnv
 from sidekick.prefix_source import build_handoff_prefix
@@ -542,19 +543,11 @@ def test_narrated_curve_configs_point_at_their_own_packet_dir() -> None:
 
 
 def test_narrated_curve_untailored_runs_under_prompt_only() -> None:
-    text = PBS.read_text(encoding="utf-8")
-    assert "FREE_ARMS=(" in text
-    free_arms_block = text.split("FREE_ARMS=(")[1].split(")")[0]
-    lines = [
-        line.strip().strip('"').strip("'")
-        for line in free_arms_block.splitlines()
-        if line.strip() and not line.strip().startswith("#")
-    ]
     arms = {}
-    for line in lines:
+    for line in read_bash_array(PBS, "FREE_ARMS"):
         parts = line.split("|")
-        if len(parts) == 3:
-            arms[parts[2]] = (parts[0], parts[1])
+        assert len(parts) == 3, f"malformed FREE_ARMS entry: {line}"
+        arms[parts[2]] = (parts[0], parts[1])
 
     for m in (6, 11):
         zs_stem = f"hj16_narrated_m{m}_zs"

@@ -1,7 +1,8 @@
-"""Within-arm spend projection and smoke takeover FATAL in hj12_live.pbs.
+"""Within-arm spend projection and smoke takeover FATAL in hj12_live.pbs, and the
+replay-source completeness refusal in hj12_prefix.pbs.
 
 Invokes HJ12_GUARD_SELFTEST cases. No live planner, no GPU, no writes under
-/scratch/n12194778/sidekick/results/.
+/scratch/n12194778/sidekick/results/ (the real-source cases only read it).
 """
 from __future__ import annotations
 
@@ -12,8 +13,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO = Path("/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15")
 PBS = REPO / "scripts/pbs/hj12_live.pbs"
+PREFIX_PBS = REPO / "scripts/pbs/hj12_prefix.pbs"
 N_FULL_TASKS = 57
 N_FULL_SEEDS = 2
 SAFETY = 1.2
@@ -206,3 +210,166 @@ def test_exception_smoke_warns_without_marker(tmp_path):
         "— smoke was uninformative (no episode reached the exception marker gate)"
     ) in out, out
     assert "takeover_smoke_exception_uninformative reached" in out
+
+
+# ---- hj12_prefix.pbs: every selected prefix_handoff arm's replay source must be complete ----------
+
+SOURCE_TASKS = 57  # N_FULL_TASKS in hj12_prefix.pbs
+CAP81_SOURCE = Path("/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923")
+
+
+def _source_tree(root: Path, *, seeds=(1, 2), n: int = SOURCE_TASKS, system: str = "planner_alone") -> Path:
+    for seed in seeds:
+        for i in range(n):
+            _write_source_row(root, system=system, seed=seed, task_id=f"t{i:03d}")
+    return root
+
+
+def _write_source_row(root: Path, *, system: str, seed: int, task_id: str, error_type: str | None = None) -> None:
+    dest = root / system / str(seed) / task_id
+    dest.mkdir(parents=True, exist_ok=True)
+    row = {"task_id": task_id, "system": system, "seed": seed, "success": True, "error_type": error_type}
+    (dest / "result.json").write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+
+def _prefix_spec(tmp_path: Path, source: Path | None, stem: str = "synth_prefix_m6", system: str = "prefix_handoff") -> str:
+    cfg = tmp_path / f"{stem}.yaml"
+    handoff = f"handoff:\n  m: 6\n  source_campaign: {source}\n" if source is not None else "handoff:\n  m: 6\n"
+    cfg.write_text(handoff, encoding="utf-8")
+    return f"{system}|{cfg}|{stem}"
+
+
+def _run_source_check(extra: dict[str, str], timeout: int = 60) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    for key in ("ARMS", "ARMSET", "SEEDS", "SYSTEM", "GUARD_SPECS", "SMOKE_ONLY"):
+        env.pop(key, None)
+    env.update(
+        {
+            "HJ12_GUARD_SELFTEST": "1",
+            "GUARD_CASE": "source_check",
+            "PY": sys.executable,
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+        }
+    )
+    env.update(extra)
+    return subprocess.run(
+        ["timeout", str(timeout), "bash", str(PREFIX_PBS)],
+        cwd=str(REPO),
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+
+
+def test_prefix_source_complete_passes(tmp_path):
+    src = _source_tree(tmp_path / "src")
+    proc = _run_source_check({"GUARD_SPECS": _prefix_spec(tmp_path, src)})
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 0, out
+    assert (
+        f"[hj12] replay source ok: arm synth_prefix_m6 source {src} "
+        "exists=1 non_crashed=seed1:57,seed2:57 crashed=0 unreadable=0"
+    ) in out, out
+    assert "[hj12] selftest: source_check passed (1 selected arms)" in out, out
+    assert "FATAL" not in out, out
+
+
+def _prepare_missing(src: Path) -> None:
+    pass  # the directory is never created
+
+
+def _prepare_one_short(src: Path) -> None:
+    _source_tree(src, seeds=(1,))
+    _source_tree(src, seeds=(2,), n=SOURCE_TASKS - 1)
+
+
+def _prepare_one_crash(src: Path) -> None:
+    # Counts are otherwise met, so only the crash can be what refuses.
+    _source_tree(src)
+    _write_source_row(src, system="planner_alone", seed=1, task_id="t999", error_type="crash")
+
+
+def _prepare_unreadable(src: Path) -> None:
+    _source_tree(src)
+    bad = src / "planner_alone" / "1" / "t998"
+    bad.mkdir(parents=True)
+    (bad / "result.json").write_text("{not json", encoding="utf-8")
+
+
+def _prepare_pooled_only(src: Path) -> None:
+    # 114 rows in total, all seed 1: a pooled ">= 57 x 2" count would pass with seed 2 absent.
+    _source_tree(src, seeds=(1,), n=2 * SOURCE_TASKS)
+
+
+@pytest.mark.parametrize(
+    "prepare, counts",
+    [
+        (_prepare_missing, "exists=0 non_crashed=seed1:0,seed2:0 crashed=0 unreadable=0"),
+        (_prepare_one_short, "exists=1 non_crashed=seed1:57,seed2:56 crashed=0 unreadable=0"),
+        (_prepare_one_crash, "exists=1 non_crashed=seed1:57,seed2:57 crashed=1 unreadable=0"),
+        (_prepare_unreadable, "exists=1 non_crashed=seed1:57,seed2:57 crashed=0 unreadable=1"),
+        (_prepare_pooled_only, "exists=1 non_crashed=seed1:114,seed2:0 crashed=0 unreadable=0"),
+    ],
+    ids=["missing_dir", "one_episode_short", "one_crash", "one_unreadable", "one_seed_only"],
+)
+def test_prefix_source_incomplete_refuses_with_one_fatal_line(tmp_path, prepare, counts):
+    src = tmp_path / "src"
+    prepare(src)
+    proc = _run_source_check({"GUARD_SPECS": _prefix_spec(tmp_path, src)})
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 2, out
+    assert (
+        f"[hj12] FATAL: arm synth_prefix_m6 replay source {src} is not complete: {counts} "
+        "(need >= 57 non-crashed per seed for SEEDS=1,2, 0 crashed, 0 unreadable); not starting vLLM"
+    ) in out, out
+    assert out.count("[hj12] FATAL") == 1, out
+    assert "source_check passed" not in out, out
+
+
+def test_prefix_source_judged_for_the_requested_seeds(tmp_path):
+    # HJ-18's source holds seed 3 only: it passes under SEEDS=3 and refuses under the default.
+    src = _source_tree(tmp_path / "src", seeds=(3,))
+    spec = _prefix_spec(tmp_path, src)
+    ok = _run_source_check({"GUARD_SPECS": spec, "SEEDS": "3"})
+    assert ok.returncode == 0, ok.stdout + ok.stderr
+    assert "non_crashed=seed3:57 crashed=0" in ok.stdout, ok.stdout
+    refused = _run_source_check({"GUARD_SPECS": spec})
+    assert refused.returncode == 2, refused.stdout + refused.stderr
+    assert "non_crashed=seed1:0,seed2:0" in refused.stdout, refused.stdout
+
+
+def test_prefix_arm_without_source_campaign_refuses(tmp_path):
+    proc = _run_source_check({"GUARD_SPECS": _prefix_spec(tmp_path, None)})
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 2, out
+    assert "[hj12] FATAL: arm synth_prefix_m6 config" in out and "has no handoff.source_campaign" in out, out
+
+
+def test_non_prefix_arms_are_not_judged(tmp_path):
+    spec = _prefix_spec(tmp_path, None, stem="synth_sft_plan", system="sft_plan")
+    proc = _run_source_check({"GUARD_SPECS": spec})
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 0, out
+    assert "[hj12] replay sources: no selected prefix_handoff arm; nothing to check" in out, out
+
+
+def test_default_free_armset_refuses_before_vllm():
+    # The default selection includes the HJ-18 arms, whose source holds seed 3 only, so under the
+    # default SEEDS=1,2 it can never pass -- whatever state the LP ceilings are in.
+    proc = _run_source_check({}, timeout=240)
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 2, out
+    assert "[hj12] FATAL: arm hj18_prefix_c81s3_zs_m6 replay source " in out, out
+    assert "source_check passed" not in out, out
+
+
+def test_real_cap81_source_passes_for_its_hj17_arm():
+    # A healthy arm must not be refused: HJ-17 replays the complete cap-81 planner sample.
+    if not CAP81_SOURCE.is_dir():
+        pytest.skip(f"{CAP81_SOURCE} not present on this machine")
+    proc = _run_source_check({"ARMS": "hj17_prefix_c81_zs_m6"}, timeout=120)
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 0, out
+    assert f"[hj12] replay source ok: arm hj17_prefix_c81_zs_m6 source {CAP81_SOURCE} exists=1" in out, out

@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from _pbs_arrays import read_bash_array
 from sidekick.agents.planner import CachedPacketPlanner
 from sidekick.agents.vllm_planner import VllmPlanner
 from sidekick.runner import load_config, make_executor, make_planner
@@ -156,23 +157,11 @@ def test_prefix_arms_keep_their_sources_receiver_and_depth(spec) -> None:
     assert make_executor(cfg).lora_name == want_lora
 
 
-def _hj12_free_arms() -> list[str]:
-    # Read to the array's own closing line. The non-greedy FREE_ARMS=\((.*?)\) other tests use
-    # stops at the first ")" inside a comment, which comes before the HJ-18 and LP entries.
-    text = (REPO / "scripts" / "pbs" / "hj12_prefix.pbs").read_text(encoding="utf-8")
-    body = text.split("\nFREE_ARMS=(\n", 1)[1].split("\n)\n", 1)[0]
-    return [
-        line.strip().strip('"')
-        for line in body.splitlines()
-        if line.strip() and not line.strip().startswith("#")
-    ]
-
-
 @pytest.mark.parametrize("spec", PREFIX, ids=[s.stem for s in PREFIX])
 def test_prefix_arms_are_registered_once_in_the_hj12_free_set(spec) -> None:
     # The cid stem must be the config's own stem: campaign_id is <stem>_<date> on both sides.
     want = f"prefix_handoff|${{REPO}}/{spec.out}|{spec.stem}"
-    assert _hj12_free_arms().count(want) == 1
+    assert read_bash_array(REPO / "scripts" / "pbs" / "hj12_prefix.pbs", "FREE_ARMS").count(want) == 1
     assert Path(spec.out).stem == spec.stem
 
 
