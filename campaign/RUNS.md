@@ -2535,3 +2535,86 @@ The honest conclusion is therefore: **a correct opening does not make this execu
 
 
 
+## Correction 2026-09-23 — the executor acted in every "no-handoff" episode
+
+This correction supersedes the runtime interpretation in the following registered sentences; it does not alter them [INFERRED]:
+
+> “A prefix episode that never hands off is the planner's recorded trajectory replayed, not a hybrid.” [OBSERVED docs/prereg_hj12_dev_20260922.md:339]
+
+> “At $m=9$, 32 of 114 episodes never handed off: the planner's recorded episode ended before step 9, so those episodes are `planner_alone` replayed, not a hybrid.” [OBSERVED campaign/RUNS.md:2515]
+
+> “The benefit appears only at $m=9$, and `planner_alone` episodes run a median of 12 actions, so $m=9$ means the planner has already done roughly three quarters of the median episode and the executor is finishing a tail.” [OBSERVED campaign/RUNS.md:2532]
+
+Direct event counting instead found that all 32 `hj12_prefix_m9_20260922` episodes with `handoff_occurred: false` included executor activity, totalling 38 executor actions; all 60 such `hj12_prefix_m11_20260922` episodes likewise included executor activity, totalling 113 actions [OBSERVED campaign/workers/brief_X18_prefix_terminal_guard.md:33-37]. The population previously called “no-handoff” is therefore renamed **prefix-exhausted**: the replayed prefix exhausted the recorded source trajectory, but the live executor still ran [OBSERVED campaign/workers/brief_X21_record_corrections.md:32-35].
+
+At $m=9$, the prefix-exhausted arm and comparator scores happened to remain identical at 0.896094 despite those 38 actions [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m9.goal_pass_no_handoff"] [OBSERVED campaign/workers/brief_X18_prefix_terminal_guard.md:35-37]. At $m=11$, the 60 prefix-exhausted episodes scored 0.8685 for the arm against 0.8507 for `planner_alone`, a difference of +1.78 pp [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m11.goal_pass_no_handoff"]. That apparent gain is a second attempt under extra budget after a replayed prefix already ended in `COMPLETE`, not evidence that the executor improves on the planner [OBSERVED campaign/workers/brief_X18_prefix_terminal_guard.md:33-40] [INFERRED].
+
+The runtime defect is being corrected under X18; after that correction, the affected prefix arms are to be re-run [OBSERVED campaign/workers/brief_X21_record_corrections.md:34-36].
+
+## 15. The unified frontier — both channels on one cost axis — 2026-09-22
+
+### Provenance
+
+- **Report**: `campaign/results/hj12_unified_frontier_20260922.report.json` [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms", "contrasts", "noninferiority", "chord"].
+- **Headline population and metric**: all episodes and `goal_pass_rate` [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "headline_population", "noninferiority.primary_metric"].
+- **Cost axis**: non-cached planner tokens per episode [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "cost_key", "cost_key_note"].
+
+### The Arm Table
+
+Arms are ordered by recorded non-cached planner-token cost per episode; values are rounded only for display [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "arms"].
+
+| arm | goal_pass_rate | non-cached planner tokens/episode | source |
+|---|---:|---:|---|
+| `executor_alone` | 0.5289 | not recorded (0 planner calls) | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.executor_alone.goal_pass_all", "arms.executor_alone.cost_per_episode", "arms.executor_alone.planner_calls_total"] |
+| `advise_oracle_esc` | 0.7096 | 7,585 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.advise_oracle_esc.goal_pass_all", "arms.advise_oracle_esc.cost_per_episode"] |
+| `sft_plan` | 0.7181 | 23,906 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.sft_plan.goal_pass_all", "arms.sft_plan.cost_per_episode"] |
+| `advise_fixed_k_10` | 0.6964 | 43,823 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.advise_fixed_k_10.goal_pass_all", "arms.advise_fixed_k_10.cost_per_episode"] |
+| `prefix_m2` | 0.7187 | 78,346 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m2.goal_pass_all", "arms.prefix_m2.cost_per_episode"] |
+| `prefix_m4` | 0.7340 | 143,753 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m4.goal_pass_all", "arms.prefix_m4.cost_per_episode"] |
+| `advise_fixed_k_3` | 0.7012 | 204,500 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.advise_fixed_k_3.goal_pass_all", "arms.advise_fixed_k_3.cost_per_episode"] |
+| `prefix_m6` | 0.7145 | 221,043 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m6.goal_pass_all", "arms.prefix_m6.cost_per_episode"] |
+| `prefix_m7` | 0.7514 | 265,783 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m7.goal_pass_all", "arms.prefix_m7.cost_per_episode"] |
+| `prefix_m8` | 0.7733 | 313,113 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m8.goal_pass_all", "arms.prefix_m8.cost_per_episode"] |
+| `prefix_m9` | 0.8134 | 357,448 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m9.goal_pass_all", "arms.prefix_m9.cost_per_episode"] |
+| `prefix_m10` | 0.7906 | 401,255 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m10.goal_pass_all", "arms.prefix_m10.cost_per_episode"] |
+| `prefix_m11` | 0.8307 | 443,361 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m11.goal_pass_all", "arms.prefix_m11.cost_per_episode"] |
+| `planner_alone` | 0.8284 | 684,453 | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.planner_alone.goal_pass_all", "arms.planner_alone.cost_per_episode"] |
+
+### The Contrasts
+
+#### 1. Executor-only minus the plan-only floor
+
+`executor_alone − sft_plan` is **−18.93 pp**, 95% CI **[−25.95, −12.07]** [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "contrasts.goal_pass_rate_executor_alone_minus_sft_plan"].
+
+#### 2. Advice cadence
+
+`advise_fixed_k_10 − advise_fixed_k_3` is **−0.48 pp**, 95% CI **[−7.20, +6.15]** [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "contrasts.goal_pass_rate_advise_fixed_k_10_minus_advise_fixed_k_3"].
+
+#### 3. Advice minus the action-prefix channel
+
+| contrast | diff pp | CI95 pp | source |
+|---|---:|---:|---|
+| `advise_fixed_k_3 − prefix_m4` | −3.28 | [−9.82, +3.26] | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m4"] |
+| `advise_fixed_k_3 − prefix_m9` | −11.23 | [−16.86, −5.76] | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m9"] |
+| `advise_fixed_k_3 − prefix_m11` | −12.95 | [−18.92, −7.12] | [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m11"] |
+
+#### 4. Prefix m11 minus the planner ceiling
+
+On all-episodes `goal_pass_rate`, `prefix_m11 − planner_alone` is **+0.23 pp**, 95% CI **[−5.27, +6.34]**; non-inferiority at the registered −7 pp margin holds [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m11.goal_pass_all"].
+
+#### 5. Chord tests
+
+Against the straight line between `sft_plan` and `planner_alone` at equal cost, `prefix_m9` is **+3.96 pp [−0.49, +8.88]** and `prefix_m11` is **+4.25 pp [−0.01, +9.11]** [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "chord.arms.prefix_m9.goal_pass_all", "chord.arms.prefix_m11.goal_pass_all"]. Neither interval excludes zero [INFERRED].
+
+### Verdict
+
+The unified frontier shows that `executor_alone` is below the plan-only floor, while changing advice cadence from $k=3$ to $k=10$ is indistinguishable from zero on this sample [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "contrasts.goal_pass_rate_executor_alone_minus_sft_plan", "contrasts.goal_pass_rate_advise_fixed_k_10_minus_advise_fixed_k_3"]. The high-budget action-prefix points at $m=9$ and $m=11$ exceed `advise_fixed_k_3`, but the matched lower-budget contrast at $m=4$ includes zero [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m4", "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m9", "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m11"]. Because the high-$m$ arms include the prefix-exhaustion runtime defect and the comparator is understated, these are exploratory frontier measurements, not evidence of general action-channel superiority [INFERRED].
+
+### What this section may not be used to claim
+
+1. `planner_alone` ran under `max_planner_calls: 25` [OBSERVED configs/pilot_planner_alone.yaml:25], while every later arm used 81 [OBSERVED configs/hj8_fixed_k_3.yaml:39-41]. Every non-inferiority statement here is against an understated comparator until that re-run happens [INFERRED].
+2. The advice arms' reviewer saw only the last 8 transcript lines [OBSERVED src/sidekick/systems/loop.py:70], while an acting planner sees the whole transcript [OBSERVED src/sidekick/systems/loop.py:68-70]. “Advice is flat” may be “starved advice is flat” until `configs/hj12_advise_fixed_k_10_fullctx.yaml` runs [OBSERVED configs/hj12_advise_fixed_k_10_fullctx.yaml:1-9] [INFERRED].
+3. At **matched** budget the two channels are indistinguishable: `advise_fixed_k_3` at 204.5k (30%) versus `prefix_m6` at ~221k (32%) is 0.7012 versus 0.7145 [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.advise_fixed_k_3", "arms.prefix_m6", "arms.planner_alone", "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m6"]. The action channel is only observed to win at 52–65% of `planner_alone` cost, where advice has never been priced [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms", "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m9", "contrasts.goal_pass_rate_advise_fixed_k_3_minus_prefix_m11"].
+4. No advice arm is *below* the plan-only floor — `advise_fixed_k_3 − sft_plan` is about −1.7 pp with a confidence interval including zero [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "contrasts.goal_pass_rate_sft_plan_minus_advise_fixed_k_3"]. The correct phrase is **indistinguishable from the floor**, never “never reaches it” [INFERRED].
+5. `prefix_m11`'s non-inferiority holds on all-episodes `goal_pass_rate` only [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m11.goal_pass_all"]. On TGC it is −7.02 pp [−14.04, +0.88] and fails [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m11.tgc_all"]. 53% of its pairs replay the comparator's own recording [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: keys "arms.prefix_m11.n_no_handoff", "arms.prefix_m11.n"].
+6. `m7`, `m8`, `m10`, and `m11` were chosen after seeing the first grid and are exploratory; Gate G1 failed as registered [OBSERVED docs/prereg_hj12_dev_20260922.md:314-331].

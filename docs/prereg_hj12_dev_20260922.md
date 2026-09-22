@@ -340,3 +340,18 @@ A prefix episode that never hands off is the planner's recorded trajectory repla
 
 
 
+## Correction 2026-09-23 — the executor acted in every "no-handoff" episode
+
+This correction supersedes the runtime interpretation in the following registered sentences; it does not alter them [INFERRED]:
+
+> “A prefix episode that never hands off is the planner's recorded trajectory replayed, not a hybrid.” [OBSERVED docs/prereg_hj12_dev_20260922.md:339]
+
+> “At $m=9$, 32 of 114 episodes never handed off: the planner's recorded episode ended before step 9, so those episodes are `planner_alone` replayed, not a hybrid.” [OBSERVED campaign/RUNS.md:2515]
+
+> “The benefit appears only at $m=9$, and `planner_alone` episodes run a median of 12 actions, so $m=9$ means the planner has already done roughly three quarters of the median episode and the executor is finishing a tail.” [OBSERVED campaign/RUNS.md:2532]
+
+Direct event counting instead found that all 32 `hj12_prefix_m9_20260922` episodes with `handoff_occurred: false` included executor activity, totalling 38 executor actions; all 60 such `hj12_prefix_m11_20260922` episodes likewise included executor activity, totalling 113 actions [OBSERVED campaign/workers/brief_X18_prefix_terminal_guard.md:33-37]. The population previously called “no-handoff” is therefore renamed **prefix-exhausted**: the replayed prefix exhausted the recorded source trajectory, but the live executor still ran [OBSERVED campaign/workers/brief_X21_record_corrections.md:32-35].
+
+At $m=9$, the prefix-exhausted arm and comparator scores happened to remain identical at 0.896094 despite those 38 actions [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m9.goal_pass_no_handoff"] [OBSERVED campaign/workers/brief_X18_prefix_terminal_guard.md:35-37]. At $m=11$, the 60 prefix-exhausted episodes scored 0.8685 for the arm against 0.8507 for `planner_alone`, a difference of +1.78 pp [OBSERVED campaign/results/hj12_unified_frontier_20260922.report.json: key "noninferiority.arms.prefix_m11.goal_pass_no_handoff"]. That apparent gain is a second attempt under extra budget after a replayed prefix already ended in `COMPLETE`, not evidence that the executor improves on the planner [OBSERVED campaign/workers/brief_X18_prefix_terminal_guard.md:33-40] [INFERRED].
+
+The runtime defect is being corrected under X18; after that correction, the affected prefix arms are to be re-run [OBSERVED campaign/workers/brief_X21_record_corrections.md:34-36].
