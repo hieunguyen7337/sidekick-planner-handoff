@@ -27,3 +27,22 @@
   `15 passed in 7.68s`
   `hpc: full job log (with the site epilogue) at /tmp/hpc-x49-spool/20260922-221351-9.out`
 - Could not finish: nothing; requested implementation, tests, and figure generation completed [OBSERVED paper/figures/figures_manifest.json:248-322] [INFERRED].
+
+## Round 2
+
+- F7 now applies x offsets −0.08 to tailored and +0.08 to untailored while retaining true ticks 6, 9, 11; y values and y-error arrays remain sourced identically [OBSERVED scripts/analysis/figures.py:1204-1251] [OBSERVED scripts/analysis/figures.py:1271-1276].
+- F8 widens the log-axis upper limit to 2.5× the maximum token value; all four annotation offsets remain unchanged [OBSERVED scripts/analysis/figures.py:1322-1326] [OBSERVED scripts/analysis/figures.py:1361-1376].
+- Added a regression assertion for the F7 dodge [OBSERVED tests/unit/test_figures.py:453-474]. Final F7/F8 renders and manifest entries were regenerated [OBSERVED paper/figures/figures_manifest.json:248-320].
+- Test command [OBSERVED /tmp/hpc-x49-spool/20260922-222321-9.out:39]:
+  `env TMPDIR=/tmp HPC_SPOOL=/tmp/hpc-x49-spool timeout 1800 hpc -c 8 -m 32gb -t 00:25:00 bash -lc 'cd /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15 && export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONPATH=src:. && timeout 900 /scratch/n12194778/sidekick/env/bin/python -m pytest tests/unit/test_figures.py -q 2>&1 | tail -10'`
+- Verbatim final test output [OBSERVED /tmp/hpc-x49-spool/20260922-222321-9.out:39]:
+  `hpc: 25711085.aqua queued (cpu_inter, 8 cpu, 32gb, walltime 00:25:00)`
+  `hpc: waiting. Ctrl-C detaches; the job keeps running (qdel 25711085 to stop it).`
+  `hpc: queued...`
+  `hpc: running on a compute node`
+  `hpc: finished after 60s`
+  `---`
+  `hpc: full job log (with the site epilogue) at /tmp/hpc-x49-spool/20260922-222321-9.out`
+  `...............                                                          [100%]`
+  `15 passed in 6.80s`
+- Could not finish: nothing; Round 2 readability fix and verification completed [OBSERVED paper/figures/figures_manifest.json:248-320] [INFERRED].

@@ -455,12 +455,21 @@ def test_f7_narrated_minus_executed_generation_and_manifest(tmp_path: Path) -> N
     out_dir = tmp_path / "figures"
     _populate_all_standard_fixtures(results_dir)
 
-    entry = generate_f7_narrated_minus_executed(results_dir, out_dir)
+    errorbar_x = []
+    original_errorbar = plt.Axes.errorbar
+
+    def mocked_errorbar(self, *args, **kwargs):
+        errorbar_x.append(list(args[0]))
+        return original_errorbar(self, *args, **kwargs)
+
+    with patch.object(plt.Axes, "errorbar", mocked_errorbar):
+        entry = generate_f7_narrated_minus_executed(results_dir, out_dir)
     assert entry["figure_id"] == "F7"
     assert Path(entry["file_pdf"]).is_file()
     assert Path(entry["file_png"]).is_file()
     assert len(entry["series"]) == 2
     assert all(series["n_points"] == 3 for series in entry["series"])
+    assert errorbar_x == [[5.92, 8.92, 10.92], [6.08, 9.08, 11.08]]
     assert "below zero mean execution beat narration" in entry["caption"]
     assert "not a difference-in-differences" in entry["caption"]
 

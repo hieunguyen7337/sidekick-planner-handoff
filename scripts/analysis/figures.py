@@ -1208,19 +1208,21 @@ def generate_f7_narrated_minus_executed(
             PALETTE["tailored"],
             results_dir / "hj16_narrated_curve_bplus_20260923.report.json",
             "goal_pass_all_narrated_t_m{m}_minus_executed_t_m{m}",
+            -0.08,
         ),
         (
             "Untailored receiver (granite zero-shot)",
             PALETTE["zeroshot"],
             results_dir / "hj16_narrated_curve_zs_20260923.report.json",
             "goal_pass_all_narrated_m{m}_minus_executed_m{m}",
+            0.08,
         ),
     ]
 
     fig, ax = plt.subplots(figsize=(4.8, 3.8))
     manifest_series: list[dict[str, Any]] = []
 
-    for label, style, report_path, contrast_template in receiver_specs:
+    for label, style, report_path, contrast_template, x_offset in receiver_specs:
         report_data = load_report_json(report_path, fig_id)
         values: list[float] = []
         ci_lowers: list[float] = []
@@ -1244,7 +1246,7 @@ def generate_f7_narrated_minus_executed(
         yerr_lower = [value - lower for value, lower in zip(values, ci_lowers)]
         yerr_upper = [upper - value for value, upper in zip(values, ci_uppers)]
         ax.errorbar(
-            m_list,
+            [m + x_offset for m in m_list],
             values,
             yerr=[yerr_lower, yerr_upper],
             color=style["color"],
@@ -1370,7 +1372,7 @@ def generate_f8_advice_cost_quality(
     tokens_values = [tokens for _, _, _, tokens, _, _ in arm_values]
     quality_values = [quality for _, _, quality, _, _, _ in arm_values]
     ax.set_xscale("log")
-    ax.set_xlim(min(tokens_values) / 1.8, max(tokens_values) * 2.0)
+    ax.set_xlim(min(tokens_values) / 1.8, max(tokens_values) * 2.5)
     ax.set_ylim(min(quality_values) - 0.04, max(quality_values) + 0.04)
     ax.set_xlabel("Non-cached planner tokens per episode (log scale)")
     ax.set_ylabel("Goal pass rate")
