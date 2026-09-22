@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import signal
 from dataclasses import dataclass, replace
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Literal, Optional
 
 from sidekick.agents.planner import CodexTimeoutError, PacketParseError, PlannerClient
 from sidekick.agents.verifier import ConstantVerifier, SelfVerifier, ThresholdRouter, Verifier
@@ -68,6 +68,9 @@ class SystemPolicy:
     # None = whole transcript on the forced-review *advise* path only.
     # An integer is that many trailing lines. Default 8 matches every existing arm.
     correct_context_lines: int | None = 8
+    # Prefix already finished: "stop" ends with the replayed outcome (default);
+    # "continue" is the pre-guard behaviour (executor still acts).
+    post_prefix_terminal: Literal["stop", "continue"] = "stop"
 
 
 @dataclass
@@ -155,6 +158,17 @@ def last_observation_from_events(events: list[Event]) -> Observation:
             error_type=ev.error_type,
         )
     return Observation(text="", step=0)
+
+
+def prefix_is_terminal(events: list[Event], last_obs: Observation) -> bool:
+    """True when a replayed prefix already ended the source episode."""
+    if last_obs.done:
+        return True
+    for ev in reversed(events):
+        if ev.event_type != "action":
+            continue
+        return (ev.payload or {}).get("kind") == "COMPLETE"
+    return False
 
 
 def token_count(usage: Usage) -> int:
@@ -256,6 +270,7 @@ def run_episode(
     n_interventions = 0
     n_planner_calls = 0
     n_planner_actions = 0
+    n_post_terminal_actions = 0
     handoff_step: int | None = None
     driver_is_planner = policy.planner_drives
     episode_tokens = 0
@@ -624,6 +639,7 @@ def run_episode(
                 "n_events": len(prefix.events),
                 "episode_tokens": episode_tokens,
             }
+            run_start_payload["policy"]["post_prefix_terminal"] = policy.post_prefix_terminal
         if sampling_seed is not None:
             run_start_payload["sampling_seed"] = int(sampling_seed)
         emit(
@@ -687,7 +703,19 @@ def run_episode(
                 error="limit",
             )
 
+        prefix_terminal = False
+        skip_live_loop = False
+        if prefix is not None:
+            prefix_terminal = prefix_is_terminal(list(prefix.events), last_obs)
+            skip_live_loop = (
+                policy.post_prefix_terminal == "stop" and prefix_terminal
+            )
+        if skip_live_loop:
+            steps_taken = int(last_obs.step)
+
         for step in range(start_step, limits.max_steps + 1):
+            if skip_live_loop:
+                break
             if error_type is not None:
                 break
             if over_token_limit():
@@ -893,6 +921,8 @@ def run_episode(
                 action = forced_action if forced_action is not None else action_from_executor(step)
                 if action is None:
                     break
+                if prefix_terminal and forced_action is None:
+                    n_post_terminal_actions += 1
                 if policy.review_proposed_action and forced_action is None:
                     action = run_action_review(
                         action=action,
@@ -1055,7 +1085,7 @@ def run_episode(
             else:
                 transcript.append(f"ACTION: {action.kind}")
         else:
-            if error_type is None:
+            if error_type is None and not skip_live_loop:
                 error_type = "limit"
                 emit(
                     step=steps_taken,
@@ -1117,6 +1147,8 @@ def run_episode(
     end_payload = result.model_dump()
     end_payload["n_planner_actions"] = n_planner_actions
     end_payload["handoff_step"] = handoff_step
+    if prefix is not None:
+        end_payload["n_post_terminal_actions"] = n_post_terminal_actions
     emit(
         step=steps_taken,
         actor="system",

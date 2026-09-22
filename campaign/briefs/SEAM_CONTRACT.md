@@ -196,6 +196,7 @@ Policy flags (recorded in `run_start` event payload `policy` dict):
 - `review_proposed_action: bool`
 - `takeover: bool`
 - `handoff_allowed: bool`
+- `post_prefix_terminal: "stop" | "continue"` — recorded only when an episode starts from a replayed prefix. `"stop"` (default) ends the episode with the replayed outcome when the prefix already terminated; `"continue"` is the pre-2026-09-23 behaviour in which the executor still acted. `run_end` then carries `n_post_terminal_actions`.
 
 Handoff configuration block (`handoff:` in system YAML configs):
 ```yaml
@@ -206,7 +207,7 @@ handoff:
 ```
 
 ## Global run limits (every system, every arm)
-`max_steps=40`, `max_tokens_per_episode=32000`, `per_step_timeout_s=120`,
-`max_planner_calls=25`. Exceeding one ends the run with `error_type="limit"`, counted as a failure
+`max_steps=40`, `max_tokens_per_episode=2000000`, `per_step_timeout_s=300`,
+`max_planner_calls=81` (= 2·max_steps + 1) for every arm from HJ-8 onward. ⚠ The HJ-1 ceiling arm `hj1b_planner_20260915` ran under the older `max_planner_calls=25`, which ended 11 of its 12 `limit` episodes; comparisons against it understate the planner until the cap-81 re-run exists. Exceeding one ends the run with `error_type="limit"`, counted as a failure
 in the denominator.
 
