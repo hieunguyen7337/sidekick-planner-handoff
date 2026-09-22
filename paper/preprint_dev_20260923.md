@@ -397,7 +397,34 @@ We document the boundary conditions of our study and the analytical defects iden
 2. **Single Planner Family:** Handoff trajectories and advice critiques were generated exclusively with `gpt-5.6-luna` at `medium` reasoning effort. Cross-planner transferability remains unmeasured.
 3. **Cap-81 Ceiling Inversion (CEIL-01, CEIL-04):** Extending planner call cap from 25 to 81 calls resulted in lower performance: `ceiling_cap81` scored **0.7637 `goal_pass` / 0.5702 TGC** vs. **0.8284 / 0.6842** for `ceiling_cap25` (paired difference **−6.47 pp `goal_pass`**, scenario [−11.68, −1.37], task [−12.48, −0.46]; TGC **−11.4 pp** [−21.05, −1.75]). Cap-81 episodes averaged 16.35 actions (max 40) vs. 13.42 for cap-25 (max 24), demonstrating that unconstrained budget allows over-acting in the tail, corrupting environment state.
 4. **Qwen Floor Format Confound:** Zero-shot Qwen3-8B fails to emit termination tokens without in-context demonstrations, invalidating floor-relative lift claims (QWEN-02, QWEN-03).
-5. **Analysis Defects Found and Repaired:**
+5. **Receiver Interaction Not Tested (NARR-04):** Our central mechanism reading — that receiver
+   tailoring is what permits narration to substitute for execution — rests on comparing *which*
+   paired contrasts resolve on each receiver, not on a difference-in-differences. The DiD carries no
+   interval in our analysis. "No resolved gap on the tailored receiver" is a weaker statement than
+   "a significantly smaller gap than on the untailored receiver", and we do not make the stronger one.
+6. **Substitutability Not Reproduced Across Planner Samples (C81-02):** The monotone decay of the
+   receiver gap with depth, on which the depth-substitutes-for-tailoring reading rests, does not
+   reproduce on an independent planner sample, where the sequence is non-monotone and ends with the
+   opposite ordering. No individual within-depth receiver gap is resolved on either sample. We report
+   this as a one-sample observation, and note it is equally not evidence *against* substitutability:
+   the intervals are too wide to resolve the effects at issue.
+7. **Deviation from a Frozen Pre-Registration (CHAN-PRICE-02):** H2's cost prediction P4 specified
+   non-cached planner tokens in [300k, 700k]; the arm spent 1,414,410. The remedy attached to a P4
+   failure is written for the opposite case, an arm priced *below* the action channel's budget, in
+   which case the primary contrast must be reported as untested. We judged that remedy inapplicable
+   because the arm was priced far above the budget rather than below it, and we report the primary
+   contrast as supported. We flag this as a deviation rather than absorbing it, and direct a reader
+   who declines the judgement to the matched-trigger result in Section 4, which carries no budget
+   question.
+8. **Test Suite Collection Defect Found Late:** For six days the project's configured test command
+   (`pytest tests/`, via `testpaths`) aborted during collection: two directories contained a test
+   module of the same basename with no package marker, so the second import collided with the first.
+   Test runs during that period executed the unit directory alone, and the 34 integration tests were
+   silently outside every reported pass count. Repaired by renaming; the full tree now reports 625
+   passed, 1 skipped. No result in this paper depends on the integration tests, but the episode is
+   recorded because a green suite that is not running everything is exactly the failure mode this
+   project's analysis defects share.
+9. **Analysis Defects Found and Repaired:**
    - *Terminal Guard Defect (GUARD-01, MECH-01..03):* Early runs allowed actions following replayed completion tokens; resolved by adding a fatal post-prefix terminal check.
    - *Handoff Flag Path (MECH-02, GUARD-01/X33d):* The mechanism script initially inspected an invalid JSON key; resolved by aligning paths and making zero-count populations fatal.
    - *Error Scan Actor Filter (MECH-04, MECH-05):* Initial audits filtered observations on executor identity, yielding 0.00% error rates; repaired to scan observation return text.
