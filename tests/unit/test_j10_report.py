@@ -677,6 +677,10 @@ A1_CONSTANT_GP = {
     "advise_k1_fullctx": 0.5,
     "advise_k10_fullctx": 0.5,
     "takeover_k10": 0.75,
+    # A1 r2 arms 1b, 11, 12: no registered prediction names them, so these values move no verdict.
+    "executor_alone_bplus": 0.375,
+    "show_k10": 0.625,
+    "advise_k10_neutral": 0.5,
 }
 A1_COST_REPORT = {
     "arms": {

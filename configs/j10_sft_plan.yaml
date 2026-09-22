@@ -1,24 +1,33 @@
-# J10 confirmatory read on test_normal, arm 2 of 9.
-# Registered in docs/prereg_j10_amendment_20260924.md §4. Derived mechanically from
-# configs/hj8_sft_plan_bplus.yaml; only campaign_id and the sourcing fields differ.
+# J10 confirmatory read on test_normal, arm 2 `sft_plan` of Amendment A1 r2
+# (docs/prereg_j10_amendment_20260924.md §4).
+# Source: configs/hj8_sft_plan_bplus.yaml
+# Differs from source in: campaign_id, planner.packet_source, planner.packet_source_pending
+# tests/unit/test_j10_configs.py diffs the parsed YAML of both files against exactly this list.
 #
 # ⚠ This config deliberately carries NO `split:` key. The split is a command-line
-# argument (src/sidekick/runner.py:427, default "dev") and a `split:` line here would be
+# argument (src/sidekick/runner.py:498, default "dev") and a `split:` line here would be
 # silently ignored, running the confirmatory read on dev while every name said test.
-# See A1 §10.2. Submit only via scripts/pbs/j10_test.pbs, which passes --split test_normal.
+# See A1 §10.2. Submit only via scripts/pbs/j10_arm.pbs, which passes --split test_normal.
 env: appworld
 campaign_id: j10_sft_plan_20260924
 # HJ-8 Class C. luna's HJ-1 plan is replayed; granite executes it under sft_b_plus.
 planner:
   type: codex
-  # LIVE on test. There is no cached packet archive for test_normal, so planner.packet_source
-  # is deliberately absent and make_planner falls through to CodexExecPlanner
-  # [OBSERVED src/sidekick/runner.py:122-123]. This arm therefore SPENDS hosted quota; the
-  # registered per-arm totals are in docs/prereg_j10_amendment_20260924.md §4.
   model: gpt-5.6-luna
   reasoning_effort: medium
   timeout_s: 300
   scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays J10 arm 3's FIRST plan packet per (task_id, seed), as every dev arm behind P1, P5
+  # and P6 replayed one recorded plan (A1 r2 §4.1, F1). A live plan here would draw a fresh plan
+  # per arm and put plan-sampling noise back into the paired contrasts; replayed, this arm spends
+  # zero hosted calls. A first packet precedes any action, so arm 3's call cap does not touch it.
+  packet_source: /scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924
+  # Produced by J10 arm 3; verify_configs.py treats it as pending only while the path is absent.
+  packet_source_pending: "produced by J10 arm 3 (planner_alone cap-81 on test_normal), not yet run"
+  packet_system: planner_alone
+  # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss
+  # must abort, not fall through to a live Codex call.
+  on_missing: fail
 executor:
   type: vllm
   model: ibm-granite/granite-4.2-8b

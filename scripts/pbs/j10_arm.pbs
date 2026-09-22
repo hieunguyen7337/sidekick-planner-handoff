@@ -34,13 +34,15 @@
 # Refusals (exit 2), all before a GPU model is loaded or anything under results/ changes:
 #   (a) SPLIT=test_challenge, any split but dev/test_normal; SPLIT=test_normal unless the one
 #       `**Status**` line of the prereg starts FROZEN and says no DRAFT, the prereg is committed
-#       and unmodified, J10_CONFIRM=A1_FROZEN, CID is the config's campaign_id, TASKS=168, SEEDS=1,2
+#       and unmodified, J10_CONFIRM=A1_FROZEN, CID is the config's campaign_id, TASKS=168, SEEDS=1,2,
+#       ADAPTER_SFT_B_PLUS is the registered sft_b_plus_iaware_granite8b directory (A1 r2 §4, F8)
 #   (b) EXPECTED_CODEX_VERSION set and `codex --version` differs (or codex absent)
 #   (c) planner.type codex with planner.model != gpt-5.6-luna; a hosted arm whose planner is not
 #       codex; executor_alone with a codex planner; a prefix arm without packet_source
 #   plus: config with a `split:` key (A1 §10.2), SYSTEM disagreeing with the config, dev episodes
-#   aimed at a registered test campaign id, a prefix arm whose planner source is incomplete
-#   (A1 §10: arm 3 completes first), another live job holding the same CID.
+#   aimed at a registered test campaign id, an arm that replays arm 3 -- handoff.source_campaign
+#   (arms 4-7) or planner.packet_source (arms 2, 8-12) -- while that source is incomplete for the
+#   requested tasks/seeds (A1 r2 §4.1, §10: arm 3 completes first), another live job holding the CID.
 # Exit codes: 0 arm complete (target non-crashed episodes, 0 crashes) | 2 refused |
 #   3 crashes or missing episodes remain -> resubmit next quota window | other: smoke/gate/infra.
 #
@@ -112,9 +114,13 @@ PY="${PY:-${SIDEKICK_VENV}/bin/python}"
 SUM="${REPO}/scripts/setup/campaign_summarize.py"
 MODEL_GRANITE=ibm-granite/granite-4.2-8b
 ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
-# Same default as hj12_prefix.pbs / hj12_live.pbs, which produced the dev prefix and advice
-# arms A1 cites. hj8_frontier.pbs defaults to the older sft_b_plus_granite8b -- see the report.
-ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b}"
+# A1 r2 §4 (F8) names this directory for every sft_b_plus arm on test: it is what every tailored
+# dev arm behind P1, P3, P5 and P6 loaded (hj12_prefix.pbs / hj12_live.pbs default to it, and the
+# hj8 sft_plan submission overrode hj8_frontier.pbs's older sft_b_plus_granite8b default). An
+# override is honoured on dev only; SPLIT=test_normal refuses any other directory below, because
+# a different adapter under the same alias changes the receiver while every log still says sft_b_plus.
+REGISTERED_ADAPTER_SFT_B_PLUS=/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b
+ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-${REGISTERED_ADAPTER_SFT_B_PLUS}}"
 MAX_LORAS=4
 cd "${REPO}" || exit 1
 echo "[j10] repo_commit=${SIDEKICK_START_COMMIT} dirty_files=$(git -C "${REPO}" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
@@ -184,12 +190,13 @@ echo "[j10] config campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} p
 [[ -n "${CFG_CAMPAIGN_ID}" ]] || fatal "${CFG} has no campaign_id"
 [[ "${HAS_SPLIT_KEY}" == "0" ]] || fatal "${CFG} carries a split: key; the split is a CLI argument and a config key is inert (A1 §10.2)"
 
+# show_k10 is fixed_k with advice_from_act: true, as B2 ran its source (scripts/pbs/hj12_live.pbs:175).
 case "${CFG_STEM}" in
-  j10_executor_alone) REG_SYSTEM=executor_alone;;
+  j10_executor_alone|j10_executor_alone_bplus) REG_SYSTEM=executor_alone;;
   j10_sft_plan) REG_SYSTEM=sft_plan;;
   j10_planner_alone_cap81) REG_SYSTEM=planner_alone;;
   j10_prefix_*) REG_SYSTEM=prefix_handoff;;
-  j10_advise_*|j10_takeover_*) REG_SYSTEM=fixed_k;;
+  j10_advise_*|j10_takeover_*|j10_show_*) REG_SYSTEM=fixed_k;;
   *) REG_SYSTEM="";;
 esac
 if [[ -z "${SYSTEM}" ]]; then
@@ -244,6 +251,10 @@ if [[ "${SPLIT}" == "test_normal" ]]; then
   fi
   [[ "${TASKS}" -eq 168 ]] || fatal "test_normal is registered at all 168 tasks (TASKS=${TASKS})"
   [[ "${SEEDS}" == "1,2" ]] || fatal "test_normal is registered at seeds 1,2 (SEEDS=${SEEDS})"
+  # Exact string, so the logged lora-module path is the text A1 registers; and for every arm,
+  # base-receiver ones included, so the refusal never depends on the config's lora_name.
+  [[ "${ADAPTER_SFT_B_PLUS}" == "${REGISTERED_ADAPTER_SFT_B_PLUS}" ]] \
+    || fatal "test_normal serves sft_b_plus only from the registered adapter ${REGISTERED_ADAPTER_SFT_B_PLUS} (A1 r2 §4, F8); got ADAPTER_SFT_B_PLUS=${ADAPTER_SFT_B_PLUS}"
 fi
 
 # ---- campaign id -------------------------------------------------------------------
@@ -343,13 +354,25 @@ print(f"[j10] dry-run config {dest}")
 PY
   HANDOFF_SOURCE="$(grep -E '^[[:space:]]*source_campaign:' "${CFG_EFF}" | head -n 1 | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]+$//')"
   echo "[j10] dry-run handoff.source_campaign=${HANDOFF_SOURCE:-<none>}"
+  # Re-read too, or the completeness check below would judge the registered test source.
+  PACKET_SOURCE="$(grep -E '^[[:space:]]*packet_source:' "${CFG_EFF}" | head -n 1 | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]+$//')"
+  echo "[j10] dry-run planner.packet_source=${PACKET_SOURCE:-<none>}"
 elif [[ "${SPLIT}" == "dev" && "${REGISTERED_SOURCE}" == "1" ]]; then
   fatal "a dev run of ${CFG_STEM} would replay the registered TEST planner campaign; use DRYRUN=1"
 fi
 
-# ---- prefix arms: the planner run they replay must be complete (A1 §10) --------------
-if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
-  SRC_STATS="$(timeout 300 "${PY}" - "${HANDOFF_SOURCE}" "${SEEDS}" <<'PY'
+# ---- replay arms: the planner run they replay must be complete (A1 r2 §4.1, §10) -----------
+# Arm 3 is the only arm that plans. Arms 4-7 re-execute its first m actions
+# (handoff.source_campaign); arms 2 and 8-12 replay its first plan packet (planner.packet_source,
+# on_missing: fail). Against a partial arm 3 a replay episode either crashes on a missing packet
+# or replays a packet from an arm-3 episode that crashed -- which arm 3's next resubmission purges
+# and re-plans, leaving this arm paired with a plan arm 3 never scored. So both kinds of source
+# are judged by the one rule the prefix arms always used: the directory exists and holds
+# >= TARGET non-crashed result.json for the requested seeds, 0 crashed, 0 unreadable.
+require_complete_source () {
+  local what="$1" src="$2" arms="$3"
+  local stats src_ok src_crash src_bad src_exists
+  stats="$(timeout 300 "${PY}" - "${src}" "${SEEDS}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -372,12 +395,19 @@ if root.is_dir():
             ok += 1
 print(f"{ok} {crash} {bad} {1 if root.is_dir() else 0}")
 PY
-)" || fatal "could not inspect the prefix source ${HANDOFF_SOURCE}"
-  read -r SRC_OK SRC_CRASH SRC_BAD SRC_EXISTS <<< "${SRC_STATS}"
-  echo "[j10] prefix source ${HANDOFF_SOURCE}: exists=${SRC_EXISTS} non_crashed=${SRC_OK} crashed=${SRC_CRASH} unreadable=${SRC_BAD} (need >= ${TARGET}, 0 crashed)"
-  if [[ "${SRC_EXISTS}" != "1" || "${SRC_OK}" -lt "${TARGET}" || "${SRC_CRASH}" -ne 0 || "${SRC_BAD}" -ne 0 ]]; then
-    fatal "prefix source campaign is not complete; arm 3 must complete before arms 4-7 start (A1 §10)"
+)" || fatal "could not inspect the ${what} ${src}"
+  read -r src_ok src_crash src_bad src_exists <<< "${stats}"
+  echo "[j10] ${what} ${src}: exists=${src_exists} non_crashed=${src_ok} crashed=${src_crash} unreadable=${src_bad} (need >= ${TARGET}, 0 crashed)"
+  if [[ "${src_exists}" != "1" || "${src_ok}" -lt "${TARGET}" || "${src_crash}" -ne 0 || "${src_bad}" -ne 0 ]]; then
+    fatal "${what} campaign is not complete; arm 3 must complete before ${arms} start (A1 §10)"
   fi
+}
+if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+  require_complete_source "prefix source" "${HANDOFF_SOURCE}" "arms 4-7"
+fi
+# A prefix arm's packet_source is its handoff source; judging it twice would only repeat the line.
+if [[ -n "${PACKET_SOURCE}" ]] && ! [[ "${SYSTEM}" == "prefix_handoff" && "${PACKET_SOURCE}" == "${HANDOFF_SOURCE}" ]]; then
+  require_complete_source "planner.packet_source" "${PACKET_SOURCE}" "arms 2 and 8-12"
 fi
 
 # Gate flags: arms that must not call the planner get --gate alone, which asserts ZERO

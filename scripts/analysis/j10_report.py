@@ -1472,10 +1472,14 @@ PERMUTATION_N = 10_000
 CLUSTER_INFERENCE_PATH = Path(__file__).resolve().parent / "cluster_inference.py"
 RAW_RESULTS_ROOT = Path("/scratch/n12194778/sidekick/results")
 
-# Registered arms [A1 §4] plus takeover_k10, which P6 needs. The value is the
-# config that produces the arm (None: no J10 config exists yet).
+# Registered arms [A1 r2 §4: 1, 1b, 2-12]. The value is the config that produces the
+# arm (None: no J10 config exists yet); its campaign id is j10_<label>_20260924. The
+# labels are what --arm accepts, so an arm missing here cannot be reported unless a
+# prediction names it -- which executor_alone_bplus (1b) and, until P7 is completed
+# at freeze, show_k10 (11) and advise_k10_neutral (12) do not.
 A1_ARMS: dict[str, Optional[str]] = {
     "executor_alone": "configs/j10_executor_alone.yaml",
+    "executor_alone_bplus": "configs/j10_executor_alone_bplus.yaml",
     "sft_plan": "configs/j10_sft_plan.yaml",
     "planner_alone_cap81": "configs/j10_planner_alone_cap81.yaml",
     "prefix_m9": "configs/j10_prefix_m9.yaml",
@@ -1484,7 +1488,9 @@ A1_ARMS: dict[str, Optional[str]] = {
     "prefix_zs_m11": "configs/j10_prefix_zs_m11.yaml",
     "advise_k1_fullctx": "configs/j10_advise_k1_fullctx.yaml",
     "advise_k10_fullctx": "configs/j10_advise_k10_fullctx.yaml",
-    "takeover_k10": None,
+    "takeover_k10": "configs/j10_takeover_k10.yaml",
+    "show_k10": "configs/j10_show_k10.yaml",
+    "advise_k10_neutral": "configs/j10_advise_k10_neutral.yaml",
 }
 
 A1_METRIC_FIELDS = {"goal_pass": "goal_pass_rate", "tgc": "tgc"}

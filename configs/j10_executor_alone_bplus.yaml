@@ -1,8 +1,9 @@
-# J10 confirmatory read on test_normal, arm 1 `executor_alone` of Amendment A1 r2
-# (docs/prereg_j10_amendment_20260924.md §4): the zero-shot floor. Arm 1b
-# (j10_executor_alone_bplus.yaml) is the same source with the adapter kept (R4).
+# J10 confirmatory read on test_normal, arm 1b `executor_alone_bplus` of Amendment A1 r2
+# (docs/prereg_j10_amendment_20260924.md §4): the tailored floor. Arms 1 and 1b differ only in
+# executor.lora_name, so "no plan" and "no tailoring" are separated (R4). The sft_b_plus alias is
+# served from the adapter j10_arm.pbs pins for test_normal (A1 r2 §4 Receivers, F8).
 # Source: configs/hj8_executor_alone_bplus.yaml
-# Differs from source in: campaign_id, executor.lora_name
+# Differs from source in: campaign_id
 # tests/unit/test_j10_configs.py diffs the parsed YAML of both files against exactly this list.
 #
 # ⚠ This config deliberately carries NO `split:` key. The split is a command-line
@@ -10,14 +11,14 @@
 # silently ignored, running the confirmatory read on dev while every name said test.
 # See A1 §10.2. Submit only via scripts/pbs/j10_arm.pbs, which passes --split test_normal.
 env: appworld
-campaign_id: j10_executor_alone_20260924
+campaign_id: j10_executor_alone_bplus_20260924
 planner:
   type: mock          # never called by executor_alone; must not be codex
 executor:
   type: vllm
   model: ibm-granite/granite-4.2-8b
   base_url: http://127.0.0.1:8000
-  lora_name: null  # A1 §4 row 1 registers the BASE receiver for this floor. Explicit no-adapter: complete() sends model=<executor.model>.
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
   temperature: 0.7
   max_tokens: 2048
   # End generation at the close of the first action. Without this the model writes an

@@ -1,11 +1,14 @@
-# J10 confirmatory read on test_normal, arm 3 of 9.
-# Registered in docs/prereg_j10_amendment_20260924.md §4. Derived mechanically from
-# configs/hj13_planner_alone_cap81.yaml; only campaign_id and the sourcing fields differ.
+# J10 confirmatory read on test_normal, arm 3 `planner_alone` cap-81 of Amendment A1 r2
+# (docs/prereg_j10_amendment_20260924.md §4). The only arm that generates plans: arms 2 and
+# 4-12 replay this campaign (A1 r2 §4.1), so it runs first and must complete before them.
+# Source: configs/hj13_planner_alone_cap81.yaml
+# Differs from source in: campaign_id
+# tests/unit/test_j10_configs.py diffs the parsed YAML of both files against exactly this list.
 #
 # ⚠ This config deliberately carries NO `split:` key. The split is a command-line
-# argument (src/sidekick/runner.py:427, default "dev") and a `split:` line here would be
+# argument (src/sidekick/runner.py:498, default "dev") and a `split:` line here would be
 # silently ignored, running the confirmatory read on dev while every name said test.
-# See A1 §10.2. Submit only via scripts/pbs/j10_test.pbs, which passes --split test_normal.
+# See A1 §10.2. Submit only via scripts/pbs/j10_arm.pbs, which passes --split test_normal.
 # planner_drives=True, plan_first=False: luna acts every step, the executor is never
 # constructed, so this arm needs no GPU and no vLLM server.
 #
