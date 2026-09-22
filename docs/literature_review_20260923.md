@@ -16,7 +16,14 @@ However, the fundamental assumption underpinning query-level routing—that task
 
 ### What we add
 
-TODO(claude): novelty verdict
+We keep the cost-quality framing of this literature and move its decision variable inside the
+episode. A cascade asks *which model should answer this query*; we ask *how much of this episode's
+opening should the expensive model execute before the cheap one takes over*. The distinction is
+not merely granularity: a query-level router must predict difficulty from the prompt, whereas our
+allocation is made against difficulty that the environment reveals only after execution begins. We
+inherit their evaluation discipline — cost on an explicit axis, quality reported against it — and
+contribute the observation that on a stateful suite the frontier's *shape* along this new axis is
+not the smooth concave curve cascade work leads one to expect.
 
 ---
 
@@ -43,7 +50,21 @@ Adjacent studies examine complementary facets of trajectory handoffs:
 
 ### What we add
 
-TODO(claude): novelty verdict
+This is where our contribution must be stated most carefully, because Ganz et al. (2026-08-25)
+reported the qualitative result — a cheaper model can continue a stronger model's trajectory at a
+favourable cost-quality point — five weeks before this work was written, and we do not claim it.
+We add three things their design forecloses. First, they average over seven switch points and so
+report a *point*; we sweep nine depths and report a *curve*, and the curve is not monotone in the
+way an averaged summary implies — it is flat across the first third of a median episode and rises
+only past a threshold. Second, every receiver in that study is prompted zero-shot; ours is
+LoRA-specialised to the specific planner whose trajectory it inherits, and we run the zero-shot
+receiver as an explicit control so that "tailored" is measured rather than asserted. Third, their
+capability gap is between two frontier-tier hosted endpoints, while ours is between a hosted
+frontier planner and an 8B open-weight model running locally at no marginal hosted cost — the
+regime in which the displacement question actually bites. We also supply what a single-rollout
+study cannot: pre-registered non-inferiority testing with paired, task- and scenario-clustered
+bootstrap intervals over repeated seeds. None of this contradicts their findings; it measures the
+object they summarised.
 
 ---
 
@@ -57,7 +78,14 @@ Similarly, Lu et al. (EMNLP 2025 Findings, arXiv:2505.17616) evaluate early-exit
 
 ### What we add
 
-TODO(claude): novelty verdict
+Our allocation runs in the opposite temporal direction to this entire lineage. SwiftSage and the
+early-exit work let the weak model act until something goes wrong and then summon the strong one;
+we spend the strong model first, on the opening stretch, and then leave. That inversion is
+motivated by the failure mechanics in Theme 8 rather than by convenience: if the first error
+dominates the outcome, compute is worth more before the error than after it. Speculative planning
+shares our vocabulary but not our economics — there the target model verifies every step, so the
+small model never holds terminal authority and the saving is latency, not hosted spend. We give
+the small model the rest of the episode outright and measure what that costs in quality.
 
 ---
 
@@ -72,7 +100,14 @@ While conceptually analogous in dividing labor between small and large models, t
 
 ### What we add
 
-TODO(claude): novelty verdict
+We take only the intuition from this literature and explicitly disclaim its guarantee. Speculative
+decoding preserves the target model's output distribution exactly, because every draft token is
+verified and rejection sampling is available. No agent-level analogue of that guarantee exists
+here: our planner does not observe, let alone verify, the actions the executor takes after handoff,
+and AppWorld actions write to databases and call APIs, so there is nothing to roll back. Our
+contribution at this boundary is therefore a discipline rather than a method — we state capability
+preservation as empirical non-inferiority on a declared distribution with a pre-registered margin,
+and never as preservation in the speculative-decoding sense.
 
 ---
 
@@ -88,7 +123,14 @@ While these studies validate the Pareto efficiency of heterogeneous role separat
 
 ### What we add
 
-TODO(claude): novelty verdict
+This literature sweeps *capacity* across roles and holds the assignment fixed for the episode; we
+hold the roles fixed and sweep *time*. Think-Big-Search-Small's finding that delegation is far more
+capacity-sensitive than execution is the closest quantitative neighbour to our own regime result
+that one plan is worth most of the available gain, and we should cite it as convergent evidence
+from a different domain rather than as a competitor. What no role-factorisation study reports is
+that the value of strong-model involvement is *non-linear in its duration*: assigning the strong
+model the planner role for a whole episode and assigning it the first nine actions are different
+allocations at different prices, and only the second is on the frontier we measure.
 
 ---
 
@@ -109,7 +151,17 @@ Our prefix parameter sweep represents the deployment-time, compute-allocation an
 
 ### What we add
 
-TODO(claude): novelty verdict
+Our training contribution sits in a gap these two literatures leave between them. ReOPD and
+Guided-OPD replay teacher prefixes *during training* precisely so that the student can eventually
+run alone, withdrawing the teacher before deployment; the classical reverse-curriculum work
+(Backplay, Salimans & Chen) moves a demonstration-derived start state backward through training for
+the same reason. In both cases the prefix is scaffolding to be removed. In our deployment the
+prefix is not scaffolding — it is the product, purchased anew on every episode — so the matched
+training objective is the one nobody has needed before: supervise the suffix that follows a teacher
+prefix, for a serving condition in which that prefix is always present. We also import ReOPD's
+warning under a new name: their "prefix trap" is a statement about where teacher supervision is
+reliable, and its deployment-time counterpart is that the executor is only on-distribution for
+prefixes drawn from the planner it was trained against.
 
 ---
 
@@ -126,7 +178,15 @@ While frameworks like Reflexion (Shinn et al., NeurIPS 2023) and CRITIC (Gou et 
 
 ### What we add
 
-TODO(claude): novelty verdict
+The established negative results here concern *self*-correction, and are therefore adjacent to our
+finding rather than identical to it: our critique is externally authored by a materially stronger
+model, which is the condition under which that literature expects correction to work. Our
+contribution is to put a price on it and compare it, at matched spend, against the same strong
+model spending the same budget on actions instead of words. That comparison is what the literature
+lacks, and it is also the claim our own evidence does not yet support: at matched budget our two
+channels are currently indistinguishable, and advice has never been priced at the budget where the
+action channel wins. Until the full-context and step-level advice arms run, the honest statement is
+that advice saturates early — cheaply — and that whether it would ever catch up is untested.
 
 ---
 
@@ -142,7 +202,15 @@ In the context of multi-stage delegation, sequential learning-to-defer framework
 
 ### What we add
 
-TODO(claude): novelty verdict
+This literature supplies the mechanism our curve needs and, read carefully, predicts the wrong
+shape. If early errors are unrecoverable, buying the strong model's first few actions should pay
+immediately, and quality should rise steeply and then saturate. We observe the opposite: nothing is
+bought until roughly the seventh step, after which quality climbs. That mismatch is the most
+interesting thing in our data, and our mechanism chapter takes it as its subject — testing whether
+the threshold coincides with where novel API discovery ends rather than with where errors begin.
+Against learning-to-defer, our allocation is deliberately *not* learned: every gate we measured sat
+at chance, so we fix the allocation by construction and characterise the frontier a learned deferral
+policy would have to beat.
 
 ---
 
@@ -177,4 +245,11 @@ In our experimental methodology, claims of non-inferiority against hosted planne
 
 ### What we add
 
-TODO(claude): novelty verdict
+We make no claim on this benchmark's leaderboard and our numbers are not comparable to the entries
+on it: we evaluate on dev, in a minimal harness, with a capped planner, and every claim we make is
+internal and paired. Reporting the external table matters anyway, for one reason — it shows that
+our frozen planner scores well below its own published figure under our scaffold, which bounds how
+far our conclusions travel. Methodologically we contribute what this benchmark's results sections
+generally omit: a pre-registered primary metric and margin, paired contrasts with clustered
+bootstrap intervals, repeated seeds, explicit populations, and a public record of which analyses
+were registered in advance and which were chosen after seeing the data.
