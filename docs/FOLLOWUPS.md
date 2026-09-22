@@ -1080,3 +1080,39 @@ Consequences to apply:
 or keep sampling stochastic and run every headline arm ≥ 2 times, reporting the spread. The first is
 cheaper and makes re-runs diagnostic; the second is more honest about deployment variance. Either way
 the thesis must state that arms were run once and what that costs.
+
+## OPEN 2026-09-23 — the uncapped ceiling re-run is quota-contaminated, 27 of 114 episodes
+
+`hj13_planner_alone_cap81_20260923` completed all 114 episodes, but the outcome distribution is:
+
+| error_type | n |
+|---|---:|
+| none (clean) | 70 |
+| `limit` | 17 |
+| `crash` | **27** |
+
+All 27 crashes carry the same detail, `codex exec exited 1` [OBSERVED counted from `events.jsonl`
+across the campaign]. The same error was returned interactively by the Codex MCP worker at the same
+time — *"You've hit your usage limit … try again at 6:46 PM"*. The planner runs `codex exec` on a
+ChatGPT **plan subscription**, not per-token billing [OBSERVED `scripts/pbs/hj1b_planner_alone.pbs:10-13`],
+so the binding constraint is plan quota, and quota is not observable from inside a batch job — the
+risk recorded in the campaign plan as open risk 6.
+
+**This arm must not be analysed as it stands.** 24% of its episodes failed for a reason that has
+nothing to do with the planner's capability, and a crash is counted in the denominator as a failure.
+Reading the uncapped ceiling off this run would understate it — the opposite of the error the re-run
+existed to fix.
+
+**Required before use**: after the quota window resets, purge the broken episodes and re-run to fill
+them (`campaign_summarize.py --purge-broken` then resubmit; the job skips completed work). Then check
+the error distribution again and only analyse when `crash` is at parity with the original arm's 1.
+
+**Also to check once clean, not before**: the 17 `limit` episodes. Under the 25-call cap, 11 of 12
+`limit` episodes ended at the call cap; at cap 81 the binding constraint should be `max_steps: 40`
+instead. Whether raising the cap converts truncated episodes into successes or merely moves where
+they truncate is the actual question the re-run was submitted to answer, and it cannot be answered
+from a contaminated sample.
+
+**Operational lesson**: hosted arms and Codex worker delegations draw on the same quota pool. Running
+them concurrently makes each one's failures look like the other's. Schedule hosted evaluation arms
+and Codex workers in separate windows.
