@@ -336,6 +336,29 @@ depend on both at full pair count. A campaign that cannot complete arms 3 and 8 
 - **Arm 3 must complete before arms 4–7 start**, since they replay its trajectories.
 - Arm 3 needs no GPU (`executor: mock`, planner drives); arms 1, 2, 4–9 need a vLLM server.
 
+### 10.1 ⚠ The campaign cannot run as a single job
+
+Measured 2026-09-22, while drafting this amendment. The hosted planner authenticates through a
+ChatGPT plan whose quota window is **invisible to a batch job**: `codex exec` reports no
+`rate_limits`. When the window is exhausted, episodes fail as `codex exec exited 1` /
+`CodexExecError` at **step 0** with `planner_tokens_total: 0`, and **the PBS job still exits 0**.
+Job 25713123 wrote 57 result files, 47 of them crashed this way, and reported `rc_full=0`.
+
+Roughly 5,000 planner calls exhausted a window that day. At 12,557 registered calls, **J10 spans at
+least three windows.** Consequences for the run, none of which touch the registration:
+
+- The campaign is submitted **repeatedly**, relying on `--purge-broken` (deletes crashed results so
+  they retry) plus the runner's skip-if-`result.json`-exists behaviour. Under §8 this is
+  **resumption, not a re-read**: it only fills unwritten episodes and never overwrites a completed one.
+- **No arm may be scored from a single job's exit code.** Before any arm is analysed, its episode
+  count and `error_type` distribution are checked, and an arm is complete only at 336 non-crashed
+  pairs.
+- A cheap `mcp__codex__codex` call returns the current limit state and reset time in plain text; it is
+  the only reliable way to see the window from here, and should be checked before each submission.
+- Budget wall-clock in **days, not hours**. This does not weaken any prediction — it only means the
+  abort rule in §9 is evaluated after the campaign stops making progress across windows, not after a
+  single job ends.
+
 ---
 
 *Amendment A1 ends. J9 remains frozen and unedited.*
