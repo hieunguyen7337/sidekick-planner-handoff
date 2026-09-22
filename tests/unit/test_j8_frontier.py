@@ -1224,3 +1224,297 @@ def test_n_pairs_equals_pinned_key_set_size_on_restricted_rows(tmp_path: Path):
             assert chord["arms"][label][key]["n_pairs"] == no_n
 
 
+# ---------------------------------------------------------------------------
+# X19: scenario-clustered bootstrap + limit-exclusion sensitivity
+# ---------------------------------------------------------------------------
+
+
+def _scenario_arms(tmp_path: Path):
+    """Three tasks in one scenario; the third is a huge negative outlier.
+
+    arm 'trt' scores 1.0 on scen_a_1 / scen_a_2 and 0.0 on scen_a_3;
+    arm 'ref' scores 1.0 everywhere. The task-clustered mean diff is
+    (0 + 0 - 1) / 3 = -1/3, but the scenario-clustered resample keeps the
+    outlier welded to its neighbours, so its interval must be wider than
+    the degenerate all-or-nothing task interval.
+    """
+    ref_dir = tmp_path / "ref"
+    trt_dir = tmp_path / "trt"
+    tasks = ["scen_a_1", "scen_a_2", "scen_a_3"]
+    for seed in SEEDS:
+        for i, task_id in enumerate(tasks):
+            trt_tgc = 0.0 if i == 2 else 1.0
+            write_run(
+                trt_dir, "trt", seed, task_id, tgc=trt_tgc, n_planner_calls=2,
+                live_calls=2, goal_pass_rate=trt_tgc,
+            )
+            write_run(
+                ref_dir, "ref", seed, task_id, tgc=1.0, n_planner_calls=2,
+                live_calls=2, goal_pass_rate=1.0,
+            )
+    ref = j8.summarise_arm("ref", j10.load_arm_tree(ref_dir), list(SEEDS), root=ref_dir)
+    trt = j8.summarise_arm("trt", j10.load_arm_tree(trt_dir), list(SEEDS), root=trt_dir)
+    ref["complete_n"] = True
+    trt["complete_n"] = True
+    return trt, ref
+
+
+def test_scenario_cluster_note_explains_the_mapping():
+    text = j8.SCENARIO_CLUSTER_NOTE
+    assert "hj1_gate.py:45-46" in text
+    assert "19" in text and "57" in text
+
+
+def test_scenario_of_is_imported_not_reimplemented():
+    from scripts.setup.hj1_gate import scenario_of as direct
+
+    assert j8.scenario_of is direct
+    assert j8.scenario_of("50e1ac9_3") == "50e1ac9"
+
+
+def test_scenario_ci_present_beside_task_ci_by_default(tmp_path: Path):
+    trt, ref = _scenario_arms(tmp_path)
+    out = j8.paired_contrast(trt, ref, "tgc")
+    assert out["n_pairs"] == 6
+    assert out["n_pairs_scenario"] == 6
+    assert out["n_clusters_scenario"] == 1
+    assert out["resample_unit_scenario"] == "scenario"
+    assert out["resample_unit_for_decision"] == j10.RESAMPLE_UNIT
+    assert out["resample"] == "task"
+    assert out["diff_pp_scenario"] == out["diff_pp"]
+
+
+def test_scenario_cluster_widens_interval_on_one_cluster(tmp_path: Path):
+    trt, ref = _scenario_arms(tmp_path)
+    out = j8.paired_contrast(trt, ref, "tgc")
+    assert out["n_clusters_scenario"] == 1
+    # With one cluster the scenario resample cannot vary, so its interval
+    # collapses to the point estimate; the task interval stays wide.
+    assert out["ci95_pp_scenario"][0] == pytest.approx(out["diff_pp"], abs=1.0)
+    task_width = out["ci95_pp"][1] - out["ci95_pp"][0]
+    assert task_width > 0
+    assert out["diff_pp"] == pytest.approx(-100.0 / 3.0, abs=0.5)
+
+
+def test_scenario_primary_leaves_task_values_under_task_keys(tmp_path: Path):
+    trt, ref = _scenario_arms(tmp_path)
+    promoted = j8.paired_contrast(trt, ref, "tgc", cluster="scenario")
+    plain = j8.paired_contrast(trt, ref, "tgc")
+    assert promoted["ci95_pp"] == plain["ci95_pp_scenario"]
+    assert promoted["ci95_pp_task"] == plain["ci95_pp"]
+    assert promoted["diff_pp_task"] == plain["diff_pp"]
+    assert promoted["resample_unit_for_decision"] == "scenario"
+    assert promoted["n_pairs"] == plain["n_pairs"]
+
+
+def test_scenario_and_task_identical_when_diffs_constant(tmp_path: Path):
+    ref_dir = tmp_path / "ref"
+    trt_dir = tmp_path / "trt"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            write_run(
+                trt_dir, "trt", seed, task_id, tgc=0.5, n_planner_calls=1,
+                live_calls=1, goal_pass_rate=0.5,
+            )
+            write_run(
+                ref_dir, "ref", seed, task_id, tgc=1.0, n_planner_calls=1,
+                live_calls=1, goal_pass_rate=1.0,
+            )
+    trt = j8.summarise_arm("trt", j10.load_arm_tree(trt_dir), list(SEEDS), root=trt_dir)
+    ref = j8.summarise_arm("ref", j10.load_arm_tree(ref_dir), list(SEEDS), root=ref_dir)
+    out = j8.paired_contrast(trt, ref, "tgc")
+    assert out["ci95_pp"] == out["ci95_pp_scenario"]
+    assert out["n_clusters_scenario"] == len(TASKS)
+
+
+def test_missing_metric_never_becomes_zero_in_scenario_ci(tmp_path: Path):
+    ref_dir = tmp_path / "ref"
+    trt_dir = tmp_path / "trt"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            write_run(
+                trt_dir, "trt", seed, task_id, tgc=0.5, n_planner_calls=1,
+                live_calls=1, goal_pass_rate=0.5,
+            )
+            write_run(
+                ref_dir, "ref", seed, task_id, tgc=1.0, n_planner_calls=1,
+                live_calls=1, goal_pass_rate=1.0,
+            )
+    # trt carries no tgc on the first task: the pair must be dropped from
+    # the statistic and counted, never read as 0.
+    for seed in SEEDS:
+        path = trt_dir / "trt" / str(seed) / TASKS[0] / "result.json"
+        row = json.loads(path.read_text(encoding="utf-8"))
+        row["tgc"] = None
+        path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    trt = j8.summarise_arm("trt", j10.load_arm_tree(trt_dir), list(SEEDS), root=trt_dir)
+    ref = j8.summarise_arm("ref", j10.load_arm_tree(ref_dir), list(SEEDS), root=ref_dir)
+    # j10's cleaning rule drops the None-tgc rows from `cleaned` before any
+    # contrast is built [OBSERVED hpc 25682165.aqua: cleaned tgc has 6
+    # keys, both (scen_0_1, seed) rows gone]. They never enter either CI
+    # and are never read as 0; the drop is visible in the arm inventory.
+    assert all(
+        trt["cleaned"][k].get("tgc") is not None for k in trt["cleaned"]
+    )
+    out = j8.paired_contrast(trt, ref, "tgc")
+    assert out["n_pairs"] == 6
+    assert out["n_pairs_scenario"] == 6
+    assert out["n_pairs_dropped_missing_field_scenario"] == 0
+    assert out["ci95_pp_scenario"] == out["ci95_pp"]
+
+
+def test_noninferiority_row_reports_scenario_hold(tmp_path: Path):
+    trt, ref = _scenario_arms(tmp_path)
+    row = j8.noninferiority_row(trt, ref, "tgc", "all")
+    assert row["margin_pp"] == j8.F1_QUALITY_PP
+    assert row["holds_scenario"] is False
+    assert row["deficit_ci_upper_pp_scenario"] == pytest.approx(
+        -row["ci95_pp_scenario"][0], abs=0.2
+    )
+
+
+def test_chord_row_reports_scenario_interval(tmp_path: Path):
+    trt, ref = _scenario_arms(tmp_path)
+    floor_dir = tmp_path / "floor"
+    tasks = ["scen_a_1", "scen_a_2", "scen_a_3"]
+    for seed in SEEDS:
+        for task_id in tasks:
+            write_run(
+                floor_dir, "floor", seed, task_id, tgc=0.0, n_planner_calls=0,
+                live_calls=0, goal_pass_rate=0.0,
+            )
+    floor = j8.summarise_arm(
+        "floor", j10.load_arm_tree(floor_dir), list(SEEDS), root=floor_dir,
+    )
+    floor["complete_n"] = True
+    row = j8.chord_residual(trt, floor, ref, "tgc", "planner_calls_live", "all")
+    assert row["ci95_pp_scenario"] is not None
+    assert row["ci95_pp_task"] == row["ci95_pp"]
+    assert row["resample_unit"] == "task"
+
+
+def test_build_report_default_clusters_task_and_emits_scenario(tmp_path: Path):
+    sidekick_dir = tmp_path / "sidekick"
+    other_dir = tmp_path / "other"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            write_run(
+                sidekick_dir, "sidekick", seed, task_id, tgc=0.5,
+                n_planner_calls=2, live_calls=2, goal_pass_rate=0.5,
+            )
+            write_run(
+                other_dir, "other", seed, task_id, tgc=1.0, n_planner_calls=2,
+                live_calls=2, goal_pass_rate=1.0,
+            )
+    out = tmp_path / "report.json"
+    rc = j8.main(
+        [
+            "--arm", f"sidekick={sidekick_dir}",
+            "--arm", f"other={other_dir}",
+            "--out", str(out),
+        ]
+    )
+    assert rc == 1  # refused: fewer than 114 rows
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["cluster"] == "task"
+    assert "19" in report["cluster_note"]
+    assert report["exclude_reference_limit"] is False
+    contrast = report["contrasts"]["tgc_all_sidekick_minus_other"]
+    assert contrast["resample_unit"] == "task"
+    assert contrast["ci95_pp_scenario"] is not None
+
+
+def test_exclude_reference_limit_cli_writes_sensitivity_block(tmp_path: Path):
+    ref_dir = tmp_path / "planner"
+    trt_dir = tmp_path / "trt"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            error_type = "limit" if task_id == TASKS[0] else None
+            write_run(
+                ref_dir, "planner_alone", seed, task_id, tgc=1.0,
+                n_planner_calls=25, live_calls=25, error_type=error_type,
+                goal_pass_rate=1.0,
+            )
+            write_run(
+                trt_dir, "trt", seed, task_id, tgc=0.5, n_planner_calls=5,
+                live_calls=5, goal_pass_rate=0.5,
+            )
+    out = tmp_path / "report.json"
+    j8.main(
+        [
+            "--arm", f"trt={trt_dir}",
+            "--arm", f"planner_alone={ref_dir}",
+            "--reference-arm", "planner_alone",
+            "--exclude-reference-limit",
+            "--out", str(out),
+        ]
+    )
+    report = json.loads(out.read_text(encoding="utf-8"))
+    info = report["reference_episodes_excluded_limit"]
+    # `limit` rows are dropped from `cleaned` at load time (j10 cleaning:
+    # error_type in the broken set never reaches a contrast), so the
+    # exclusion criterion is `error_type == 'limit'` on the *loaded runs*,
+    # and n_reference_before counts loaded rows, not cleaned ones.
+    assert info["applied"] is True
+    assert info["n_reference_before"] == 6  # 8 loaded, 2 limit rows dropped
+    assert info["n_excluded"] == 0
+    assert info["n_reference_after"] == 6
+    assert info["loaded_rows"] == 8
+    assert info["loaded_error_type_limit"] == 2
+    sens = report["exclude_reference_limit_sensitivity"]
+    assert sens["noninferiority"]["diagnostic_only"] is True
+    assert sens["noninferiority"]["reference_n_after_exclusion"] == 6
+    row = sens["noninferiority"]["arms"]["trt"]["tgc_all"]
+    assert row["n_pairs"] == 6
+    assert report["noninferiority"]["arms"]["trt"]["tgc_all"]["n_pairs"] == 6
+
+
+def test_exclude_reference_limit_without_reference_arm_records_reason(
+    tmp_path: Path,
+):
+    arm_dir = tmp_path / "arms"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            write_run(
+                arm_dir, "sidekick", seed, task_id, tgc=0.5, n_planner_calls=2,
+                live_calls=2, goal_pass_rate=0.5,
+            )
+    out = tmp_path / "report.json"
+    j8.main(
+        [
+            "--arm", f"sidekick={arm_dir}",
+            "--exclude-reference-limit",
+            "--out", str(out),
+        ]
+    )
+    report = json.loads(out.read_text(encoding="utf-8"))
+    info = report["reference_episodes_excluded_limit"]
+    assert info["applied"] is False
+    assert "reference-arm" in info["reason"]
+    assert report["exclude_reference_limit_sensitivity"] is None
+
+    other_dir = tmp_path / "other"
+    for task_id in TASKS:
+        for seed in SEEDS:
+            write_run(
+                other_dir, "other", seed, task_id, tgc=1.0, n_planner_calls=2,
+                live_calls=2, goal_pass_rate=1.0,
+            )
+    rc = j8.main(
+        [
+            "--arm", f"sidekick={arm_dir}",
+            "--arm", f"other={other_dir}",
+            "--out", str(out),
+        ]
+    )
+    assert rc == 1  # refused: fewer than 114 rows
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["cluster"] == "task"
+    assert "19" in report["cluster_note"]
+    assert report["exclude_reference_limit"] is False
+    assert report["reference_episodes_excluded_limit"] is None
+    assert report["exclude_reference_limit_sensitivity"] is None
+    contrast = report["contrasts"]["tgc_all_sidekick_minus_other"]
+    assert contrast["resample_unit"] == "task"
+    assert contrast["ci95_pp_scenario"] is not None
+

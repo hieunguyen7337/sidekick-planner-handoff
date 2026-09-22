@@ -17,6 +17,7 @@ import importlib.util
 import json
 import math
 import os
+import random
 import re
 import statistics
 import sys
@@ -51,7 +52,12 @@ attach_sft_plan_source_plan_tokens = _nc.attach_sft_plan_source_plan_tokens
 noncached_episode_cost = _nc.noncached_episode_cost
 
 from scripts.setup.campaign_summarize import BROKEN  # noqa: E402
-from scripts.setup.hj1_gate import paired_diff  # noqa: E402
+from scripts.setup.hj1_gate import (  # noqa: E402
+    BOOTSTRAP,
+    paired_diff,
+    scenario_of,
+    SEED,
+)
 
 MIN_ROWS = 114
 F1_QUALITY_PP = 7.0
@@ -211,6 +217,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "using its own. The reference and floor are restricted to the "
             "same keys. An unknown name is fatal and lists the valid arms. "
             "Omit to keep per-arm keys (default, unchanged)."
+        ),
+    )
+    p.add_argument(
+        "--cluster",
+        choices=["task", "scenario"],
+        default="task",
+        help=(
+            "Bootstrap resample unit for every contrast / non-inferiority / "
+            "chord interval. 'task' (default) is the existing behaviour and "
+            "also emits a scenario-clustered interval beside it under "
+            "'*_scenario' on every row. 'scenario' makes the scenario "
+            "interval primary and keeps the task values under '*_task'."
+        ),
+    )
+    p.add_argument(
+        "--exclude-reference-limit",
+        action="store_true",
+        help=(
+            "Sensitivity analysis: drop reference-arm episodes whose "
+            "error_type == 'limit' (censored at the binding call cap), then "
+            "emit a second non-inferiority / chord block. The headline "
+            "block is never edited."
         ),
     )
     return p.parse_args(argv)
@@ -1020,6 +1048,7 @@ def paired_contrast(
     field: str,
     population: str = "all",
     handoff_keys_arm: dict[str, Any] | None = None,
+    cluster: str = "task",
 ) -> dict[str, Any]:
     """Task-clustered paired bootstrap. Delegates to j10_report / hj1_gate.
 
@@ -1031,6 +1060,12 @@ def paired_contrast(
     set (CLI --handoff-keys-from).
     population='no-handoff': the complement (handoff_occurred is False).
     Handoff subsets use all-episodes scoring (crash = 0).
+
+    cluster='task' (default) is the pre-existing behaviour: the primary
+    interval is task-clustered and a scenario-clustered interval is added
+    beside it under `*_scenario`. cluster='scenario' switches the primary
+    resample unit to the scenario and preserves the task values under
+    `*_task`.
     """
     left = arm_a["cleaned"]
     right = arm_b["cleaned"]
@@ -1086,7 +1121,148 @@ def paired_contrast(
         defining = _defining_handoff_arm(arm_a, handoff_keys_arm)
         out["defining_arm"] = defining["label"]
         out["handoff_keys_from"] = defining["label"]
+    scenario = _attach_scenario_ci(out, left, right, field)
+    if cluster == "scenario":
+        _promote_scenario_primary(out, scenario)
     return out
+
+
+SCENARIO_CLUSTER_NOTE = (
+    "The 57 dev tasks are 19 scenarios x 3 variants: AppWorld task ids are "
+    "`<scenario>_<n>`, so `50e1ac9_1`, `_2` and `_3` are one scenario "
+    "(scripts/setup/hj1_gate.py:45-46). Three variants of one scenario share "
+    "a world, a user and an app set, so their outcomes are correlated. "
+    "`*_scenario` fields bootstrap over scenarios (the cluster is "
+    "scenario_of(task_id)); unmarked / `*_task` fields bootstrap over tasks "
+    "as before. Both intervals are always reported side by side; the point "
+    "estimate is identical, only the interval moves."
+)
+
+
+def paired_diff_scenario(
+    base: dict[tuple[str, int], dict[str, Any]],
+    other: dict[tuple[str, int], dict[str, Any]],
+    field: str,
+) -> dict[str, Any]:
+    """hj1_gate.paired_diff with the resample unit promoted task -> scenario.
+
+    Same pairing, same missing-value rule (a pair with a None on either side
+    is dropped from this statistic and counted), same seed and bootstrap
+    count. Only the cluster is different: `_draw_task_clusters` groups on
+    task_id, this groups on scenario_of(task_id). scenario_of is imported,
+    not reimplemented.
+    """
+    keys = sorted(set(base) & set(other))
+    diffs: list[float] = []
+    kept: list[tuple[str, int]] = []
+    missing_field = 0
+    for k in keys:
+        b, o = base[k].get(field), other[k].get(field)
+        if b is None or o is None:
+            missing_field += 1
+            continue
+        diffs.append(float(b) - float(o))
+        kept.append(k)
+    if not diffs:
+        return {
+            "n_pairs": 0,
+            "n_tasks": 0,
+            "n_clusters": 0,
+            "mean_cluster_size": None,
+            "resample": "scenario",
+            "resample_unit": "scenario",
+            "pairs_dropped_missing_field": missing_field,
+            "diff_pp": None,
+            "ci95_pp": None,
+            "bootstrap": BOOTSTRAP,
+        }
+    point = statistics.fmean(diffs)
+    by_scenario: dict[str, list[float]] = {}
+    for key, diff in zip(kept, diffs):
+        by_scenario.setdefault(scenario_of(key[0]), []).append(diff)
+    scenarios = sorted(by_scenario)
+    rng = random.Random(SEED)
+    means: list[float] = []
+    for _ in range(BOOTSTRAP):
+        sampled = [
+            value
+            for scenario in (
+                scenarios[rng.randrange(len(scenarios))]
+                for _ in range(len(scenarios))
+            )
+            for value in by_scenario[scenario]
+        ]
+        means.append(sum(sampled) / len(sampled))
+    means.sort()
+    lo = means[int(0.025 * BOOTSTRAP)]
+    hi = means[int(0.975 * BOOTSTRAP)]
+    return {
+        "n_pairs": len(diffs),
+        "n_tasks": len({k[0] for k in keys}),
+        "n_clusters": len(scenarios),
+        "mean_cluster_size": round(len(diffs) / len(scenarios), 4),
+        "resample": "scenario",
+        "resample_unit": "scenario",
+        "pairs_dropped_missing_field": missing_field,
+        "diff_pp": round(point * 100, 2),
+        "ci95_pp": [round(lo * 100, 2), round(hi * 100, 2)],
+        "bootstrap": BOOTSTRAP,
+    }
+
+
+def _attach_scenario_ci(
+    out: dict[str, Any],
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+    field: str,
+) -> dict[str, Any]:
+    """Add the scenario-clustered interval beside the existing task one."""
+    scenario = paired_diff_scenario(left, right, field)
+    out["diff_pp_scenario"] = scenario.get("diff_pp")
+    out["ci95_pp_scenario"] = scenario.get("ci95_pp")
+    out["n_clusters_scenario"] = scenario.get("n_clusters")
+    out["n_pairs_scenario"] = scenario.get("n_pairs")
+    out["mean_cluster_size_scenario"] = scenario.get("mean_cluster_size")
+    out["resample_unit_scenario"] = "scenario"
+    out["n_pairs_dropped_missing_field_scenario"] = scenario.get(
+        "pairs_dropped_missing_field"
+    )
+    if "diff" in out:
+        out["diff_scenario"] = (
+            None
+            if scenario.get("diff_pp") is None
+            else round(scenario["diff_pp"] / 100.0, 6)
+        )
+        out["ci95_scenario"] = (
+            None
+            if scenario.get("ci95_pp") is None
+            else [round(v / 100.0, 6) for v in scenario["ci95_pp"]]
+        )
+    return scenario
+
+
+def _promote_scenario_primary(out: dict[str, Any], scenario: dict[str, Any]) -> None:
+    """Under --cluster scenario: scenario CI becomes primary, task beside."""
+    for key in ("diff_pp", "ci95_pp", "diff", "ci95"):
+        if key in out:
+            out[f"{key}_task"] = out[key]
+    if "n_clusters" in out:
+        out["n_clusters_task"] = out["n_clusters"]
+    if "mean_cluster_size" in out:
+        out["mean_cluster_size_task"] = out["mean_cluster_size"]
+    out["resample_unit_task"] = out.get("resample_unit", "task")
+    if scenario.get("diff_pp") is not None:
+        out["diff_pp"] = scenario["diff_pp"]
+        out["ci95_pp"] = scenario["ci95_pp"]
+        if "diff" in out:
+            out["diff"] = out["diff_scenario"]
+            out["ci95"] = out["ci95_scenario"]
+        out["n_clusters"] = scenario["n_clusters"]
+        out["mean_cluster_size"] = scenario["mean_cluster_size"]
+    out["resample"] = "scenario"
+    out["resample_unit"] = "scenario"
+    out["resample_unit_for_decision"] = "scenario"
+
 
 
 def choose_k_matched(
@@ -1838,10 +2014,12 @@ def noninferiority_row(
     field: str,
     population: str = "all",
     handoff_keys_arm: dict[str, Any] | None = None,
+    cluster: str = "task",
 ) -> dict[str, Any]:
     """Paired task-clustered non-inferiority vs the reference arm."""
     contrast = paired_contrast(
-        arm, reference, field, population, handoff_keys_arm=handoff_keys_arm
+        arm, reference, field, population, handoff_keys_arm=handoff_keys_arm,
+        cluster=cluster,
     )
     ci = contrast.get("ci95_pp")
     holds = None
@@ -1855,6 +2033,10 @@ def noninferiority_row(
     out["deficit_ci_upper_pp"] = deficit_upper_pp
     out["rule"] = NI_RULE
     out["primary"] = field == "goal_pass_rate"
+    ci_sc = contrast.get("ci95_pp_scenario")
+    if isinstance(ci_sc, (list, tuple)) and len(ci_sc) >= 2 and ci_sc[0] is not None:
+        out["deficit_ci_upper_pp_scenario"] = round(-float(ci_sc[0]), 6)
+        out["holds_scenario"] = bool(float(ci_sc[0]) >= -F1_QUALITY_PP)
     pop_name = out.get("population")
     if pop_name in {HANDOFF_ONLY_POPULATION, NO_HANDOFF_POPULATION}:
         occurred = pop_name == HANDOFF_ONLY_POPULATION
@@ -1869,6 +2051,7 @@ def noninferiority_block(
     arms: dict[str, dict[str, Any]],
     reference_label: str | None,
     handoff_keys_from: str | None = None,
+    cluster: str = "task",
 ) -> dict[str, Any] | None:
     pinned = resolve_handoff_keys_arm(arms, handoff_keys_from)
     if not reference_label:
@@ -1879,42 +2062,44 @@ def noninferiority_block(
             "reference_arm": reference_label,
         }
     reference = arms[reference_label]
-    if not reference.get("complete_n"):
+    if not reference.get("cleaned"):
         return {
             "error": (
                 f"--reference-arm {reference_label!r} has "
-                f"{reference.get('n')} rows (need {MIN_ROWS})"
+                f"{reference.get('n')} rows and no cleaned episodes"
             ),
             "reference_arm": reference_label,
         }
     rows: dict[str, Any] = {}
     for label, arm in arms.items():
-        if label == reference_label or not arm.get("complete_n"):
+        if label == reference_label or not arm.get("cleaned"):
             continue
         rows[label] = {
             "goal_pass_all": noninferiority_row(
-                arm, reference, "goal_pass_rate", "all", pinned
+                arm, reference, "goal_pass_rate", "all", pinned, cluster
             ),
             "goal_pass_survivors": noninferiority_row(
-                arm, reference, "goal_pass_rate", "survivors", pinned
+                arm, reference, "goal_pass_rate", "survivors", pinned, cluster
             ),
             "goal_pass_handoff_only": noninferiority_row(
-                arm, reference, "goal_pass_rate", HANDOFF_ONLY_POPULATION, pinned
+                arm, reference, "goal_pass_rate", HANDOFF_ONLY_POPULATION,
+                pinned, cluster,
             ),
             "goal_pass_no_handoff": noninferiority_row(
-                arm, reference, "goal_pass_rate", NO_HANDOFF_POPULATION, pinned
+                arm, reference, "goal_pass_rate", NO_HANDOFF_POPULATION,
+                pinned, cluster,
             ),
             "tgc_all": noninferiority_row(
-                arm, reference, "tgc", "all", pinned
+                arm, reference, "tgc", "all", pinned, cluster
             ),
             "tgc_survivors": noninferiority_row(
-                arm, reference, "tgc", "survivors", pinned
+                arm, reference, "tgc", "survivors", pinned, cluster
             ),
             "tgc_handoff_only": noninferiority_row(
-                arm, reference, "tgc", HANDOFF_ONLY_POPULATION, pinned
+                arm, reference, "tgc", HANDOFF_ONLY_POPULATION, pinned, cluster
             ),
             "tgc_no_handoff": noninferiority_row(
-                arm, reference, "tgc", NO_HANDOFF_POPULATION, pinned
+                arm, reference, "tgc", NO_HANDOFF_POPULATION, pinned, cluster
             ),
             "handoff_ease": handoff_reference_ease(arm, reference, pinned),
         }
@@ -1931,6 +2116,21 @@ def noninferiority_block(
     return out
 
 
+def _stamp_undefined_chord_cluster_fields(out: dict[str, Any]) -> None:
+    """Keep cluster keys present when the chord interval is undefined."""
+    out.setdefault("resample", "task")
+    out.setdefault("resample_unit", "task")
+    out.setdefault("ci95_pp_task", out.get("ci95_pp"))
+    out.setdefault("diff_pp_task", out.get("diff_pp"))
+    out.setdefault("ci95_task", out.get("ci95"))
+    out.setdefault("diff_task", out.get("diff"))
+    out.setdefault("ci95_pp_scenario", None)
+    out.setdefault("diff_pp_scenario", None)
+    out.setdefault("n_clusters_scenario", 0)
+    out.setdefault("n_pairs_scenario", 0)
+    out.setdefault("resample_unit_scenario", "scenario")
+
+
 def chord_residual(
     arm: dict[str, Any],
     floor: dict[str, Any],
@@ -1939,11 +2139,13 @@ def chord_residual(
     cost_key: str,
     population: str = "all",
     handoff_keys_arm: dict[str, Any] | None = None,
+    cluster: str = "task",
 ) -> dict[str, Any]:
     """Quality minus the floor-reference chord at this arm's cost fraction.
 
-    Reuses paired_diff (task-clustered). The cost fraction is a plug-in from
-    the paired mean costs so this is not a second bootstrap.
+    Reuses paired_diff (task-clustered) plus a scenario-clustered interval
+    beside it. The cost fraction is a plug-in from the paired mean costs so
+    this is not a second bootstrap.
     """
     left = dict(arm["cleaned"])
     mid = dict(floor["cleaned"])
@@ -2030,6 +2232,7 @@ def chord_residual(
         "cost_fraction": None,
         "note": "no overlapping triples with recorded quality and cost",
     }
+    _stamp_undefined_chord_cluster_fields(empty)
     if not usable:
         return empty
     c_arm = statistics.fmean(costs_arm)
@@ -2043,6 +2246,7 @@ def chord_residual(
         empty["cost_arm"] = c_arm
         empty["cost_floor"] = c_floor
         empty["cost_reference"] = c_ref
+        _stamp_undefined_chord_cluster_fields(empty)
         return empty
     fraction = (c_arm - c_floor) / denom
     residual_left: dict[tuple[str, int], dict[str, Any]] = {}
@@ -2056,6 +2260,13 @@ def chord_residual(
         residual_right[key] = {"chord_residual": 0.0}
     out = j10.native_from_paired_diff(
         paired_diff(residual_left, residual_right, "chord_residual", resample="task")
+    )
+    _attach_scenario_ci(out, residual_left, residual_right, "chord_residual")
+    _rename_task_fields_for_chord(
+        out,
+        residual_left=residual_left,
+        residual_right=residual_right,
+        promote=(cluster == "scenario"),
     )
     out["field"] = quality_field
     out["population"] = pop_name
@@ -2086,12 +2297,50 @@ def chord_residual(
     return out
 
 
+def _rename_task_fields_for_chord(
+    out: dict[str, Any],
+    residual_left: dict[tuple[str, int], dict[str, Any]] | None = None,
+    residual_right: dict[tuple[str, int], dict[str, Any]] | None = None,
+    promote: bool = False,
+) -> None:
+    """Keep the task-clustered chord interval primary and scenario beside it.
+
+    paired_diff_scenario computed the residual bootstrap over scenarios, so
+    the scenario fields are already on `out` under `*_scenario`; the
+    remaining task-style keys are the same numbers re-keyed. Renaming keeps
+    the default (task-primary) output identical to the previous release and
+    only adds `*_scenario`. Under --cluster scenario (promote=True) the
+    scenario interval becomes primary and the task values move to `*_task`.
+    """
+    for key in ("diff_pp", "ci95_pp", "diff", "ci95"):
+        if key in out:
+            out[f"{key}_task"] = out[key]
+    if "n_clusters" in out:
+        out["n_clusters_task"] = out["n_clusters"]
+    if "mean_cluster_size" in out:
+        out["mean_cluster_size_task"] = out["mean_cluster_size"]
+    out["resample_unit_task"] = out.get("resample_unit", "task")
+    if "diff_pp_scenario" not in out and residual_left and residual_right:
+        _attach_scenario_ci(out, residual_left, residual_right, "chord_residual")
+    if promote and out.get("diff_pp_scenario") is not None:
+        out["diff_pp"] = out["diff_pp_scenario"]
+        out["ci95_pp"] = out["ci95_pp_scenario"]
+        if "diff" in out:
+            out["diff"] = out["diff_scenario"]
+            out["ci95"] = out["ci95_scenario"]
+        out["n_clusters"] = out["n_clusters_scenario"]
+        out["resample"] = "scenario"
+        out["resample_unit"] = "scenario"
+        out["resample_unit_for_decision"] = "scenario"
+
+
 def chord_block(
     arms: dict[str, dict[str, Any]],
     reference_label: str | None,
     floor_label: str | None,
     cost_key: str,
     handoff_keys_from: str | None = None,
+    cluster: str = "task",
 ) -> dict[str, Any] | None:
     pinned = resolve_handoff_keys_arm(arms, handoff_keys_from)
     if not reference_label or not floor_label:
@@ -2113,23 +2362,25 @@ def chord_block(
         }
     reference = arms[reference_label]
     floor = arms[floor_label]
-    if not reference.get("complete_n") or not floor.get("complete_n"):
+    if not reference.get("cleaned") or not floor.get("cleaned"):
         return {
-            "error": "chord requires complete reference and floor arms",
+            "error": "chord requires cleaned reference and floor arms",
             "reference_arm": reference_label,
             "floor_arm": floor_label,
             "cost_key": cost_key,
         }
     rows: dict[str, Any] = {}
     for label, arm in arms.items():
-        if label in {reference_label, floor_label} or not arm.get("complete_n"):
+        if label in {reference_label, floor_label} or not arm.get("cleaned"):
             continue
         rows[label] = {
             "goal_pass_all": chord_residual(
-                arm, floor, reference, "goal_pass_rate", cost_key, "all", pinned
+                arm, floor, reference, "goal_pass_rate", cost_key, "all",
+                pinned, cluster,
             ),
             "goal_pass_survivors": chord_residual(
-                arm, floor, reference, "goal_pass_rate", cost_key, "survivors", pinned
+                arm, floor, reference, "goal_pass_rate", cost_key, "survivors",
+                pinned, cluster,
             ),
             "goal_pass_handoff_only": chord_residual(
                 arm,
@@ -2139,6 +2390,7 @@ def chord_block(
                 cost_key,
                 HANDOFF_ONLY_POPULATION,
                 pinned,
+                cluster,
             ),
             "goal_pass_no_handoff": chord_residual(
                 arm,
@@ -2148,12 +2400,14 @@ def chord_block(
                 cost_key,
                 NO_HANDOFF_POPULATION,
                 pinned,
+                cluster,
             ),
             "tgc_all": chord_residual(
-                arm, floor, reference, "tgc", cost_key, "all", pinned
+                arm, floor, reference, "tgc", cost_key, "all", pinned, cluster
             ),
             "tgc_survivors": chord_residual(
-                arm, floor, reference, "tgc", cost_key, "survivors", pinned
+                arm, floor, reference, "tgc", cost_key, "survivors", pinned,
+                cluster,
             ),
             "tgc_handoff_only": chord_residual(
                 arm,
@@ -2163,6 +2417,7 @@ def chord_block(
                 cost_key,
                 HANDOFF_ONLY_POPULATION,
                 pinned,
+                cluster,
             ),
             "tgc_no_handoff": chord_residual(
                 arm,
@@ -2172,6 +2427,7 @@ def chord_block(
                 cost_key,
                 NO_HANDOFF_POPULATION,
                 pinned,
+                cluster,
             ),
             "handoff_ease": handoff_reference_ease(arm, reference, pinned),
         }
@@ -2311,6 +2567,8 @@ def build_report(
     packet_source: Path | None = DEFAULT_SFT_PLAN_PACKET_SOURCE,
     packet_system: str = DEFAULT_SFT_PLAN_PACKET_SYSTEM,
     handoff_keys_from: str | None = None,
+    cluster: str = "task",
+    exclude_reference_limit: bool = False,
 ) -> tuple[dict[str, Any], int]:
     for directory in arm_dirs.values():
         marker = j10.heldout_marker_in_path(directory)
@@ -2365,19 +2623,23 @@ def build_report(
         headline = None
 
     complete = {k: v for k, v in arms.items() if v.get("complete_n")}
+    analysable = {k: v for k, v in arms.items() if v.get("cleaned")}
     contrasts: dict[str, Any] = {}
     disagreements: list[dict[str, Any]] = []
-    if complete:
-        for a, b in combinations(complete.keys(), 2):
-            tgc_all_c = paired_contrast(complete[a], complete[b], "tgc", "all")
+    if analysable:
+        for a, b in combinations(analysable.keys(), 2):
+            tgc_all_c = paired_contrast(
+                analysable[a], analysable[b], "tgc", "all", cluster=cluster
+            )
             tgc_surv_c = paired_contrast(
-                complete[a], complete[b], "tgc", "survivors"
+                analysable[a], analysable[b], "tgc", "survivors", cluster=cluster
             )
             gp_all_c = paired_contrast(
-                complete[a], complete[b], "goal_pass_rate", "all"
+                analysable[a], analysable[b], "goal_pass_rate", "all", cluster=cluster
             )
             gp_surv_c = paired_contrast(
-                complete[a], complete[b], "goal_pass_rate", "survivors"
+                analysable[a], analysable[b], "goal_pass_rate", "survivors",
+                cluster=cluster,
             )
             contrasts[f"tgc_all_{a}_minus_{b}"] = tgc_all_c
             contrasts[f"tgc_survivors_{a}_minus_{b}"] = tgc_surv_c
@@ -2386,7 +2648,7 @@ def build_report(
             contrasts[f"goal_pass_survivors_{a}_minus_{b}"] = gp_surv_c
             contrasts[f"goal_pass_rate_{a}_minus_{b}"] = gp_all_c
             contrasts[f"calls_live_{a}_minus_{b}"] = paired_contrast(
-                complete[a], complete[b], "planner_calls_live"
+                analysable[a], analysable[b], "planner_calls_live"
             )
             for all_c, surv_c in ((tgc_all_c, tgc_surv_c), (gp_all_c, gp_surv_c)):
                 info = population_contrast_disagreement(all_c, surv_c)
@@ -2425,10 +2687,108 @@ def build_report(
         f1_rows[label] = row
 
     h3 = h3_calibration(arms, oracle_labels)
-    ni = noninferiority_block(complete, reference_arm, handoff_keys_from)
+    ni = noninferiority_block(analysable, reference_arm, handoff_keys_from, cluster)
     chord = chord_block(
-        complete, reference_arm, floor_arm, cost_key, handoff_keys_from
+        analysable, reference_arm, floor_arm, cost_key, handoff_keys_from, cluster
     )
+
+    # --exclude-reference-limit: drop reference episodes that hit the
+    # binding call cap (error_type == 'limit'; e.g. planner_alone ran
+    # max_planner_calls: 25, configs/pilot_planner_alone.yaml:25, while
+    # later arms used 81, configs/hj8_fixed_k_3.yaml:41). The headline and
+    # the primary blocks above are untouched; this emits a second,
+    # diagnostic-only non-inferiority / chord block on the reduced
+    # reference. Never coerced to a pass: if the reduced reference has
+    # fewer rows, the block says so.
+    reference_limit_info: dict[str, Any] | None = None
+    sensitivity: dict[str, Any] | None = None
+    if exclude_reference_limit:
+        if not reference_arm or reference_arm not in arms:
+            reference_limit_info = {
+                "applied": False,
+                "reason": (
+                    f"--exclude-reference-limit needs --reference-arm; "
+                    f"got {reference_arm!r}"
+                ),
+            }
+        else:
+            ref_loaded = j10.load_arm_tree(arm_dirs[reference_arm])
+            ref_rows = arms[reference_arm]["cleaned"]
+            limited_cleaned = {
+                key
+                for key, row in ref_rows.items()
+                if row.get("error_type") == "limit"
+            }
+            loaded_runs = ref_loaded["runs"]
+            limited_loaded = {
+                key
+                for key, row in loaded_runs.items()
+                if row.get("error_type") == "limit"
+            }
+            reference_limit_info = {
+                "applied": True,
+                "reference_arm": reference_arm,
+                "criterion": (
+                    "loaded error_type == 'limit' (episode censored at the "
+                    "binding call cap); those rows are already absent from "
+                    "`cleaned`, so n_excluded counts only rows the cleaning "
+                    "step did not already drop"
+                ),
+                "loaded_rows": len(loaded_runs),
+                "loaded_error_type_limit": len(limited_loaded),
+                "n_reference_before": len(ref_rows),
+                "n_excluded": len(limited_cleaned),
+                "n_reference_after": len(ref_rows) - len(limited_cleaned),
+                "excluded_keys": sorted(
+                    f"{task_id}|{seed}"
+                    for (task_id, seed) in limited_cleaned | limited_loaded
+                ),
+            }
+            drop_keys = limited_loaded | limited_cleaned
+            reduced = dict(arms[reference_arm])
+            reduced["cleaned"] = {
+                key: row
+                for key, row in ref_rows.items()
+                if key not in drop_keys
+            }
+            reduced["n"] = len(reduced["cleaned"])
+            # Diagnostic-only: MIN_ROWS does not apply; report reduced n.
+            reduced["complete_n"] = bool(reduced["cleaned"])
+            sens_arms = {}
+            for label, arm in analysable.items():
+                copied = dict(arm)
+                copied["cleaned"] = {
+                    key: row
+                    for key, row in arm["cleaned"].items()
+                    if key not in drop_keys
+                }
+                copied["n"] = len(copied["cleaned"])
+                copied["complete_n"] = bool(copied["cleaned"])
+                sens_arms[label] = copied
+            sens_arms[reference_arm] = reduced
+            sens_ni = noninferiority_block(
+                sens_arms, reference_arm, handoff_keys_from, cluster
+            )
+            if isinstance(sens_ni, dict):
+                sens_ni["diagnostic_only"] = True
+                sens_ni["reference_n_after_exclusion"] = reduced["n"]
+            sens_chord = chord_block(
+                sens_arms, reference_arm, floor_arm, cost_key,
+                handoff_keys_from, cluster,
+            )
+            if isinstance(sens_chord, dict):
+                sens_chord["diagnostic_only"] = True
+                sens_chord["reference_n_after_exclusion"] = reduced["n"]
+            sensitivity = {
+                "note": (
+                    "Second non-inferiority / chord block on a reference "
+                    "restricted to episodes that did not hit its binding "
+                    "call cap. The headline block above is unchanged; this "
+                    "block is a sensitivity analysis only."
+                ),
+                "noninferiority": sens_ni,
+                "chord": sens_chord,
+            }
 
     report: dict[str, Any] = {
         "headline": headline,
@@ -2482,6 +2842,11 @@ def build_report(
         "noninferiority_margin_pp": F1_QUALITY_PP,
         "noninferiority": ni,
         "chord": chord,
+        "cluster": cluster,
+        "cluster_note": SCENARIO_CLUSTER_NOTE,
+        "exclude_reference_limit": bool(exclude_reference_limit),
+        "reference_episodes_excluded_limit": reference_limit_info,
+        "exclude_reference_limit_sensitivity": sensitivity,
         "headline_population": HEADLINE_POPULATION,
         "population_preamble": POPULATION_PREAMBLE,
         "population_notes": population_notes(arms),
@@ -2541,6 +2906,8 @@ def main(argv: list[str] | None = None) -> int:
         packet_source=args.packet_source,
         packet_system=args.packet_system,
         handoff_keys_from=args.handoff_keys_from,
+        cluster=args.cluster,
+        exclude_reference_limit=args.exclude_reference_limit,
     )
     if report.get("refused") and "arms" not in report:
         print(report.get("reason") or "refused")
