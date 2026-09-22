@@ -60,7 +60,7 @@ ALPHA = 0.05
 FIELD = "goal_pass_rate"
 # Every rule that reads a Holm-adjusted p asks whether a contrast is "> 0 with CI
 # excluding zero", so "the far side of zero" (Amendment 1 §1) is the share of bootstrap
-# means <= 0: j10.bootstrap_pvalue(direction="greater"), as A1 computes its P6.
+# means <= 0: j10.bootstrap_pvalue(direction="greater"), as A1 r2 §5.3 does for predictions with no reversed outcome (P3, P4).
 P_DIRECTION = "greater"
 
 ARM_ORDER = ("T", "A", "S", "N")
@@ -167,7 +167,7 @@ AMBIGUITIES: list[dict[str, str]] = [
               "means on the far side of zero' without naming a side."),
      "script_behaviour": ("Every rule that consumes the adjusted p is a '> 0' claim, so p = 2 x "
                           "share of scenario-bootstrap means <= 0 (j10.bootstrap_pvalue "
-                          "'greater', as A1 does for P6). The 2 x min-tail p is reported beside "
+                          "'greater', as A1 r2 §5.3 does for predictions with no reversed outcome). The 2 x min-tail p is reported beside "
                           "it as p_two_sided; the two coincide whenever the point estimate is "
                           "positive.")},
     {"id": "pool04_decision_bearing_bounds",
@@ -213,8 +213,9 @@ AMBIGUITIES: list[dict[str, str]] = [
                           "(j8_noncached_cost.usage_noncached_tokens); cost = totals.usd_total.")},
     {"id": "signflip_resolution",
      "what": "§3 names a scenario-cluster sign-flip p without a permutation count.",
-     "script_behaviour": ("j10.a1_permutation: 10,000 Monte Carlo sign patterns, seed 20260924, "
-                          "two-sided (19 clusters give 2^19 patterns, so it is not enumerated).")},
+     "script_behaviour": ("Amendment 3: j10.a1_permutation -> cluster_inference.registered_signflip, "
+                          "the routine A1 r2 §5.5 uses. 19 clusters give 2^19 <= 2^20 patterns, so the "
+                          "p is exact enumeration, two-sided at 0.")},
     {"id": "system_labels",
      "what": "Arms are defined by campaign names; the runner also records a system label.",
      "script_behaviour": "More than one system label inside an arm is reported as a warning, not a refusal."},
@@ -294,6 +295,8 @@ def _translate_pool04(pool: dict[str, Any], rule: str) -> dict[str, Any]:
     if "bounds_by_seed" in out:
         out["bounds_by_seed"] = [dict(row, verdict=names[row["verdict"]]) for row in out["bounds_by_seed"]]
         out["verdicts_by_seed"] = sorted({names[v] for v in out["verdicts_by_seed"]})
+    if isinstance(out.get("bound_200k"), dict):
+        out["bound_200k"] = dict(out["bound_200k"], verdict=names[out["bound_200k"]["verdict"]])
     out["on_boundary"] = bool(out["fired"] and not out.get("stable", True))
     out["status"] = "on_boundary" if out["on_boundary"] else ("stable" if out["fired"] else "not_fired")
     return out
@@ -695,7 +698,8 @@ def build_report(
             "p_value": f"j10.bootstrap_pvalue(scenario means, 0, {P_DIRECTION!r})",
             "multiplicity": {"method": "Holm step-down", "family": list(HOLM_FAMILY), "alpha": ALPHA},
             "pool04": {"window_pp": j10.POOL04_WINDOW_PP, "seeds": list(j10.POOL04_SEEDS)},
-            "signflip": "j10.a1_permutation: scenario clusters, 10,000 patterns, seed 20260924, two-sided",
+            "signflip": ("j10.a1_permutation (cluster_inference.registered_signflip): scenario clusters, "
+                         "exact over 2^G patterns when 2^G <= 2^20 (2^19 here), two-sided at 0"),
             "crash_convention": "drop only error_type == 'crash'; limit and every other error_type is scored",
         },
         "ambiguities": AMBIGUITIES,

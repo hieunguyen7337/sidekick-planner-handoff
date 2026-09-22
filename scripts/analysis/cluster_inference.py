@@ -202,6 +202,55 @@ def cluster_signflip_pvalue(
     )["p"]
 
 
+# The registered sign-flip of Amendment A1 r2 §5.5 (docs/prereg_j10_amendment_20260924.md:258-266):
+# exact when the cluster count gives <= 2**20 sign patterns, otherwise Monte Carlo over 100,000
+# patterns at seed 20260924. j10_report (every A1 prediction) and b2_decomposition (every B2
+# contrast) call this one routine, so the J10 read and the B2 decomposition cannot disagree on it.
+REGISTERED_EXACT_MAX_PATTERNS = 1 << 20
+REGISTERED_MC_PATTERNS = 100_000
+
+
+def registered_signflip(
+    diffs: Sequence[float],
+    clusters: Sequence[Hashable],
+    *,
+    threshold: float = 0.0,
+    alternative: str = "two-sided",
+    seed: int = DEFAULT_SEED,
+) -> dict[str, Any]:
+    """A1 r2 §5.5 cluster sign-flip p at ``threshold``, with its bookkeeping.
+
+    Exactly what is computed. Let d_i be episode i's paired difference, t the threshold,
+    S_g = sum over episodes i in cluster g of (d_i - t), N the number of episodes and, for a
+    sign vector s in {-1, +1}^G, T(s) = sum_g s_g S_g / N; T_obs = T(1, ..., 1), the observed
+    shifted mean. With tol = 1e-9 * max(1, sum_g |S_g| / N) (ties on discrete metrics count):
+
+        extreme(s):  'greater'   T(s) >= T_obs - tol
+                     'less'      T(s) <= T_obs + tol
+                     'two-sided' |T(s)| >= |T_obs| - tol
+
+        exact (2**G <= 2**20):  p = #{s in {-1,+1}^G : extreme(s)} / 2**G   (identity included)
+        otherwise:              p = (1 + #{b <= 100,000 : extreme(s_b)}) / (1 + 100,000),
+                                s_b drawn i.i.d. uniform from numpy default_rng(seed).
+
+    A non-inferiority prediction at margin -m (A1 P3: prefix_m11 - planner_alone_cap81 above
+    -7.00 pp) is threshold = -0.07, alternative = 'greater': H0 is a mean at the margin, and
+    evidence against it is a shifted mean that few flipped patterns reach. The enumeration is
+    signflip_details' chunked numpy product (65,536 patterns x G per chunk).
+    """
+    shifted = [float(d) - float(threshold) for d in diffs]
+    sums, _sizes, _n = _cluster_sums(shifted, clusters)
+    n_clusters = int(sums.shape[0])
+    exact = n_clusters < 63 and (1 << n_clusters) <= REGISTERED_EXACT_MAX_PATTERNS
+    n_perm = (1 << n_clusters) if exact else REGISTERED_MC_PATTERNS
+    out = signflip_details(shifted, clusters, n_perm=n_perm, seed=seed, alternative=alternative)
+    out.update(
+        threshold=float(threshold),
+        rule="A1 r2 §5.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+    )
+    return out
+
+
 def _weights(scheme: str, rng: np.random.Generator, size: tuple[int, int]) -> np.ndarray:
     if scheme == "rademacher":
         return rng.choice(np.array([-1.0, 1.0]), size=size)
@@ -268,6 +317,9 @@ def wild_cluster_bootstrap_ci(
 
 __all__ = [
     "cluster_signflip_pvalue",
+    "registered_signflip",
+    "REGISTERED_EXACT_MAX_PATTERNS",
+    "REGISTERED_MC_PATTERNS",
     "wild_cluster_bootstrap_ci",
     "signflip_details",
     "wild_cluster_draws",

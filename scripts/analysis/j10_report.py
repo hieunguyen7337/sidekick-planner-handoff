@@ -1475,7 +1475,8 @@ A1_SPLIT_N_TASKS = {"dev": 57, "test_normal": 168}
 A1_DEFAULT_SEEDS = "1,2"
 POOL04_WINDOW_PP = 1.00
 POOL04_SEEDS = (20260924, 1, 2, 3, 7, 101, 999)
-PERMUTATION_N = 10_000
+POOL04_BIG_N = 200_000  # A1:249-250, "and at 200,000 resamples at 20260924"
+POOL04_BIG_SEED = 20260924
 CLUSTER_INFERENCE_PATH = Path(__file__).resolve().parent / "cluster_inference.py"
 RAW_RESULTS_ROOT = Path("/scratch/n12194778/sidekick/results")
 
@@ -1512,6 +1513,17 @@ def _rule_negative_with_reversal(point: float, lo_above: bool, hi_below: bool) -
     return "not_supported"
 
 
+def _rule_positive_with_reversal(point: float, lo_above: bool, hi_below: bool) -> str:
+    # P1's rule mirrored for a positive prediction (P6, A1:374-378). The events it receives
+    # are P1's: the unadjusted scenario CI bound AND, inside the Holm family, the Holm-adjusted
+    # two-sided p (a1_decide_family), so "reversed" needs the same evidence as "supported".
+    if lo_above:
+        return "supported"
+    if hi_below:
+        return "reversed"
+    return "not_supported"
+
+
 def _rule_lower_bound_above(point: float, lo_above: bool, hi_below: bool) -> str:
     return "supported" if lo_above else "not_supported"
 
@@ -1537,6 +1549,15 @@ A1_RULES: dict[str, dict[str, Any]] = {
         "bounds": ("hi", "lo"),
         "direction": "two-sided",
         "text": "supported if CI hi < t; reversed if CI lo > t; else not_supported",
+    },
+    # Two-sided p, as P1's rule, so a reversal can reject too. Whenever the lower tail
+    # (means <= t) is the smaller one, 2 x min(tails) equals the 'greater' p exactly, so the
+    # change from 'greater' moves P6's p only when the effect points the wrong way.
+    "positive_excludes_zero_with_reversal": {
+        "decide": _rule_positive_with_reversal,
+        "bounds": ("lo", "hi"),
+        "direction": "two-sided",
+        "text": "supported if CI lo > t; reversed if CI hi < t; else not_supported",
     },
     "lower_bound_above_threshold": {
         "decide": _rule_lower_bound_above,
@@ -1633,6 +1654,9 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "rule": "lower_bound_above_threshold",
         "threshold_pp": -7.00,
         "holm_family": True,
+        # A1 r2 §5.5 (A1:263): the sign-flip sensitivity is one-sided at the threshold for P3
+        # only -- 'greater' on the differences shifted by +0.07 (cluster_inference.registered_signflip).
+        "permutation_alternative": "greater",
         "statement": "prefix_m11 − planner_alone_cap81 on goal_pass has CI lower bound above −7.00 pp",
         "citation": f"{A1_PREREG}:309-330",
         "dev_reference": {
@@ -1692,40 +1716,90 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "metric": "goal_pass",
         "left": "takeover_k10",
         "right": "advise_k10_fullctx",
-        "rule": "lower_bound_above_threshold",
+        # A1:374-378 registers supported / not supported / reversed, as for P1.
+        "rule": "positive_excludes_zero_with_reversal",
         "threshold_pp": 0.0,
         "holm_family": True,
         "statement": "takeover_k10 − advise_k10_fullctx on goal_pass is positive, 95% scenario CI excluding zero",
         "citation": f"{A1_PREREG}:364-381",
         "dev_reference": {
             "diff_pp": 6.69,
-            "ci95_pp_scenario": [1.29, 13.48],
-            "source": "caller brief 2026-09-23; j8_frontier at seed 20260915 gives [1.29, 13.49]",
+            # A1:370-371 (F4): 13.49 in the registered orientation; 13.48 was the reversed
+            # contrast's bound negated, one order statistic away.
+            "ci95_pp_scenario": [1.29, 13.49],
+            "source": "campaign/results/hj13_c1_matched_trigger_20260923.report.json (CHAN-C1-02), "
+                      "recomputed in the registered orientation by j8_frontier at seed 20260915",
+            "key": "contrasts.goal_pass_all_advise_fullctx_k10_minus_takeover_k10 (stored reversed)",
             "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
         },
     },
 ]
 
-# A1 §6 "Supporting contrasts, registered but not decision-bearing" [A1:412-426].
-# r2's table differs from this list; see the supporting_contrasts_differ_from_r2
-# record below. The list is left as it was: which contrasts are registered is the
-# freeze's decision, not this script's.
+# A1 §6 "Supporting contrasts, registered but not decision-bearing" [A1:412-421], one
+# row per line of r2's table, in its order and orientation. All on goal_pass, reported
+# unadjusted and outside the Holm family [A1:243]. `kind` picks the estimand:
+#   paired        left − right, paired on (task_id, seed), as every A1 contrast;
+#   did           (left[0] − left[1]) − (right[0] − right[1]) per (task_id, seed), over
+#                 the keys all four arms score;
+#   handoff_depth per receiver, target − base restricted to episodes whose TARGET-depth
+#                 episode handed off, as F-c: Σ d·h / Σ h with the whole scenario
+#                 resampled (j16_robustness.decomposition, gain_on_handoff_subset).
 A1_SUPPORTING: list[dict[str, Any]] = [
-    {"id": "S1", "left": "advise_k1_fullctx", "right": "prefix_m9",
-     "dev_reference": {"diff_pp": -9.89, "ci95_pp_scenario": [-17.79, -1.99]}},
-    {"id": "S2", "left": "advise_k10_fullctx", "right": "prefix_m11",
-     "dev_reference": {"diff_pp": -7.73, "ci95_pp_scenario": [-12.60, -3.12]}},
-    {"id": "S3", "left": "prefix_m9", "right": "prefix_m11",
-     "dev_reference": {"diff_pp": -4.92, "ci95_pp_scenario": [-10.36, 0.43]}},
-    {"id": "S4", "left": "planner_alone_cap81", "right": "prefix_zs_m11",
-     "dev_reference": {"diff_pp": -2.95, "ci95_pp_scenario": [-8.65, 1.91]}},
+    # A1:416 "| `advise_k1 − prefix_m9` | −9.89 pp | [−17.79, −1.99] | dev basis |"
+    {"id": "S1", "kind": "paired", "left": "advise_k1_fullctx", "right": "prefix_m9",
+     "citation": f"{A1_PREREG}:416",
+     "dev_reference": {"diff_pp": -9.89, "ci95_pp_scenario": [-17.79, -1.99], "source": "dev basis"}},
+    # A1:417 "| `advise_k10 − prefix_m11` | −7.73 pp | [−12.60, −3.12] | dev basis |"
+    {"id": "S2", "kind": "paired", "left": "advise_k10_fullctx", "right": "prefix_m11",
+     "citation": f"{A1_PREREG}:417",
+     "dev_reference": {"diff_pp": -7.73, "ci95_pp_scenario": [-12.60, -3.12], "source": "dev basis"}},
+    # A1:418 "| `prefix_m11 − prefix_m9` (tailored depth) | +4.25 pp (171) | [+0.15, +8.75],
+    # **on the boundary** (POOL-04) | j15 `t_depth_m9_m11` |"
+    {"id": "S3", "kind": "paired", "left": "prefix_m11", "right": "prefix_m9",
+     "label": "tailored depth", "citation": f"{A1_PREREG}:418",
+     "dev_reference": {"diff_pp": 4.25, "ci95_pp_scenario": [0.15, 8.75], "n_pairs": 171,
+                       "pool04": "on the boundary", "source": "j15 t_depth_m9_m11"}},
+    # A1:419 "| `(m11 − m9)_tailored − (m11 − m9)_untailored` (R2) | +2.81 pp (171) |
+    # [−2.57, +8.96] | POOL-03 |"
+    {"id": "S4", "kind": "did", "left": ["prefix_m11", "prefix_m9"],
+     "right": ["prefix_zs_m11", "prefix_zs_m9"], "label": "tailoring x depth (R2)",
+     "citation": f"{A1_PREREG}:419",
+     "dev_reference": {"diff_pp": 2.81, "ci95_pp_scenario": [-2.57, 8.96], "n_pairs": 171,
+                       "source": "POOL-03"}},
+    # A1:420 "| `prefix_m11 − executor_alone_bplus` (tailored floor → m11) | new arm | — | arm 1b |"
+    {"id": "S5", "kind": "paired", "left": "prefix_m11", "right": "executor_alone_bplus",
+     "label": "tailored floor -> m11", "citation": f"{A1_PREREG}:420", "dev_reference": None},
+    # A1:421 "| handoff-only depth: m9 → m11 restricted to episodes where a handoff occurs at
+    # m = 11 | reported for both receivers | — | F-c |"
+    {"id": "S6", "kind": "handoff_depth", "label": "handoff-only depth m9 -> m11",
+     "receivers": {"tailored": ["prefix_m11", "prefix_m9"],
+                   "untailored": ["prefix_zs_m11", "prefix_zs_m9"]},
+     "citation": f"{A1_PREREG}:421", "dev_reference": None},
 ]
+
+# Not in r2's supporting table, so reported as exploratory [A1:243-244]. The ceiling −
+# untailored m11 gap is the number behind the §4.1 sourcing correction [A1:179], which §7
+# item 6 reports whether or not it helps [A1:442].
+A1_EXPLORATORY: list[dict[str, Any]] = [
+    {"id": "E1", "kind": "paired", "left": "planner_alone_cap81", "right": "prefix_zs_m11",
+     "label": "ceiling − untailored m11 (sourcing correction)",
+     "citation": f"{A1_PREREG}:179",
+     "dev_reference": {"diff_pp": -2.95, "ci95_pp_scenario": [-8.65, 1.91], "n_pairs": 114}},
+]
+
+# Prefix arms and their depth m, for §7 item 4's no-handoff counts [A1:437-440].
+A1_PREFIX_ARMS: dict[str, int] = {"prefix_m9": 9, "prefix_m11": 11, "prefix_zs_m9": 9, "prefix_zs_m11": 11}
+
+# §7 item 7: "SGC ... for P1 and P6, descriptive" [A1:443].
+A1_SGC_PREDICTIONS = ("P1", "P6")
 
 # Records of where A1's text and this script had to meet. `status` is
 # "resolved_by_r2" when r2 now says what the script does (the r1 text that raised it
-# is cited at A1_PREREG_R1), and "open" when r2 says something the script does not
-# yet do -- reported, not changed, since the statistics are frozen with the text.
-# r1's `p6_arm_not_registered` is gone: r2 registers arm 10 and P6 [A1:131, 135, 364-381].
+# is cited at A1_PREREG_R1). A record whose r2 text the script did not yet implement
+# was "open" and is removed once the code implements it: P6 reversed, the P2 ratio
+# interval, the POOL-04 200k bound, the §5.5 sign-flip rule and r2's supporting table
+# all are now. r1's `p6_arm_not_registered` is gone: r2 registers arm 10 and P6
+# [A1:131, 135, 364-381].
 A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "bootstrap_seed_of_dev_references",
@@ -1807,62 +1881,6 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
             "prediction that uses it."
         ),
     },
-    {
-        "id": "p6_has_no_reversed_outcome",
-        "status": "open",
-        "citations": [f"{A1_PREREG}:374-378"],
-        "what": "r2 registers three P6 outcomes: supported, not supported, and reversed (withdrawn).",
-        "script_behaviour": (
-            "P6 uses lower_bound_above_threshold, which returns supported or not_supported; "
-            "an interval entirely below zero is reported as not_supported, never reversed."
-        ),
-    },
-    {
-        "id": "p2_ratio_interval_not_reported",
-        "status": "open",
-        "citations": [f"{A1_PREREG}:238-239", f"{A1_PREREG}:291"],
-        "what": "r2 reports P2's token ratio with its scenario-clustered interval beside the point verdict.",
-        "script_behaviour": "a1_evaluate_cost_prediction reports the point ratio and calls only; no interval.",
-    },
-    {
-        "id": "pool04_200k_bound_not_computed",
-        "status": "open",
-        "citations": [f"{A1_PREREG}:248-253"],
-        "what": (
-            "r2 §5.4 recomputes a near-threshold bound at seven seeds AND at 200,000 "
-            "resamples at 20260924, and reports the 200k bound with the seven."
-        ),
-        "script_behaviour": "a1_pool04 recomputes the seven seeds only.",
-    },
-    {
-        "id": "permutation_p_differs_from_r2",
-        "status": "open",
-        "citations": [f"{A1_PREREG}:260-263", "scripts/analysis/cluster_inference.py:137"],
-        "what": (
-            "r2 §5.5: exact if the scenario count gives <= 2^20 sign patterns, otherwise Monte "
-            "Carlo over 100,000 patterns at seed 20260924; one-sided at the threshold for P3."
-        ),
-        "script_behaviour": (
-            f"a1_permutation passes n_perm = {PERMUTATION_N} and alternative='two-sided' for "
-            "every prediction, so it enumerates exactly only up to 2^13 patterns and P3 is "
-            "two-sided. Not decision-bearing under either text."
-        ),
-    },
-    {
-        "id": "supporting_contrasts_differ_from_r2",
-        "status": "open",
-        "citations": [f"{A1_PREREG}:414-421", f"{A1_PREREG}:201-202"],
-        "what": (
-            "r2's table: advise_k1 − prefix_m9; advise_k10 − prefix_m11; prefix_m11 − prefix_m9 "
-            "(tailored depth); the tailoring x depth DiD (R2); prefix_m11 − executor_alone_bplus; "
-            "handoff-only depth for both receivers."
-        ),
-        "script_behaviour": (
-            "A1_SUPPORTING is S1 and S2 as r2, S3 = prefix_m9 − prefix_m11 (the reverse of r2's "
-            "orientation), and S4 = planner_alone_cap81 − prefix_zs_m11, which r2 does not list. "
-            "The DiD, the 1b row and handoff-only depth are not computed."
-        ),
-    },
 ]
 
 
@@ -1915,6 +1933,8 @@ def a1_arm_episodes(
                 "goal_pass_rate": optional_float(row, "goal_pass_rate"),
                 "tgc": score_tgc(row)["tgc"],
                 "error_type": row.get("error_type"),
+                # SGC's per-task pass, as hj1_gate.scenario_goal_completion reads it.
+                "success": None if row.get("success") is None else bool(row["success"]),
             }
     n_expected = len(tasks) * len(seeds)
     in_matrix = [k for k in runs if k[0] in task_set and k[1] in seed_set]
@@ -2126,10 +2146,10 @@ def _public_contrast(cmp: dict[str, Any]) -> dict[str, Any]:
 
 
 def _load_cluster_signflip():
-    """Lazy import of cluster_signflip_pvalue (owned by another unit).
+    """Lazy import of cluster_inference.registered_signflip, the A1 r2 §5.5 routine.
 
-    Contract: cluster_signflip_pvalue(diffs, clusters, *, n_perm=10000,
-    seed=20260924, alternative="two-sided") -> float. Returns None if absent.
+    Contract: registered_signflip(diffs, clusters, *, threshold, alternative, seed) ->
+    {"p", "method", "n_patterns", "n_clusters", ...}. Returns None if absent.
     """
     if not CLUSTER_INFERENCE_PATH.exists():
         return None
@@ -2138,36 +2158,415 @@ def _load_cluster_signflip():
         return None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return getattr(module, "cluster_signflip_pvalue", None)
+    return getattr(module, "registered_signflip", None)
 
 
-def a1_permutation(series: dict[str, Any], threshold: float) -> dict[str, Any]:
-    """Scenario-cluster sign-flip p for H0: effect == threshold. Not decision-bearing."""
+def a1_permutation(series: dict[str, Any], threshold: float,
+                   alternative: str = "two-sided") -> dict[str, Any]:
+    """Scenario-cluster sign-flip p at `threshold` (A1 r2 §5.5). Not decision-bearing.
+
+    Exact over all 2^G sign patterns when G <= 20, else 100,000 Monte Carlo patterns at
+    seed 20260924; two-sided unless the prediction registers one side (P3: 'greater').
+    The formula is stated in cluster_inference.registered_signflip.
+    """
     base = {
         "decision_bearing": False,
         "clusters": "scenario",
-        "null": "paired differences symmetric about the threshold",
-        "n_perm": PERMUTATION_N,
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": threshold,
         "seed": A1_BOOTSTRAP_SEED,
-        "alternative": "two-sided",
+        "alternative": alternative,
+        "rule": "A1 r2 §5.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
     }
     if not series["diffs"]:
         return {**base, "status": "no_pairs", "p_value": None}
     try:
         fn = _load_cluster_signflip()
-    except Exception as exc:  # the module is written concurrently; never fatal
+    except Exception as exc:  # never fatal: the p is reported beside the verdict, not in it
         return {**base, "status": "import_error", "error": f"{type(exc).__name__}: {exc}", "p_value": None}
     if fn is None:
         return {**base, "status": "unavailable", "p_value": None,
-                "reason": f"{CLUSTER_INFERENCE_PATH.name} or cluster_signflip_pvalue absent"}
-    shifted = [d - threshold for d in series["diffs"]]
+                "reason": f"{CLUSTER_INFERENCE_PATH.name} or registered_signflip absent"}
     clusters = _cluster_labels(series["keys"], "scenario")
     try:
-        p = fn(shifted, clusters, n_perm=PERMUTATION_N, seed=A1_BOOTSTRAP_SEED,
-               alternative="two-sided")
+        details = fn(series["diffs"], clusters, threshold=threshold, alternative=alternative,
+                     seed=A1_BOOTSTRAP_SEED)
     except Exception as exc:
         return {**base, "status": "error", "error": f"{type(exc).__name__}: {exc}", "p_value": None}
-    return {**base, "status": "ok", "p_value": None if p is None else float(p)}
+    p = details.get("p") if isinstance(details, dict) else None
+    return {
+        **base,
+        "status": "ok",
+        "p_value": None if p is None else float(p),
+        "method": details.get("method") if isinstance(details, dict) else None,
+        "n_patterns": details.get("n_patterns") if isinstance(details, dict) else None,
+        "n_clusters": details.get("n_clusters") if isinstance(details, dict) else None,
+    }
+
+
+# ---- ratio intervals, handoff facts, SGC (A1 §6 supporting, §7) ---------------
+J16_ROBUSTNESS_PATH = Path(__file__).resolve().parent / "j16_robustness.py"
+_J16_MODULE: Any = None
+
+
+def _load_j16() -> Any:
+    """Lazy import of j16_robustness, for bootstrap_multi / ratio (the F-c and F-f code).
+
+    Lazy so that a module the J10 predictions never need cannot stop them being decided;
+    the intervals built on it are information only.
+    """
+    global _J16_MODULE
+    if _J16_MODULE is None:
+        spec = importlib.util.spec_from_file_location("j16_robustness", J16_ROBUSTNESS_PATH)
+        if spec is None or spec.loader is None:
+            raise ImportError(str(J16_ROBUSTNESS_PATH))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _J16_MODULE = module
+    return _J16_MODULE
+
+
+def a1_ratio_bootstrap(
+    comps: dict[tuple[str, int], tuple[float, ...]],
+    stats: dict[str, tuple[int, int]],
+    units: tuple[str, ...],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """Cluster percentile bootstrap of Σ comps[i] / Σ comps[j], via j16_robustness.bootstrap_multi.
+
+    `stats` maps a name to its (numerator, denominator) component indices. Whole
+    clusters are resampled, so a ratio restricted to a subset (Σ d·h / Σ h) keeps the
+    clusters that contribute nothing to it -- F-c's estimand, not a mean over a subset.
+    """
+    try:
+        j16 = _load_j16()
+    except Exception as exc:  # information only: never fatal
+        return {"status": "import_error", "error": f"{type(exc).__name__}: {exc}"}
+    fns = {name: j16.ratio(i, j) for name, (i, j) in stats.items()}
+    out: dict[str, Any] = {"status": "ok", "n_boot": n_boot, "seed": seed, "n_units": len(comps)}
+    for unit in units:
+        b = j16.bootstrap_multi(comps, fns, unit, seed, n_boot)
+        out[f"n_clusters_{unit}"] = b["n_clusters"]
+        for name, st in b["stats"].items():
+            blk = out.setdefault(name, {"point": st["point"]})
+            blk[f"ci95_{unit}"] = st["ci95"]
+            blk[f"n_undefined_{unit}"] = st["n_undefined"]
+    return out
+
+
+def _as_pp(block: dict[str, Any], units: tuple[str, ...]) -> dict[str, Any]:
+    out = {"diff_pp": None if block.get("point") is None else round(block["point"] * 100, 2)}
+    for unit in units:
+        ci = block.get(f"ci95_{unit}")
+        out[f"ci95_pp_{unit}"] = None if ci is None else [round(ci[0] * 100, 2), round(ci[1] * 100, 2)]
+        out[f"n_undefined_{unit}"] = block.get(f"n_undefined_{unit}")
+    return out
+
+
+def _last_report_handoff(events_path: Path) -> Optional[bool]:
+    """handoff_occurred of the last `report` event after the last run_start, or None.
+
+    The events of the attempt that wrote result.json, read as j16_robustness
+    .events_last_attempt / episode_facts and j13_mechanism do. Kept here, not imported,
+    because §7 item 4 is reported regardless of outcome and must not depend on j16.
+    """
+    try:
+        lines = events_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    events: list[dict[str, Any]] = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(ev, dict):
+            events.append(ev)
+    start = 0
+    for i, ev in enumerate(events):
+        if ev.get("event_type") == "run_start":
+            start = i
+    flag: Optional[bool] = None
+    for ev in events[start:]:
+        payload = ev.get("payload")
+        if ev.get("event_type") == "report" and isinstance(payload, dict):
+            value = payload.get("handoff_occurred")
+            flag = None if value is None else bool(value)
+    return flag
+
+
+def a1_handoff_flags(root: Path) -> dict[tuple[str, int], Optional[bool]]:
+    """(task_id, seed) -> handoff_occurred for every result.json under a prefix arm.
+
+    The first result.json per key wins, as in load_arm_tree (a duplicate already makes
+    the arm incomplete there).
+    """
+    flags: dict[tuple[str, int], Optional[bool]] = {}
+    if not root.exists():
+        return flags
+    for path in sorted(root.rglob("result.json")):
+        row, _err = _read_result(path)
+        if row is None or row.get("task_id") is None or row.get("seed") is None:
+            continue
+        key = (str(row["task_id"]), int(row["seed"]))
+        if key not in flags:
+            flags[key] = _last_report_handoff(path.parent / "events.jsonl")
+    return flags
+
+
+def a1_no_handoff_counts(
+    arm: dict[str, Any],
+    flags: dict[tuple[str, int], Optional[bool]],
+    m: Optional[int],
+) -> dict[str, Any]:
+    """§7 item 4 [A1:437-440]: over an arm's scored episodes, how many handed off at m."""
+    values = [flags.get(k) for k in sorted(arm["episodes"])]
+    return {
+        "m": m,
+        "n_scored": len(values),
+        "n_handoff": sum(1 for v in values if v is True),
+        # "arm 3 finished within m actions": the prefix exhausted the source trajectory.
+        "n_no_handoff": sum(1 for v in values if v is False),
+        "n_flag_missing": sum(1 for v in values if v is None),
+        "citation": f"{A1_PREREG}:437-440",
+    }
+
+
+def a1_sgc_units(
+    episodes: dict[tuple[str, int], dict[str, Any]],
+    tasks: list[str],
+    seeds: list[int],
+) -> tuple[dict[tuple[str, int], float], int]:
+    """(scenario, seed) -> 1.0 if every task of the scenario passed, else 0.0 [A1:443].
+
+    A unit is scored only when all its registered tasks are scored episodes with a
+    recorded `success` (hj1_gate.scenario_goal_completion's coverage rule); a crash is
+    not an outcome under A1 (F6), so it leaves its unit unscored rather than failed.
+    Returns (units, number of registered units left unscored).
+    """
+    expected = Counter(scenario_of(t) for t in tasks)
+    groups: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for (task_id, seed), ep in episodes.items():
+        groups.setdefault((scenario_of(task_id), seed), []).append(ep)
+    units: dict[tuple[str, int], float] = {}
+    for unit, group in groups.items():
+        if len(group) < expected.get(unit[0], 0) or any(ep.get("success") is None for ep in group):
+            continue
+        units[unit] = 1.0 if all(ep["success"] for ep in group) else 0.0
+    return units, len(expected) * len(seeds) - len(units)
+
+
+def a1_sgc(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+    tasks: list[str],
+    seeds: list[int],
+) -> dict[str, Any]:
+    """SGC of both sides of a prediction on shared (scenario, seed) units. Descriptive:
+    r2 registers no interval or test for it [A1:443]."""
+    ul, dropped_l = a1_sgc_units(left, tasks, seeds)
+    ur, dropped_r = a1_sgc_units(right, tasks, seeds)
+    shared = sorted(set(ul) & set(ur))
+    sgc_l = statistics.fmean(ul[u] for u in shared) if shared else None
+    sgc_r = statistics.fmean(ur[u] for u in shared) if shared else None
+    return {
+        "descriptive": True,
+        "decision_bearing": False,
+        "unit": "(scenario, seed); passes only if every task of the scenario passes (success)",
+        "n_units_registered": len({scenario_of(t) for t in tasks}) * len(seeds),
+        "n_units_shared": len(shared),
+        "n_units_unscored_left": dropped_l,
+        "n_units_unscored_right": dropped_r,
+        "n_passed_left": int(sum(ul[u] for u in shared)),
+        "n_passed_right": int(sum(ur[u] for u in shared)),
+        "sgc_left": None if sgc_l is None else round(sgc_l, 6),
+        "sgc_right": None if sgc_r is None else round(sgc_r, 6),
+        "diff_pp": None if not shared else round((sgc_l - sgc_r) * 100, 2),
+        "n_discordant_units": sum(1 for u in shared if ul[u] != ur[u]),
+        "citation": f"{A1_PREREG}:443",
+    }
+
+
+def a1_did_series(
+    arms4: list[dict[tuple[str, int], dict[str, Any]]],
+    field: str,
+) -> dict[str, Any]:
+    """(a − b) − (c − d) per (task_id, seed), over the keys all four arms score."""
+    shared = sorted(set(arms4[0]) & set(arms4[1]) & set(arms4[2]) & set(arms4[3]))
+    keys: list[tuple[str, int]] = []
+    diffs: list[float] = []
+    missing = 0
+    for key in shared:
+        vals = [arm[key].get(field) for arm in arms4]
+        if any(v is None for v in vals):
+            missing += 1
+            continue
+        a, b, c, d = (float(v) for v in vals)
+        keys.append(key)
+        diffs.append((a - b) - (c - d))
+    return {"keys": keys, "diffs": diffs, "n_shared": len(shared), "n_dropped_missing_field": missing}
+
+
+def a1_handoff_depth(
+    target: dict[tuple[str, int], dict[str, Any]],
+    base: dict[tuple[str, int], dict[str, Any]],
+    target_flags: dict[tuple[str, int], Optional[bool]],
+    field: str,
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """target − base on the target depth's handoff episodes and on all episodes [A1:421, 439-440].
+
+    h = 1 only when the TARGET episode's report says handoff_occurred is true (F-c,
+    j16_robustness.decomposition); a missing flag counts as h = 0 and is reported.
+    """
+    comps: dict[tuple[str, int], tuple[float, ...]] = {}
+    n_missing_field = n_flag_missing = 0
+    for key in sorted(set(target) & set(base)):
+        yt, yb = target[key].get(field), base[key].get(field)
+        if yt is None or yb is None:
+            n_missing_field += 1
+            continue
+        flag = target_flags.get(key)
+        n_flag_missing += int(flag is None)
+        h = 1.0 if flag is True else 0.0
+        d = float(yt) - float(yb)
+        comps[key] = (d * h, h, d, 1.0)
+    units = ("scenario", "task")
+    boot = a1_ratio_bootstrap(comps, {"handoff_only": (0, 1), "all": (2, 3)}, units,
+                              n_boot=n_boot, seed=seed)
+    out: dict[str, Any] = {
+        "n_pairs": len(comps),
+        "n_handoff": int(sum(c[1] for c in comps.values())),
+        "n_no_handoff_or_flag_missing": int(sum(1 - c[1] for c in comps.values())),
+        "n_flag_missing": n_flag_missing,
+        "n_dropped_missing_field": n_missing_field,
+        "estimand": "Σ d·h / Σ h (handoff_only) and Σ d / n (all); d = target − base, h at the target depth",
+        "status": boot["status"],
+    }
+    if boot["status"] != "ok":
+        out["error"] = boot.get("error")
+        return out
+    out.update(n_boot=n_boot, seed=seed, n_clusters_scenario=boot["n_clusters_scenario"])
+    for name in ("handoff_only", "all"):
+        out[name] = _as_pp(boot[name], units)
+    return out
+
+
+def a1_evaluate_supporting(
+    spec: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    handoff_flags: dict[str, dict[tuple[str, int], Optional[bool]]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """One supporting or exploratory row on goal_pass (A1 §6 table). Not decision-bearing."""
+    row = dict(spec)
+    row["decision_bearing"] = False
+    kind = spec.get("kind", "paired")
+    field = A1_METRIC_FIELDS["goal_pass"]
+    if kind == "handoff_depth":
+        receivers = {}
+        for name, (target, base) in spec["receivers"].items():
+            if target not in arms or base not in arms:
+                receivers[name] = {"target": target, "base": base, "status": "arm_absent"}
+                continue
+            receivers[name] = {"target": target, "base": base} | a1_handoff_depth(
+                arms[target]["episodes"], arms[base]["episodes"], handoff_flags.get(target, {}),
+                field, n_boot=n_boot, seed=seed)
+        row["goal_pass"] = receivers
+        # The handoff point is set by arm 3's trajectory, so both receivers should agree.
+        targets = [t for t, _b in spec["receivers"].values() if t in handoff_flags]
+        if len(targets) == 2:
+            fa, fb = handoff_flags[targets[0]], handoff_flags[targets[1]]
+            row["handoff_flag_mismatch_between_receivers"] = sum(
+                1 for k in set(fa) & set(fb) if fa[k] != fb[k])
+        return row
+    if kind == "did":
+        labels = list(spec["left"]) + list(spec["right"])
+        absent = [a for a in labels if a not in arms]
+        if absent:
+            row.update(goal_pass=None, reason=f"arm absent: {absent}")
+            return row
+        series = a1_did_series([arms[a]["episodes"] for a in labels], field)
+        row["goal_pass"] = {
+            "field": field,
+            "n_pairs": len(series["diffs"]),
+            "n_shared": series["n_shared"],
+            "n_dropped_missing_field": series["n_dropped_missing_field"],
+            "scenario": _public(a1_interval(series, "scenario", n_boot=n_boot, seed=seed)),
+            "task": _public(a1_interval(series, "task", n_boot=n_boot, seed=seed)),
+        }
+        return row
+    if kind != "paired":
+        row.update(goal_pass=None, reason=f"unknown supporting kind {kind!r}")
+        return row
+    if spec["left"] in arms and spec["right"] in arms:
+        row["goal_pass"] = _public_contrast(a1_contrast(
+            arms[spec["left"]]["episodes"], arms[spec["right"]]["episodes"], field,
+            n_boot=n_boot, seed=seed))
+    else:
+        row.update(goal_pass=None, reason="arm absent")
+    return row
+
+
+def a1_cost_ratio_interval(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    field: str,
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """P2's token ratio with a scenario-clustered interval, as information [A1:238-239, 291].
+
+    The verdict stays on the arm means [A1:289]. The interval is F-f's
+    (j16_robustness.cost_contrast): Σ left / Σ right over episodes paired on
+    (task_id, seed), whole scenarios resampled, from j12_cost_axes' per-episode rows.
+    """
+    base = {"information_only": True, "decision_bearing": False, "field": field,
+            "clusters": "scenario", "estimand": "Σ left / Σ right over (task_id, seed) pairs"}
+
+    def index(rows: Any) -> Optional[dict[tuple[str, int], Any]]:
+        if not isinstance(rows, list):
+            return None
+        out: dict[tuple[str, int], Any] = {}
+        for r in rows:
+            if isinstance(r, dict) and r.get("task_id") is not None and r.get("seed") is not None:
+                out.setdefault((str(r["task_id"]), int(r["seed"])), r.get(field))
+        return out
+
+    li, ri = index(left.get("episodes")), index(right.get("episodes"))
+    if li is None or ri is None:
+        return {**base, "status": "not_computed",
+                "reason": "cost report has no per-episode rows (arms.<label>.episodes from j12_cost_axes)"}
+    comps = {k: (float(li[k]), float(ri[k])) for k in sorted(set(li) & set(ri))
+             if li[k] is not None and ri[k] is not None}
+    if not comps:
+        return {**base, "status": "no_pairs"}
+    boot = a1_ratio_bootstrap(comps, {"ratio": (0, 1)}, ("scenario",), n_boot=n_boot, seed=seed)
+    if boot["status"] != "ok":
+        return {**base, "status": boot["status"], "error": boot.get("error")}
+    st = boot["ratio"]
+    ci = st.get("ci95_scenario")
+    return {
+        **base,
+        "status": "ok",
+        "n_pairs": len(comps),
+        "n_clusters": boot["n_clusters_scenario"],
+        "n_boot": n_boot,
+        "seed": seed,
+        "point": None if st["point"] is None else round(st["point"], 4),
+        "ci95": None if ci is None else [round(ci[0], 4), round(ci[1], 4)],
+        "n_undefined": st.get("n_undefined_scenario"),
+    }
 
 
 # ---- evaluating one prediction ---------------------------------------------
@@ -2220,6 +2619,21 @@ def a1_pool04(
     out["bounds_by_seed"] = per_seed
     out["verdicts_by_seed"] = sorted({row["verdict"] for row in per_seed})
     out["stable"] = all(row["verdict"] == base_verdict for row in per_seed)
+    # A1:248-253: the fired bound is also recomputed at 200,000 resamples at 20260924 and
+    # reported with the seven. It is reported, not voted: "on the boundary" is decided by
+    # the seven seeds alone.
+    big_lo, big_hi = percentile_ci(
+        cluster_bootstrap_means(series["diffs"], _cluster_labels(series["keys"], "scenario"),
+                                n_boot=POOL04_BIG_N, seed=POOL04_BIG_SEED)
+    )
+    out["bound_200k"] = {
+        "n_boot": POOL04_BIG_N,
+        "seed": POOL04_BIG_SEED,
+        "lo_pp": round(big_lo * 100, 2),
+        "hi_pp": round(big_hi * 100, 2),
+        "verdict": rule["decide"](primary["point"], *_events(big_lo, big_hi, t)),
+        "decision_bearing": False,
+    }
     return out
 
 
@@ -2259,7 +2673,8 @@ def a1_evaluate_contrast_prediction(
     out["verdict_unadjusted"] = rule["decide"](primary["point"], lo_above, hi_below)
     out["p_value"] = bootstrap_pvalue(primary["_means"], t, rule["direction"])
     out["pool04"] = a1_pool04(pred, cmp["_series"], primary, n_boot=n_boot, seed=seed)
-    out["permutation_sensitivity"] = a1_permutation(cmp["_series"], t)
+    out["permutation_sensitivity"] = a1_permutation(
+        cmp["_series"], t, pred.get("permutation_alternative", "two-sided"))
     out["_point"], out["_lo"], out["_hi"] = primary["point"], primary["lo"], primary["hi"]
     if incomplete:
         out.update(decidable=False, verdict="refused_incomplete",
@@ -2273,6 +2688,9 @@ def a1_evaluate_cost_prediction(
     pred: dict[str, Any],
     cost_report: Optional[dict[str, Any]],
     expected_n: int,
+    *,
+    n_boot: int = A1_BOOTSTRAP_N,
+    seed: int = A1_BOOTSTRAP_SEED,
 ) -> dict[str, Any]:
     out: dict[str, Any] = {k: v for k, v in pred.items()}
     out["rule_text"] = A1_RULES[pred["rule"]]["text"]
@@ -2305,6 +2723,7 @@ def a1_evaluate_cost_prediction(
     lt, rt = float(values["left_tokens_per_episode"]), float(values["right_tokens_per_episode"])
     ratio = (lt / rt) if rt > 0 else math.inf
     out["ratio"] = None if math.isinf(ratio) else round(ratio, 4)
+    out["ratio_interval"] = a1_cost_ratio_interval(left, right, tf, n_boot=n_boot, seed=seed)
     calls_more = float(values["left_calls_per_episode"]) > float(values["right_calls_per_episode"])
     out["calls_strictly_more"] = calls_more
     verdict = "supported" if (ratio >= float(pred["min_ratio"]) and calls_more) else "not_supported"
@@ -2429,8 +2848,19 @@ def load_predictions(path: Optional[Path]) -> tuple[list[dict[str, Any]], list[d
                     raise ValueError(f"{path}: {p['id']} missing {key!r}")
         else:
             raise ValueError(f"{path}: unknown kind {p['kind']!r}")
+        if p.get("permutation_alternative", "two-sided") not in ("two-sided", "greater", "less"):
+            raise ValueError(f"{path}: {p['id']}: permutation_alternative must be two-sided, greater or less")
         p.setdefault("holm_family", False)
         p.setdefault("role", "secondary")
+    for s in support:
+        kind = s.get("kind", "paired")
+        need = {"paired": ("id", "left", "right"), "did": ("id", "left", "right"),
+                "handoff_depth": ("id", "receivers")}.get(kind)
+        if need is None:
+            raise ValueError(f"{path}: supporting {s.get('id')!r}: unknown kind {kind!r}")
+        missing = [k for k in need if k not in s]
+        if missing:
+            raise ValueError(f"{path}: supporting {s.get('id')!r} missing {missing}")
     return preds, support
 
 
@@ -2445,6 +2875,7 @@ def build_report_a1(
     cost_report: Optional[dict[str, Any]] = None,
     predictions: Optional[list[dict[str, Any]]] = None,
     supporting: Optional[list[dict[str, Any]]] = None,
+    exploratory: Optional[list[dict[str, Any]]] = None,
     n_boot: int = A1_BOOTSTRAP_N,
     bootstrap_seed: int = A1_BOOTSTRAP_SEED,
     out_path: Optional[Path] = None,
@@ -2492,7 +2923,8 @@ def build_report_a1(
     results: list[dict[str, Any]] = []
     for pred in preds:
         if pred["kind"] == "cost_ratio":
-            row = a1_evaluate_cost_prediction(pred, cost_report, expected_n_tasks * len(seeds))
+            row = a1_evaluate_cost_prediction(pred, cost_report, expected_n_tasks * len(seeds),
+                                              n_boot=n_boot, seed=bootstrap_seed)
             if blocking and row.get("decidable"):
                 row.update(decidable=False, verdict="refused_incomplete",
                            reason="the matrix itself is refused: " + "; ".join(reasons))
@@ -2504,18 +2936,27 @@ def build_report_a1(
         for key in [k for k in r if k.startswith("_")]:
             r.pop(key)
 
-    supporting_out = []
-    for s in support:
-        row = dict(s)
-        row["decision_bearing"] = False
-        if s["left"] in arms and s["right"] in arms:
-            row["goal_pass"] = _public_contrast(a1_contrast(
-                arms[s["left"]]["episodes"], arms[s["right"]]["episodes"], "goal_pass_rate",
-                n_boot=n_boot, seed=bootstrap_seed))
-        else:
-            row["goal_pass"] = None
-            row["reason"] = "arm absent"
-        supporting_out.append(row)
+    # Handoff flags for every prefix arm and every handoff_depth target that was given.
+    flag_labels = {a for a in arm_dirs if a in A1_PREFIX_ARMS} | {
+        target for s in support if s.get("kind") == "handoff_depth"
+        for target, _base in s["receivers"].values() if target in arm_dirs
+    }
+    handoff_flags = {a: a1_handoff_flags(arm_dirs[a]) for a in sorted(flag_labels)}
+    no_handoff = {a: a1_no_handoff_counts(arms[a], handoff_flags[a], A1_PREFIX_ARMS.get(a))
+                  for a in sorted(flag_labels)}
+    supporting_out = [a1_evaluate_supporting(s, arms, handoff_flags, n_boot=n_boot, seed=bootstrap_seed)
+                      for s in support]
+    exploratory_out = [
+        a1_evaluate_supporting(s, arms, handoff_flags, n_boot=n_boot, seed=bootstrap_seed)
+        | {"exploratory": True}
+        for s in (exploratory if exploratory is not None else A1_EXPLORATORY)
+    ]
+    sgc_out = {
+        p["id"]: {"left": p["left"], "right": p["right"]}
+        | a1_sgc(arms[p["left"]]["episodes"], arms[p["right"]]["episodes"], tasks, seeds)
+        for p in preds
+        if p["id"] in A1_SGC_PREDICTIONS and p["left"] in arms and p["right"] in arms
+    }
 
     decided = [r for r in results if r.get("decidable")]
     all_decided = len(decided) == len(results)
@@ -2554,7 +2995,14 @@ def build_report_a1(
             "paired_on": "(task_id, seed)",
             "algorithm": "hj1_gate._draw_task_clusters / j8_frontier.paired_diff_scenario, seed exposed",
         },
-        "stability_rule": {"id": "POOL-04", "window_pp": POOL04_WINDOW_PP, "seeds": list(POOL04_SEEDS)},
+        "stability_rule": {"id": "POOL-04", "window_pp": POOL04_WINDOW_PP, "seeds": list(POOL04_SEEDS),
+                           "reported_bound": {"n_boot": POOL04_BIG_N, "seed": POOL04_BIG_SEED}},
+        "permutation_rule": {
+            "id": "A1 §5.5", "decision_bearing": False, "clusters": "scenario",
+            "exact_max_patterns": 2 ** 20, "monte_carlo_patterns": 100_000, "seed": A1_BOOTSTRAP_SEED,
+            "one_sided": {p["id"]: p["permutation_alternative"] for p in preds
+                          if p.get("permutation_alternative", "two-sided") != "two-sided"},
+        },
         "multiplicity": multiplicity,
         "arms": {
             label_: {k: v for k, v in arm.items() if k != "episodes"} | {"split_provenance": provenance[label_]}
@@ -2563,6 +3011,11 @@ def build_report_a1(
         "predictions": results,
         "verdicts": {r["id"]: r.get("verdict") for r in results},
         "supporting_contrasts": supporting_out,
+        "exploratory_contrasts": exploratory_out,
+        # §7 item 4, second half [A1:437-440]: per prefix arm, episodes with no handoff.
+        "no_handoff_counts": no_handoff,
+        # §7 item 7 [A1:443]: SGC for P1 and P6, descriptive.
+        "sgc": sgc_out,
         "ambiguities": A1_AMBIGUITIES,
         "crash_convention": (
             "error_type == 'crash' is not an outcome (dropped, counted, arm incomplete); "

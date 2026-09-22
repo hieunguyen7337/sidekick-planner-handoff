@@ -180,3 +180,12 @@ Wave B campaign directory existed. The "routine A1 uses" in item 6 was the code 
 specifies exact enumeration up to 2^20 sign patterns, and that code is being aligned to it. B2 has 19 scenario
 clusters, i.e. 2^19 patterns, so its sign-flip p is computed by **exact enumeration**: two-sided at 0, by the same
 shared routine as A1. It remains a sensitivity and is not decision-bearing.
+
+### Erratum to Amendment 2 item 1, 2026-09-23 ~10:05 AEST (descriptive; changes no rule or computation)
+
+Appended after the first B2 show-arm episodes had begun, so it is limited to correcting a description. Amendment 2 item 1
+describes the directional p (`"greater"`) as "the form A1 uses for P6". A1 r2 §5.3 now registers P6, and P1, with a
+two-sided p, because those two predictions register a *reversed* outcome. The directional form is registered only for predictions that register
+none (P3, P4, P7's components). B2 registers no reversed outcome, so its p remains the directional form exactly as
+item 1 defines it. The parenthetical should read "the form A1 r2 uses for predictions without a reversed
+outcome".

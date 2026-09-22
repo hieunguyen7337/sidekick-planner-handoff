@@ -220,3 +220,75 @@ def test_wild_ci_index_rule_matches_repo_percentile_convention():
     lo, hi = wild_cluster_bootstrap_ci(diffs, clusters, n_boot=10_000, seed=3)
     assert lo == draws[int(0.025 * 10_000)]
     assert hi == draws[int(0.975 * 10_000)]
+
+
+# ---- registered_signflip: A1 r2 §5.5 ------------------------------------------------------
+
+
+def _brute_force_p(diffs, clusters, threshold, alternative):
+    """Every sign pattern, one at a time, in plain Python: the definition, not the numpy path."""
+    import itertools
+
+    labels = sorted(set(clusters))
+    sums = {g: sum(d - threshold for d, c in zip(diffs, clusters) if c == g) for g in labels}
+    n = len(diffs)
+    t_obs = sum(sums.values()) / n
+    hits = 0
+    total = 0
+    for signs in itertools.product((1.0, -1.0), repeat=len(labels)):
+        t = sum(s * sums[g] for s, g in zip(signs, labels)) / n
+        total += 1
+        if alternative == "greater":
+            hits += t >= t_obs - 1e-12
+        elif alternative == "less":
+            hits += t <= t_obs + 1e-12
+        else:
+            hits += abs(t) >= abs(t_obs) - 1e-12
+    return hits / total
+
+
+@pytest.mark.parametrize("alternative", ["two-sided", "greater", "less"])
+@pytest.mark.parametrize("threshold", [0.0, -0.07])
+def test_registered_exact_agrees_with_a_brute_force_loop(alternative, threshold):
+    from scripts.analysis.cluster_inference import registered_signflip
+
+    rng = random.Random(11)
+    clusters = [f"sc{g}" for g in range(9) for _ in range(rng.randint(1, 4))]
+    diffs = [rng.choice([-1.0, -0.5, 0.0, 0.25, 0.5, 1.0]) for _ in clusters]
+    got = registered_signflip(diffs, clusters, threshold=threshold, alternative=alternative)
+    assert got["method"] == "exact" and got["n_patterns"] == 2 ** 9
+    assert got["p"] == pytest.approx(_brute_force_p(diffs, clusters, threshold, alternative), abs=1e-12)
+    assert got["threshold"] == threshold and got["alternative"] == alternative
+
+
+def test_registered_is_exact_up_to_two_pow_20_and_monte_carlo_above():
+    from scripts.analysis.cluster_inference import (
+        REGISTERED_EXACT_MAX_PATTERNS, REGISTERED_MC_PATTERNS, registered_signflip)
+
+    assert (REGISTERED_EXACT_MAX_PATTERNS, REGISTERED_MC_PATTERNS) == (2 ** 20, 100_000)
+    rng = random.Random(5)
+    at_limit = [f"c{g}" for g in range(20) for _ in range(2)]
+    d20 = [rng.gauss(0.1, 1.0) for _ in at_limit]
+    exact = registered_signflip(d20, at_limit)
+    assert (exact["method"], exact["n_patterns"], exact["n_clusters"]) == ("exact", 2 ** 20, 20)
+    above = [f"c{g}" for g in range(21) for _ in range(2)]
+    d21 = [rng.gauss(0.1, 1.0) for _ in above]
+    mc = registered_signflip(d21, above)
+    assert (mc["method"], mc["n_patterns"], mc["n_clusters"]) == ("monte_carlo", 100_000, 21)
+    assert mc["seed"] == 20260924
+    assert mc == registered_signflip(d21, above)  # deterministic at the registered seed
+    # p = (1 + count) / (1 + 100,000)
+    assert mc["p"] == pytest.approx((1 + mc["n_as_extreme"]) / (1 + 100_000))
+
+
+def test_registered_one_sided_non_inferiority_direction():
+    # An arm 5 pp BELOW its ceiling is still well above a -7 pp margin: the shifted mean is
+    # +2 pp in every cluster, so only the identity pattern reaches it -> p = 1 / 2**G.
+    from scripts.analysis.cluster_inference import registered_signflip
+
+    clusters = [f"s{g}" for g in range(6) for _ in range(3)]
+    diffs = [-0.05] * len(clusters)
+    got = registered_signflip(diffs, clusters, threshold=-0.07, alternative="greater")
+    assert got["p"] == pytest.approx(1 / 2 ** 6)
+    # The same data tested at the margin in the other direction is no evidence at all.
+    assert registered_signflip(diffs, clusters, threshold=-0.07, alternative="less")["p"] == 1.0

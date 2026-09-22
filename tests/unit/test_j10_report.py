@@ -635,8 +635,11 @@ def write_a1_arm(
     tgc: float = 0.0,
     error_types: dict | None = None,
     manifest_split: str | None = "dev",
+    success=False,
+    handoff: dict | None = None,
 ) -> Path:
-    """One arm tree in runner layout. goal_pass: a float or a {(task, seed): value} map."""
+    """One arm tree in runner layout. goal_pass / success: a value or a {(task, seed): value}
+    map. handoff: {(task, seed): bool} written as the prefix arm's `report` event."""
     arm_root = root / label
     for task_id in A1_TASKS:
         for seed in A1_SEEDS:
@@ -644,12 +647,17 @@ def write_a1_arm(
             dest = arm_root / "sys" / str(seed) / task_id
             dest.mkdir(parents=True, exist_ok=True)
             gp = goal_pass[key] if isinstance(goal_pass, dict) else goal_pass
+            if handoff is not None and key in handoff:
+                events = [{"event_type": "run_start", "payload": {}},
+                          {"event_type": "report", "payload": {"handoff_occurred": handoff[key]}}]
+                (dest / "events.jsonl").write_text(
+                    "".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
             row = {
                 "run_id": f"synth/{label}/{seed}/{task_id}",
                 "task_id": task_id,
                 "system": "sys",
                 "seed": seed,
-                "success": False,
+                "success": success[key] if isinstance(success, dict) else success,
                 "tgc": tgc,
                 "goal_pass_rate": gp,
                 "steps": 5,
@@ -872,9 +880,10 @@ def test_permutation_p_is_reported_beside_the_verdict_not_decision_bearing(tmp_p
     dirs = write_a1_matrix(tmp_path)
     calls = []
 
-    def stub(diffs, clusters, *, n_perm=10000, seed=20260924, alternative="two-sided"):
-        calls.append((list(diffs), list(clusters), n_perm, seed, alternative))
-        return 0.5  # would contradict every "supported" verdict if it were decision-bearing
+    def stub(diffs, clusters, *, threshold, alternative, seed):
+        calls.append((list(diffs), list(clusters), threshold, alternative, seed))
+        # p = 0.5 would contradict every "supported" verdict if it were decision-bearing.
+        return {"p": 0.5, "method": "exact", "n_patterns": 16, "n_clusters": 4}
 
     monkeypatch.setattr(j10, "_load_cluster_signflip", lambda: stub)
     report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
@@ -883,15 +892,253 @@ def test_permutation_p_is_reported_beside_the_verdict_not_decision_bearing(tmp_p
         perm = p[pid]["permutation_sensitivity"]
         assert perm["status"] == "ok" and perm["p_value"] == 0.5
         assert perm["decision_bearing"] is False
+        assert (perm["method"], perm["n_patterns"]) == ("exact", 16)
     assert p["P1"]["verdict"] == "supported"
     assert len(calls) == 5
-    diffs, clusters, n_perm, seed, alternative = calls[1]  # P3, shifted by the −7 pp margin
-    assert diffs == pytest.approx([0.07] * 24)
+    # P3 (A1:263): one-sided at its −7 pp threshold; the routine does the shift.
+    diffs, clusters, threshold, alternative, seed = calls[1]
+    assert diffs == pytest.approx([0.0] * 24)
     assert sorted(set(clusters)) == ["sc0", "sc1", "sc2", "sc3"]
-    assert (n_perm, seed, alternative) == (10000, 20260924, "two-sided")
+    assert (threshold, alternative, seed) == (pytest.approx(-0.07), "greater", 20260924)
+    # Every other prediction is two-sided at its threshold.
+    assert {c[3] for i, c in enumerate(calls) if i != 1} == {"two-sided"}
+    assert report["permutation_rule"]["one_sided"] == {"P3": "greater"}
     monkeypatch.setattr(j10, "_load_cluster_signflip", lambda: None)
     report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
     assert by_id(report)["P1"]["permutation_sensitivity"]["status"] == "unavailable"
+
+
+def test_permutation_uses_the_registered_routine_exact_below_2_pow_20(tmp_path):
+    # 4 scenario clusters -> 16 patterns, enumerated. P3's arm − ceiling is 0 everywhere,
+    # i.e. +7 pp above its −7 pp threshold on every cluster: the 'greater' p is the one
+    # all-positive pattern of 16 that is as extreme, 1/16; P6's +25 pp two-sided p is 2/16.
+    dirs = write_a1_matrix(tmp_path)
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    p = by_id(report)
+    p3, p6 = p["P3"]["permutation_sensitivity"], p["P6"]["permutation_sensitivity"]
+    assert (p3["method"], p3["n_patterns"], p3["n_clusters"]) == ("exact", 16, 4)
+    assert p3["p_value"] == pytest.approx(1 / 16) and p3["alternative"] == "greater"
+    assert p6["p_value"] == pytest.approx(2 / 16) and p6["alternative"] == "two-sided"
+
+
+def test_p6_reversed_mirrors_p1_unadjusted_ci_and_holm_adjusted_two_sided_p():
+    rules = j10.A1_RULES
+    p1_rule, p6_rule = rules["negative_excludes_zero_with_reversal"], rules["positive_excludes_zero_with_reversal"]
+    assert p1_rule["direction"] == p6_rule["direction"] == "two-sided"
+    p6 = next(p for p in j10.A1_PREDICTIONS if p["id"] == "P6")
+    assert p6["rule"] == "positive_excludes_zero_with_reversal"
+    # A1:370-371 (F4): the registered-orientation upper bound.
+    assert p6["dev_reference"]["ci95_pp_scenario"] == [1.29, 13.49]
+
+    def family(p6_point, p6_lo, p6_hi, p6_p):
+        results = [
+            _synthetic("P1", "negative_excludes_zero_with_reversal", 0.0, 6, 2, 10, 0.004),
+            _synthetic("P6", "positive_excludes_zero_with_reversal", 0.0, p6_point, p6_lo, p6_hi, p6_p),
+        ]
+        j10.a1_decide_family(results)
+        return {r["id"]: r["verdict"] for r in results}
+
+    # Both CIs sit on the wrong side of zero, both Holm-adjusted p reject: both reversed.
+    assert family(-5, -9, -1, 0.01) == {"P1": "reversed", "P6": "reversed"}
+    # The same P6 interval with a Holm-adjusted p above 0.05 (m = 2: max(2 x 0.004, 0.06))
+    # is not reversed -- as for P1.
+    assert family(-5, -9, -1, 0.06) == {"P1": "reversed", "P6": "not_supported"}
+    assert family(5, 1, 9, 0.01)["P6"] == "supported"
+    assert family(2, -1, 5, 0.01)["P6"] == "not_supported"
+
+
+def test_p6_reversed_on_a_constructed_matrix(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path, gp={"takeover_k10": 0.25})  # 0.25 − 0.5 = −25 pp
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    row = by_id(report)["P6"]
+    assert row["contrast"]["scenario"]["ci95_pp"] == [-25.0, -25.0]
+    assert row["verdict_unadjusted"] == row["verdict"] == "reversed"
+
+
+def test_pool04_reports_the_200k_bound_only_when_it_fires(tmp_path: Path, monkeypatch):
+    dirs = write_a1_matrix(tmp_path)
+    seen = []
+
+    def fake_means(diffs, clusters, *, n_boot=10_000, seed=20260924):
+        seen.append((n_boot, seed))
+        return [-0.002 if seed == 7 else 0.005] * n_boot  # +0.50 pp, inside the 1 pp window
+
+    monkeypatch.setattr(j10, "cluster_bootstrap_means", fake_means)
+    p6 = [dict(p) for p in j10.A1_PREDICTIONS if p["id"] == "P6"]
+    report, _ = a1_report({k: dirs[k] for k in ("takeover_k10", "advise_k10_fullctx")},
+                          predictions=p6, supporting=[], exploratory=[])
+    pool = by_id(report)["P6"]["pool04"]
+    assert pool["bound_200k"] == {"n_boot": 200_000, "seed": 20260924, "lo_pp": 0.5, "hi_pp": 0.5,
+                                  "verdict": "supported", "decision_bearing": False}
+    assert (200_000, 20260924) in seen
+    # The seven seeds alone decide: seed 7 flips, so it is on the boundary whatever 200k says.
+    assert pool["stable"] is False and by_id(report)["P6"]["verdict"] == "on_boundary"
+    assert report["stability_rule"]["reported_bound"] == {"n_boot": 200_000, "seed": 20260924}
+    monkeypatch.undo()
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)  # real bootstrap: P1 is far from 0
+    assert by_id(report)["P1"]["pool04"]["fired"] is False
+    assert "bound_200k" not in by_id(report)["P1"]["pool04"]
+    assert "bound_200k" in by_id(report)["P4"]["pool04"]  # P4's lower bound sits on 0
+
+
+def test_supporting_registry_is_r2_table_verbatim():
+    lines = (REPO_ROOT / j10.A1_PREREG).read_text(encoding="utf-8").splitlines()
+    rows = {s["id"]: s for s in j10.A1_SUPPORTING}
+    assert list(rows) == ["S1", "S2", "S3", "S4", "S5", "S6"]
+    # Each row's citation points at the r2 table line that registers it, in its orientation.
+    expected = {
+        "S1": ("advise_k1_fullctx", "prefix_m9", "`advise_k1 − prefix_m9`"),
+        "S2": ("advise_k10_fullctx", "prefix_m11", "`advise_k10 − prefix_m11`"),
+        "S3": ("prefix_m11", "prefix_m9", "`prefix_m11 − prefix_m9` (tailored depth)"),
+        "S4": (["prefix_m11", "prefix_m9"], ["prefix_zs_m11", "prefix_zs_m9"],
+               "`(m11 − m9)_tailored − (m11 − m9)_untailored` (R2)"),
+        "S5": ("prefix_m11", "executor_alone_bplus", "`prefix_m11 − executor_alone_bplus`"),
+    }
+    for sid, (left, right, text) in expected.items():
+        assert (rows[sid]["left"], rows[sid]["right"]) == (left, right)
+        line_no = int(rows[sid]["citation"].rsplit(":", 1)[1])
+        assert text in lines[line_no - 1], sid
+    assert rows["S3"]["dev_reference"]["ci95_pp_scenario"] == [0.15, 8.75]
+    assert rows["S4"]["dev_reference"] == {"diff_pp": 2.81, "ci95_pp_scenario": [-2.57, 8.96],
+                                           "n_pairs": 171, "source": "POOL-03"}
+    s6 = rows["S6"]
+    assert "handoff-only depth" in lines[int(s6["citation"].rsplit(":", 1)[1]) - 1]
+    assert s6["receivers"] == {"tailored": ["prefix_m11", "prefix_m9"],
+                               "untailored": ["prefix_zs_m11", "prefix_zs_m9"]}
+    # r1's S4 (ceiling − untailored m11) is not in r2's table: exploratory, not supporting.
+    assert [(e["id"], e["left"], e["right"]) for e in j10.A1_EXPLORATORY] == [
+        ("E1", "planner_alone_cap81", "prefix_zs_m11")]
+
+
+def test_supporting_and_exploratory_contrasts_on_a_constructed_matrix(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    s = {r["id"]: r for r in report["supporting_contrasts"]}
+    # Constant dyadic values (A1_CONSTANT_GP): every interval is its point.
+    assert s["S1"]["goal_pass"]["scenario"]["ci95_pp"] == [-12.5, -12.5]  # 0.5 − 0.625
+    assert s["S2"]["goal_pass"]["scenario"]["diff_pp"] == -25.0           # 0.5 − 0.75
+    assert s["S3"]["goal_pass"]["scenario"]["diff_pp"] == 12.5            # 0.75 − 0.625
+    # DiD: (0.75 − 0.625) − (0.5 − 0.5) = +12.5 pp, both clusterings.
+    s4 = s["S4"]["goal_pass"]
+    assert (s4["n_pairs"], s4["scenario"]["ci95_pp"], s4["task"]["ci95_pp"]) == (24, [12.5, 12.5], [12.5, 12.5])
+    assert s["S5"]["goal_pass"]["scenario"]["diff_pp"] == 37.5            # 0.75 − 0.375
+    assert all(r["decision_bearing"] is False for r in s.values())
+    (e1,) = report["exploratory_contrasts"]
+    assert e1["exploratory"] is True and e1["goal_pass"]["scenario"]["diff_pp"] == 25.0
+    # No events.jsonl in this tree: every handoff flag is missing, and says so.
+    assert report["no_handoff_counts"]["prefix_m11"] == {
+        "m": 11, "n_scored": 24, "n_handoff": 0, "n_no_handoff": 0, "n_flag_missing": 24,
+        "citation": f"{j10.A1_PREREG}:437-440"}
+
+
+def test_handoff_only_depth_and_no_handoff_counts(tmp_path: Path):
+    # Scenarios sc0, sc1 hand off at m = 11; sc2, sc3 finish within m (no handoff).
+    handoff = {(t, s): t.startswith(("sc0", "sc1")) for t in A1_TASKS for s in A1_SEEDS}
+    m11 = {k: (0.875 if h else 0.75) for k, h in handoff.items()}
+    dirs = {
+        "prefix_m11": write_a1_arm(tmp_path, "prefix_m11", m11, handoff=handoff),
+        "prefix_m9": write_a1_arm(tmp_path, "prefix_m9", 0.625,
+                                  handoff={k: False for k in handoff}),
+        "prefix_zs_m11": write_a1_arm(tmp_path, "prefix_zs_m11", 0.5, handoff=handoff),
+        "prefix_zs_m9": write_a1_arm(tmp_path, "prefix_zs_m9", 0.5),
+    }
+    # An earlier attempt said "handed off"; only the last attempt's report counts.
+    ev = dirs["prefix_zs_m11"] / "sys" / "1" / "sc3_1" / "events.jsonl"
+    ev.write_text("".join(json.dumps(e) + "\n" for e in [
+        {"event_type": "run_start"}, {"event_type": "report", "payload": {"handoff_occurred": True}},
+        {"event_type": "run_start"}, {"event_type": "report", "payload": {"handoff_occurred": False}},
+    ]), encoding="utf-8")
+    report, _ = a1_report(dirs, predictions=[])
+    counts = report["no_handoff_counts"]
+    assert {a: (c["n_handoff"], c["n_no_handoff"], c["n_flag_missing"]) for a, c in counts.items()} == {
+        "prefix_m11": (12, 12, 0), "prefix_m9": (0, 24, 0),
+        "prefix_zs_m11": (12, 12, 0), "prefix_zs_m9": (0, 0, 24)}
+    s6 = next(r for r in report["supporting_contrasts"] if r["id"] == "S6")
+    tailored = s6["goal_pass"]["tailored"]
+    assert tailored["status"] == "ok" and (tailored["n_pairs"], tailored["n_handoff"]) == (24, 12)
+    # d = 0.25 on handoff episodes, 0.125 elsewhere: handoff-only +25 pp, all +18.75 pp.
+    assert tailored["handoff_only"]["diff_pp"] == 25.0
+    assert tailored["handoff_only"]["ci95_pp_scenario"] == [25.0, 25.0]
+    assert tailored["all"]["diff_pp"] == 18.75
+    assert s6["goal_pass"]["untailored"]["handoff_only"]["diff_pp"] == 0.0
+    assert s6["handoff_flag_mismatch_between_receivers"] == 0
+    # S3 over all episodes reports the same +18.75 pp: §7 item 4's "both" populations.
+    s3 = next(r for r in report["supporting_contrasts"] if r["id"] == "S3")
+    assert s3["goal_pass"]["scenario"]["diff_pp"] == 18.75
+
+
+def test_sgc_for_p1_and_p6_is_descriptive(tmp_path: Path):
+    ok = {(t, s): True for t in A1_TASKS for s in A1_SEEDS}
+    one_fail = dict(ok)
+    one_fail[("sc0_2", 1)] = False  # unit (sc0, 1) fails; the other 7 pass
+    dirs = write_a1_matrix(tmp_path)
+    dirs["prefix_m11"] = write_a1_arm(tmp_path / "x", "prefix_m11", 0.75, success=ok)
+    dirs["advise_k1_fullctx"] = write_a1_arm(tmp_path / "x", "advise_k1_fullctx", 0.5, success=one_fail)
+    # A crash leaves its unit unscored, not failed (A1 F6).
+    dirs["takeover_k10"] = write_a1_arm(tmp_path / "x", "takeover_k10", 0.75, success=ok,
+                                        error_types={("sc3_1", 2): "crash"})
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    sgc = report["sgc"]
+    assert set(sgc) == {"P1", "P6"}
+    p1 = sgc["P1"]
+    assert (p1["left"], p1["right"], p1["descriptive"], p1["decision_bearing"]) == (
+        "advise_k1_fullctx", "prefix_m11", True, False)
+    assert (p1["n_units_registered"], p1["n_units_shared"]) == (8, 8)
+    assert (p1["n_passed_left"], p1["n_passed_right"], p1["diff_pp"]) == (7, 8, -12.5)
+    p6 = sgc["P6"]
+    assert (p6["n_units_unscored_left"], p6["n_units_shared"]) == (1, 7)
+    assert (p6["sgc_left"], p6["sgc_right"]) == (1.0, 0.0)
+
+
+def test_p2_ratio_interval_is_information_only_and_is_f_f_draw_for_draw():
+    import random as _random
+
+    p2 = next(p for p in j10.A1_PREDICTIONS if p["id"] == "P2")
+    rng = _random.Random(11)
+    left_rows, right_rows = [], []
+    for task_id in A1_TASKS:
+        for seed in A1_SEEDS:
+            left_rows.append({"task_id": task_id, "seed": seed,
+                              "noncached_tokens_per_episode": 1e6 * (1 + rng.random())})
+            right_rows.append({"task_id": task_id, "seed": seed,
+                               "noncached_tokens_per_episode": 4e5 * (1 + rng.random())})
+    cost = json.loads(json.dumps(A1_COST_REPORT))
+    cost["arms"]["advise_k1_fullctx"]["episodes"] = left_rows
+    cost["arms"]["prefix_m11"]["episodes"] = right_rows
+    row = j10.a1_evaluate_cost_prediction(p2, cost, expected_n=24)
+    # The verdict stays on the arm means (A1:289), whatever the interval says.
+    assert row["verdict"] == "supported" and row["ratio"] == round(1414410.0 / 443361.0, 4)
+    iv = row["ratio_interval"]
+    assert iv["status"] == "ok" and iv["information_only"] is True and iv["decision_bearing"] is False
+    assert (iv["n_pairs"], iv["n_clusters"], iv["seed"], iv["n_boot"]) == (24, 4, 20260924, 10_000)
+    # Same numbers as j16_robustness.cost_contrast (F-f, the dev [2.47, 4.06] source).
+    j16 = j10._load_j16()
+    a = {(r["task_id"], r["seed"]): r for r in left_rows}
+    b = {(r["task_id"], r["seed"]): r for r in right_rows}
+    ff = j16.cost_contrast(a, b, "noncached_tokens_per_episode", (("scenario", 20260924),), 10_000)
+    ff_ci = ff[j16._boot_name("scenario", 20260924)]["ratio_ci95"]
+    assert iv["ci95"] == [round(ff_ci[0], 4), round(ff_ci[1], 4)]
+    assert iv["point"] == round(ff["mean_left"] / ff["mean_right"], 4)
+    # A cost report without per-episode rows still gives the point verdict.
+    bare = j10.a1_evaluate_cost_prediction(p2, A1_COST_REPORT, expected_n=24)
+    assert bare["verdict"] == "supported" and bare["ratio_interval"]["status"] == "not_computed"
+
+
+def test_no_r2_record_is_left_open():
+    # Each r2-vs-code record was removed when the code came to implement r2.
+    assert {a["status"] for a in j10.A1_AMBIGUITIES} == {"resolved_by_r2"}
+
+
+def test_load_predictions_refuses_an_unknown_permutation_side_or_supporting_kind(tmp_path: Path):
+    bad = tmp_path / "bad.json"
+    p3 = dict(next(p for p in j10.A1_PREDICTIONS if p["id"] == "P3"), permutation_alternative="upper")
+    bad.write_text(json.dumps([p3]), encoding="utf-8")
+    with pytest.raises(ValueError, match="permutation_alternative"):
+        j10.load_predictions(bad)
+    bad.write_text(json.dumps({"predictions": list(j10.A1_PREDICTIONS),
+                               "supporting": [{"id": "X", "kind": "triple"}]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="unknown kind"):
+        j10.load_predictions(bad)
 
 
 def test_a_p7_is_a_registry_entry_not_code(tmp_path: Path):

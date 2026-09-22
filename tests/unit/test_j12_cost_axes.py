@@ -179,6 +179,13 @@ def test_zero_hosted_call_arm_costs_zero_usd() -> None:
     assert summary["hosted_calls_per_episode"] == 0.0
     assert summary["diagnostics"]["n_episodes_priced"] == 2
     assert summary["diagnostics"]["n_episodes_missing_usage"] == 0
+    # Per-episode rows (j10_report's P2 ratio interval pairs on them), in key order.
+    assert summary["episodes"] == [
+        {"task_id": "task_01", "seed": 1, "noncached_tokens_per_episode": 0.0,
+         "hosted_calls_per_episode": 0.0, "usd_per_episode": 0.0},
+        {"task_id": "task_02", "seed": 1, "noncached_tokens_per_episode": 0.0,
+         "hosted_calls_per_episode": 0.0, "usd_per_episode": 0.0},
+    ]
 
 
 def test_usd_is_monotone_in_tokens_at_a_fixed_mix() -> None:

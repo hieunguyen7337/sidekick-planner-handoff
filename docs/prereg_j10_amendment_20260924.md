@@ -229,9 +229,9 @@ in the paper.
 
 - **The Holm family** is every registered `goal_pass` prediction whose *support* requires rejecting a null:
   **P1, P3, P4, P6**, plus each registered component of **P7** — at most $m = 6$.
-- Each member's p-value is the **two-sided-equivalent percentile-bootstrap p** at its threshold, from the same
-  scenario-clustered bootstrap as its interval: $2 \times$ the share of resampled means on the wrong side of
-  the threshold (`j10_report.bootstrap_pvalue`).
+- Each member's p-value is the **two-sided-equivalent percentile-bootstrap p** at its threshold, from the same scenario-clustered bootstrap as its interval (`j10_report.bootstrap_pvalue`). **P3, P4 and P7's components**, which register no reversed outcome, use $2 \times$ the share of resampled means on the wrong side of the threshold (`direction="greater"`).
+  **P1 and P6** register a *reversed* outcome, so they use $2 \times$ the smaller tail at 0 (`direction="two-sided"`). One p then serves both readings, and a reversal enters the Holm family with the same evidence standard as a confirmation.
+  The two forms are equal whenever the point estimate lies on the predicted side. They differ only for an effect that points the wrong way, and for such an effect only the two-sided form can support claiming a reversal.
 - Holm step-down is applied at family-wise $\alpha = 0.05$. An interval condition in a decision rule
   ("CI excludes zero", "lower bound above −7.00") counts as met only if the unadjusted 95% interval meets it
   **and** the Holm-adjusted p is ≤ 0.05. Both verdicts are reported.

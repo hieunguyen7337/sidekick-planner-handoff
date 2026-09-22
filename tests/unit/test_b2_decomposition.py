@@ -164,6 +164,9 @@ def test_unresolved_still_reports_every_interval(tmp_path: Path):
     for block in report["contrasts"].values():
         assert block["status"] == "COMPLETE" and block["scenario"]["ci95_pp"] and block["task"]["ci95_pp"]
         assert block["signflip"]["status"] == "ok" and block["signflip"]["p_value"] is not None
+        # Amendment 3 / A1 r2 §5.5: 19 scenario clusters -> all 2^19 patterns, two-sided at 0.
+        assert (block["signflip"]["method"], block["signflip"]["n_patterns"]) == ("exact", 2 ** 19)
+        assert block["signflip"]["alternative"] == "two-sided" and block["signflip"]["threshold"] == 0.0
     for block in report["exploratory"]["tgc_contrasts"].values():
         assert block["status"] == "COMPLETE" and block["n_pairs"] == 171
 
@@ -198,6 +201,9 @@ def test_bound_near_zero_that_flips_across_seeds_is_on_the_boundary_and_falls_th
     assert {b["seed"]: b["lo_pp"] for b in pool["bounds_by_seed"]} == {
         20260924: 0.5, 1: 0.5, 2: 0.5, 3: 0.5, 7: -0.2, 101: 0.5, 999: 0.5}
     assert pool["verdicts_by_seed"] == ["excludes_zero_positive", "includes_zero"]
+    # A1 r2 §5.4's 200k bound rides along, in B2's words; it does not vote.
+    assert (pool["bound_200k"]["n_boot"], pool["bound_200k"]["seed"]) == (200_000, 20260924)
+    assert pool["bound_200k"]["verdict"] == "excludes_zero_positive"
     # Unadjusted and Holm would both have fired "execution matters" ...
     assert d1["events"]["excludes_zero_positive_unadjusted"] is True and d1["holm_rejects"] is True
     # ... but a boundary contrast satisfies neither reading (Amendment 1 §4).
@@ -380,6 +386,11 @@ def test_pooled_loading_reproduces_published_c1_on_the_seed_1_2_campaigns():
     assert (len(tasks), cmp["n_pairs"]) == (57, 114)
     assert cmp["scenario"]["diff_pp"] == 6.69
     assert cmp["scenario"]["ci95_pp"] == [1.29, 13.49]
+    # ROB-02's exact scenario sign-flip p (0.0469, j16_inference) from the shared routine:
+    # 2^19 patterns enumerated, two-sided at 0, so the value is exact, not a draw.
+    perm = b2.j10.a1_permutation(cmp["_series"], 0.0)
+    assert (perm["method"], perm["n_patterns"]) == ("exact", 2 ** 19)
+    assert perm["p_value"] == pytest.approx(0.046875)
 
 
 def test_registered_campaigns_on_the_real_results_tree_never_crash(tmp_path: Path, monkeypatch):

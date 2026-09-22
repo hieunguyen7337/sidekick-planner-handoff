@@ -463,6 +463,19 @@ def price_arm_episodes(
             if not gpu_vals
             else "calculated from recorded gpu_seconds and local.usd_per_gpu_hour assumption"
         ),
+        # Per-episode values behind the means above. A ratio of two arms' means needs them
+        # to carry an interval (j10_report's P2, A1 r2 §5.3), and re-pricing in the reader
+        # would be a second implementation of this function.
+        "episodes": [
+            {
+                "task_id": str(key[0]),
+                "seed": int(key[1]),
+                "noncached_tokens_per_episode": row.get("noncached_tokens_per_episode"),
+                "hosted_calls_per_episode": row.get("hosted_calls_per_episode"),
+                "usd_per_episode": row.get("usd_per_episode"),
+            }
+            for key, row in sorted(cleaned.items())
+        ],
     }
 
 
