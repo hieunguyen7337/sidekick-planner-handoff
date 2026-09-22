@@ -88,11 +88,11 @@ Arm / System Configuration        Goal Pass    TGC     Non-Cached Tokens   USD /
 --------------------------------------------------------------------------------------------------
 executor_alone (granite 8B)        0.5289    0.1316                   0   $0.000000          0.00
 plan_only (sft_plan iaware)        0.7181    0.3947              23,906   $0.003015          1.00
-advise_fixed_k_10 (starved ctx)    0.6964    0.3947              43,823   $0.004386          2.42
+advise_fixed_k_10 (starved ctx)    0.6964    0.4123              43,823   $0.004386          2.42
 advise_fixed_k_10_fullctx          0.7339    0.4386              49,819   $0.005494          2.46
 takeover_fixed_k_10 (action C1)    0.8007    0.5175              41,464   $0.004820          2.32
-advise_fixed_k_3 (starved ctx)     0.7012    0.3509             204,500   $0.012203          6.82
-prefix_m6 (action prefix)          0.7237    0.4211             221,043   $0.016268          6.98
+advise_fixed_k_3 (starved ctx)     0.7012    0.4561             204,500   $0.012203          6.82
+prefix_m6 (action prefix)          0.7237    0.4298             221,043   $0.016268          6.98
 prefix_m9 (action prefix)          0.7852    0.5614             357,448   $0.022740          9.77
 prefix_m11 (action prefix)         0.8098    0.6053             443,361   $0.026475         11.25
 ceiling_cap25 (planner alone)      0.8284    0.6842             684,453   $0.035479         14.43
