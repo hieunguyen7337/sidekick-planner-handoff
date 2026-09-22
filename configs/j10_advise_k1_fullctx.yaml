@@ -1,0 +1,46 @@
+# J10 confirmatory read on test_normal, arm 8 of 9.
+# Registered in docs/prereg_j10_amendment_20260924.md §4. Derived mechanically from
+# configs/hj13_advise_fixed_k_1_fullctx.yaml; only campaign_id and the sourcing fields differ.
+#
+# ⚠ This config deliberately carries NO `split:` key. The split is a command-line
+# argument (src/sidekick/runner.py:427, default "dev") and a `split:` line here would be
+# silently ignored, running the confirmatory read on dev while every name said test.
+# See A1 §10.2. Submit only via scripts/pbs/j10_test.pbs, which passes --split test_normal.
+# [OBSERVED campaign/workers/brief_X22_tierB_configs.md:35-45]
+env: appworld
+campaign_id: j10_advise_k1_fullctx_20260924
+correct_context: full
+fixed_k: 1          # review every step; the cached up-front plan remains free
+planner:
+  type: codex
+  # LIVE on test. There is no cached packet archive for test_normal, so planner.packet_source
+  # is deliberately absent and make_planner falls through to CodexExecPlanner
+  # [OBSERVED src/sidekick/runner.py:122-123]. This arm therefore SPENDS hosted quota; the
+  # registered per-arm totals are in docs/prereg_j10_amendment_20260924.md §4.
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 81 = 2·max_steps + 1. The inherited 25 cap ended 11 of 12 `limit` episodes
+  # in HJ-1; max_steps: 40 must be the binding cap.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

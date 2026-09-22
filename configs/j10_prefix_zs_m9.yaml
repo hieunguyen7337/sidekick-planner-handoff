@@ -1,0 +1,56 @@
+# J10 confirmatory read on test_normal, arm 6 of 9.
+# Registered in docs/prereg_j10_amendment_20260924.md §4. Derived mechanically from
+# configs/hj13_prefix_zs_m9.yaml; only campaign_id and the sourcing fields differ.
+#
+# ⚠ This config deliberately carries NO `split:` key. The split is a command-line
+# argument (src/sidekick/runner.py:427, default "dev") and a `split:` line here would be
+# silently ignored, running the confirmatory read on dev while every name said test.
+# See A1 §10.2. Submit only via scripts/pbs/j10_test.pbs, which passes --split test_normal.
+env: appworld
+campaign_id: j10_prefix_zs_m9_20260924
+handoff:
+  source_campaign: /scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924
+  source_system: planner_alone
+  m: 9
+# HJ-8 Class C. luna's HJ-1 plan is replayed; granite executes it under sft_b_plus.
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays J10 arm 3 (j10_planner_alone_cap81_20260924): this arm spends zero MARGINAL hosted
+  # calls, every arm sees the identical trajectory per task+seed, and -- unlike the published dev
+  # prefix arms -- the prefix source and the ceiling are the SAME planner run, so the
+  # non-inferiority comparison is like-for-like (A1 §4.1, ledger CEIL-05).
+  packet_source: /scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924
+  packet_system: planner_alone
+  # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss
+  # must abort, not fall through to a live Codex call.
+  on_missing: fail
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: null  # Explicit no-adapter. complete() then sends model=<executor.model>. Action events: usage.model is the base id and usage.raw.lora_name is null. A dummy alias that is not in --lora-modules still hits BASE while usage.model names the alias.
+  temperature: 0.7
+  max_tokens: 2048
+  # See pilot_exec_8b.yaml: ends generation at the first action instead of paying for the
+  # model to invent the environment's reply. Never a bare "```" -- it matches the opener.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # prompt_only/sft_plan calls the planner once per episode (plan_first, planner_drives=False), so
+  # this is nowhere near binding here. It IS binding for planner_alone, where the planner
+  # takes every step -- see docs/FOLLOWUPS.md.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

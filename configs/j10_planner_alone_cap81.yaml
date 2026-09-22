@@ -1,0 +1,37 @@
+# J10 confirmatory read on test_normal, arm 3 of 9.
+# Registered in docs/prereg_j10_amendment_20260924.md §4. Derived mechanically from
+# configs/hj13_planner_alone_cap81.yaml; only campaign_id and the sourcing fields differ.
+#
+# ⚠ This config deliberately carries NO `split:` key. The split is a command-line
+# argument (src/sidekick/runner.py:427, default "dev") and a `split:` line here would be
+# silently ignored, running the confirmatory read on dev while every name said test.
+# See A1 §10.2. Submit only via scripts/pbs/j10_test.pbs, which passes --split test_normal.
+# planner_drives=True, plan_first=False: luna acts every step, the executor is never
+# constructed, so this arm needs no GPU and no vLLM server.
+#
+# The model and effort MUST be stated explicitly. ~/.codex/config.toml on this box
+# defaults to gpt-5.6-sol at xhigh; relying on the default would run a different and
+# far more expensive model and invalidate the arm.
+env: appworld
+campaign_id: j10_planner_alone_cap81_20260924
+planner:
+  type: codex
+  binary: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+executor:
+  type: mock          # never called by planner_alone; must not be vllm
+  # Required by scripts/setup/verify_configs.py for every non-exempt config; the
+  # frozen-pilot source escapes that check, so the copy inherited a gap it never
+  # had. The mock executor never generates, so this bound is inert here.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_planner_calls=25 is the real limit.
+  # 32000 made every episode die at step 2 -- each codex call resends the whole
+  # transcript on ~15.4k scaffolding, so 2 calls cost 88k input tokens.
+  per_step_timeout_s: 120
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

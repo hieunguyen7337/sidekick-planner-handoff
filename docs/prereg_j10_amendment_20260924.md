@@ -362,3 +362,37 @@ least three windows.** Consequences for the run, none of which touch the registr
 ---
 
 *Amendment A1 ends. J9 remains frozen and unedited.*
+
+### 10.2 ⚠ Correction to §10, appended 2026-09-23: the split is a CLI argument, not a config field
+
+§10 states that each registered arm "needs a config with `split: test_normal`". **That is wrong, and
+acting on it would have run the entire confirmatory campaign on the dev split while every campaign id,
+log line and report said test.**
+
+`src/sidekick/runner.py:427` declares `--split` as a command-line argument with `default="dev"`, and it
+reaches the task loader only through `run(split=args.split, ...)` at `:443`, feeding
+`appworld_task_ids(split, n)` at `:379`. No configuration file in `configs/` carries a `split:` key, and
+the runner never reads one. A `split: test_normal` line added to a YAML config is **inert**: it parses,
+it is ignored, and the campaign silently evaluates the first *n* **dev** tasks.
+
+This is the silent-zero failure class this project has hit repeatedly (`docs/claims_ledger.md`
+QUAL/GUARD/MECH rows): the run completes, exits 0, writes a full set of `result.json` files and produces
+entirely plausible numbers for a configuration nobody intended. Here it would have been worse than
+usual, because the one-read rule in §8 means the error could not simply be re-run — the registered read
+would have been spent on the wrong split.
+
+**What is registered does not change.** The split is still `test_normal`, the arm list, seeds, pair
+counts, predictions and decision rules in §§4–7 are untouched. Only the mechanism for selecting the
+split changes, and §10 was already marked as not part of the registration.
+
+**Required instead:**
+
+1. The J10 submission passes `--split test_normal` explicitly on every runner invocation, including the
+   smoke slice. A J10 config must **not** contain a `split:` key, so that no reader is misled into
+   believing the config controls it.
+2. Before any arm is analysed, the campaign is verified to have actually run on test tasks by
+   intersecting the observed `task_id` set against the dev task list: **any overlap is fatal**, because
+   the dev and test splits share no task ids. A run whose task ids are all dev ids is the exact
+   signature of this defect.
+3. The verification in (2) runs as a gate on the first arm submitted, before the remaining arms start,
+   so a mistake costs one arm rather than the campaign.

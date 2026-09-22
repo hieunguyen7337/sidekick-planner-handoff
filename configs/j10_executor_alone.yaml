@@ -1,0 +1,37 @@
+# J10 confirmatory read on test_normal, arm 1 of 9.
+# Registered in docs/prereg_j10_amendment_20260924.md §4. Derived mechanically from
+# configs/hj8_executor_alone_bplus.yaml; only campaign_id and the sourcing fields differ.
+#
+# ⚠ This config deliberately carries NO `split:` key. The split is a command-line
+# argument (src/sidekick/runner.py:427, default "dev") and a `split:` line here would be
+# silently ignored, running the confirmatory read on dev while every name said test.
+# See A1 §10.2. Submit only via scripts/pbs/j10_test.pbs, which passes --split test_normal.
+env: appworld
+campaign_id: j10_executor_alone_20260924
+planner:
+  type: mock          # never called by executor_alone; must not be codex
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: null  # A1 §4 row 1 registers the BASE receiver for this floor. Explicit no-adapter: complete() sends model=<executor.model>.
+  temperature: 0.7
+  max_tokens: 2048
+  # End generation at the close of the first action. Without this the model writes an
+  # action, invents the output it expects and reasons over the invention for the rest
+  # of the budget. Never add a bare "```": it matches the opening fence.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false   # Granite 4.2 template defaults it True and then
+    # spends the whole budget reasoning without ever emitting an action
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml
