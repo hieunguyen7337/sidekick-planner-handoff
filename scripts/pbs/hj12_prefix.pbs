@@ -468,8 +468,17 @@ PY
   [[ "${rc}" -eq 0 ]] || return 2
 }
 
-# n_runs / n_broken over <OUT>/<cid>/**/result.json. BROKEN matches
-# campaign_summarize.BROKEN [OBSERVED scripts/setup/campaign_summarize.py:33].
+# Crash convention (J10 / A1 §10.1, B2 prereg §3, LP prereg §3), the same as hj12_live.pbs:
+# the only episode a resubmission may refill is one whose result.json says
+# error_type == "crash", or one whose result.json is unreadable. timeout / parse_error /
+# limit / api_error are SCORED outcomes of the arm. Through 2026-09-23 this file counted
+# them as "broken" and ran --purge-broken, so every resubmission deleted and re-ran exactly
+# the failed episodes: a second roll at the failures only, which biases the arm upward.
+
+# n_runs / n_crashed over <OUT>/<cid>/**/result.json. n_crashed is the set
+# campaign_summarize.purge_crashed deletes: error_type == "crash", or a result.json
+# that is empty, not JSON, or not an object
+# [OBSERVED scripts/setup/campaign_summarize.py:255-287].
 campaign_stats () {
   local cid="$1"
   timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
@@ -478,34 +487,42 @@ import sys
 from pathlib import Path
 
 root = Path(sys.argv[1]) / sys.argv[2]
-broken = {"api_error", "timeout", "crash", "parse_error"}
 n = 0
-nb = 0
+nc = 0
 if root.is_dir():
     for path in root.rglob("result.json"):
         n += 1
         try:
-            data = json.loads(path.read_text(encoding="utf-8") or "{}")
-        except (OSError, json.JSONDecodeError):
-            nb += 1
-            continue
-        if (data.get("error_type") or "") in broken:
-            nb += 1
-print(f"{n} {nb}")
+            text = path.read_text(encoding="utf-8").strip()
+            data = json.loads(text) if text else None
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            data = None
+        if not isinstance(data, dict) or data.get("error_type") == "crash":
+            nc += 1
+print(f"{n} {nc}")
 PY
 }
 
 arm_is_complete () {
   local cid="$1"
-  local n_runs n_broken stats
+  local n_runs n_crashed stats
   if [[ ! -f "${OUT}/results/${cid}/manifest.json" ]]; then
     return 1
   fi
   stats="$(campaign_stats "${cid}" || true)"
-  read -r n_runs n_broken <<<"${stats:-0 0}"
+  read -r n_runs n_crashed <<<"${stats:-0 0}"
   n_runs="${n_runs:-0}"
-  n_broken="${n_broken:-0}"
-  [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_broken}" -eq 0 ]]
+  n_crashed="${n_crashed:-0}"
+  [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_crashed}" -eq 0 ]]
+}
+
+# Delete ONLY what campaign_stats counts as n_crashed (plus result-less attempt dirs),
+# so the runner refills it. --purge-broken is the wrong tool on this path: it also
+# deletes timeout / parse_error / api_error, which are scored (see above).
+hj12_purge_crashed () {
+  local cid="$1"
+  echo "[hj12] ---- purge crashed runs from earlier attempts (timeout/parse_error/limit/api_error are scored and kept) ----"
+  timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-crashed-only 2>/dev/null | head -2
 }
 
 LORA_MODULES=()
@@ -874,6 +891,20 @@ hj12_run_guard_selftest () {
       hj12_require_complete_sources || exit 2
       echo "[hj12] selftest: source_check passed (${#SELECTED_ARMS[@]} selected arms)"
       ;;
+    resume_purge)
+      # The resume path on a constructed tree, through the same helpers run_arm calls:
+      # arm_is_complete before the purge, the crash-only purge, then the recount. Needs a
+      # manifest under ${GUARD_OUT}/results/<cid>/ for "complete" to be reachable at all.
+      OUT="${GUARD_OUT:?}"
+      N_PLANNED="${GUARD_N_PLANNED:?}"
+      local rp_cid="${GUARD_CID:?}" rp_before=0 rp_after=0 rp_stats rp_n rp_nc
+      if arm_is_complete "${rp_cid}"; then rp_before=1; fi
+      hj12_purge_crashed "${rp_cid}"
+      rp_stats="$(campaign_stats "${rp_cid}" || true)"
+      read -r rp_n rp_nc <<<"${rp_stats:-0 0}"
+      if arm_is_complete "${rp_cid}"; then rp_after=1; fi
+      echo "[hj12] selftest: resume_purge cid=${rp_cid} complete_before=${rp_before} n_runs=${rp_n} n_crashed=${rp_nc} n_planned=${N_PLANNED} complete_after=${rp_after}"
+      ;;
     *)
       echo "[hj12] FATAL: unknown GUARD_CASE=${GUARD_CASE}"
       exit 2
@@ -892,7 +923,7 @@ hj12_require_complete_sources || exit 2
 
 # Smoke-then-full-then-summarise for one arm. Args: system, config, campaign_id.
 # SMOKE_ONLY=1 returns after smoke+gate (scid is still removed). Does not
-# --purge-broken or write a manifest on the real cid, so a later full run
+# purge or write a manifest on the real cid, so a later full run
 # still sees n_runs=0 and will smoke itself; an existing campaign is left
 # intact. An arm that already has result.json still skips smoke.
 # prefix_handoff must not pass --expect-planner: live planner calls must be
@@ -909,7 +940,7 @@ run_arm () {
   local camp_rc=0
   local sum_rc=0
   local n_runs=0
-  local n_broken=0
+  local n_crashed=0
   local stats=""
   local gate_cmd=(--gate)
   if [[ -n "${SYSTEM:-}" ]]; then
@@ -925,28 +956,29 @@ run_arm () {
 
   echo "[hj12] ---- arm ${cid} system=${system} ----"
   if arm_is_complete "${cid}"; then
-    echo "[hj12] resume: ${cid} already complete (${N_PLANNED} result.json, 0 broken, manifest present); skipped"
+    echo "[hj12] resume: ${cid} already complete (${N_PLANNED} result.json, 0 crashed, manifest present); skipped"
     return 0
   fi
 
   if [[ "${SMOKE_ONLY}" == "1" ]]; then
     echo "[hj12] smoke_only: not purging ${cid} (will not touch a real campaign tree)"
   else
-    echo "[hj12] ---- purge broken runs from earlier attempts ----"
-    timeout 120 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -2
+    hj12_purge_crashed "${cid}"
   fi
 
+  # Same predicate as arm_is_complete, minus the manifest: scored timeout /
+  # parse_error episodes count toward n_runs and never toward n_crashed.
   stats="$(campaign_stats "${cid}" || true)"
-  read -r n_runs n_broken <<<"${stats:-0 0}"
+  read -r n_runs n_crashed <<<"${stats:-0 0}"
   n_runs="${n_runs:-0}"
-  n_broken="${n_broken:-0}"
-  echo "[hj12] resume: ${cid} n_runs=${n_runs} n_broken=${n_broken} n_planned=${N_PLANNED}"
-  if [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_broken}" -eq 0 ]]; then
+  n_crashed="${n_crashed:-0}"
+  echo "[hj12] resume: ${cid} n_runs=${n_runs} n_crashed=${n_crashed} n_planned=${N_PLANNED}"
+  if [[ "${n_runs}" -eq "${N_PLANNED}" && "${n_crashed}" -eq 0 ]]; then
     if [[ "${SMOKE_ONLY}" == "1" ]]; then
-      echo "[hj12] smoke_only: ${cid} has a full clean tree; smoke skipped; not writing manifest"
+      echo "[hj12] smoke_only: ${cid} has a full tree with 0 crashed; smoke skipped; not writing manifest"
       return 0
     fi
-    echo "[hj12] resume: ${cid} has a full clean tree; writing missing manifest"
+    echo "[hj12] resume: ${cid} has a full tree with 0 crashed; writing missing manifest"
     timeout 300 "${PY}" "${SUM}" \
       --out "${OUT}" --campaign-id "${cid}" \
       --config "${cfg}" \

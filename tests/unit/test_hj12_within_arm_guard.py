@@ -45,7 +45,9 @@ def _write_run(root: Path, *, system: str, task_id: str, live_calls: int, steps:
         )
 
 
-def _run_case(case: str, out_root: Path, cid: str, extra: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _run_case(
+    case: str, out_root: Path, cid: str, extra: dict[str, str] | None = None, script: Path = PBS
+) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["HJ12_GUARD_SELFTEST"] = "1"
     env["GUARD_CASE"] = case
@@ -58,7 +60,7 @@ def _run_case(case: str, out_root: Path, cid: str, extra: dict[str, str] | None 
     if extra:
         env.update(extra)
     return subprocess.run(
-        ["timeout", "60", "bash", str(PBS)],
+        ["timeout", "60", "bash", str(script)],
         cwd=str(REPO),
         env=env,
         text=True,
@@ -212,7 +214,7 @@ def test_exception_smoke_warns_without_marker(tmp_path):
     assert "takeover_smoke_exception_uninformative reached" in out
 
 
-# ---- hj12_live.pbs resume: refill ONLY crashed episodes (#56) --------------------------------------
+# ---- hj12_live.pbs and hj12_prefix.pbs resume: refill ONLY crashed episodes (#56) ----------------
 # timeout / parse_error are scored outcomes (B2 prereg §3, A1 r2): a resubmission that deleted and
 # re-ran them would reroll the arm's failures. Only error_type == "crash" (or an unreadable
 # result.json) may be purged, and an arm with 0 crashes is complete whatever else it scored.
@@ -236,20 +238,24 @@ def _campaign_manifest(out_root: Path, cid: str) -> None:
     (dest / "manifest.json").write_text("{}\n", encoding="utf-8")
 
 
-def _run_resume_purge(out_root: Path, cid: str) -> str:
-    proc = _run_case("resume_purge", out_root, cid, extra={"GUARD_N_PLANNED": str(RESUME_PLANNED)})
+RESUME_SCRIPTS = pytest.mark.parametrize("script", [PBS, PREFIX_PBS], ids=["live", "prefix"])
+
+
+def _run_resume_purge(out_root: Path, cid: str, script: Path) -> str:
+    proc = _run_case("resume_purge", out_root, cid, extra={"GUARD_N_PLANNED": str(RESUME_PLANNED)}, script=script)
     out = proc.stdout + proc.stderr
     assert proc.returncode == 0, out
     return out
 
 
-def test_resume_purges_exactly_the_crashed_episode_and_arm_is_not_complete(tmp_path):
+@RESUME_SCRIPTS
+def test_resume_purges_exactly_the_crashed_episode_and_arm_is_not_complete(tmp_path, script):
     cid = "resume_crash"
     root = tmp_path / cid
     kept = [_episode(root, f"t{i}", None) for i in range(3)]
     crashed = _episode(root, "t3", "crash")
     _campaign_manifest(tmp_path, cid)
-    out = _run_resume_purge(tmp_path, cid)
+    out = _run_resume_purge(tmp_path, cid, script)
     assert (
         f"[purge-crashed-only] campaign={cid} removed crash=1 unreadable_result=0 no_result=0 kept=3"
     ) in out, out
@@ -261,7 +267,8 @@ def test_resume_purges_exactly_the_crashed_episode_and_arm_is_not_complete(tmp_p
     assert all((d / "result.json").is_file() for d in kept), out
 
 
-def test_resume_keeps_scored_parse_error_and_timeout_and_arm_is_complete(tmp_path):
+@RESUME_SCRIPTS
+def test_resume_keeps_scored_parse_error_and_timeout_and_arm_is_complete(tmp_path, script):
     cid = "resume_scored"
     root = tmp_path / cid
     eps = [
@@ -272,7 +279,7 @@ def test_resume_keeps_scored_parse_error_and_timeout_and_arm_is_complete(tmp_pat
     ]
     before = {p: p.read_bytes() for d in eps for p in sorted(d.iterdir())}
     _campaign_manifest(tmp_path, cid)
-    out = _run_resume_purge(tmp_path, cid)
+    out = _run_resume_purge(tmp_path, cid, script)
     assert (
         f"[purge-crashed-only] campaign={cid} removed crash=0 unreadable_result=0 no_result=0 kept=4"
     ) in out, out
@@ -286,7 +293,8 @@ def test_resume_keeps_scored_parse_error_and_timeout_and_arm_is_complete(tmp_pat
     assert after == before, out
 
 
-def test_resume_counts_an_empty_result_json_as_needing_a_refill(tmp_path):
+@RESUME_SCRIPTS
+def test_resume_counts_an_empty_result_json_as_needing_a_refill(tmp_path, script):
     # A write killed mid-flight: the runner only checks that result.json exists, so left alone
     # this episode would never be re-run and the arm would be "complete" with a hole in it.
     cid = "resume_empty"
@@ -294,13 +302,23 @@ def test_resume_counts_an_empty_result_json_as_needing_a_refill(tmp_path):
     kept = [_episode(root, f"t{i}", None) for i in range(3)]
     empty = _episode(root, "t3", None, body="")
     _campaign_manifest(tmp_path, cid)
-    out = _run_resume_purge(tmp_path, cid)
+    out = _run_resume_purge(tmp_path, cid, script)
     assert (
         f"[hj12] selftest: resume_purge cid={cid} complete_before=0 n_runs=3 n_crashed=0 "
         f"n_planned={RESUME_PLANNED} complete_after=0"
     ) in out, out
     assert not empty.exists(), out
     assert all((d / "result.json").is_file() for d in kept), out
+
+
+@pytest.mark.parametrize(
+    "script", [PBS, PREFIX_PBS, REPO / "scripts/pbs/lp_live.pbs"], ids=["live", "prefix", "lp_live"]
+)
+def test_no_command_line_purges_scored_episodes(script):
+    # The scripts the pending LP / B2 arms run through may name --purge-broken only in comments.
+    code = [ln for ln in script.read_text(encoding="utf-8").splitlines() if not ln.lstrip().startswith("#")]
+    assert not [ln for ln in code if "--purge-broken" in ln], script
+    assert any("--purge-crashed-only" in ln for ln in code), script
 
 
 # ---- hj12_prefix.pbs: every selected prefix_handoff arm's replay source must be complete ----------
