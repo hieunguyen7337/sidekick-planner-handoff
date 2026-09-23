@@ -32,8 +32,13 @@ class PriceSchedule:
           (output + reasoning_output) at `output` — reasoning tokens are billed as output.
         - vllm: gpu_seconds/3600 * usd_per_gpu_hour, no token cost.
         - mock: 0.0.
+        - cache: 0.0. A replayed archived packet bought nothing; its `model` names the
+          SOURCE planner, which may be a local model absent from the hosted schedule
+          (an LP arm replaying a Qwen ceiling's packet). Before this branch, cache
+          records fell through to the codex lookup: $0 for a luna packet (zero tokens),
+          UnknownModelError for a local one.
         """
-        if usage.provider == "mock":
+        if usage.provider in ("mock", "cache"):
             return 0.0
         if usage.provider == "vllm":
             return usage.gpu_seconds / 3600.0 * self.usd_per_gpu_hour

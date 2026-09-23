@@ -96,6 +96,31 @@ def test_mock_is_free(prices):
     assert prices.cost_usd(u) == 0.0
 
 
+def test_cache_is_free_for_a_local_source_model(prices):
+    # An LP arm replays a Qwen ceiling's plan packet: provider "cache", model = the SOURCE
+    # planner, which is not in the hosted schedule. It bought nothing, so it costs nothing,
+    # and it must not raise (it crashed every LP-1 channel smoke episode at step 0).
+    u = Usage(model="Qwen/Qwen3-8B", provider="cache")
+    assert prices.cost_usd(u) == 0.0
+
+
+def test_cache_of_a_hosted_packet_is_still_zero(prices):
+    # Unchanged for every existing replay arm: a luna cache record was $0 before (zero tokens).
+    assert prices.cost_usd(Usage(model="gpt-5.6-luna", provider="cache")) == 0.0
+
+
+def test_unknown_hosted_model_still_raises_when_bought(prices):
+    # The guard still bites where money is spent.
+    with pytest.raises(UnknownModelError):
+        prices.cost_usd(Usage(model="Qwen/Qwen3-8B", provider="codex", input_tokens=1))
+
+
+def test_ledger_accepts_a_cached_local_packet(prices):
+    ledger = CostLedger(prices)
+    ledger.add("planner", Usage(model="Qwen/Qwen3-8B", provider="cache"))
+    assert ledger.totals()["usd_total"] == 0.0
+
+
 def test_zero_usage_is_zero(prices):
     assert prices.cost_usd(luna()) == 0.0
 
