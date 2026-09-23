@@ -153,7 +153,13 @@ def summarise(out_root: Path, campaign_id: str) -> dict:
     }
 
 
-def gate(summary: dict, *, expect_planner: bool, expect_model: str | None) -> list[str]:
+def gate(
+    summary: dict,
+    *,
+    expect_planner: bool,
+    expect_model: str | None,
+    allow_live_planner: bool = False,
+) -> list[str]:
     fails = []
     if summary["n_runs"] == 0:
         fails.append("no result.json files were written at all")
@@ -187,6 +193,16 @@ def gate(summary: dict, *, expect_planner: bool, expect_model: str | None) -> li
                 fails.append(f"planner ran as {wrong}, expected only {expect_model!r}")
             if not models:
                 fails.append("no planner model id was recorded on any usage record")
+    elif allow_live_planner:
+        # prefix_handoff with its planner SERVED (scripts/pbs/lp_live.pbs): the system honours
+        # executor asks, so a stuck executor's ask is answered live and live > 0 is part of the
+        # arm, while most episodes make no live call at all. Neither count is required. The model
+        # check reads the planner-attributed usage records that exist -- vacuous at zero live
+        # calls, and a mock fallback or a wrong server fails it as soon as one ask is answered.
+        if expect_model:
+            wrong = [m for m in models if m != expect_model]
+            if wrong:
+                fails.append(f"planner ran as {wrong}, expected only {expect_model!r}")
     else:
         # prefix_handoff: live==0 with replay-inclusive>0 is the normal correct state, not a leak.
         live = int(summary.get("planner_calls_live_total") or 0)
@@ -418,6 +434,10 @@ def main(argv: list[str] | None = None) -> int:
                             "are scored outcomes and are kept.")
     p.add_argument("--expect-planner", action="store_true")
     p.add_argument("--expect-model")
+    p.add_argument("--allow-live-planner", action="store_true",
+                   help="without --expect-planner: live planner calls are part of the arm "
+                        "(prefix_handoff with its planner served), so do not require zero; "
+                        "--expect-model then checks every planner model id recorded")
     p.add_argument("--expect-split",
                    help="A1 §10.2: fail unless every task id matches this split "
                         "(dev ids for 'dev'; zero overlap with dev ids otherwise)")
@@ -454,7 +474,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[manifest] wrote {dest}")
 
     if a.gate:
-        fails = gate(s, expect_planner=a.expect_planner, expect_model=a.expect_model)
+        fails = gate(
+            s,
+            expect_planner=a.expect_planner,
+            expect_model=a.expect_model,
+            allow_live_planner=a.allow_live_planner,
+        )
         if fails:
             print("[gate] FAIL")
             for f in fails:

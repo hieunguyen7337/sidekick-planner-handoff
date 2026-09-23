@@ -139,6 +139,42 @@ def test_free_arm_live_spend_fails_with_both_counts():
     assert "models={}" in msg
 
 
+@pytest.mark.parametrize(
+    "models, live",
+    [({}, 0), ({"Qwen/Qwen3-8B": 10}, 10)],
+    ids=["zero_live_calls", "ten_answered_asks"],
+)
+def test_served_prefix_arm_passes_with_or_without_live_calls(models, live):
+    # scripts/pbs/lp_live.pbs prefix arms: prefix_handoff honours executor asks and the planner
+    # is served, so neither zero live calls nor a handful may fail the arm.
+    fails = cs.gate(
+        _summary(models, planner_calls=806, planner_calls_live_total=live),
+        expect_planner=False,
+        expect_model="Qwen/Qwen3-8B",
+        allow_live_planner=True,
+    )
+    assert fails == []
+
+
+def test_served_prefix_arm_still_fails_on_a_wrong_model():
+    fails = cs.gate(
+        _summary({"Qwen/Qwen3-8B": 3, "mock-planner": 1}, planner_calls=806, planner_calls_live_total=4),
+        expect_planner=False,
+        expect_model="Qwen/Qwen3-8B",
+        allow_live_planner=True,
+    )
+    assert fails == ["planner ran as ['mock-planner'], expected only 'Qwen/Qwen3-8B'"]
+
+
+def test_allow_live_planner_is_opt_in_and_leaves_the_free_arm_rule_alone():
+    fails = cs.gate(
+        _summary({"gpt-5.6-luna": 10}, planner_calls=806, planner_calls_live_total=10),
+        expect_planner=False,
+        expect_model=None,
+    )
+    assert any("expected zero live planner calls but saw 10" in f for f in fails)
+
+
 def test_non_free_arm_zero_calls_still_fails_expect_planner():
     """Guards MockPlanner-fallback detection; ledger 0 must not change this branch."""
     fails = cs.gate(

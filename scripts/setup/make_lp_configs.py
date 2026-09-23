@@ -55,6 +55,14 @@ PREFIX_SOURCES = {
 }
 PREFIX_WHY = "the seeds-1,2 half of the pooled cap-81 prefix arm (ledger POOL-01)"
 
+# Prefix arms carry a v2 campaign id. Their first ids (<stem>_<DATE>) ran under hj12_prefix.pbs,
+# which serves no planner, so every executor ask prefix_handoff honours hit a closed port and
+# crashed (PBS 25725094). Executors ask when stuck, so those crashes are outcome-linked and a
+# crash-only refill would select on outcome: the arms are re-run whole under new ids, and the old
+# ones are VOID (scripts/analysis/lp_report.py VOID_CAMPAIGNS refuses them).
+PREFIX_ID_TAG = "v2"
+VOID_PREFIX_CAMPAIGNS = frozenset(f"{lp}_{suffix}_{DATE}" for lp in CEILINGS for suffix in PREFIX_SOURCES)
+
 # Planner keys only CodexExecPlanner reads. Dropped, not carried: run provenance stamps
 # planner.reasoning_effort into every manifest, and "medium" there would describe a knob the
 # local planner does not have.
@@ -112,6 +120,12 @@ class Spec:
     @property
     def declared(self) -> frozenset[str]:
         return PREFIX_DECLARED if self.kind == "prefix" else LIVE_DECLARED
+
+    @property
+    def campaign_id(self) -> str:
+        if self.kind == "prefix":
+            return f"{self.stem}_{PREFIX_ID_TAG}_{DATE}"
+        return f"{self.stem}_{DATE}"
 
 
 def all_specs() -> list[Spec]:
@@ -204,8 +218,12 @@ _PLANNER_COMMENTS = {
     ],
     "type/prefix": [
         "# The LOCALLY SERVED planner whose trajectory is replayed, settings copied from {ceiling}.",
-        "# Nothing in a prefix arm should call it live, and no planner server is started for one, so",
-        "# a stray call fails loudly instead of reaching hosted quota.",
+        "# It IS served during this arm: prefix_handoff honours executor asks (allow_executor_ask=True,",
+        "# src/sidekick/systems/prefix_handoff.py:42; the ASK_PLANNER branch of loop.py:1042 calls",
+        "# planner.correct() live), so a stuck executor's ask is answered by this same local planner,",
+        "# as hosted luna answered them in the published prefix arms. Run via",
+        "# scripts/pbs/lp_live.pbs ARMSET={lp_tag}_prefix, which serves it -- not hj12_prefix.pbs,",
+        "# which serves no planner, so every honoured ask there crashed on a closed port (PBS 25725094).",
     ],
     "packet_source": [
         "# The first plan is replayed from the {lp} ceiling itself, never from a hosted sample: a",
@@ -226,7 +244,7 @@ _PLANNER_COMMENTS = {
 
 def _planner_block(spec: Spec, planner: dict[str, Any]) -> list[str]:
     lines = ["planner:"]
-    fill = {"ceiling": CEILINGS[spec.lp], "lp": spec.label}
+    fill = {"ceiling": CEILINGS[spec.lp], "lp": spec.label, "lp_tag": spec.lp}
     for key, value in planner.items():
         comments = _PLANNER_COMMENTS.get(f"{key}/{spec.kind}", _PLANNER_COMMENTS.get(key, []))
         for comment in comments:
@@ -257,7 +275,9 @@ def _body(spec: Spec, planner: dict[str, Any]) -> str:
         if m:
             top = m.group(1)
         if line.startswith("campaign_id:"):
-            out.append(f"campaign_id: {spec.stem}_{DATE}")
+            if spec.campaign_id in VOID_PREFIX_CAMPAIGNS:
+                raise ValueError(f"{spec.out}: campaign_id {spec.campaign_id} is VOID")
+            out.append(f"campaign_id: {spec.campaign_id}")
             hits["campaign_id"] += 1
             j += 1
             continue
@@ -323,12 +343,14 @@ def _header(spec: Spec, src: dict[str, Any], derived: dict[str, Any]) -> str:
             f"# handoff.source_campaign moves with it: the replayed prefix is the {lp} ceiling's trajectory.",
             f"# Receiver: {rx}. Depth: m={m}. Both are the source's, unchanged.",
             "#",
-            "# The planner block moves although nothing here should call the planner live: provenance",
-            "# stamps planner.type/model into every manifest, and the source's codex block would file",
-            f"# these episodes under gpt-5.6-luna when the replayed trajectory is {model}'s. A stray live",
-            "# call can then reach only a local server, never hosted quota; the prefix gate still fails it.",
-            "# Replay-only: needs the executor server alone (scripts/pbs/hj12_prefix.pbs, once its",
-            "# FREE_ARMS lists this stem).",
+            "# The planner block moves for two reasons. Provenance stamps planner.type/model into every",
+            "# manifest, and the source's codex block would file these episodes under gpt-5.6-luna when",
+            f"# the replayed trajectory is {model}'s. And the planner is CALLED here: prefix_handoff",
+            "# honours executor asks, so a stuck executor's ask is answered live by the same local planner,",
+            "# as hosted luna answered them in the published prefix arms.",
+            f"# Run with scripts/pbs/lp_live.pbs ARMSET={spec.lp}_prefix, which serves this planner beside the",
+            "# granite executor. campaign_id carries v2: the first ids ran with no planner server",
+            "# (hj12_prefix.pbs), every honoured ask crashed on a closed port, and those ids are VOID.",
         ]
     return "\n".join(head) + "\n"
 

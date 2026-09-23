@@ -50,7 +50,8 @@
 #   SYSTEM (default prefix_handoff), SEEDS (default 1,2; the HJ-18 arms need SEEDS=3)
 #   Every selected prefix_handoff arm's handoff.source_campaign must already be complete for
 #   SEEDS (hj12_require_complete_sources), so the default ARMSET=free refuses while any source
-#   is partial or absent (the LP ceilings) -- select arms with ARMS=... instead.
+#   is partial or absent (HJ-18's holds seed 3 only) -- select arms with ARMS=... instead.
+#   The LP prefix arms do not run here (they need a served planner): scripts/pbs/lp_live.pbs.
 #   SMOKE_ONLY=1 (default 0): each pending arm runs its 3-task smoke and
 #   gate, then stops before the 57×2 campaign. Job rc is the first failed
 #   smoke/gate. Unset or 0 leaves the full run unchanged.
@@ -212,20 +213,10 @@ FREE_ARMS=(
   "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m6.yaml|hj18_prefix_c81s3_bplus_m6"
   "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m9.yaml|hj18_prefix_c81s3_bplus_m9"
   "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m11.yaml|hj18_prefix_c81s3_bplus_m11"
-  # LP-1 / LP-2: replays of the local-planner ceilings; submit only after the matching
-  # ceiling has 114 non-crashed episodes.
-  "prefix_handoff|${REPO}/configs/lp1_prefix_zs_m6.yaml|lp1_prefix_zs_m6"
-  "prefix_handoff|${REPO}/configs/lp1_prefix_zs_m9.yaml|lp1_prefix_zs_m9"
-  "prefix_handoff|${REPO}/configs/lp1_prefix_zs_m11.yaml|lp1_prefix_zs_m11"
-  "prefix_handoff|${REPO}/configs/lp1_prefix_bplus_m6.yaml|lp1_prefix_bplus_m6"
-  "prefix_handoff|${REPO}/configs/lp1_prefix_bplus_m9.yaml|lp1_prefix_bplus_m9"
-  "prefix_handoff|${REPO}/configs/lp1_prefix_bplus_m11.yaml|lp1_prefix_bplus_m11"
-  "prefix_handoff|${REPO}/configs/lp2_prefix_zs_m6.yaml|lp2_prefix_zs_m6"
-  "prefix_handoff|${REPO}/configs/lp2_prefix_zs_m9.yaml|lp2_prefix_zs_m9"
-  "prefix_handoff|${REPO}/configs/lp2_prefix_zs_m11.yaml|lp2_prefix_zs_m11"
-  "prefix_handoff|${REPO}/configs/lp2_prefix_bplus_m6.yaml|lp2_prefix_bplus_m6"
-  "prefix_handoff|${REPO}/configs/lp2_prefix_bplus_m9.yaml|lp2_prefix_bplus_m9"
-  "prefix_handoff|${REPO}/configs/lp2_prefix_bplus_m11.yaml|lp2_prefix_bplus_m11"
+  # The LP-1 / LP-2 prefix arms (configs/lp{1,2}_prefix_*.yaml) are NOT here and must not be:
+  # prefix_handoff honours executor asks, and this script serves no planner, so every honoured
+  # ask crashed on a closed port (PBS 25725094) -- outcome-linked crashes. They run through
+  # scripts/pbs/lp_live.pbs ARMSET=lp1_prefix|lp2_prefix, which serves the local planner.
 )
 
 hj12_select_arms () {
@@ -358,8 +349,9 @@ if [[ "${HJ12_GUARD_SELFTEST:-0}" != "1" ]]; then
 fi
 
 # ---- replay sources: a prefix arm re-executes the first m actions of handoff.source_campaign.
-# The default ARMSET=free selects every FREE_ARMS entry, including arms whose source does not
-# exist yet (the LP ceilings) or holds only seed 3 (HJ-18, which must be submitted with SEEDS=3).
+# The default ARMSET=free selects every FREE_ARMS entry, including arms whose source holds only
+# seed 3 (HJ-18, which must be submitted with SEEDS=3). scripts/pbs/lp_live.pbs ports this check
+# (lp_require_complete_sources) for the LP prefix arms, whose sources are the LP ceilings.
 # Against a partial source a replay episode either finds no events.jsonl -- effective_m=0, a
 # handoff that silently never happened -- or replays an episode that crashed, which the source's
 # next resubmission purges and re-plans, leaving this arm paired with a trajectory nobody scored.

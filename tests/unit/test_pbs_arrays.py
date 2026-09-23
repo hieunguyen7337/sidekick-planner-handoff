@@ -1,7 +1,7 @@
 """tests/unit/_pbs_arrays.read_bash_array: the shared FREE_ARMS reader.
 
-The parsers it replaced stopped at the ")" inside the HJ-19 comment, so no HJ-19, HJ-18 or LP
-entry was ever checked while every test stayed green. These pin that the reader reaches the real
+The parsers it replaced stopped at the ")" inside the HJ-19 comment, so no HJ-19, HJ-18 or (then)
+LP entry was ever checked while every test stayed green. These pin that the reader reaches the real
 end of the array, and that it refuses shapes it does not understand instead of skipping them.
 """
 from __future__ import annotations
@@ -18,14 +18,17 @@ PBS = REPO / "scripts" / "pbs" / "hj12_prefix.pbs"
 
 def test_free_arms_reaches_the_last_entry_past_the_parenthesised_comment() -> None:
     arms = read_bash_array(PBS, "FREE_ARMS")
-    # The last entry of the array is an LP-2 replay; stopping early would end on hj16/hj19.
-    assert arms[-1] == "prefix_handoff|${REPO}/configs/lp2_prefix_bplus_m11.yaml|lp2_prefix_bplus_m11"
+    # The last entry of the array is an HJ-18 replay, after the parenthesised HJ-19 comment;
+    # stopping early would end on hj16/hj19.
+    assert arms[-1] == "prefix_handoff|${REPO}/configs/hj18_prefix_c81s3_bplus_m11.yaml|hj18_prefix_c81s3_bplus_m11"
     stems = [entry.split("|")[2] for entry in arms]
     for rx in ("zs", "bplus"):
         for m in (6, 9, 11):
             assert f"hj18_prefix_c81s3_{rx}_m{m}" in stems
-            assert f"lp1_prefix_{rx}_m{m}" in stems
-            assert f"lp2_prefix_{rx}_m{m}" in stems
+            # The LP prefix arms need a served planner and run through lp_live.pbs instead
+            # (tests/unit/test_lp_configs.py pins where they are registered).
+            assert f"lp1_prefix_{rx}_m{m}" not in stems
+            assert f"lp2_prefix_{rx}_m{m}" not in stems
     assert "hj19_prefix_m11_qwen_notk" in stems
     assert "hj19_sft_plan_qwen_notk" in stems
     # Every data line between "FREE_ARMS=(" and its closing ")" is an entry; comments are not.

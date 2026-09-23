@@ -7,7 +7,7 @@
 # strength (plan 2026-09-23, unit A3). That test needs the source with the planner swapped and
 # nothing else moved, so this file differs from its source ONLY in these fields -- exactly this
 # set, compared on the parsed YAML by make_lp_configs.py --check and the unit test:
-#   campaign_id: hj17_prefix_c81_bplus_m9_20260923 -> lp2_prefix_bplus_m9_20260923
+#   campaign_id: hj17_prefix_c81_bplus_m9_20260923 -> lp2_prefix_bplus_m9_v2_20260923
 #   handoff.source_campaign: /scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923 -> /scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923
 #   planner.base_url: (absent) -> http://127.0.0.1:8002/v1
 #   planner.chat_template_kwargs.enable_thinking: (absent) -> false
@@ -26,22 +26,28 @@
 # handoff.source_campaign moves with it: the replayed prefix is the LP-2 ceiling's trajectory.
 # Receiver: granite + sft_b_plus. Depth: m=9. Both are the source's, unchanged.
 #
-# The planner block moves although nothing here should call the planner live: provenance
-# stamps planner.type/model into every manifest, and the source's codex block would file
-# these episodes under gpt-5.6-luna when the replayed trajectory is Qwen/Qwen3.8-27B-FP8's. A stray live
-# call can then reach only a local server, never hosted quota; the prefix gate still fails it.
-# Replay-only: needs the executor server alone (scripts/pbs/hj12_prefix.pbs, once its
-# FREE_ARMS lists this stem).
+# The planner block moves for two reasons. Provenance stamps planner.type/model into every
+# manifest, and the source's codex block would file these episodes under gpt-5.6-luna when
+# the replayed trajectory is Qwen/Qwen3.8-27B-FP8's. And the planner is CALLED here: prefix_handoff
+# honours executor asks, so a stuck executor's ask is answered live by the same local planner,
+# as hosted luna answered them in the published prefix arms.
+# Run with scripts/pbs/lp_live.pbs ARMSET=lp2_prefix, which serves this planner beside the
+# granite executor. campaign_id carries v2: the first ids ran with no planner server
+# (hj12_prefix.pbs), every honoured ask crashed on a closed port, and those ids are VOID.
 env: appworld
-campaign_id: lp2_prefix_bplus_m9_20260923
+campaign_id: lp2_prefix_bplus_m9_v2_20260923
 handoff:
   source_campaign: /scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923
   source_system: planner_alone
   m: 9
 planner:
   # The LOCALLY SERVED planner whose trajectory is replayed, settings copied from configs/lp2_planner_alone_cap81_qwen38_27b.yaml.
-  # Nothing in a prefix arm should call it live, and no planner server is started for one, so
-  # a stray call fails loudly instead of reaching hosted quota.
+  # It IS served during this arm: prefix_handoff honours executor asks (allow_executor_ask=True,
+  # src/sidekick/systems/prefix_handoff.py:42; the ASK_PLANNER branch of loop.py:1042 calls
+  # planner.correct() live), so a stuck executor's ask is answered by this same local planner,
+  # as hosted luna answered them in the published prefix arms. Run via
+  # scripts/pbs/lp_live.pbs ARMSET=lp2_prefix, which serves it -- not hj12_prefix.pbs,
+  # which serves no planner, so every honoured ask there crashed on a closed port (PBS 25725094).
   type: vllm
   model: Qwen/Qwen3.8-27B-FP8
   base_url: http://127.0.0.1:8002/v1

@@ -103,7 +103,21 @@ REFERENCE_CAMPAIGNS: dict[str, str] = {
 }
 REFERENCE_ORDER: tuple[str, ...] = tuple(REFERENCE_CAMPAIGNS)
 # [prereg:15-16]: "VOID ... It is never analysed."
-VOID_CAMPAIGNS: tuple[str, ...] = ("lp1_planner_alone_cap81_qwen8b_20260923",)
+_VOID_LP1_CEILING = "lp1_planner_alone_cap81_qwen8b_20260923"
+# The first LP prefix-replay ids. They ran under scripts/pbs/hj12_prefix.pbs, which serves no
+# planner, so every executor ask prefix_handoff honours hit a closed port and crashed (PBS
+# 25725094). Executors ask when stuck, so those crashes are outcome-linked; the arms are re-run
+# whole under <stem>_v2_20260923 (scripts/setup/make_lp_configs.py) and these ids are never analysed.
+_VOID_LP_PREFIX = tuple(
+    f"lp{n}_prefix_{receiver}_m{m}_20260923" for n in (1, 2) for receiver in ("zs", "bplus") for m in (6, 9, 11)
+)
+VOID_CAMPAIGNS: tuple[str, ...] = (_VOID_LP1_CEILING, *_VOID_LP_PREFIX)
+
+
+def _void_reason(cid: str) -> str:
+    if cid == _VOID_LP1_CEILING:
+        return f"[{PREREG}:15-16]"
+    return "(run with no planner server; honoured executor asks crashed on a closed port, PBS 25725094)"
 
 ARM_NAMES = {
     "C": "planner alone, cap 81 (ceiling)",
@@ -316,7 +330,7 @@ def resolve_campaigns(planners: tuple[str, ...] = PLANNERS,
             if not isinstance(cid, str) or not cid.strip():
                 raise ProtocolError(f"{rel}: no campaign_id")
             if cid in VOID_CAMPAIGNS:
-                raise ProtocolError(f"{rel}: campaign_id {cid!r} is VOID [{PREREG}:15-16] and is never analysed")
+                raise ProtocolError(f"{rel}: campaign_id {cid!r} is VOID {_void_reason(cid)} and is never analysed")
             if not cid.startswith(f"lp{n}_"):
                 raise ProtocolError(f"{rel}: campaign_id {cid!r} is not an LP-{n} campaign")
             if cid in seen:
