@@ -253,3 +253,24 @@ Written before any LP-2 arm has run: at 17:15 AEST the results root holds only t
     are read on their own rules.
   - Nothing in this amendment is chosen from P8's contrasts. The rule above concerns a key of the LP-2 ceiling
     only.
+
+## Amendment 5 — disclosure: process statistics of the LP-2 ceiling were computed (2026-09-23 ~18:15 AEST; no registered item changes)
+
+- **Why.** To explain P8's gate failure, `scripts/analysis/lp_planner_diagnostic.py` computed process statistics
+  for the luna, P8 and P27 ceilings, the tailored executor alone, and P8's prefix arms (run ~17:56 and again
+  ~18:14 AEST; `campaign/results/lp_planner_diagnostic_20260923.json`; ledger LP-MECH-01/02).
+- **What was seen of LP-2.** For the P27 ceiling the script prints no outcome: no `goal_pass`, TGC, `error_type`
+  or step count. Its process statistics were seen:
+  - credential look-up (`apis.supervisor.show_account_passwords`) in 106/114 episodes;
+  - a placeholder-like credential in 14;
+  - 57.1 % of CODE observations failed;
+  - COMPLETE in 74;
+  - 5 episodes whose last ten actions executed nothing, and 36 that repeat one action ≥ 5 times;
+  - 88.9 % of its actions are CODE.
+
+  Its 35 step-limit episodes were already known from the completeness check (job 25724763).
+- Amendment 4 asks for the 113-pair sensitivity "before any LP-2 aggregate is read". These are aggregates of the
+  LP-2 ceiling, though none is the gate quantity or an L-contrast, so they are disclosed here.
+- **Nothing was chosen after them.** LP-2 live job 25748167 was running and prefix job 25748168 was queued, both
+  submitted under Amendment 4 before the diagnostic ran. No rule, arm, key or threshold changes. P27's gate and
+  L1–L5 are read only from `lp_report.py`, as registered.

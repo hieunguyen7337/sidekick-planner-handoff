@@ -1,0 +1,246 @@
+{
+ "note": "Descriptive, exploratory. Last attempt per episode, seeds 1-2. P27 outcomes masked (LP prereg Amendment 4: lp_report.py reads LP-2 aggregates first). 'placeholder' is a regex heuristic; prefix-arm counts are the receiver's actions only.",
+ "campaigns": {
+  "luna_C": {
+   "campaign": "hj13_planner_alone_cap81_20260923",
+   "n": 114,
+   "outcomes_shown": true,
+   "action_share": {
+    "planner:CODE": 0.664,
+    "planner:REPORT": 0.277,
+    "planner:COMPLETE": 0.04,
+    "planner:ASK_PLANNER": 0.019
+   },
+   "actions_per_episode": 16.4,
+   "code_fail_rate": 0.174,
+   "n_cred_lookup": 114,
+   "n_placeholder": 0,
+   "n_complete": 75,
+   "n_tail_no_code": 19,
+   "n_repeat_ge5": 19,
+   "error_type": {
+    "None": 96,
+    "limit": 18
+   },
+   "goal_pass_mean": 0.7637,
+   "steps_mean": 16.35
+  },
+  "P8_C": {
+   "campaign": "lp1_planner_alone_cap81_qwen8b_v2_20260923",
+   "n": 114,
+   "outcomes_shown": true,
+   "action_share": {
+    "planner:CODE": 0.443,
+    "planner:REPORT": 0.422,
+    "planner:ASK_PLANNER": 0.129,
+    "planner:COMPLETE": 0.007
+   },
+   "actions_per_episode": 33.0,
+   "code_fail_rate": 0.865,
+   "n_cred_lookup": 0,
+   "n_placeholder": 88,
+   "n_complete": 25,
+   "n_tail_no_code": 43,
+   "n_repeat_ge5": 87,
+   "error_type": {
+    "None": 25,
+    "limit": 89
+   },
+   "goal_pass_mean": 0.2666,
+   "steps_mean": 33.03
+  },
+  "P27_C": {
+   "campaign": "lp2_planner_alone_cap81_qwen38_27b_20260923",
+   "n": 114,
+   "outcomes_shown": false,
+   "action_share": {
+    "planner:CODE": 0.889,
+    "planner:REPORT": 0.074,
+    "planner:COMPLETE": 0.024,
+    "planner:ASK_PLANNER": 0.013
+   },
+   "actions_per_episode": 26.5,
+   "code_fail_rate": 0.571,
+   "n_cred_lookup": 106,
+   "n_placeholder": 14,
+   "n_complete": 74,
+   "n_tail_no_code": 5,
+   "n_repeat_ge5": 36
+  },
+  "E_bplus": {
+   "campaign": "hj8_executor_alone_bplus_20260919",
+   "n": 114,
+   "outcomes_shown": true,
+   "action_share": {
+    "executor:CODE": 0.972,
+    "executor:COMPLETE": 0.028
+   },
+   "actions_per_episode": 21.9,
+   "code_fail_rate": 0.371,
+   "n_cred_lookup": 113,
+   "n_placeholder": 3,
+   "n_complete": 70,
+   "n_tail_no_code": 0,
+   "n_repeat_ge5": 41,
+   "error_type": {
+    "None": 83,
+    "limit": 31
+   },
+   "goal_pass_mean": 0.5289,
+   "steps_mean": 21.94
+  },
+  "P8_Mb6": {
+   "campaign": "lp1_prefix_bplus_m6_v2_20260923",
+   "n": 114,
+   "outcomes_shown": true,
+   "action_share": {
+    "executor:CODE": 0.901,
+    "executor:REPORT": 0.051,
+    "executor:ASK_PLANNER": 0.043,
+    "executor:COMPLETE": 0.004
+   },
+   "actions_per_episode": 25.3,
+   "code_fail_rate": 0.839,
+   "n_cred_lookup": 43,
+   "n_placeholder": 40,
+   "n_complete": 12,
+   "n_tail_no_code": 0,
+   "n_repeat_ge5": 77,
+   "prefix_start_step_mean": 6.13,
+   "effective_m_mean": 5.13,
+   "n_handoff": 53,
+   "error_type": {
+    "None": 37,
+    "limit": 77
+   },
+   "goal_pass_mean": 0.3126,
+   "steps_mean": 31.13
+  },
+  "P8_Mb11": {
+   "campaign": "lp1_prefix_bplus_m11_v2_20260923",
+   "n": 114,
+   "outcomes_shown": true,
+   "action_share": {
+    "executor:CODE": 0.913,
+    "executor:REPORT": 0.054,
+    "executor:ASK_PLANNER": 0.029,
+    "executor:COMPLETE": 0.004
+   },
+   "actions_per_episode": 23.1,
+   "code_fail_rate": 0.891,
+   "n_cred_lookup": 31,
+   "n_placeholder": 48,
+   "n_complete": 10,
+   "n_tail_no_code": 0,
+   "n_repeat_ge5": 76,
+   "prefix_start_step_mean": 8.27,
+   "effective_m_mean": 7.27,
+   "n_handoff": 46,
+   "error_type": {
+    "None": 35,
+    "limit": 79
+   },
+   "goal_pass_mean": 0.2996,
+   "steps_mean": 31.12
+  },
+  "P8_Mz11": {
+   "campaign": "lp1_prefix_zs_m11_v2_20260923",
+   "n": 114,
+   "outcomes_shown": true,
+   "action_share": {
+    "executor:CODE": 0.96,
+    "executor:COMPLETE": 0.03,
+    "executor:REPORT": 0.008,
+    "executor:ASK_PLANNER": 0.002
+   },
+   "actions_per_episode": 15.9,
+   "code_fail_rate": 0.669,
+   "n_cred_lookup": 10,
+   "n_placeholder": 35,
+   "n_complete": 54,
+   "n_tail_no_code": 0,
+   "n_repeat_ge5": 14,
+   "prefix_start_step_mean": 8.27,
+   "effective_m_mean": 7.27,
+   "n_handoff": 46,
+   "error_type": {
+    "None": 81,
+    "limit": 33
+   },
+   "goal_pass_mean": 0.2825,
+   "steps_mean": 23.94
+  },
+  "luna_Mb11": {
+   "campaign": "hj12_prefix_m11_20260923",
+   "n": 114,
+   "outcomes_shown": true,
+   "action_share": {
+    "executor:CODE": 0.951,
+    "executor:COMPLETE": 0.049
+   },
+   "actions_per_episode": 5.4,
+   "code_fail_rate": 0.341,
+   "n_cred_lookup": 12,
+   "n_placeholder": 0,
+   "n_complete": 30,
+   "n_tail_no_code": 0,
+   "n_repeat_ge5": 14,
+   "prefix_start_step_mean": 11.04,
+   "effective_m_mean": 10.04,
+   "n_handoff": 54,
+   "error_type": {
+    "None": 105,
+    "limit": 9
+   },
+   "goal_pass_mean": 0.8098,
+   "steps_mean": 15.53
+  }
+ },
+ "P8_C_stall_samples": [
+  {
+   "episode": "1/0d8a4ee_1",
+   "last_kinds": [
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT"
+   ],
+   "last_messages": [
+    "The repeated failure to log in with valid credentials suggests a deeper issue with the account or authentication process. It is strongly recommended to check if",
+    "The repeated failure to log in with valid credentials suggests a deeper issue with the account or authentication process. It is strongly recommended to check if"
+   ]
+  },
+  {
+   "episode": "1/383cbac_3",
+   "last_kinds": [
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT"
+   ],
+   "last_messages": [
+    "The 'venmo.login()' API call continues to fail with invalid credentials. This indicates that the provided username or password is still incorrect. To proceed, w",
+    "The 'venmo.login()' API call continues to fail with invalid credentials. This indicates that the provided username or password is still incorrect. To proceed, w"
+   ]
+  },
+  {
+   "episode": "1/4ec8de5_1",
+   "last_kinds": [
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT",
+    "REPORT"
+   ],
+   "last_messages": [
+    "The task cannot proceed without valid Spotify credentials. Please provide valid username and password for authentication.",
+    "The task cannot proceed without valid Spotify credentials. Please provide valid username and password for authentication."
+   ]
+  }
+ ]
+}
