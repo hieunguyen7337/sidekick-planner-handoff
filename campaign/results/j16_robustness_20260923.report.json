@@ -1,6 +1,6 @@
 {
   "generated_by": "scripts/analysis/j16_robustness.py",
-  "generated_at": "2026-09-23T08:18:48+10:00",
+  "generated_at": "2026-09-23T10:30:31+10:00",
   "bootstrap": {
     "B": 10000,
     "seed_new_intervals": 20260924,
@@ -12697,7 +12697,7 @@
           "match": true
         },
         {
-          "item": "CEIL-01 (cap-81 rerun)",
+          "item": "CEIL-07 (cap-81 rerun)",
           "source": "campaign/results/hj13_ceiling_cap25_vs_cap81_20260923.report.json",
           "key": "contrasts.goal_pass_all_ceiling_cap25_minus_ceiling_cap81.diff_pp",
           "expected": 6.47,
@@ -12706,7 +12706,7 @@
           "match": true
         },
         {
-          "item": "CEIL-01 (cap-81 rerun)",
+          "item": "CEIL-07 (cap-81 rerun)",
           "source": "campaign/results/hj13_ceiling_cap25_vs_cap81_20260923.report.json",
           "key": "contrasts.goal_pass_all_ceiling_cap25_minus_ceiling_cap81.ci95_pp",
           "expected": [
@@ -12721,7 +12721,7 @@
           "match": true
         },
         {
-          "item": "CEIL-01 (cap-81 rerun)",
+          "item": "CEIL-07 (cap-81 rerun)",
           "source": "campaign/results/hj13_ceiling_cap25_vs_cap81_20260923.report.json",
           "key": "contrasts.tgc_all_ceiling_cap25_minus_ceiling_cap81.diff_pp",
           "expected": 11.4,
@@ -12730,7 +12730,7 @@
           "match": true
         },
         {
-          "item": "CEIL-01 (cap-81 rerun)",
+          "item": "CEIL-07 (cap-81 rerun)",
           "source": "campaign/results/hj13_ceiling_cap25_vs_cap81_20260923.report.json",
           "key": "contrasts.tgc_all_ceiling_cap25_minus_ceiling_cap81.ci95_pp",
           "expected": [
@@ -22561,6 +22561,7 @@
       "campaign_predates_commit": true,
       "advise_path_before_commit": "delta = '\\n'.join(transcript[-8:])  (git show 722e887 -- src/sidekick/systems/loop.py)",
       "fullctx_campaigns_on_disk": [
+        "b2_advise_neutral_fixed_k_10_fullctx_20260923",
         "hj12_advise_fixed_k_10_fullctx_20260923",
         "hj13_advise_fixed_k_1_fullctx_20260923"
       ],

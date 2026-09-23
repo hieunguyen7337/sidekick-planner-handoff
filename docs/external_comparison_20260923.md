@@ -77,8 +77,8 @@ All numbers below are measured strictly on the **dev** split (57 tasks, 114 pair
 | **takeover k=10** (action channel, matched trigger) | 0.8007 | dev (all 114 episodes) | `CHAN-C1-01` | Action execution at trigger step; point estimate only (CI pending) |
 | **action prefix m=9** (tailored receiver) | 0.7852 | dev (all 114 episodes) | `SHAPE-01`, `SHAPE-06` | First 9 actions replayed from planner; post-terminal guard |
 | **action prefix m=11** (tailored receiver) | 0.8098 | dev (all 114 episodes) | `SHAPE-06`, `PRED-01-RESULT`, `TAILOR-07` | First 11 actions replayed from planner; post-terminal guard |
-| **ceiling, cap-25** (`planner_alone`) | 0.8284 | dev (all 114 episodes) | `CEIL-01`, `CEIL-02`, `CHAN-ZS-05` | Capped at 25 calls (source of replayed prefix trajectories) |
-| **ceiling, cap-81** (`planner_alone`) | 0.7637 | dev (all 114 episodes) | `CEIL-01`, `CEIL-02`, `CEIL-03` | Capped at 81 calls; independent sample exhibiting over-acting degradation |
+| **ceiling, cap-25** (`planner_alone`) | 0.8284 | dev (all 114 episodes) | `CEIL-07`, `CEIL-08`, `CHAN-ZS-05` | Capped at 25 calls (source of replayed prefix trajectories) |
+| **ceiling, cap-81** (`planner_alone`) | 0.7637 | dev (all 114 episodes) | `CEIL-07`, `CEIL-08`, `CEIL-09` | Capped at 81 calls; independent sample exhibiting over-acting degradation |
 
 ---
 

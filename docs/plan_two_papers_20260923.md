@@ -26,7 +26,7 @@ calls); large worker units go to Claude or an Opus subagent.
 | Depth is a **span**, not a threshold | m6→m11 +7.70 / +8.39 pp, lower bounds 3–4 pp clear (POOL-01); every adjacent step Holm-null (MULT-01) | 171 |
 | NI to the planner acting alone holds on goal_pass (all four) | POOL-02; untailored-m11 TGC undetermined at a discrete atom | 171 |
 | Narration ≈ execution on the tailored receiver; receiver × narration interaction resolves at m11 | NARR-03..05, DID-01 | 114 |
-| Mechanism: front-loaded API discovery; error suppression | MECH-01/05/07 | 114 |
+| Mechanism: front-loaded API discovery; error suppression | MECH-08/05/07 | 114 |
 | Tailoring × depth: unresolved at 171 | DID-02, POOL-03 | 171 |
 | Second executor family: zero-shot curve real, both floors unusable (termination failure, measured cause) | QWEN-01..07 | 114 |
 

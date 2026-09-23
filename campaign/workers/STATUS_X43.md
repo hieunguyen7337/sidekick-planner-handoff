@@ -34,8 +34,8 @@ All internal figures are evaluated on the 57-task dev split (114 paired episodes
 | Advice k=10, full context | 0.7339 | `ADV-FC-01` [OBSERVED docs/claims_ledger.md:82] | Periodic review, full transcript |
 | Takeover k=10 (action channel) | 0.8007 | `CHAN-C1-01` [OBSERVED docs/claims_ledger.md:89] | Matched-trigger takeover; point estimate only |
 | Action prefix m=9 / m=11 | 0.7852 / 0.8098 | `SHAPE-01`, `SHAPE-06`, `TAILOR-07` [OBSERVED docs/claims_ledger.md:36,47,66] | Tailored receiver post-guard |
-| Ceiling, cap-25 | 0.8284 | `CEIL-01`, `CEIL-02` [OBSERVED docs/claims_ledger.md:69,70] | Replayed trajectory source |
-| Ceiling, cap-81 | 0.7637 | `CEIL-01`, `CEIL-02`, `CEIL-03` [OBSERVED docs/claims_ledger.md:69,70,72] | Independent planner sample |
+| Ceiling, cap-25 | 0.8284 | `CEIL-07`, `CEIL-08` [OBSERVED docs/claims_ledger.md:69,70] | Replayed trajectory source |
+| Ceiling, cap-81 | 0.7637 | `CEIL-07`, `CEIL-08`, `CEIL-09` [OBSERVED docs/claims_ledger.md:69,70,72] | Independent planner sample |
 
 ## 4. Methodological Alignment
 The 4 causes of discrepancy against published leaderboard scores (scaffold, split, task count, reasoning effort) and the paired within-task experimental rationale are documented without hedging [OBSERVED docs/limitations_external_20260923.md:1-24].

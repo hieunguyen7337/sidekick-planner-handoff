@@ -35,7 +35,7 @@ a figure that runs must be complete.
 **F1 · The depth curve, both receivers.** `goal_pass` against handoff depth m for the tailored receiver
 (`hj12_prefix_m{2,4,6,7,8,9,10,11}_20260923`) and the untailored receiver
 (`hj13_prefix_zs_m{6,9,11}_20260923`), with clustered CI bands. Horizontal reference lines for the
-**two ceilings, each labelled with its cap**: cap-25 0.8284 and cap-81 0.7637 (CEIL-01/CEIL-02 require the
+**two ceilings, each labelled with its cap**: cap-25 0.8284 and cap-81 0.7637 (CEIL-07/CEIL-08 require the
 cap to be named wherever a ceiling appears). Mark the plan-only floor 0.7181 and the executor-alone floor
 0.5289. Shade the registered 7.00 pp non-inferiority margin below the ceiling being compared against.
 **Do not draw a breakpoint marker**: the registered threshold test S3 did not pass and no threshold
@@ -53,8 +53,8 @@ m=9, +2.46 at m=11 (TAILOR-01/04/07), with CIs. Add the suffix-adapter arms
 them and say so in the manifest rather than failing.
 
 **F4 · Mechanism, two panels.** Left: M1, the cumulative share of the planner's first API uses by position
-(MECH-01), with the m=6/9/11 depths marked. Right: M3, the decomposition of each rise into its
-handoff-earned and silenced-episode parts as a stacked bar (MECH-03: at m6→m9, 8.55 pp handoff and 1.65 pp
+(MECH-08), with the m=6/9/11 depths marked. Right: M3, the decomposition of each rise into its
+handoff-earned and silenced-episode parts as a stacked bar (MECH-10: at m6→m9, 8.55 pp handoff and 1.65 pp
 silenced; at m6→m11, 9.19 and 6.00). The right panel is the figure that answers "the rise is by
 construction", so label the handoff share as a percentage on the bar.
 

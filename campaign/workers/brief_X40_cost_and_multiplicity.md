@@ -59,7 +59,7 @@ or containing `test_normal` / `test_challenge`. Copy the one in `scripts/analysi
 
 **Fatal, not silent:** if an arm yields zero priced episodes, or if more than 5 % of episodes lack usage
 records, raise `SystemExit` naming the arm and the counts. Do not write a report. (A diagnostic that only
-records is how `MECH-02` happened; see `docs/claims_ledger.md`.)
+records is how `MECH-09` happened; see `docs/claims_ledger.md`.)
 
 ---
 

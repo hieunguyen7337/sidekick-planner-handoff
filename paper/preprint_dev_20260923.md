@@ -184,7 +184,7 @@ The registered composite verdict is negative: S1 and S2 hold but S3 fails, so no
 
 Across a multi-step span the depth effect is resolved (SHAPE-10, exploratory; CHAN-ZS-04). For the untailored receiver, moving from $m = 6$ to $m = 9$ produces a **+10.21 pp** rise in `goal_pass` (0.6825 to 0.7845), with a 95% scenario-clustered CI of **[+2.60, +18.20]** (task **[+3.80, +16.81]**), and a **+16.67 pp** rise in TGC (0.3860 to 0.5526, scenario **[+5.26, +28.07]**, task **[+7.02, +26.32]**). Extending untailored zero-shot from $m = 9$ to $m = 11$ provides an additional **+4.99 pp** `goal_pass` (reaching 0.8345; task [+0.26, +9.31]) and **+7.02 pp** TGC (reaching 0.6228; scenario [+0.88, +14.04]; CHAN-ZS-04).
 
-The span rise is not run-to-run noise: replicate evaluations differ by 0.04 pp at $m = 6$ (0.7241 vs. 0.7237; NOISE-02) and 1.82 pp at $m = 9$ (0.8033 vs. 0.7852; NOISE-03), and twice the larger, 3.63 pp, is cleared by both the 6.15 pp tailored and the 10.21 pp zero-shot rise (NOISE-03, NOISE-04).
+The span rise is not run-to-run noise: replicate evaluations differ by 0.04 pp at $m = 6$ (0.7241 vs. 0.7237; NOISE-05) and 1.82 pp at $m = 9$ (0.8033 vs. 0.7852; NOISE-03), and twice the larger, 3.63 pp, is cleared by both the 6.15 pp tailored and the 10.21 pp zero-shot rise (NOISE-03, NOISE-04).
 
 ---
 
@@ -357,7 +357,7 @@ receivers. We therefore make no substitutability claim; intervals ±5–11 pp wi
 
 ## 8. Mechanism Decomposition: API Discovery and Compounding Error
 
-Two mechanisms explain why deep prefixes help: front-loaded API discovery and suppressed error compounding (MECH-01, MECH-05, MECH-07).
+Two mechanisms explain why deep prefixes help: front-loaded API discovery and suppressed error compounding (MECH-08, MECH-05, MECH-07).
 
 ```
 Figure F4: Mechanism decomposition. Left (M1): cumulative share of first API uses by planner position.
@@ -367,7 +367,7 @@ Right (M3): decomposition of zero-shot depth rises into handoff-earned and silen
 
 ### 8.1 Front-Loaded API Discovery (M1)
 
-Interactive tasks require discovering valid endpoints, function names and argument schemas. In an audit of 673 first API invocations across 114 planner source episodes (mean 5.9 per episode; MECH-01), discovery is front-loaded: 16.9% of first uses have occurred by position $k = 1$, 35.5% by $k = 3$, 60.5% by $k = 6$, **78.3%** by $k = 9$ and **86.6%** by $k = 11$.
+Interactive tasks require discovering valid endpoints, function names and argument schemas. In an audit of 673 first API invocations across 114 planner source episodes (mean 5.9 per episode; MECH-08), discovery is front-loaded: 16.9% of first uses have occurred by position $k = 1$, 35.5% by $k = 3$, 60.5% by $k = 6$, **78.3%** by $k = 9$ and **86.6%** by $k = 11$.
 
 The per-position probability of introducing a novel API drops from 100% at step 1 to 48.2% at steps 5–6, 36.7% at steps 9–10, and 27.1% over steps 11–20. A prefix of depth $m = 9$ handles over three-quarters of the entire task's exploratory discovery, relieving the local executor of unconstrained search.
 
@@ -839,16 +839,16 @@ project's analysis defects share.
 ### C.2 Analysis Defects Found and Repaired
 
 - *Terminal Guard Defect (GUARD-01, MECH-01..03):* Early runs allowed actions following replayed completion tokens; resolved by adding a fatal post-prefix terminal check.
-- *Handoff Flag Path (MECH-02, GUARD-01/X33d):* The mechanism script initially inspected an invalid JSON key; resolved by aligning paths and making zero-count populations fatal.
+- *Handoff Flag Path (MECH-09, GUARD-03/X33d):* The mechanism script initially inspected an invalid JSON key; resolved by aligning paths and making zero-count populations fatal.
 - *Error Scan Actor Filter (MECH-04, MECH-05):* Initial audits filtered observations on executor identity, yielding 0.00% error rates; repaired to scan observation return text.
 - *Adapter Build Mismatch (ADV-FC-02):* Initial H1 advice contrasts paired against an older 0.7000 adapter build; corrected to use the standard 0.7181 `iaware` build.
 - *Cost Token Pricing (COST-01):* Local executor tokens were initially passed to hosted pricing calculators; corrected to filter exclusively on hosted usage events.
 - *Segmented Fit Float Tie-Breaking (TIEBREAK-01):* Exact RSS float comparisons in segmented regression produced spurious breakpoints on straight lines; resolved via scaled RSS tolerances.
 
-### C.3 A Results Table Filled With Invented Values (QUAL-03)
+### C.3 A Results Table Filled With Invented Values (QUAL-07)
 
 The number audit of Appendix A exists because of a real failure. A worker drafting the cost table invented three of its
 eleven TGC values — one a fill-down of the row above, one wrong by 10.52 pp — while reporting zero
 outstanding work, and the entire `goal_pass` column beside them was correct, so nothing looked wrong
-(QUAL-03). An instruction to flag uncertain values cannot catch that, because a model that does not
+(QUAL-07). An instruction to flag uncertain values cannot catch that, because a model that does not
 know it is guessing cannot comply with it. A set difference can, and did.

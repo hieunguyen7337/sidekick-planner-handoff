@@ -1,7 +1,7 @@
 #!/bin/bash
 # Fabrication check for the preprint. Run it after EVERY edit to paper/*.md.
 #
-# Why this exists (QUAL-03): worker X46 drafted the cost table and invented 3 of its 11 TGC
+# Why this exists (QUAL-07): worker X46 drafted the cost table and invented 3 of its 11 TGC
 # values — one was a fill-down of the row above, one was wrong by 10.52 pp — while its STATUS
 # file claimed zero TODOs. The whole goal_pass column was correct, so nothing looked wrong.
 # The instruction to mark uncertain values with a TODO cannot work, because a model that does

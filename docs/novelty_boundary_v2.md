@@ -67,9 +67,9 @@ spliced in verbatim.
 > reported the qualitative result — a cheaper model can continue a stronger model's trajectory at a
 > favourable cost-quality point — five weeks before this work was written, and we do not claim it.
 > We add three things their design forecloses. First, they average over seven switch points and so
-> report a *point*; we sweep nine depths and report a *curve*, and the curve is not monotone in the
-> way an averaged summary implies — it is flat across the first third of a median episode and rises
-> only past a threshold. Second, every receiver in that study is prompted zero-shot; ours is
+> report a *point*; we sweep nine depths and report a *curve*, which an averaged summary cannot show: across a span of
+> depths the curve rises, but the data cannot localize a breakpoint within that span.
+> Second, every receiver in that study is prompted zero-shot; ours is
 > LoRA-specialised to the specific planner whose trajectory it inherits, and we run the zero-shot
 > receiver as an explicit control so that "tailored" is measured rather than asserted. Third, their
 > capability gap is between two frontier-tier hosted endpoints, while ours is between a hosted

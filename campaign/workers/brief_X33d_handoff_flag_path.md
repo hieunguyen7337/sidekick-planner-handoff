@@ -17,7 +17,7 @@ True, every arm reports `handoff_episodes: 0, silenced_episodes: 114`, M2 is ent
 controlled curve has `n_keys: 0`, and the decompositions attribute 100% of the rise to "silenced" by
 construction. The script's own divergence diagnostic recorded 111 / 83 / 58 disagreements at
 m = 6 / 9 / 11 — those are the real handoff counts — and the script wrote a report anyway. Both
-19:13 reports are invalid (claims ledger MECH-02).
+19:13 reports are invalid (claims ledger MECH-09).
 
 **Where the flag actually is:** the episode's `report` event in `events.jsonl`, beside `result.json`:
 

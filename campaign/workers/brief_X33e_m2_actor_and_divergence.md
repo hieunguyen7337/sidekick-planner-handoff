@@ -59,7 +59,7 @@ blocks a valid analysis.
   That direction cannot be explained by the post-`COMPLETE` behaviour and means the flag or the loading is
   wrong. Name the arm, the episode and the count.
 - **Fatal, unchanged:** an episode missing a `report` event; and zero `handoff_occurred is True` episodes
-  in an arm while any episode has executor `n_calls > 0` (the MECH-02 signature).
+  in an arm while any episode has executor `n_calls > 0` (the MECH-09 signature).
 - **Not fatal, but recorded:** episodes with `handoff_occurred is False` and `n_calls > 0`. Count them per
   arm into a new report field `post_complete_executor_actions` beside the existing `divergence_count`, and
   add one line to the markdown naming it as the pre-F0 behaviour. Keep `divergence_count` as it is so the

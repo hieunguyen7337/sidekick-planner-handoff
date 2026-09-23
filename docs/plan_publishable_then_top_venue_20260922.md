@@ -13,9 +13,9 @@ Dev, 57 tasks × 2 seeds = 114 pairs, `goal_pass`, replayed prefixes from `hj1b_
 |---|---:|---:|---:|---:|---:|---|
 | untailored base granite | 0.1903 | 0.2885 | 0.6825 | 0.7845 | **0.8345** | CHAN-ZS-01, -04 |
 | tailored `sft_b_plus` (post-guard) | 0.5289 | 0.7181 | 0.7237 | 0.7852 | 0.8098 | SHAPE-*, TAILOR-07 |
-| replicate of tailored (same job, same code) | — | — | 0.7241 | *running* | — | NOISE-02 |
-| planner alone, **25-call cap** (the run every prefix arm replays) | | | | | 0.8284 | CEIL-01 |
-| planner alone, **cap 81** (fresh sample, 2026-09-22) | | | | | 0.7637 | CEIL-01: −6.47 pp [−11.68, −1.37] vs cap 25 |
+| replicate of tailored (same job, same code) | — | — | 0.7241 | *running* | — | NOISE-05 |
+| planner alone, **25-call cap** (the run every prefix arm replays) | | | | | 0.8284 | CEIL-07 |
+| planner alone, **cap 81** (fresh sample, 2026-09-22) | | | | | 0.7637 | CEIL-07: −6.47 pp [−11.68, −1.37] vs cap 25 |
 
 Established (interval excludes zero on the primary, scenario-clustered):
 - **Action channel ≫ advice channel on an untailored receiver**: +9.8 pp for one plan against +59.4 pp
@@ -34,7 +34,7 @@ Not established:
 - **Non-inferiority to the ceiling**: the ceiling is the handicapped 25-cap run until H0 lands.
 - **The registered C3 direction** is refuted (TAILOR-05); the suffix adapter (F4b) is the last C3 arm.
 
-Two things resolve within hours: the m=9 replicate (NOISE-02: the m=6 half is 0.04 pp, so the
+Two things resolve within hours: the m=9 replicate (NOISE-05: the m=6 half is 0.04 pp, so the
 withdrawal bar of 3.075 pp now rests on m=9 alone) and the zero-shot Qwen3-8B second family (job
 25696145; kill-condition 4's untested conjunct).
 
@@ -76,7 +76,7 @@ between H2 and H3** for the remaining tier B budget (~1,600 + ~1,100 fit inside 
 
 Gate **G-P**: every headline number has a ledger row with both clusterings; H0 at 0 crash; H1 run;
 X38 run on both receivers; second-family direction recorded either way; the noise floor reported under
-both the registered (NOISE-02) and the substitute (NOISE-01) definitions; figures from report JSONs.
+both the registered (NOISE-05) and the substitute (NOISE-01) definitions; figures from report JSONs.
 
 | unit | lane | cost | status |
 |---|---|---|---|
@@ -102,7 +102,7 @@ Estimated wall time to G-P: **8–10 working days** with the degraded worker ros
 | T1 | **Power.** 57 tasks in **19 scenario clusters** leave S3 unresolved and the m=9 non-inferiority missing by 0.06 pp | "n=19 clusters" is the first thing a statistician sees | H5 seed 3 (~820) then **H7 test split** | ~820 + ~8–12k; H7 needs the J9 §8.1 authorisation and a committed prereg amendment |
 | T2 | **Matched cost and matched information** for the channel claim | "actions executed vs prose is unfair by construction" | X38, X38b (free) + H2 | 0 + ~1,600 |
 | T3 | **Deployability**: oracle replay → live handoff | attack 8 | H3 `planner_handoff` | ~900–1,300 |
-| T4 | **Generality**: second receiver family with full curve; a second *planner sample* for the curve; limitation for one suite, one planner model | "one model pair, one planner run" | Qwen zs m6/m9/m11 (free); untailored curve on the cap-81 trajectories (free, CEIL-02 item 4); a second planner *model* is out of scope (rule: luna only) — stated as a limitation | 0 |
+| T4 | **Generality**: second receiver family with full curve; a second *planner sample* for the curve; limitation for one suite, one planner model | "one model pair, one planner run" | Qwen zs m6/m9/m11 (free); untailored curve on the cap-81 trajectories (free, CEIL-08 item 4); a second planner *model* is out of scope (rule: luna only) — stated as a limitation | 0 |
 | T5 | **Mechanism**: why flat-then-rising; what the executor does at the first post-handoff error | descriptive curve vs explanation | F3 complete | 0 |
 | T6 | **External anchoring**: AppWorld leaderboard, Handoff Tax's percentile-of-trajectory scale beside our step scale | "how does this relate to the field's numbers" | F7 + F1 percentile-scale | 0 |
 | T7 | **Multiplicity and confirmation**: Holm across the depth-contrast family on dev; one pre-registered confirmatory read on test | post-hoc grid (attack 6) | analysis + H7 amendment | 0 (+H7) |
@@ -124,9 +124,9 @@ authorisation.
 - **X38 lands near plan-only** → H2 is dropped, H3 takes its budget, headline (i) is re-worded to the
   state-advancement mechanism.
 - ~~H0 ceiling rises well above 0.83~~ **Resolved 19:10: the opposite happened.** The cap-81 sample
-  scores 0.7637, significantly *below* the 25-cap run (CEIL-01). Every non-inferiority statement so
+  scores 0.7637, significantly *below* the 25-cap run (CEIL-07). Every non-inferiority statement so
   far was against the higher ceiling, so none weakens. Two consequences: name the ceiling in every
-  comparison (CEIL-02), and treat the 6.47 pp between planner runs as the planner's own noise, which
+  comparison (CEIL-08), and treat the 6.47 pp between planner runs as the planner's own noise, which
   the replay design removes from the depth curve (executor-side replicate noise: 0.04 pp at m=6).
 - **New free robustness check**: re-run the untailored prefix curve (m6/m9/m11) on the cap-81
   trajectories — a second, weaker planner sample for the curve at zero hosted cost (goes into §3 T4).
@@ -145,7 +145,7 @@ suite, one planner, and the channel confound until X38.
 
 ## 6. Tonight's queue and tomorrow's first checks
 
-Tonight, in order: replicate m=9 → NOISE-02 second half + withdrawal verdict; H0 gate (0 crash) → submit
+Tonight, in order: replicate m=9 → NOISE-05 second half + withdrawal verdict; H0 gate (0 crash) → submit
 H1; training ends → submit `hj13_prefix_hf_m6 hj13_prefix_hf_m9 hj13_prefix_hf_m11`; Qwen m6/m9 → first
 five episodes inspected for parse failures, then aggregate.
 Tomorrow: X38 brief (Cline), Qwen m11 config, F3 remainder, ledger rows for every new report, commit.
@@ -186,7 +186,7 @@ environment state the prefix left behind. Consequences, per the §1 decision rul
 over the starved control [−1.39, +9.13]. Every interval includes zero. Advice does not leave the
 plan-only floor even when the reviewer sees the whole transcript.
 
-**Attack 1, "the rise is by construction" (MECH-03).** With the handoff flag read correctly, the zero-shot
+**Attack 1, "the rise is by construction" (MECH-10).** With the handoff flag read correctly, the zero-shot
 m6→m9 rise of 10.21 pp decomposes into **8.55 pp (83.8 %) earned on episodes where the executor genuinely
 took over** and 1.65 pp from prefix-exhausted episodes. Restricted to the handoff subset alone, deepening
 6→9 raises goal-pass by **11.89 pp** and 6→11 by **19.41 pp**. The share falls to 60.5 % at m=11, so the
@@ -212,7 +212,7 @@ CI is attached.
   trajectories instead of cap-25. Viability confirmed first: 114/114 episodes carry ≥6 actions, 99 carry
   ≥9, 76 carry ≥11. The cap-81 planner also took **more** actions (mean 16.35 vs 13.42) while scoring
   6.47 pp **lower**, with the distributions identical through the median and diverging only in the upper
-  tail — which favours the over-acting reading of CEIL-01 over run-to-run drift, without eliminating it.
+  tail — which favours the over-acting reading of CEIL-07 over run-to-run drift, without eliminating it.
 - **Suffix adapter (HF-TRAIN-01).** Trained clean (final loss 0.0427, token accuracy 0.9903, 2 epochs,
   615 sequences) and comparable to the reference build (0.0503 / 0.982), so a null result on C3 cannot be
   explained away as a failed adapter. First arm in: `hj13_prefix_hf_m6` scores **0.7480** against the
@@ -222,7 +222,7 @@ CI is attached.
 
 Each was a *believable number* rather than a crash, which is the failure mode this project keeps meeting.
 
-1. **The handoff flag was read from `result.json`, where it does not exist** (MECH-02), so every M2/M3
+1. **The handoff flag was read from `result.json`, where it does not exist** (MECH-09), so every M2/M3
    population was empty and the decompositions attributed 100 % of every rise to prefix-exhausted episodes
    by construction. Fixed (X33d) by reading the `report` event, as `j8_frontier.py` does.
 2. **M2 filtered observations by `actor == "executor"`** (MECH-04), but observations are emitted by
@@ -233,7 +233,7 @@ Each was a *believable number* rather than a crash, which is the failure mode th
    Three plan-only campaigns exist on disk spanning 0.7000 to 0.7181. Standing rule added: every
    cross-arm contrast names the adapter build of every arm in it.
 
-The fatal-guard added in (1) fired on its first real run and was **right to** (GUARD-01): it caught
+The fatal-guard added in (1) fired on its first real run and was **right to** (GUARD-03): it caught
 pre-F0 comparison arms where the executor acted after a replayed `COMPLETE`. That guard was then refined
 from a blanket 5 % divergence threshold to the directional check that is genuinely impossible
 (`handoff_occurred = True` with zero executor calls), with the benign pre-F0 direction recorded rather
@@ -448,7 +448,7 @@ above. The brief had said to write `[TODO:` wherever the ledger had no number; t
 reported zero such markers and zero unsourced claims. **That instruction is not self-enforcing** — a
 model that does not know it is guessing cannot comply with it. A **set-difference audit** (every numeric
 literal in the draft must appear in the cited source) found all three in one command. That audit now runs
-on the preprint after every edit and is the reason the later additions are clean. QUAL-03.
+on the preprint after every edit and is the reason the later additions are clean. QUAL-07.
 
 ### 10.4 State
 
@@ -478,7 +478,7 @@ and would give the second family a real floor.
 | **Abstract and contribution list rescoped** | Both asserted the superseded NARR-01 equivalence and the demoted TAILOR-07 substitutability. Corrected; H2 added as a fourth finding. | — |
 | **`pytest tests/` had been aborting at collection since 2026-09-16** | `tests/unit` and `tests/integration` both held `test_limits_and_policy.py` and, with no `__init__.py`, the second import collided. Every "588 passed" this session was `tests/unit` alone. Renamed; the whole tree now runs: **625 passed, 1 skipped**. | — |
 | **Trainer pinned to H100** | The A100/H100 coin flip killed two dry runs (granite 25690327, Qwen 25708421). `gpu_id=H100` moved into `scripts/pbs/train_sft.pbs`. | — |
-| **Preprint number audit moved into the repo** | It lived only in a job temp directory that dies with the job, and it is the only thing that caught X46's three fabricated values. Now `scripts/analysis/preprint_number_audit.sh`. | QUAL-03 |
+| **Preprint number audit moved into the repo** | It lived only in a job temp directory that dies with the job, and it is the only thing that caught X46's three fabricated values. Now `scripts/analysis/preprint_number_audit.sh`. | QUAL-07 |
 
 ### 11.2 Judgement call 1 — a frozen prereg's remedy that did not fit its own failure
 

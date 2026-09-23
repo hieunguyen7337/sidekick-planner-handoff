@@ -42,8 +42,8 @@ claim id — do not retype any number that has no ledger row:
 | advice k=10, full context | 0.7339 | ADV-FC-01 |
 | takeover k=10 (action channel, matched trigger) | 0.8007 | CHAN-C1-01, point estimate only |
 | action prefix m=9 / m=11 | 0.7852 / 0.8098 | |
-| ceiling, **cap-25** | 0.8284 | name the cap, CEIL-02 |
-| ceiling, **cap-81** | 0.7637 | independent sample, CEIL-01 |
+| ceiling, **cap-25** | 0.8284 | name the cap, CEIL-08 |
+| ceiling, **cap-81** | 0.7637 | independent sample, CEIL-07 |
 
 ## Output 2 — `docs/limitations_external_20260923.md`
 

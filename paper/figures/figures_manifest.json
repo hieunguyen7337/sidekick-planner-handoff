@@ -132,7 +132,7 @@
     "file_png": "paper/figures/f4_mechanism.png",
     "width_in": 7.0,
     "column": "two-column",
-    "caption": "Mechanism decomposition across two panels. Left (M1): cumulative share of the planner's first API uses by action position, showing that >78% of API discovery occurs before $m=9$. Right (M3): decomposition of zero-shot depth rises ($m6\\rightarrow 9$ and $m6\\rightarrow 11$) into handoff-earned and silenced-episode contributions, establishing that 83.8% of the $m6\\rightarrow 9$ rise is earned on episodes where the executor took over and completed the task (MECH-01, MECH-03).",
+    "caption": "Mechanism decomposition across two panels. Left (M1): cumulative share of the planner's first API uses by action position, showing that >78% of API discovery occurs before $m=9$. Right (M3): decomposition of zero-shot depth rises ($m6\\rightarrow 9$ and $m6\\rightarrow 11$) into handoff-earned and silenced-episode contributions, establishing that 83.8% of the $m6\\rightarrow 9$ rise is earned on episodes where the executor took over and completed the task (MECH-08, MECH-10).",
     "series": [
       {
         "label": "M1 API novelty cumulative share",

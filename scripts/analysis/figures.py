@@ -167,7 +167,7 @@ def generate_f1_depth_curve(
     
     Guards:
     - No vertical breakpoint line (per F1-RESULT-04: S3 did not pass, no threshold claimed).
-    - Ceilings labelled with caps (CEIL-01/CEIL-02).
+    - Ceilings labelled with caps (CEIL-07/CEIL-08).
     - Refuses if required reports/keys missing or series empty.
     """
     fig_id = "F1"
@@ -281,7 +281,7 @@ def generate_f1_depth_curve(
         zorder=1,
     )
 
-    # Reference ceilings (with mandatory cap labels per CEIL-01/02)
+    # Reference ceilings (with mandatory cap labels per CEIL-07/08)
     ax.axhline(
         ceil_cap25, color=PALETTE["ceiling_cap25"]["color"],
         linestyle=PALETTE["ceiling_cap25"]["linestyle"], linewidth=1.2,
@@ -816,7 +816,7 @@ def generate_f4_mechanism(
         "by action position, showing that >78% of API discovery occurs before $m=9$. "
         "Right (M3): decomposition of zero-shot depth rises ($m6\\rightarrow 9$ and $m6\\rightarrow 11$) into "
         "handoff-earned and silenced-episode contributions, establishing that 83.8% of the $m6\\rightarrow 9$ rise "
-        "is earned on episodes where the executor took over and completed the task (MECH-01, MECH-03)."
+        "is earned on episodes where the executor took over and completed the task (MECH-08, MECH-10)."
     )
 
     manifest_entry = {

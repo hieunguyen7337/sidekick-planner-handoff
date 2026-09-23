@@ -1603,8 +1603,8 @@ def section_fe(store: ArmStore, n_boot: int) -> dict[str, Any]:
         key = f"{jf}_ceiling_cap25_minus_ceiling_cap81"
         e = cc["contrasts"][key]
         c = contrast(store, "ceiling_cap25", "ceiling_cap81", field, boots=leg, n_boot=n_boot)
-        repro.check("CEIL-01 (cap-81 rerun)", rel(cc_name), f"contrasts.{key}.diff_pp", e["diff_pp"], c["diff_pp"], 2)
-        repro.check("CEIL-01 (cap-81 rerun)", rel(cc_name), f"contrasts.{key}.ci95_pp", e["ci95_pp"],
+        repro.check("CEIL-07 (cap-81 rerun)", rel(cc_name), f"contrasts.{key}.diff_pp", e["diff_pp"], c["diff_pp"], 2)
+        repro.check("CEIL-07 (cap-81 rerun)", rel(cc_name), f"contrasts.{key}.ci95_pp", e["ci95_pp"],
                     c[_boot_name("scenario", LEGACY_SEED)]["ci95_pp"], 2)
     for label, rkey in (("ceiling_cap25", "planner_alone"),):
         repro.check("arm mean", rel(uf_name), f"arms.{rkey}.goal_pass_all", uf["arms"][rkey]["goal_pass_all"],
