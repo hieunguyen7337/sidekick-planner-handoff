@@ -1,5 +1,5 @@
 # J10 confirmatory read on test_normal, arm 12 `advise_k10_neutral` of Amendment A1 r2
-# (docs/prereg_j10_amendment_20260924.md §4; P7, registered or struck at freeze by §6 P7).
+# (docs/prereg_j10_amendment_20260924.md §4). Exploratory since r3: B2 was unresolved, so §6 P7 registers no prediction; contrasts E2–E5.
 # As arm 9, with the neutral advice prompt (planner.correct_prompt: neutral).
 # Source: configs/b2_advise_neutral_fixed_k_10_fullctx.yaml
 # Differs from source in: campaign_id, planner.packet_source, planner.packet_source_pending

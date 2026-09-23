@@ -685,7 +685,8 @@ A1_CONSTANT_GP = {
     "advise_k1_fullctx": 0.5,
     "advise_k10_fullctx": 0.5,
     "takeover_k10": 0.75,
-    # A1 r2 arms 1b, 11, 12: no registered prediction names them, so these values move no verdict.
+    # A1 arms 1b, 11, 12: no registered prediction names them (r3: 11-12 are exploratory
+    # rows E2-E5 only), so these values move no verdict.
     "executor_alone_bplus": 0.375,
     "show_k10": 0.625,
     "advise_k10_neutral": 0.5,
@@ -895,7 +896,7 @@ def test_permutation_p_is_reported_beside_the_verdict_not_decision_bearing(tmp_p
         assert (perm["method"], perm["n_patterns"]) == ("exact", 16)
     assert p["P1"]["verdict"] == "supported"
     assert len(calls) == 5
-    # P3 (A1:263): one-sided at its −7 pp threshold; the routine does the shift.
+    # P3 (A1:270): one-sided at its −7 pp threshold; the routine does the shift.
     diffs, clusters, threshold, alternative, seed = calls[1]
     assert diffs == pytest.approx([0.0] * 24)
     assert sorted(set(clusters)) == ["sc0", "sc1", "sc2", "sc3"]
@@ -927,7 +928,7 @@ def test_p6_reversed_mirrors_p1_unadjusted_ci_and_holm_adjusted_two_sided_p():
     assert p1_rule["direction"] == p6_rule["direction"] == "two-sided"
     p6 = next(p for p in j10.A1_PREDICTIONS if p["id"] == "P6")
     assert p6["rule"] == "positive_excludes_zero_with_reversal"
-    # A1:370-371 (F4): the registered-orientation upper bound.
+    # A1:377-378 (F4): the registered-orientation upper bound.
     assert p6["dev_reference"]["ci95_pp_scenario"] == [1.29, 13.49]
 
     def family(p6_point, p6_lo, p6_hi, p6_p):
@@ -1007,7 +1008,25 @@ def test_supporting_registry_is_r2_table_verbatim():
                                "untailored": ["prefix_zs_m11", "prefix_zs_m9"]}
     # r1's S4 (ceiling − untailored m11) is not in r2's table: exploratory, not supporting.
     assert [(e["id"], e["left"], e["right"]) for e in j10.A1_EXPLORATORY] == [
-        ("E1", "planner_alone_cap81", "prefix_zs_m11")]
+        ("E1", "planner_alone_cap81", "prefix_zs_m11"),
+        ("E2", "takeover_k10", "show_k10"),
+        ("E3", "show_k10", "advise_k10_fullctx"),
+        ("E4", "advise_k10_neutral", "advise_k10_fullctx"),
+        ("E5", "takeover_k10", "advise_k10_neutral")]
+
+
+def test_arms_11_and_12_are_exploratory_rows_cited_to_the_r3_p7_table():
+    # A1 r3 completed P7 from an unresolved B2: no P7 prediction, and arms 11-12 appear only
+    # as the exploratory rows E2-E5, each citing the r3 table line that registers it.
+    lines = (REPO_ROOT / j10.A1_PREREG).read_text(encoding="utf-8").splitlines()
+    rows = {e["id"]: e for e in j10.A1_EXPLORATORY}
+    for eid in ("E2", "E3", "E4", "E5"):
+        e = rows[eid]
+        line = lines[int(e["citation"].rsplit(":", 1)[1]) - 1]
+        assert line.startswith(f"| {eid} | `{e['left']} − {e['right']}`"), eid
+        assert e["dev_reference"]["n_pairs"] == 171
+    assert not [p for p in j10.A1_PREDICTIONS if p["id"].startswith("P7")]
+    assert {"show_k10", "advise_k10_neutral"} <= set(j10.A1_ARMS)
 
 
 def test_supporting_and_exploratory_contrasts_on_a_constructed_matrix(tmp_path: Path):
@@ -1023,12 +1042,17 @@ def test_supporting_and_exploratory_contrasts_on_a_constructed_matrix(tmp_path: 
     assert (s4["n_pairs"], s4["scenario"]["ci95_pp"], s4["task"]["ci95_pp"]) == (24, [12.5, 12.5], [12.5, 12.5])
     assert s["S5"]["goal_pass"]["scenario"]["diff_pp"] == 37.5            # 0.75 − 0.375
     assert all(r["decision_bearing"] is False for r in s.values())
-    (e1,) = report["exploratory_contrasts"]
-    assert e1["exploratory"] is True and e1["goal_pass"]["scenario"]["diff_pp"] == 25.0
+    e = {r["id"]: r for r in report["exploratory_contrasts"]}
+    assert list(e) == ["E1", "E2", "E3", "E4", "E5"]
+    assert all(r["exploratory"] is True and r["decision_bearing"] is False for r in e.values())
+    assert e["E1"]["goal_pass"]["scenario"]["diff_pp"] == 25.0            # 0.75 − 0.5
+    # Arms 11-12 (A1 r3, exploratory): show 0.625, neutral 0.5, takeover 0.75, advice 0.5.
+    assert [e[k]["goal_pass"]["scenario"]["diff_pp"] for k in ("E2", "E3", "E4", "E5")] == [
+        12.5, 12.5, 0.0, 25.0]
     # No events.jsonl in this tree: every handoff flag is missing, and says so.
     assert report["no_handoff_counts"]["prefix_m11"] == {
         "m": 11, "n_scored": 24, "n_handoff": 0, "n_no_handoff": 0, "n_flag_missing": 24,
-        "citation": f"{j10.A1_PREREG}:437-440"}
+        "citation": f"{j10.A1_PREREG}:475-478"}
 
 
 def test_handoff_only_depth_and_no_handoff_counts(tmp_path: Path):
@@ -1106,7 +1130,7 @@ def test_p2_ratio_interval_is_information_only_and_is_f_f_draw_for_draw():
     cost["arms"]["advise_k1_fullctx"]["episodes"] = left_rows
     cost["arms"]["prefix_m11"]["episodes"] = right_rows
     row = j10.a1_evaluate_cost_prediction(p2, cost, expected_n=24)
-    # The verdict stays on the arm means (A1:289), whatever the interval says.
+    # The verdict stays on the arm means (A1:296), whatever the interval says.
     assert row["verdict"] == "supported" and row["ratio"] == round(1414410.0 / 443361.0, 4)
     iv = row["ratio_interval"]
     assert iv["status"] == "ok" and iv["information_only"] is True and iv["decision_bearing"] is False

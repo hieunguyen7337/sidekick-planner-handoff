@@ -1,5 +1,5 @@
 # J10 confirmatory read on test_normal, arm 11 `show_k10` of Amendment A1 r2
-# (docs/prereg_j10_amendment_20260924.md §4; P7, registered or struck at freeze by §6 P7).
+# (docs/prereg_j10_amendment_20260924.md §4). Exploratory since r3: B2 was unresolved, so §6 P7 registers no prediction; contrasts E2–E5.
 # As arm 10, but the planner's action is shown to the receiver as advice text and never
 # executed (advice_from_act: true; src/sidekick/runner.py:319-320). Runs as --system fixed_k.
 # Source: configs/b2_show_fixed_k_10.yaml

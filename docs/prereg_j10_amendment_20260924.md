@@ -1,6 +1,6 @@
 # Preregistration Amendment A1 to the J9 Freeze — J10 on `test_normal`
 
-**Status**: **DRAFT, revision 2, pending user review — not freezable until B2 has landed and §6 P7 is completed.**
+**Status**: **DRAFT, revision 3, pending user review. B2 has landed (unresolved) and §6 P7 is completed (no P7 prediction registered); freezable once the user has reviewed it.**
 
 Amends, and does not edit, `docs/prereg_j9_freeze_20260920.md`. Freezing means replacing the status line above
 with one that **begins** `**Status**: FROZEN`, and committing. `scripts/pbs/j10_arm.pbs` refuses a
@@ -16,6 +16,11 @@ with one that **begins** `**Status**: FROZEN`, and committing. `scripts/pbs/j10_
     decomposition as **P7**;
   - every planner-involving arm replays **arm 3's** first plan packet, as every dev arm did;
   - multiplicity, seeds, crash handling and the boundary-stability rule are specified exactly.
+- **r3** (2026-09-23): B2 landed with the registered outcome **unresolved**
+  (`campaign/results/b2_decomposition_20260923.report.json`, key `outcome.reading`). §6 P7 is completed by the
+  rule r2 fixed for that outcome: no P7 prediction, arms 11 and 12 exploratory, Holm $m = 4$. P6's 171-pair dev
+  value is inserted. The edits are confined to lines that named B2 or P7 as pending (status, H-A1c, §4 arms
+  11–12, §5.3, P6, P7, §9).
 
 **Gate assertion at time of writing**: the AppWorld `test_normal` split has **not** been read, loaded,
 listed, or evaluated by this project, and no file under any `test_normal` or `test_challenge` path has
@@ -104,7 +109,8 @@ differences:
 - the delivery (executed vs shown).
 
 `docs/prereg_c1_decomposition_20260923.md` (frozen, dev) separates them. A1 registers on test whichever
-separation B2 shows to be decisive.
+separation B2 shows to be decisive. **B2 showed none to be decisive** (outcome *unresolved*, §6 P7), so no
+separation is registered; arms 11 and 12 run on test as exploratory arms.
 
 These are claims about *form*, not *quantity*: H-A1's budget asymmetry favours the advice arm, and H-A1b holds
 the trigger and the context fixed.
@@ -129,13 +135,14 @@ Seeds: $s \in \{1, 2\}$. **336 paired episodes per arm.**
 | 8 | `advise_k1_fullctx` | `sft_b_plus` | arm 3's plan, then full-context prose advice every step | 19.02 | **6,391** |
 | 9 | `advise_k10_fullctx` | `sft_b_plus` | arm 3's plan, then full-context prose advice every 10 steps | 2.46 | **827** |
 | 10 | `takeover_k10` | `sft_b_plus` | arm 3's plan, then the planner executes its own action every 10 steps | 2.32 | **780** |
-| 11 | `show_k10` *(P7; confirmed at freeze)* | `sft_b_plus` | as arm 10, but the action is shown as advice text, never executed | ≈2.32 (B2) | **≈780** |
-| 12 | `advise_k10_neutral` *(P7; confirmed at freeze)* | `sft_b_plus` | as arm 9, with the neutral advice prompt | ≈2.46 (B2) | **≈827** |
+| 11 | `show_k10` *(exploratory: B2 unresolved)* | `sft_b_plus` | as arm 10, but the action is shown as advice text, never executed | ≈2.32 (B2) | **≈780** |
+| 12 | `advise_k10_neutral` *(exploratory: B2 unresolved)* | `sft_b_plus` | as arm 9, with the neutral advice prompt | ≈2.46 (B2) | **≈827** |
 
 **Arm 9 is no longer droppable** (R1). It is one half of the P6 pair.
 
-**Arms 11 and 12** are registered, or struck, at freeze by the rule in §6 P7. A struck arm is removed from this
-table before the status line changes. No arm may be added after freeze.
+**Arms 11 and 12** run as **exploratory** arms, by §6 P7's rule for an unresolved B2. They enter no prediction
+and no Holm family; their contrasts (§6 P7, E2–E5) are reported unadjusted with the label attached. No arm may
+be added after freeze.
 
 **Receivers.** Every `sft_b_plus` arm serves one adapter:
 `/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b`, launched as
@@ -228,7 +235,7 @@ in the paper.
 ### 5.3 Multiplicity (F3)
 
 - **The Holm family** is every registered `goal_pass` prediction whose *support* requires rejecting a null:
-  **P1, P3, P4, P6**, plus each registered component of **P7** — at most $m = 6$.
+  **P1, P3, P4, P6**, plus each registered component of **P7** — at most $m = 6$. B2 was unresolved, so P7 registers no component and **$m = 4$**.
 - Each member's p-value is the **two-sided-equivalent percentile-bootstrap p** at its threshold, from the same scenario-clustered bootstrap as its interval (`j10_report.bootstrap_pvalue`). **P3, P4 and P7's components**, which register no reversed outcome, use $2 \times$ the share of resampled means on the wrong side of the threshold (`direction="greater"`).
   **P1 and P6** register a *reversed* outcome, so they use $2 \times$ the smaller tail at 0 (`direction="two-sided"`). One p then serves both readings, and a reversal enters the Holm family with the same evidence standard as a confirmation.
   The two forms are equal whenever the point estimate lies on the predicted side. They differ only for an effect that points the wrong way, and for such an effect only the two-sided form can support claiming a reversal.
@@ -369,7 +376,13 @@ the planner is asked for and what the executor receives.
 
 Dev (114 pairs, CHAN-C1-02, registered orientation): **+6.69 pp, [+1.29, +13.49]**. The ledger's 13.48 is the
 reversed contrast's bound negated; one order statistic apart (F4). Exact scenario sign-flip p = 0.047; wild
-cluster bootstrap [+0.88, +12.48] (ROB-02). **[171-pair value from B1 inserted at freeze.]**
+cluster bootstrap [+0.88, +12.48] (ROB-02).
+
+At **171 pairs** (seeds 1–3; B2's D0, `campaign/results/b2_decomposition_20260923.report.json` key
+`contrasts.D0`, same orientation, bootstrap seed 20260924): **+6.13 pp, [+0.75, +12.71]**, task-clustered
+[+0.97, +11.73]. The POOL-04 lower bound excludes zero at all seven seeds. The exact scenario sign-flip gives
+p = 0.063, so at 171 pairs the small-cluster sensitivity disagrees with the bootstrap verdict (ledger DEC-02).
+Seed 3's plan packets come from the cap-81 campaign; seeds 1–2's come from the cap-25 one.
 
 - **Supported** → H-A1b holds on test. With P1 this is the paper's headline: the channel result holds at a
   matched trigger and at adverse budget.
@@ -379,8 +392,12 @@ cluster bootstrap [+0.88, +12.48] (ROB-02). **[171-pair value from B1 inserted a
 
 ⚠ P6 tests the dev contrast **as built**, including its prompt asymmetry. What P6 means is settled by P7.
 Without P7, a supported P6 licenses "the takeover arm beats the advice arm", not "execution beats prose".
+B2 left P7 unregistered (below). On dev a neutral advice prompt recovered about three-fifths of the gap
+(N − A +3.73 pp [−0.06, +8.24]; T − N +2.40 pp [−2.94, +8.89]; ledger DEC-03). So a supported P6 is reported
+as **"actions beat the registered advice prompt"**, with the exploratory arm-12 contrast E5 in the same
+paragraph, and never as a channel effect without that qualification.
 
-### P7 — the decomposition of P6 (R6). **Completed at freeze from B2; until then this section is a template.**
+### P7 — the decomposition of P6 (R6). **Completed in r3 from B2: unresolved, so no P7 prediction is registered.**
 
 B2 (`docs/prereg_c1_decomposition_20260923.md`, frozen before any B2 episode) runs four arms on dev at
 171 pairs:
@@ -406,6 +423,27 @@ At freeze, the user and orchestrator complete P7 from the B2 outcome, by this ru
 
 Each P7 prediction's dev value and interval are written into this section at freeze, from the B2 report, with
 its key.
+
+**Completion (r3).** B2's registered outcome is **unresolved** (`campaign/results/b2_decomposition_20260923.report.json`,
+key `outcome.reading`; ledger DEC-01). No rule fired:
+- prompt artefact: D4's interval includes zero, but D3's lower bound is −0.06, so D3 does not exclude zero; all
+  seven POOL-04 seeds agree;
+- execution matters: D1's lower bound is −1.56;
+- content, not execution: D2's lower bound is −2.43.
+
+The last row of the table therefore applies. **No P7 prediction is registered.** Arms 11 and 12 run as
+exploratory arms, and the paper reports that the decomposition was unresolved on dev. On test, their contrasts
+are the exploratory rows E2–E5, in B2's orientations. They are reported unadjusted, on both clusterings, with
+the dev values beside them, and none may be promoted to a claim after the read (§5.3):
+
+| id | contrast (B2 label) | dev, 171 pairs | scenario CI | B2 key |
+|---|---|---:|---|---|
+| E2 | `takeover_k10 − show_k10` (D1) | +3.83 pp | [−1.56, +10.81] | `contrasts.D1` |
+| E3 | `show_k10 − advise_k10_fullctx` (D2) | +2.30 pp | [−2.43, +7.31] | `contrasts.D2` |
+| E4 | `advise_k10_neutral − advise_k10_fullctx` (D3) | +3.73 pp | [−0.06, +8.24] | `contrasts.D3` |
+| E5 | `takeover_k10 − advise_k10_neutral` (D4) | +2.40 pp | [−2.94, +8.89] | `contrasts.D4` |
+
+If arms 11 and 12 cannot complete 336 non-crashed pairs, they are reported as not run, as a pair (§9).
 
 ---
 
@@ -470,9 +508,9 @@ unconstrained:
 | Arm 3 (`planner_alone` cap-81) | **5,830** |
 | Arm 8 (`advise_k1_fullctx`) | **6,391** |
 | Arms 9 + 10 (the P6 pair) | **1,607** |
-| Arms 11 + 12 (P7), if registered | **≤ 1,607** |
+| Arms 11 + 12 (exploratory; B2 unresolved) | **≤ 1,607** |
 | Arm 2 and every other arm | 0 (replay) |
-| **Registered total** | **13,828**, and **≤ 15,435** with arms 11 and 12 |
+| **Registered total** | **≤ 15,435**: 13,828 for arms 1–10, and arms 11 and 12 add ≤ 1,607 |
 | Measured basis | dev live-call rates per episode with the plan packet replayed, as on test |
 | Quota observed | ~5,000 calls per plan window (§10.1), so **≥ 3 windows** |
 | Billing | ChatGPT-plan subscription, `gpt-5.6-luna`, no per-token billing |
@@ -486,8 +524,8 @@ read. Replay arms are immune; live arms are not. So:
 4. then the GPU-only arms 1, 1b, 2 and 4–7.
 
 **Abort rule.** J10 is **reported as not run** — never at reduced power — if arms 3, 8, 9 or 10 cannot
-complete 336 non-crashed pairs (for example because the model is withdrawn or quota never returns). P7's arms
-are abandoned only as a pair and then reported as not run, while P1–P6 stand.
+complete 336 non-crashed pairs (for example because the model is withdrawn or quota never returns). Arms 11
+and 12 are abandoned only as a pair and then reported as not run, while P1–P6 stand.
 
 ### 9.1 The planner is pinned, and what that can and cannot guarantee (R5)
 

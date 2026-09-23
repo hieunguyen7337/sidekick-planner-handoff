@@ -1439,10 +1439,10 @@ def main_v1(argv: Optional[list[str]] = None) -> int:
 #
 # Registered here, before the read:
 #   * paired on (task_id, seed); a pair missing or crashed on either side is
-#     dropped from that contrast and counted [A1 §5.1, lines 201-210];
+#     dropped from that contrast and counted [A1 §5.1, lines 208-217];
 #   * percentile cluster bootstrap, B = 10,000, seed 20260924; scenario
 #     clustering is PRIMARY and governs every decision, task clustering is
-#     reported beside it [A1 §5.2, lines 214-219];
+#     reported beside it [A1 §5.2, lines 221-226];
 #   * the resampling algorithm is hj1_gate.paired_diff / j8_frontier.
 #     paired_diff_scenario draw-for-draw (same RNG consumption, same percentile
 #     indices), with the seed exposed -- j8_frontier hard-codes hj1_gate.SEED =
@@ -1451,7 +1451,7 @@ def main_v1(argv: Optional[list[str]] = None) -> int:
 #   * predictions are DATA (A1_PREDICTIONS); decision rules are a small table
 #     (A1_RULES) the data refers to by name, so P7 is a list entry;
 #   * Holm across the goal_pass predictions flagged holm_family=True -- those whose
-#     support needs a rejection: P1, P3, P4, P6 and any P7 component [A1 §5.3, lines 230-231];
+#     support needs a rejection: P1, P3, P4, P6 and any P7 component [A1 §5.3, lines 237-238];
 #   * POOL-04 boundary-stability rule [A1 §5.4]; a cluster sign-flip permutation p
 #     is reported beside each verdict and is not decision-bearing [A1 §5.5].
 # ===========================================================================
@@ -1475,7 +1475,7 @@ A1_SPLIT_N_TASKS = {"dev": 57, "test_normal": 168}
 A1_DEFAULT_SEEDS = "1,2"
 POOL04_WINDOW_PP = 1.00
 POOL04_SEEDS = (20260924, 1, 2, 3, 7, 101, 999)
-POOL04_BIG_N = 200_000  # A1:249-250, "and at 200,000 resamples at 20260924"
+POOL04_BIG_N = 200_000  # A1:256-257, "and at 200,000 resamples at 20260924"
 POOL04_BIG_SEED = 20260924
 CLUSTER_INFERENCE_PATH = Path(__file__).resolve().parent / "cluster_inference.py"
 RAW_RESULTS_ROOT = Path("/scratch/n12194778/sidekick/results")
@@ -1483,8 +1483,9 @@ RAW_RESULTS_ROOT = Path("/scratch/n12194778/sidekick/results")
 # Registered arms [A1 r2 §4: 1, 1b, 2-12]. The value is the config that produces the
 # arm (None: no J10 config exists yet); its campaign id is j10_<label>_20260924. The
 # labels are what --arm accepts, so an arm missing here cannot be reported unless a
-# prediction names it -- which executor_alone_bplus (1b) and, until P7 is completed
-# at freeze, show_k10 (11) and advise_k10_neutral (12) do not.
+# prediction names it -- which executor_alone_bplus (1b) does not. show_k10 (11) and
+# advise_k10_neutral (12) carry no prediction either: A1 r3 completed P7 from an
+# unresolved B2, so they appear only in the exploratory rows E2-E5 [A1:441-444].
 A1_ARMS: dict[str, Optional[str]] = {
     "executor_alone": "configs/j10_executor_alone.yaml",
     "executor_alone_bplus": "configs/j10_executor_alone_bplus.yaml",
@@ -1514,7 +1515,7 @@ def _rule_negative_with_reversal(point: float, lo_above: bool, hi_below: bool) -
 
 
 def _rule_positive_with_reversal(point: float, lo_above: bool, hi_below: bool) -> str:
-    # P1's rule mirrored for a positive prediction (P6, A1:374-378). The events it receives
+    # P1's rule mirrored for a positive prediction (P6, A1:387-391). The events it receives
     # are P1's: the unadjusted scenario CI bound AND, inside the Holm family, the Holm-adjusted
     # two-sided p (a1_decide_family), so "reversed" needs the same evidence as "supported".
     if lo_above:
@@ -1601,7 +1602,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "threshold_pp": 0.0,
         "holm_family": True,
         "statement": "advise_k1_fullctx − prefix_m11 on goal_pass is negative, CI excluding zero",
-        "citation": f"{A1_PREREG}:274-284",
+        "citation": f"{A1_PREREG}:281-291",
         "dev_reference": {
             "diff_pp": -14.81,
             "ci95_pp_scenario": [-21.20, -7.96],
@@ -1627,13 +1628,13 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
             "advise_k1_fullctx spends >= 2x the non-cached planner tokens of prefix_m11 "
             "and strictly more hosted calls per episode"
         ),
-        "citation": f"{A1_PREREG}:286-307",
+        "citation": f"{A1_PREREG}:293-314",
         "notes": (
             "Read from a scripts/analysis/j12_cost_axes.py report over the J10 arms "
             "(--cost-report), whose prefix arms are costed at their attributed source "
             "steps. Run j12 with --packet-source pointed at the J10 arm-3 campaign, not "
             "its hj1b default. If not supported, P1 is uninterpretable as a channel "
-            "result [A1:306-307]."
+            "result [A1:313-314]."
         ),
         "dev_reference": {
             "ratio": 3.19,
@@ -1654,16 +1655,16 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "rule": "lower_bound_above_threshold",
         "threshold_pp": -7.00,
         "holm_family": True,
-        # A1 r2 §5.5 (A1:263): the sign-flip sensitivity is one-sided at the threshold for P3
+        # A1 r2 §5.5 (A1:270): the sign-flip sensitivity is one-sided at the threshold for P3
         # only -- 'greater' on the differences shifted by +0.07 (cluster_inference.registered_signflip).
         "permutation_alternative": "greater",
         "statement": "prefix_m11 − planner_alone_cap81 on goal_pass has CI lower bound above −7.00 pp",
-        "citation": f"{A1_PREREG}:309-330",
+        "citation": f"{A1_PREREG}:316-337",
         "dev_reference": {
             "diff_pp": 4.75,
             "ci95_pp_scenario": [-1.16, 11.75],
             "source": A1_DEV_BASIS,
-            "key": "contrasts.goal_pass_all_ceiling_c81_minus_c81_bp_m11 (negated here; A1 r2 quotes it stored, −4.75 [−11.75, +1.16], A1:315-316)",
+            "key": "contrasts.goal_pass_all_ceiling_c81_minus_c81_bp_m11 (negated here; A1 r2 quotes it stored, −4.75 [−11.75, +1.16], A1:322-323)",
             "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
         },
     },
@@ -1678,12 +1679,12 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "threshold_pp": 0.0,
         "holm_family": True,
         "statement": "prefix_zs_m11 − prefix_zs_m9 on goal_pass is positive (registered underpowered)",
-        "citation": f"{A1_PREREG}:332-348",
+        "citation": f"{A1_PREREG}:339-355",
         "dev_reference": {
             "diff_pp": 2.82,
             "ci95_pp_scenario": [-1.55, 7.16],
             "source": A1_DEV_BASIS,
-            "key": "contrasts.goal_pass_all_c81_zs_m9_minus_c81_zs_m11 (stored −2.82 [−7.16, +1.55]; negated here, as r1 did silently -- A1 r2 quotes it stored, A1:339-340)",
+            "key": "contrasts.goal_pass_all_c81_zs_m9_minus_c81_zs_m11 (stored −2.82 [−7.16, +1.55]; negated here, as r1 did silently -- A1 r2 quotes it stored, A1:346-347)",
             "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
         },
     },
@@ -1700,7 +1701,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         # adjustment would make it easier to support; it is judged on the unadjusted interval.
         "holm_family": False,
         "statement": "advise_k1_fullctx − sft_plan on goal_pass is NOT positive with a CI excluding zero",
-        "citation": f"{A1_PREREG}:350-362",
+        "citation": f"{A1_PREREG}:357-369",
         "dev_reference": {
             "diff_pp": -5.51,
             "ci95_pp_scenario": [-13.15, 2.51],
@@ -1716,15 +1717,15 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "metric": "goal_pass",
         "left": "takeover_k10",
         "right": "advise_k10_fullctx",
-        # A1:374-378 registers supported / not supported / reversed, as for P1.
+        # A1:387-391 registers supported / not supported / reversed, as for P1.
         "rule": "positive_excludes_zero_with_reversal",
         "threshold_pp": 0.0,
         "holm_family": True,
         "statement": "takeover_k10 − advise_k10_fullctx on goal_pass is positive, 95% scenario CI excluding zero",
-        "citation": f"{A1_PREREG}:364-381",
+        "citation": f"{A1_PREREG}:371-398",
         "dev_reference": {
             "diff_pp": 6.69,
-            # A1:370-371 (F4): 13.49 in the registered orientation; 13.48 was the reversed
+            # A1:377-378 (F4): 13.49 in the registered orientation; 13.48 was the reversed
             # contrast's bound negated, one order statistic away.
             "ci95_pp_scenario": [1.29, 13.49],
             "source": "campaign/results/hj13_c1_matched_trigger_20260923.report.json (CHAN-C1-02), "
@@ -1735,9 +1736,9 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
     },
 ]
 
-# A1 §6 "Supporting contrasts, registered but not decision-bearing" [A1:412-421], one
+# A1 §6 "Supporting contrasts, registered but not decision-bearing" [A1:450-459], one
 # row per line of r2's table, in its order and orientation. All on goal_pass, reported
-# unadjusted and outside the Holm family [A1:243]. `kind` picks the estimand:
+# unadjusted and outside the Holm family [A1:250]. `kind` picks the estimand:
 #   paired        left − right, paired on (task_id, seed), as every A1 contrast;
 #   did           (left[0] − left[1]) − (right[0] − right[1]) per (task_id, seed), over
 #                 the keys all four arms score;
@@ -1745,52 +1746,75 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
 #                 episode handed off, as F-c: Σ d·h / Σ h with the whole scenario
 #                 resampled (j16_robustness.decomposition, gain_on_handoff_subset).
 A1_SUPPORTING: list[dict[str, Any]] = [
-    # A1:416 "| `advise_k1 − prefix_m9` | −9.89 pp | [−17.79, −1.99] | dev basis |"
+    # A1:454 "| `advise_k1 − prefix_m9` | −9.89 pp | [−17.79, −1.99] | dev basis |"
     {"id": "S1", "kind": "paired", "left": "advise_k1_fullctx", "right": "prefix_m9",
-     "citation": f"{A1_PREREG}:416",
+     "citation": f"{A1_PREREG}:454",
      "dev_reference": {"diff_pp": -9.89, "ci95_pp_scenario": [-17.79, -1.99], "source": "dev basis"}},
-    # A1:417 "| `advise_k10 − prefix_m11` | −7.73 pp | [−12.60, −3.12] | dev basis |"
+    # A1:455 "| `advise_k10 − prefix_m11` | −7.73 pp | [−12.60, −3.12] | dev basis |"
     {"id": "S2", "kind": "paired", "left": "advise_k10_fullctx", "right": "prefix_m11",
-     "citation": f"{A1_PREREG}:417",
+     "citation": f"{A1_PREREG}:455",
      "dev_reference": {"diff_pp": -7.73, "ci95_pp_scenario": [-12.60, -3.12], "source": "dev basis"}},
-    # A1:418 "| `prefix_m11 − prefix_m9` (tailored depth) | +4.25 pp (171) | [+0.15, +8.75],
+    # A1:456 "| `prefix_m11 − prefix_m9` (tailored depth) | +4.25 pp (171) | [+0.15, +8.75],
     # **on the boundary** (POOL-04) | j15 `t_depth_m9_m11` |"
     {"id": "S3", "kind": "paired", "left": "prefix_m11", "right": "prefix_m9",
-     "label": "tailored depth", "citation": f"{A1_PREREG}:418",
+     "label": "tailored depth", "citation": f"{A1_PREREG}:456",
      "dev_reference": {"diff_pp": 4.25, "ci95_pp_scenario": [0.15, 8.75], "n_pairs": 171,
                        "pool04": "on the boundary", "source": "j15 t_depth_m9_m11"}},
-    # A1:419 "| `(m11 − m9)_tailored − (m11 − m9)_untailored` (R2) | +2.81 pp (171) |
+    # A1:457 "| `(m11 − m9)_tailored − (m11 − m9)_untailored` (R2) | +2.81 pp (171) |
     # [−2.57, +8.96] | POOL-03 |"
     {"id": "S4", "kind": "did", "left": ["prefix_m11", "prefix_m9"],
      "right": ["prefix_zs_m11", "prefix_zs_m9"], "label": "tailoring x depth (R2)",
-     "citation": f"{A1_PREREG}:419",
+     "citation": f"{A1_PREREG}:457",
      "dev_reference": {"diff_pp": 2.81, "ci95_pp_scenario": [-2.57, 8.96], "n_pairs": 171,
                        "source": "POOL-03"}},
-    # A1:420 "| `prefix_m11 − executor_alone_bplus` (tailored floor → m11) | new arm | — | arm 1b |"
+    # A1:458 "| `prefix_m11 − executor_alone_bplus` (tailored floor → m11) | new arm | — | arm 1b |"
     {"id": "S5", "kind": "paired", "left": "prefix_m11", "right": "executor_alone_bplus",
-     "label": "tailored floor -> m11", "citation": f"{A1_PREREG}:420", "dev_reference": None},
-    # A1:421 "| handoff-only depth: m9 → m11 restricted to episodes where a handoff occurs at
+     "label": "tailored floor -> m11", "citation": f"{A1_PREREG}:458", "dev_reference": None},
+    # A1:459 "| handoff-only depth: m9 → m11 restricted to episodes where a handoff occurs at
     # m = 11 | reported for both receivers | — | F-c |"
     {"id": "S6", "kind": "handoff_depth", "label": "handoff-only depth m9 -> m11",
      "receivers": {"tailored": ["prefix_m11", "prefix_m9"],
                    "untailored": ["prefix_zs_m11", "prefix_zs_m9"]},
-     "citation": f"{A1_PREREG}:421", "dev_reference": None},
+     "citation": f"{A1_PREREG}:459", "dev_reference": None},
 ]
 
-# Not in r2's supporting table, so reported as exploratory [A1:243-244]. The ceiling −
-# untailored m11 gap is the number behind the §4.1 sourcing correction [A1:179], which §7
-# item 6 reports whether or not it helps [A1:442].
+# Not in r2's supporting table, so reported as exploratory [A1:250-251]. The ceiling −
+# untailored m11 gap is the number behind the §4.1 sourcing correction [A1:186], which §7
+# item 6 reports whether or not it helps [A1:480].
 A1_EXPLORATORY: list[dict[str, Any]] = [
     {"id": "E1", "kind": "paired", "left": "planner_alone_cap81", "right": "prefix_zs_m11",
      "label": "ceiling − untailored m11 (sourcing correction)",
-     "citation": f"{A1_PREREG}:179",
+     "citation": f"{A1_PREREG}:186",
      "dev_reference": {"diff_pp": -2.95, "ci95_pp_scenario": [-8.65, 1.91], "n_pairs": 114}},
+    # E2-E5: arms 11 and 12, exploratory because B2 was unresolved (A1 r3 §6 P7). Each is
+    # B2's contrast in B2's orientation, with its dev value from
+    # campaign/results/b2_decomposition_20260923.report.json `contrasts.D1`..`D4`.
+    # A1:441 "| E2 | `takeover_k10 − show_k10` (D1) | +3.83 pp | [−1.56, +10.81] | `contrasts.D1` |"
+    {"id": "E2", "kind": "paired", "left": "takeover_k10", "right": "show_k10",
+     "label": "execution: takeover − show (B2 D1)", "citation": f"{A1_PREREG}:441",
+     "dev_reference": {"diff_pp": 3.83, "ci95_pp_scenario": [-1.56, 10.81], "n_pairs": 171,
+                       "source": "b2 contrasts.D1"}},
+    # A1:442 "| E3 | `show_k10 − advise_k10_fullctx` (D2) | +2.30 pp | [−2.43, +7.31] | `contrasts.D2` |"
+    {"id": "E3", "kind": "paired", "left": "show_k10", "right": "advise_k10_fullctx",
+     "label": "prompt + content: show − advice (B2 D2)", "citation": f"{A1_PREREG}:442",
+     "dev_reference": {"diff_pp": 2.30, "ci95_pp_scenario": [-2.43, 7.31], "n_pairs": 171,
+                       "source": "b2 contrasts.D2"}},
+    # A1:443 "| E4 | `advise_k10_neutral − advise_k10_fullctx` (D3) | +3.73 pp | [−0.06, +8.24] | `contrasts.D3` |"
+    {"id": "E4", "kind": "paired", "left": "advise_k10_neutral", "right": "advise_k10_fullctx",
+     "label": "advice prompt wording: neutral − registered (B2 D3)", "citation": f"{A1_PREREG}:443",
+     "dev_reference": {"diff_pp": 3.73, "ci95_pp_scenario": [-0.06, 8.24], "n_pairs": 171,
+                       "source": "b2 contrasts.D3"}},
+    # A1:444 "| E5 | `takeover_k10 − advise_k10_neutral` (D4) | +2.40 pp | [−2.94, +8.89] | `contrasts.D4` |"
+    {"id": "E5", "kind": "paired", "left": "takeover_k10", "right": "advise_k10_neutral",
+     "label": "channel vs neutral advice: takeover − neutral (B2 D4)", "citation": f"{A1_PREREG}:444",
+     "dev_reference": {"diff_pp": 2.40, "ci95_pp_scenario": [-2.94, 8.89], "n_pairs": 171,
+                       "source": "b2 contrasts.D4"}},
 ]
 
-# Prefix arms and their depth m, for §7 item 4's no-handoff counts [A1:437-440].
+# Prefix arms and their depth m, for §7 item 4's no-handoff counts [A1:475-478].
 A1_PREFIX_ARMS: dict[str, int] = {"prefix_m9": 9, "prefix_m11": 11, "prefix_zs_m9": 9, "prefix_zs_m11": 11}
 
-# §7 item 7: "SGC ... for P1 and P6, descriptive" [A1:443].
+# §7 item 7: "SGC ... for P1 and P6, descriptive" [A1:481].
 A1_SGC_PREDICTIONS = ("P1", "P6")
 
 # Records of where A1's text and this script had to meet. `status` is
@@ -1799,12 +1823,12 @@ A1_SGC_PREDICTIONS = ("P1", "P6")
 # was "open" and is removed once the code implements it: P6 reversed, the P2 ratio
 # interval, the POOL-04 200k bound, the §5.5 sign-flip rule and r2's supporting table
 # all are now. r1's `p6_arm_not_registered` is gone: r2 registers arm 10 and P6
-# [A1:131, 135, 364-381].
+# [A1:137, 135, 364-381].
 A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "bootstrap_seed_of_dev_references",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:219-222", f"{A1_PREREG_R1}:157", "scripts/setup/hj1_gate.py:29",
+        "citations": [f"{A1_PREREG}:226-229", f"{A1_PREREG_R1}:157", "scripts/setup/hj1_gate.py:29",
                       "scripts/analysis/j8_frontier.py:55-59,1184"],
         "what": (
             "r1 fixed bootstrap seed 20260924 without saying that its dev intervals were "
@@ -1819,7 +1843,7 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "negated_dev_references",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:201-202", f"{A1_PREREG}:315-318", f"{A1_PREREG}:339-340",
+        "citations": [f"{A1_PREREG}:208-209", f"{A1_PREREG}:322-325", f"{A1_PREREG}:346-347",
                       f"{A1_PREREG_R1}:219-222", f"{A1_PREREG_R1}:233-234"],
         "what": (
             "r1 quoted P3 and P4 intervals obtained by negating the stored contrast, and for "
@@ -1836,21 +1860,22 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "holm_family_size",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:230-231", f"{A1_PREREG}:238-242", f"{A1_PREREG_R1}:164"],
+        "citations": [f"{A1_PREREG}:237-238", f"{A1_PREREG}:245-249", f"{A1_PREREG_R1}:164"],
         "what": (
             "r1 §5.3 applied Holm 'across the five predictions on goal_pass', but P2 is a "
             "cost predicate, so P1-P5 contain four goal_pass predictions."
         ),
         "script_behaviour": (
             "Resolved by A1 r2 §5.3: family = the goal_pass predictions whose support needs a "
-            "rejection (P1, P3, P4, P6 → m = 4, plus any registered P7 component). P2 (cost) "
+            "rejection (P1, P3, P4, P6 → m = 4; A1 r3 registers no P7 component, B2 being "
+            "unresolved). P2 (cost) "
             "and P5 (support by non-rejection) are outside it."
         ),
     },
     {
         "id": "holm_vs_ci_rules",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:232-237", f"{A1_PREREG}:240-242", f"{A1_PREREG_R1}:164"],
+        "citations": [f"{A1_PREREG}:239-244", f"{A1_PREREG}:247-249", f"{A1_PREREG_R1}:164"],
         "what": (
             "r1's decision rules were CI conditions while Holm needs p-values; r1 did not say "
             "how the two combine, nor that for P5 a Holm adjustment makes 'supported' EASIER "
@@ -1866,7 +1891,7 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "residual_crash_scoring",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:207-210", f"{A1_PREREG}:488-490",
+        "citations": [f"{A1_PREREG}:214-217", f"{A1_PREREG}:526-528",
                       f"{A1_PREREG_R1}:148-149", f"{A1_PREREG_R1}:352-355",
                       "scripts/analysis/j8_frontier.py:419-430"],
         "what": (
@@ -2324,7 +2349,7 @@ def a1_no_handoff_counts(
     flags: dict[tuple[str, int], Optional[bool]],
     m: Optional[int],
 ) -> dict[str, Any]:
-    """§7 item 4 [A1:437-440]: over an arm's scored episodes, how many handed off at m."""
+    """§7 item 4 [A1:475-478]: over an arm's scored episodes, how many handed off at m."""
     values = [flags.get(k) for k in sorted(arm["episodes"])]
     return {
         "m": m,
@@ -2333,7 +2358,7 @@ def a1_no_handoff_counts(
         # "arm 3 finished within m actions": the prefix exhausted the source trajectory.
         "n_no_handoff": sum(1 for v in values if v is False),
         "n_flag_missing": sum(1 for v in values if v is None),
-        "citation": f"{A1_PREREG}:437-440",
+        "citation": f"{A1_PREREG}:475-478",
     }
 
 
@@ -2342,7 +2367,7 @@ def a1_sgc_units(
     tasks: list[str],
     seeds: list[int],
 ) -> tuple[dict[tuple[str, int], float], int]:
-    """(scenario, seed) -> 1.0 if every task of the scenario passed, else 0.0 [A1:443].
+    """(scenario, seed) -> 1.0 if every task of the scenario passed, else 0.0 [A1:481].
 
     A unit is scored only when all its registered tasks are scored episodes with a
     recorded `success` (hj1_gate.scenario_goal_completion's coverage rule); a crash is
@@ -2368,7 +2393,7 @@ def a1_sgc(
     seeds: list[int],
 ) -> dict[str, Any]:
     """SGC of both sides of a prediction on shared (scenario, seed) units. Descriptive:
-    r2 registers no interval or test for it [A1:443]."""
+    r2 registers no interval or test for it [A1:481]."""
     ul, dropped_l = a1_sgc_units(left, tasks, seeds)
     ur, dropped_r = a1_sgc_units(right, tasks, seeds)
     shared = sorted(set(ul) & set(ur))
@@ -2388,7 +2413,7 @@ def a1_sgc(
         "sgc_right": None if sgc_r is None else round(sgc_r, 6),
         "diff_pp": None if not shared else round((sgc_l - sgc_r) * 100, 2),
         "n_discordant_units": sum(1 for u in shared if ul[u] != ur[u]),
-        "citation": f"{A1_PREREG}:443",
+        "citation": f"{A1_PREREG}:481",
     }
 
 
@@ -2421,7 +2446,7 @@ def a1_handoff_depth(
     n_boot: int,
     seed: int,
 ) -> dict[str, Any]:
-    """target − base on the target depth's handoff episodes and on all episodes [A1:421, 439-440].
+    """target − base on the target depth's handoff episodes and on all episodes [A1:459, 439-440].
 
     h = 1 only when the TARGET episode's report says handoff_occurred is true (F-c,
     j16_robustness.decomposition); a missing flag counts as h = 0 and is reported.
@@ -2525,9 +2550,9 @@ def a1_cost_ratio_interval(
     n_boot: int,
     seed: int,
 ) -> dict[str, Any]:
-    """P2's token ratio with a scenario-clustered interval, as information [A1:238-239, 291].
+    """P2's token ratio with a scenario-clustered interval, as information [A1:245-246, 291].
 
-    The verdict stays on the arm means [A1:289]. The interval is F-f's
+    The verdict stays on the arm means [A1:296]. The interval is F-f's
     (j16_robustness.cost_contrast): Σ left / Σ right over episodes paired on
     (task_id, seed), whole scenarios resampled, from j12_cost_axes' per-episode rows.
     """
@@ -2619,7 +2644,7 @@ def a1_pool04(
     out["bounds_by_seed"] = per_seed
     out["verdicts_by_seed"] = sorted({row["verdict"] for row in per_seed})
     out["stable"] = all(row["verdict"] == base_verdict for row in per_seed)
-    # A1:248-253: the fired bound is also recomputed at 200,000 resamples at 20260924 and
+    # A1:255-260: the fired bound is also recomputed at 200,000 resamples at 20260924 and
     # reported with the seven. It is reported, not voted: "on the boundary" is decided by
     # the seven seeds alone.
     big_lo, big_hi = percentile_ci(
@@ -2792,13 +2817,13 @@ def a1_protocol_guard(
     registered_settings: bool,
 ) -> Optional[str]:
     if split == "test_challenge":
-        return "refusing test_challenge: it is not read under A1 [docs/prereg_j10_amendment_20260924.md:461]"
+        return "refusing test_challenge: it is not read under A1 [docs/prereg_j10_amendment_20260924.md:499]"
     if split not in A1_SPLIT_N_TASKS:
         return f"unknown split {split!r}; A1 analyses dev (dry runs) or test_normal"
     if split == "test_normal" and not confirm:
         return (
             "refusing test_normal without --confirm-heldout-test-split: A1 is a single "
-            "read [docs/prereg_j10_amendment_20260924.md:449-462]"
+            "read [docs/prereg_j10_amendment_20260924.md:487-500]"
         )
     if split == "test_normal" and plumbing:
         return "refusing --plumbing-check on test_normal"
@@ -3012,9 +3037,9 @@ def build_report_a1(
         "verdicts": {r["id"]: r.get("verdict") for r in results},
         "supporting_contrasts": supporting_out,
         "exploratory_contrasts": exploratory_out,
-        # §7 item 4, second half [A1:437-440]: per prefix arm, episodes with no handoff.
+        # §7 item 4, second half [A1:475-478]: per prefix arm, episodes with no handoff.
         "no_handoff_counts": no_handoff,
-        # §7 item 7 [A1:443]: SGC for P1 and P6, descriptive.
+        # §7 item 7 [A1:481]: SGC for P1 and P6, descriptive.
         "sgc": sgc_out,
         "ambiguities": A1_AMBIGUITIES,
         "crash_convention": (
