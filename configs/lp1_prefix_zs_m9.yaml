@@ -8,12 +8,12 @@
 # nothing else moved, so this file differs from its source ONLY in these fields -- exactly this
 # set, compared on the parsed YAML by make_lp_configs.py --check and the unit test:
 #   campaign_id: hj17_prefix_c81_zs_m9_20260923 -> lp1_prefix_zs_m9_20260923
-#   handoff.source_campaign: /scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923 -> /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_20260923
+#   handoff.source_campaign: /scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923 -> /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_v2_20260923
 #   planner.base_url: (absent) -> http://127.0.0.1:8001/v1
 #   planner.chat_template_kwargs.enable_thinking: (absent) -> false
 #   planner.max_tokens: (absent) -> 2048
 #   planner.model: gpt-5.6-luna -> Qwen/Qwen3-8B
-#   planner.packet_source: /scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923 -> /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_20260923
+#   planner.packet_source: /scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923 -> /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_v2_20260923
 #   planner.packet_source_pending: (absent) -> "produced by the LP-1 ceiling run (lp1_planner_alone_cap81..."
 #   planner.reasoning_effort: medium -> (absent)
 #   planner.scratch_parent: /scratch/n12194778/sidekick/codex_scratch -> (absent)
@@ -35,7 +35,7 @@
 env: appworld
 campaign_id: lp1_prefix_zs_m9_20260923
 handoff:
-  source_campaign: /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_20260923
+  source_campaign: /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_v2_20260923
   source_system: planner_alone
   m: 9
 planner:
@@ -51,10 +51,10 @@ planner:
   chat_template_kwargs:
     enable_thinking: false
   # The plan is replayed from the same LP-1 ceiling episode as the prefix above.
-  packet_source: /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_20260923
+  packet_source: /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_v2_20260923
   # verify_configs.py exempts the source only while the path is absent; once the ceiling has
   # written it, it must resolve like any other.
-  packet_source_pending: produced by the LP-1 ceiling run (lp1_planner_alone_cap81_qwen8b_20260923), which may not have landed yet
+  packet_source_pending: produced by the LP-1 ceiling run (lp1_planner_alone_cap81_qwen8b_v2_20260923), which may not have landed yet
   packet_system: planner_alone
   # Load-bearing: a cache miss must abort, never fall through to a live plan.
   on_missing: fail

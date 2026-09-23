@@ -12,7 +12,7 @@
 #   planner.chat_template_kwargs.enable_thinking: (absent) -> false
 #   planner.max_tokens: (absent) -> 2048
 #   planner.model: gpt-5.6-luna -> Qwen/Qwen3-8B
-#   planner.packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915 -> /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_20260923
+#   planner.packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915 -> /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_v2_20260923
 #   planner.packet_source_pending: (absent) -> "produced by the LP-1 ceiling run (lp1_planner_alone_cap81..."
 #   planner.reasoning_effort: medium -> (absent)
 #   planner.scratch_parent: /scratch/n12194778/sidekick/codex_scratch -> (absent)
@@ -43,10 +43,10 @@ planner:
     enable_thinking: false
   # The first plan is replayed from the LP-1 ceiling itself, never from a hosted sample: a
   # hosted plan followed by local reviews would put two planners in one episode.
-  packet_source: /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_20260923
+  packet_source: /scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_v2_20260923
   # verify_configs.py exempts the source only while the path is absent; once the ceiling has
   # written it, it must resolve like any other.
-  packet_source_pending: produced by the LP-1 ceiling run (lp1_planner_alone_cap81_qwen8b_20260923), which may not have landed yet
+  packet_source_pending: produced by the LP-1 ceiling run (lp1_planner_alone_cap81_qwen8b_v2_20260923), which may not have landed yet
   packet_system: planner_alone
   # Load-bearing: a cache miss must abort, never fall through to a live plan.
   on_missing: fail

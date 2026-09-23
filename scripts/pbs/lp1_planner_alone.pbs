@@ -13,6 +13,16 @@
 #   qsub -v SEEDS=1,2 scripts/pbs/lp1_planner_alone.pbs
 #   qsub -v SEEDS=1,2,SMOKE_ONLY=1 scripts/pbs/lp1_planner_alone.pbs
 #
+# ⚠ The campaign id is the config's campaign_id (CFG), not a default spelled here. The first
+# LP-1 campaign, lp1_planner_alone_cap81_qwen8b_20260923, is VOID (plan call without
+# structured output; every episode parse_error at step 0) and stays on disk; a default id in
+# this file would have kept the next job writing into it after the config moved to v2. A CID
+# passed with -v must equal the config's, or the job refuses before any GPU is touched.
+#
+# Self-tests (no GPU, no server; tests/unit/test_lp_configs.py):
+#   LP1_SELFTEST=smoke_gate LP1_SMOKE_DIR=<campaign dir>   run the smoke gate on a tree (read-only)
+#   LP1_SELFTEST=cid [CFG=<yaml>] [CID=<id>]               print the resolved campaign id
+#
 # ⚠ gpu_id=H100 is pinned on the select line, not left to qsub-time memory. A 40 GB A100
 # has twice taken a job on this box that needed an 80 GB card and died at load; the fix
 # belongs in the file that trips it.
@@ -33,6 +43,82 @@ REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
 SIDEKICK_VENV=/scratch/n12194778/sidekick/env
 OUT=/scratch/n12194778/sidekick/results
 LOGDIR="${REPO}/campaign/workers/logs"
+SELFTEST="${LP1_SELFTEST:-0}"
+
+# The smoke gate reads what the smoke episodes wrote, never the runner's exit code alone.
+# Job 25724309 passed a gate that checked only `smoke rc=0` although all 3 smoke episodes had
+# ended parse_error at step 0 -- the plan call never produced a packet -- and the full run then
+# spent 75 episodes measuring nothing. A gate that only counts crashes passes an arm that
+# measured nothing, so this one refuses the full run on any of:
+#   * an episode whose PLAN call failed to parse: result.json error_type == "parse_error" and
+#     an events.jsonl `error` event with error_type "parse_error" and payload.method "plan"
+#     (what call_planner("plan", ...) logs, src/sidekick/systems/loop.py);
+#   * every episode at steps == 0: nothing past the plan ran, whatever the cause;
+#   * no result.json at all, or one that is not a readable JSON object.
+lp1_smoke_gate () {
+  local dir="$1" f row et steps n=0 n_plan_parse=0 n_zero=0 n_bad=0 types=""
+  while IFS= read -r -d '' f; do
+    n=$((n + 1))
+    if ! row="$(jq -r 'if type == "object" then "\(.error_type // "none") \(.steps // 0)" else error("not an object") end' "${f}" 2>/dev/null)" \
+       || [[ -z "${row}" ]]; then
+      n_bad=$((n_bad + 1)); types+="unreadable"$'\n'; continue
+    fi
+    read -r et steps <<< "${row}"
+    types+="${et}"$'\n'
+    [[ "${steps}" == "0" ]] && n_zero=$((n_zero + 1))
+    # One verdict over the whole file (-n + inputs): jq 1.6's -e reflects only the LAST input
+    # line, so a per-line `select(...) | true` misses a match that is not the final event.
+    if [[ "${et}" == "parse_error" ]] && jq -R -n -e \
+         '[inputs | fromjson? | select(.event_type == "error" and .error_type == "parse_error" and .payload.method == "plan")] | length > 0' \
+         "$(dirname "${f}")/events.jsonl" >/dev/null 2>&1; then
+      n_plan_parse=$((n_plan_parse + 1))
+    fi
+  done < <(find "${dir}" -name result.json -print0 2>/dev/null)
+  echo "[lp1] smoke gate ${dir##*/}: result.json=${n} plan_parse_error=${n_plan_parse} steps_zero=${n_zero} unreadable=${n_bad}"
+  if [[ -n "${types}" ]]; then
+    echo "[lp1] smoke error_type distribution:"
+    printf '%s' "${types}" | sort | uniq -c | sort -rn
+  fi
+  if [[ "${n}" -eq 0 || "${n_bad}" -ne 0 ]]; then
+    echo "[lp1] FATAL: smoke gate: ${n} result.json, ${n_bad} unreadable; nothing to judge the arm by"
+    return 1
+  fi
+  if [[ "${n_plan_parse}" -ne 0 ]]; then
+    echo "[lp1] FATAL: smoke gate: ${n_plan_parse}/${n} episodes ended parse_error in the plan call; the planner produced no packet"
+    return 1
+  fi
+  if [[ "${n_zero}" -eq "${n}" ]]; then
+    echo "[lp1] FATAL: smoke gate: all ${n} episodes ended at steps == 0; the arm ran nothing past the plan"
+    return 1
+  fi
+  echo "[lp1] smoke gate passed"
+  return 0
+}
+
+if [[ "${SELFTEST}" == "smoke_gate" ]]; then
+  lp1_smoke_gate "${LP1_SMOKE_DIR:?}"
+  exit $?
+fi
+
+CFG="${CFG:-${REPO}/configs/lp1_planner_alone_cap81_qwen8b.yaml}"
+CFG_CID="$(awk '/^campaign_id:/ { print $2; exit }' "${CFG}" 2>/dev/null | tr -d "\"'")"
+CID="${CID:-${CFG_CID}}"
+if [[ -z "${CFG_CID}" || "${CID}" != "${CFG_CID}" ]]; then
+  echo "[lp1] FATAL: CID='${CID}' but ${CFG} has campaign_id='${CFG_CID}'; the campaign id comes from the config"
+  exit 1
+fi
+# The VOID campaign is evidence and stays untouched: never resumed into, and its smoke tree never
+# cleared by the rm below, whatever config a job is pointed at.
+case "${CID}" in
+  lp1_planner_alone_cap81_qwen8b_20260923)
+    echo "[lp1] FATAL: ${CID} is VOID (see configs/lp1_planner_alone_cap81_qwen8b.yaml); refusing to write into it"
+    exit 1;;
+esac
+if [[ "${SELFTEST}" == "cid" ]]; then
+  echo "CID|${CID}"
+  exit 0
+fi
+
 mkdir -p "${LOGDIR}"
 
 cd "${REPO}" || exit 1
@@ -63,6 +149,14 @@ else
   echo "[lp1] FATAL: no nvcc at ${CU13}/bin/nvcc; vLLM's JIT kernels cannot build"; exit 1
 fi
 export VLLM_USE_FLASHINFER_SAMPLER=0
+# DeepGEMM off. LP-2's first submission (25724310, Qwen3.8-27B-FP8) loaded the weights and then
+# died in the profiling dummy run inside DeepGEMM's FP8 GEMM JIT: `RuntimeError: Assertion error
+# (.../deepgemm-src/.../jit/compiler.hpp:234): false and "NVCC compilation failed"`
+# (campaign/workers/logs/lp2_planner_alone_cap81_qwen38_27b_20260923.25724310.aqua_vllm.log:259).
+# vLLM 0.29 reads the switch at vllm/envs.py:1541; at 0, is_deep_gemm_supported() is False
+# (vllm/utils/deep_gemm.py:110), so the FP8 linear layers must pick a kernel without DeepGEMM.
+# Inert for bf16 Qwen3-8B, which never takes the FP8 path.
+export VLLM_USE_DEEP_GEMM=0
 export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
 export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
 export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
@@ -80,9 +174,6 @@ for _ in $(seq 1 50); do
   PORT=$(( PORT + 1 ))
 done
 export SIDEKICK_PLANNER_BASE_URL="http://127.0.0.1:${PORT}/v1"
-CFG="${CFG:-${REPO}/configs/lp1_planner_alone_cap81_qwen8b.yaml}"
-DATE="${DATE:-20260923}"
-CID="${CID:-lp1_planner_alone_cap81_qwen8b_${DATE}}"
 SEEDS="${SEEDS:-1,2}"
 TASKS="${TASKS:-57}"
 SMOKE_ONLY="${SMOKE_ONLY:-0}"
@@ -151,16 +242,24 @@ fi
 echo "[lp1] served model confirmed: ${SERVED}"
 
 # Smoke on the SAME seed population as the full run, so its episodes are not orphans
-# that inflate the campaign count.
+# that inflate the campaign count. The smoke tree is cleared first, as lp_live.pbs does: the
+# runner skips any episode whose result.json exists, so an earlier job's smoke would be
+# re-judged by the gate below instead of re-run.
+SCID="${CID}_smoke"
+rm -rf "${OUT:?}/${SCID:?}"
 echo "[lp1] smoke: 3 tasks, seed ${SMOKE_SEED}"
 timeout 3600 "${SIDEKICK_VENV}/bin/python" -m sidekick.runner \
   --system planner_alone --split dev --tasks 3 --seeds "${SMOKE_SEED}" \
-  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}_smoke" --workers 3
+  --config "${CFG}" --out "${OUT}" --campaign-id "${SCID}" --workers 3
 smoke_rc=$?
 echo "[lp1] smoke rc=${smoke_rc}"
 if [[ "${smoke_rc}" -ne 0 ]]; then
   echo "[lp1] FATAL: smoke failed; not spending the full run"
   exit "${smoke_rc}"
+fi
+if ! lp1_smoke_gate "${OUT}/${SCID}"; then
+  echo "[lp1] FATAL: smoke gate refused; not spending the full run"
+  exit 1
 fi
 
 if [[ "${SMOKE_ONLY}" == "1" ]]; then

@@ -1,14 +1,19 @@
 """LP arm configs: rendered from their hosted sources, differing only where declared, each driving
-the locally served planner of its LP ceiling -- plus the refusals in scripts/pbs/lp_live.pbs.
+the locally served planner of its LP ceiling -- plus the refusals and the crash-only resume purge
+in scripts/pbs/lp_live.pbs, and the smoke gate and campaign id of scripts/pbs/lp1_planner_alone.pbs.
 
 The LP arms test whether the channel result holds across planner strength. They answer that only
 if each is its source with the planner swapped and nothing else moved, and only if the planner it
 builds is the one the ceiling ran. Both failure modes still produce believable numbers, so both
 are pinned here rather than left to review.
+
+The PBS self-tests run on trees built under tmp_path. The one case that reads
+/scratch/n12194778/sidekick/results/ only reads it.
 """
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import re
 import subprocess
@@ -25,7 +30,12 @@ from sidekick.runner import load_config, make_executor, make_planner
 
 REPO = Path(__file__).resolve().parents[2]
 PBS = REPO / "scripts" / "pbs" / "lp_live.pbs"
+LP1_PBS = REPO / "scripts" / "pbs" / "lp1_planner_alone.pbs"
 RESULTS = "/scratch/n12194778/sidekick/results"
+# The first LP-1 ceiling: every episode parse_error at step 0 (job 25724309). It stays on disk and
+# must never again be a replay source or a campaign this repo writes into.
+VOID_LP1_CEILING = "lp1_planner_alone_cap81_qwen8b_20260923"
+LP1_CEILING = "lp1_planner_alone_cap81_qwen8b_v2_20260923"
 
 # Stated here rather than read from the ceiling configs, so a ceiling edit that changes the
 # planner shows up as a failing test instead of silently re-pointing twenty arms.
@@ -137,6 +147,13 @@ def test_replay_sources_name_the_matching_lp_ceiling(spec) -> None:
     assert verify_configs.pending_packet_source(cfg["planner"]) is not None or Path(want).exists()
 
 
+def test_lp1_ceiling_is_v2_and_no_arm_replays_the_void_campaign() -> None:
+    assert load_config(str(REPO / mk.CEILINGS["lp1"]))["campaign_id"] == LP1_CEILING
+    assert VOID_LP1_CEILING not in LP1_CEILING  # so the substring check below cannot pass vacuously
+    for spec in SPECS:
+        assert VOID_LP1_CEILING not in (REPO / spec.out).read_text(encoding="utf-8"), spec.out
+
+
 @pytest.mark.parametrize("spec", LIVE, ids=[s.stem for s in LIVE])
 def test_live_arms_keep_their_sources_channel_and_receiver(spec) -> None:
     cfg, src = _cfg(spec), mk.load(spec.source)
@@ -227,3 +244,235 @@ def test_guard_refuses_a_receiver_the_job_does_not_serve() -> None:
     # A zero-shot prefix config asks for the base model; lp_live registers only sft_b_plus.
     r = _guard("configs/lp1_prefix_zs_m9.yaml")
     assert r.returncode != 0 and "silently hits the BASE model" in r.stdout
+
+
+# ---- lp_live.pbs resume: refill ONLY crashed episodes ---------------------------------------
+# timeout / parse_error are scored outcomes (B2 prereg §3, A1 r2): a resubmission that deleted and
+# re-ran them would reroll the arm's failures. Only error_type == "crash" (or an unreadable
+# result.json) may be purged, and an arm with 0 crashes is complete whatever else it scored. The
+# same cases as tests/unit/test_hj12_within_arm_guard.py pins for hj12_live.pbs.
+
+RESUME_PLANNED = 4
+
+
+def _episode(root: Path, task_id: str, error_type: str | None, *, body: str | None = None) -> Path:
+    dest = root / "fixed_k" / "1" / task_id
+    dest.mkdir(parents=True, exist_ok=True)
+    row = {"task_id": task_id, "system": "fixed_k", "seed": 1, "success": False, "error_type": error_type}
+    (dest / "result.json").write_text(json.dumps(row) + "\n" if body is None else body, encoding="utf-8")
+    (dest / "events.jsonl").write_text(json.dumps({"event_type": "run_start"}) + "\n", encoding="utf-8")
+    return dest
+
+
+def _campaign_manifest(out_root: Path, cid: str) -> None:
+    # A prior full run always writes one, crashes or not; with it present, only the counts decide.
+    dest = out_root / "results" / cid
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "manifest.json").write_text("{}\n", encoding="utf-8")
+
+
+def _resume_purge(out_root: Path, cid: str) -> str:
+    r = _pbs(
+        LP_SELFTEST="resume_purge",
+        LP_SELFTEST_OUT=str(out_root),
+        LP_SELFTEST_CID=cid,
+        LP_SELFTEST_N_PLANNED=str(RESUME_PLANNED),
+        # This tree's summarizer, not the one under the script's hard-coded REPO.
+        LP_SUM=str(REPO / "scripts" / "setup" / "campaign_summarize.py"),
+    )
+    out = r.stdout + r.stderr
+    assert r.returncode == 0, out
+    return out
+
+
+def test_lp_live_resume_purges_exactly_the_crashed_episode_and_arm_is_not_complete(tmp_path) -> None:
+    cid = "resume_crash"
+    root = tmp_path / cid
+    kept = [_episode(root, f"t{i}", None) for i in range(3)]
+    crashed = _episode(root, "t3", "crash")
+    _campaign_manifest(tmp_path, cid)
+    out = _resume_purge(tmp_path, cid)
+    assert f"[purge-crashed-only] campaign={cid} removed crash=1 unreadable_result=0 no_result=0 kept=3" in out, out
+    assert (
+        f"[lp] selftest: resume_purge cid={cid} complete_before=0 n_runs=3 n_crashed=0 "
+        f"n_planned={RESUME_PLANNED} complete_after=0"
+    ) in out, out
+    assert not crashed.exists(), out  # the whole directory: EventLog appends on a retry
+    assert all((d / "result.json").is_file() for d in kept), out
+
+
+def test_lp_live_resume_keeps_scored_parse_error_and_timeout_and_arm_is_complete(tmp_path) -> None:
+    cid = "resume_scored"
+    root = tmp_path / cid
+    eps = [
+        _episode(root, "t0", None),
+        _episode(root, "t1", "limit"),
+        _episode(root, "t2", "parse_error"),
+        _episode(root, "t3", "timeout"),
+    ]
+    before = {p: p.read_bytes() for d in eps for p in sorted(d.iterdir())}
+    _campaign_manifest(tmp_path, cid)
+    out = _resume_purge(tmp_path, cid)
+    assert f"[purge-crashed-only] campaign={cid} removed crash=0 unreadable_result=0 no_result=0 kept=4" in out, out
+    # complete_before=1 is the resume scan skipping the arm: under --purge-broken it was never
+    # complete, and every resubmission rerolled the parse_error and the timeout.
+    assert (
+        f"[lp] selftest: resume_purge cid={cid} complete_before=1 n_runs={RESUME_PLANNED} n_crashed=0 "
+        f"n_planned={RESUME_PLANNED} complete_after=1"
+    ) in out, out
+    after = {p: p.read_bytes() for d in eps for p in sorted(d.iterdir())}
+    assert after == before, out
+
+
+def test_lp_live_resume_counts_an_empty_result_json_as_needing_a_refill(tmp_path) -> None:
+    # A write killed mid-flight: the runner only checks that result.json exists, so left alone
+    # this episode would never be re-run and the arm would be "complete" with a hole in it.
+    cid = "resume_empty"
+    root = tmp_path / cid
+    kept = [_episode(root, f"t{i}", None) for i in range(3)]
+    empty = _episode(root, "t3", None, body="")
+    _campaign_manifest(tmp_path, cid)
+    out = _resume_purge(tmp_path, cid)
+    assert (
+        f"[lp] selftest: resume_purge cid={cid} complete_before=0 n_runs=3 n_crashed=0 "
+        f"n_planned={RESUME_PLANNED} complete_after=0"
+    ) in out, out
+    assert not empty.exists(), out
+    assert all((d / "result.json").is_file() for d in kept), out
+
+
+def test_lp_live_counts_plan_events_that_are_not_the_last_line(tmp_path) -> None:
+    # A ceiling episode logs its plan at step 0 and run_end after it, so the plan is never the
+    # final event. jq 1.6's -e judged only the last line, and the old per-line check counted 0.
+    for i in range(3):
+        dest = tmp_path / f"t{i}"
+        dest.mkdir()
+        types = ["run_start", "observation", "plan", "evaluate", "run_end"] if i < 2 else ["run_start", "error", "run_end"]
+        (dest / "events.jsonl").write_text("".join(json.dumps({"event_type": t}) + "\n" for t in types), encoding="utf-8")
+    r = _pbs(LP_SELFTEST="plan_count", LP_PLAN_ROOT=str(tmp_path))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert r.stdout.strip() == "2"
+
+
+def test_lp_live_no_longer_purges_scored_episodes() -> None:
+    text = PBS.read_text(encoding="utf-8")
+    assert "--purge-crashed-only" in text
+    assert not re.search(r"^[^#]*--purge-broken", text, flags=re.MULTILINE)
+
+
+# ---- scripts/pbs/lp1_planner_alone.pbs: the smoke gate and the campaign id --------------------
+# Job 25724309's gate checked only the smoke runner's exit code and passed three episodes that had
+# all ended parse_error in the plan call at step 0; the full run then measured nothing. The gate
+# must read what the episodes wrote.
+
+
+def _lp1(**env_extra: str) -> subprocess.CompletedProcess:
+    env = {k: v for k, v in os.environ.items() if k not in ("CID", "CFG", "LP1_SMOKE_DIR")}
+    return subprocess.run(
+        ["bash", str(LP1_PBS)], env={**env, **env_extra}, capture_output=True, text=True, timeout=120
+    )
+
+
+def _smoke_episode(root: Path, task_id: str, error_type: str | None, steps: int, *, failed_call: str | None = None,
+                   body: str | None = None) -> None:
+    dest = root / "planner_alone" / "1" / task_id
+    dest.mkdir(parents=True, exist_ok=True)
+    row = {"task_id": task_id, "system": "planner_alone", "seed": 1, "success": False,
+           "steps": steps, "error_type": error_type}
+    (dest / "result.json").write_text(json.dumps(row) + "\n" if body is None else body, encoding="utf-8")
+    events = [{"event_type": "run_start", "step": 0, "actor": "system", "payload": {}}]
+    if failed_call is not None:
+        # What loop.call_planner logs when the planner raises PacketParseError.
+        events.append({"event_type": "error", "step": 0, "actor": "planner", "error_type": "parse_error",
+                       "payload": {"method": failed_call, "raw_output": '```json\n{"context": "API docs'}})
+    (dest / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+
+
+def _gate(tree: Path) -> tuple[int, str]:
+    r = _lp1(LP1_SELFTEST="smoke_gate", LP1_SMOKE_DIR=str(tree))
+    return r.returncode, r.stdout + r.stderr
+
+
+def test_lp1_pbs_parses() -> None:
+    subprocess.run(["bash", "-n", str(LP1_PBS)], check=True)
+
+
+def test_lp1_smoke_gate_refuses_the_smoke_the_old_gate_passed(tmp_path) -> None:
+    for i in range(3):
+        _smoke_episode(tmp_path, f"t{i}", "parse_error", 0, failed_call="plan")
+    rc, out = _gate(tmp_path)
+    assert rc != 0, out
+    assert "result.json=3 plan_parse_error=3 steps_zero=3 unreadable=0" in out, out
+    assert "FATAL" in out and "parse_error in the plan call" in out, out
+
+
+def test_lp1_smoke_gate_refuses_a_single_plan_parse_error(tmp_path) -> None:
+    _smoke_episode(tmp_path, "t0", None, 9)
+    _smoke_episode(tmp_path, "t1", "limit", 40)
+    _smoke_episode(tmp_path, "t2", "parse_error", 0, failed_call="plan")
+    rc, out = _gate(tmp_path)
+    assert rc != 0, out
+    assert "plan_parse_error=1 steps_zero=1" in out, out
+
+
+def test_lp1_smoke_gate_refuses_when_every_episode_stopped_at_step_zero(tmp_path) -> None:
+    # Not a parse failure, and not a crash either: still an arm that ran nothing past the plan.
+    for i, et in enumerate(("api_error", "timeout", None)):
+        _smoke_episode(tmp_path, f"t{i}", et, 0)
+    rc, out = _gate(tmp_path)
+    assert rc != 0, out
+    assert "plan_parse_error=0 steps_zero=3" in out and "steps == 0" in out, out
+
+
+def test_lp1_smoke_gate_passes_scored_endings_past_the_plan(tmp_path) -> None:
+    _smoke_episode(tmp_path, "t0", None, 9)
+    _smoke_episode(tmp_path, "t1", "limit", 40)
+    # A parse failure in a LATER planner call is a scored outcome of the arm, not a dead plan.
+    _smoke_episode(tmp_path, "t2", "parse_error", 6, failed_call="act")
+    rc, out = _gate(tmp_path)
+    assert rc == 0, out
+    assert "result.json=3 plan_parse_error=0 steps_zero=0 unreadable=0" in out, out
+    assert "smoke gate passed" in out, out
+
+
+@pytest.mark.parametrize("body", [None, ""], ids=["no_result_json", "empty_result_json"])
+def test_lp1_smoke_gate_refuses_nothing_to_judge(tmp_path, body) -> None:
+    if body is not None:
+        _smoke_episode(tmp_path, "t0", None, 9)
+        _smoke_episode(tmp_path, "t1", None, 0, body=body)
+    rc, out = _gate(tmp_path)
+    assert rc != 0 and "nothing to judge the arm by" in out, out
+
+
+def test_lp1_smoke_gate_refuses_the_real_void_smoke() -> None:
+    # Read-only: jq and find over the tree job 25724309 wrote; nothing is written or deleted.
+    tree = Path(RESULTS) / f"{VOID_LP1_CEILING}_smoke"
+    if not tree.is_dir():
+        pytest.skip(f"{tree} not present on this machine")
+    rc, out = _gate(tree)
+    assert rc != 0, out
+    assert "plan_parse_error=3 steps_zero=3" in out, out
+
+
+def test_lp1_campaign_id_is_the_configs() -> None:
+    r = _lp1(LP1_SELFTEST="cid", CFG=str(REPO / mk.CEILINGS["lp1"]))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert r.stdout.strip().splitlines()[-1] == f"CID|{LP1_CEILING}"
+    r = _lp1(LP1_SELFTEST="cid", CFG=str(REPO / mk.CEILINGS["lp2"]))
+    assert r.stdout.strip().splitlines()[-1] == f"CID|{load_config(str(REPO / mk.CEILINGS['lp2']))['campaign_id']}"
+
+
+def test_lp1_refuses_a_cid_that_is_not_the_configs() -> None:
+    r = _lp1(LP1_SELFTEST="cid", CFG=str(REPO / mk.CEILINGS["lp1"]), CID=VOID_LP1_CEILING)
+    assert r.returncode != 0 and "FATAL" in r.stdout, r.stdout + r.stderr
+    assert "CID|" not in r.stdout
+
+
+def test_lp1_refuses_the_void_campaign_even_from_a_config_that_names_it(tmp_path) -> None:
+    # e.g. a job pointed at a stale checkout's config: the void tree must not be resumed into,
+    # nor its smoke tree cleared.
+    old = tmp_path / "old_lp1.yaml"
+    old.write_text(f"env: appworld\ncampaign_id: {VOID_LP1_CEILING}\n", encoding="utf-8")
+    r = _lp1(LP1_SELFTEST="cid", CFG=str(old))
+    assert r.returncode != 0 and "is VOID" in r.stdout, r.stdout + r.stderr
+    assert "CID|" not in r.stdout

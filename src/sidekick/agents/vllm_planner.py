@@ -7,7 +7,7 @@ This backend answers it at zero hosted cost by serving an open-weight planner on
 cluster's own GPUs, so the whole `planner_alone` -> prefix replay -> channel pair sequence
 can be re-run against a second planner family.
 
-Four things are deliberate:
+Five things are deliberate:
 
 * **The prompts are not written here.** They come from `planner.build_*_prompt`, the same
   functions `CodexExecPlanner` calls. If each backend spelled its own prompt, a difference
@@ -35,6 +35,16 @@ Four things are deliberate:
   the first exchange when the plan was replayed -- is never dropped: it carries the API docs
   (directly, or as `CachedPacketPlanner`'s prepended digest). When nothing droppable is
   left, `PlannerContextOverflow` is raised and the loop scores the episode as a ``limit``.
+
+* **The plan call is structured, as the hosted one is.** `CodexExecPlanner` asks for the
+  packet with ``--output-schema`` (DELEGATION_PACKET_SCHEMA) and only falls back to a
+  fenced-JSON reply when that fails. The first LP-1 ceiling (job 25724309) made the plan call
+  as free text instead: Qwen3-8B added a ``context`` key, copied the API docs into it, ran out
+  of ``max_tokens`` before the JSON closed, and every episode ended ``parse_error`` at step 0
+  -- an arm that measured nothing, from a request the hosted planner never makes. So `plan()`
+  sends the same schema as ``response_format`` first (vLLM enforces it while decoding) and
+  falls back exactly as codex does, with the same appended sentence
+  (`STRUCTURED_OUTPUT_FALLBACK_SUFFIX`). `act`/`correct` stay free text on both backends.
 """
 
 from __future__ import annotations
@@ -44,6 +54,8 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from sidekick.agents.planner import (
+    DELEGATION_PACKET_SCHEMA,
+    STRUCTURED_OUTPUT_FALLBACK_SUFFIX,
     PacketParseError,
     PlannerContextOverflow,
     build_act_prompt,
@@ -66,6 +78,30 @@ DEFAULT_TEMPERATURE = 0.7
 # is N tokens. However, you requested ..." -- vllm 0.29 renderers/params.py). Matched in one
 # place, `is_context_overflow`, so a wording change is a one-line fix.
 CONTEXT_OVERFLOW_TEXT = "maximum context length"
+
+# The plan call's structured-output request: the OpenAI chat-completions `response_format`
+# carrying the very schema object codex writes to its --output-schema file, so the two
+# backends constrain the packet identically. vLLM 0.29 accepts this shape for chat
+# completions: ChatCompletionRequest.response_format (entrypoints/openai/chat_completion/
+# protocol.py:229) is a ResponseFormat whose `json_schema` is JsonSchemaResponseFormat{name,
+# schema (alias), strict} (entrypoints/generate/base/protocol.py:70-76,103-106), and it
+# becomes the guided-decoding `json` constraint (same file, :125-128).
+PLAN_RESPONSE_FORMAT: dict[str, Any] = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "delegation_packet",
+        "schema": DELEGATION_PACKET_SCHEMA,
+        "strict": True,
+    },
+}
+
+# A 4xx (other than a context overflow) whose body names one of these was a refusal of the
+# structured-output request itself -- the request validator names `response_format` /
+# `json_schema` (chat_completion/protocol.py:767-777), the grammar backend "JSON schema"
+# (v1/structured_output/backend_xgrammar.py:352,359). That is the local counterpart of codex's
+# `--output-schema` call exiting non-zero, and falls back the same way. Any other 4xx is a
+# real error and still raises.
+RESPONSE_FORMAT_REJECTION_TEXTS = ("response_format", "json_schema", "json schema", "structured_output")
 
 
 class VllmPlannerError(RuntimeError):
@@ -97,6 +133,25 @@ class _ContextRejected(Exception):
         super().__init__("request exceeds the planner's context window")
         self.latency_s = latency_s
         self.body = body
+
+
+class _ResponseFormatRejected(Exception):
+    """The server refused the structured-output request. Internal: `plan` falls back on it."""
+
+    def __init__(self, usage: Usage, body: str) -> None:
+        super().__init__("planner server refused the response_format request")
+        self.usage = usage
+        self.body = body
+
+
+def is_response_format_rejection(status_code: Any, body: str) -> bool:
+    """True for a non-overflow 4xx whose body names the structured-output request."""
+    if not isinstance(status_code, int) or not 400 <= status_code < 500:
+        return False
+    if is_context_overflow(status_code, body):
+        return False
+    text = (body or "").lower()
+    return any(needle in text for needle in RESPONSE_FORMAT_REJECTION_TEXTS)
 
 
 def is_context_overflow(status_code: Any, body: str) -> bool:
@@ -158,30 +213,36 @@ class VllmPlanner:
     # --- PlannerClient ------------------------------------------------------------------
 
     def plan(self, task_id: str, goal: str, context: str, timeout_s: float | None = None) -> PlannerResponse:
+        # The same two attempts as CodexExecPlanner._invoke_for_packet: the plan prompt under
+        # the packet schema (parse_path "output_schema"), then -- only if that reply does not
+        # parse or the server refuses the schema -- the plan prompt plus the shared fallback
+        # sentence, as free text (parse_path "fenced_json"). A planner that cannot produce a
+        # packet twice is a real failure and must surface, not be papered over with a default
+        # packet that would silently measure nothing.
         prompt = build_plan_prompt(task_id, goal, context)
-        text, usage = self._converse(prompt, timeout_s)
+        packet: DelegationPacket | None = None
         try:
-            packet = parse_packet_text(text)
-            parse_path = "fenced_json"
-        except PacketParseError:
-            # One retry with an explicit instruction, mirroring the hosted backend's
-            # structured-output -> fenced-JSON fallback. A planner that cannot produce a
-            # packet twice is a real failure and must surface, not be papered over with a
-            # default packet that would silently measure nothing.
-            #
+            text, usage = self._converse(prompt, timeout_s, response_format=PLAN_RESPONSE_FORMAT)
+        except _ResponseFormatRejected as rejected:
+            usage = rejected.usage
+        else:
+            try:
+                packet = parse_packet_text(text)
+            except PacketParseError:
+                packet = None
+
+        if packet is not None:
+            parse_path = "output_schema"
+        else:
             # The failed exchange is NOT kept in the thread, and only the successful one
             # becomes the anchor: the failed reply carries nothing the loop uses, and both
             # prompts embed the API docs, so keeping it would park a second copy of them in
             # every later request -- a large share of a 32k window.
-            prompt = (
-                build_plan_prompt(task_id, goal, context)
-                + "\nYour previous reply could not be parsed. Reply with a single fenced "
-                "```json block containing only the DelegationPacket object."
-            )
+            prompt = prompt + STRUCTURED_OUTPUT_FALLBACK_SUFFIX
             text, retry_usage = self._converse(prompt, timeout_s)
             usage = _merge_usage(usage, retry_usage)
             packet = parse_packet_text(text)
-            parse_path = "fenced_json_retry"
+            parse_path = "fenced_json"
 
         self._record(prompt, text, anchor=True)
         if not packet.task_id:
@@ -246,14 +307,33 @@ class VllmPlanner:
                 return True
         return False
 
-    def _converse(self, prompt: str, timeout_s: float | None = None) -> tuple[str, Usage]:
+    def _converse(
+        self,
+        prompt: str,
+        timeout_s: float | None = None,
+        *,
+        response_format: Optional[dict[str, Any]] = None,
+    ) -> tuple[str, Usage]:
         """Send thread + prompt, compacting on a context overflow. Does not record the exchange."""
         drops = 0
         # Refused attempts still held the GPU while the server tokenised them.
         refused_latency_s = 0.0
         while True:
             try:
-                text, usage = self._chat(self._messages(prompt), timeout_s)
+                text, usage = self._chat(self._messages(prompt), timeout_s, response_format=response_format)
+            except _ResponseFormatRejected as rejected:
+                # Nothing was generated; bill the time only, and say why the plan fell back.
+                total = rejected.usage.latency_s + refused_latency_s
+                usage = rejected.usage.model_copy(
+                    update={
+                        "latency_s": total,
+                        "gpu_seconds": total * float(self.gpu_fraction),
+                        "n_calls": 0,
+                    }
+                )
+                usage.raw.update(self._thread_stats(drops))
+                usage.raw["response_format_rejected"] = True
+                raise _ResponseFormatRejected(usage, rejected.body) from None
             except _ContextRejected as rejected:
                 refused_latency_s += rejected.latency_s
                 if not self._drop_oldest_exchange():
@@ -308,7 +388,13 @@ class VllmPlanner:
         messages.append({"role": "user", "content": prompt})
         return messages
 
-    def _chat(self, messages: list[dict[str, str]], timeout_s: float | None = None) -> tuple[str, Usage]:
+    def _chat(
+        self,
+        messages: list[dict[str, str]],
+        timeout_s: float | None = None,
+        *,
+        response_format: Optional[dict[str, Any]] = None,
+    ) -> tuple[str, Usage]:
         client = self._ensure_client()
         payload: dict[str, Any] = {
             "model": self.model,
@@ -318,6 +404,10 @@ class VllmPlanner:
         }
         if self.chat_template_kwargs:
             payload["chat_template_kwargs"] = self.chat_template_kwargs
+        # Only plan() passes one; act/correct are free text on both backends, as codex runs
+        # them without --output-schema.
+        if response_format is not None:
+            payload["response_format"] = response_format
 
         t0 = time.perf_counter()
         response = client.post(self._chat_url(), json=payload)
@@ -330,6 +420,8 @@ class VllmPlanner:
             body = _safe_text(response)
             if is_context_overflow(status_code, body):
                 raise _ContextRejected(latency_s, body) from exc
+            if response_format is not None and is_response_format_rejection(status_code, body):
+                raise _ResponseFormatRejected(self._usage({}, latency_s), body) from exc
             raise VllmPlannerError(
                 f"planner server returned {status_code}",
                 usage=self._usage({}, latency_s),

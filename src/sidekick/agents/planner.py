@@ -67,6 +67,16 @@ DELEGATION_PACKET_SCHEMA: dict[str, Any] = {
 
 _FENCED_JSON_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL | re.IGNORECASE)
 
+# Appended to the plan prompt when the structured-output plan call fails, by EVERY backend:
+# CodexExecPlanner after its `--output-schema` call, VllmPlanner after its `response_format`
+# call. One constant so the second attempt cannot differ in wording between the hosted and
+# the local planner (see the prompt-sharing note below). The text is the hosted planner's
+# own: editing it changes the prompts of every hosted arm.
+STRUCTURED_OUTPUT_FALLBACK_SUFFIX = (
+    "\nThe structured-output call failed. Reply with a single fenced "
+    "```json block containing the DelegationPacket object."
+)
+
 
 class PlannerClient(Protocol):
     name: str
@@ -447,11 +457,7 @@ class CodexExecPlanner:
                 usage.raw["packet_parse_path"] = "output_schema"
                 return text, usage, thread_id, "output_schema"
             except (PacketParseError, CodexExecError):
-                fallback_prompt = (
-                    prompt
-                    + "\nThe structured-output call failed. Reply with a single fenced "
-                    "```json block containing the DelegationPacket object."
-                )
+                fallback_prompt = prompt + STRUCTURED_OUTPUT_FALLBACK_SUFFIX
                 text, usage, thread_id = self._invoke(
                     fallback_prompt, schema_path=None, timeout_s=timeout_s, scratch=scratch
                 )

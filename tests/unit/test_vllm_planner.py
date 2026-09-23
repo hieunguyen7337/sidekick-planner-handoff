@@ -11,17 +11,25 @@ from __future__ import annotations
 
 import itertools
 import json
+import subprocess
 
 import pytest
 
 from sidekick.agents import planner as planner_mod
 from sidekick.agents import vllm_planner as vllm_mod
-from sidekick.agents.planner import CachedPacketPlanner, PlannerContextOverflow
+from sidekick.agents.planner import (
+    DELEGATION_PACKET_SCHEMA,
+    CachedPacketPlanner,
+    CodexExecConfig,
+    CodexExecPlanner,
+    PlannerContextOverflow,
+)
 from sidekick.agents.vllm_planner import (
     VllmPlanner,
     VllmPlannerContextOverflow,
     VllmPlannerError,
     is_context_overflow,
+    is_response_format_rejection,
 )
 from sidekick.protocols.schemas import DelegationPacket
 
@@ -140,15 +148,27 @@ def test_correct_prompt_is_the_shared_one() -> None:
 # --- packet handling --------------------------------------------------------------------
 
 
-def test_plan_parses_a_fenced_packet() -> None:
-    p, _ = make_planner([chat_response("```json\n" + json.dumps(PACKET) + "\n```")])
+def test_plan_parses_a_structured_packet() -> None:
+    # Under response_format vLLM returns the bare JSON object, as codex's --output-schema does.
+    p, _ = make_planner([chat_response(json.dumps(PACKET))])
 
     got = p.plan("t1", "g", "ctx")
 
     assert got.kind == "PLAN"
     assert got.packet.task_id == "t1"
     assert len(got.packet.plan_steps) == len(PACKET["plan_steps"])
-    assert got.usage.raw["packet_parse_path"] == "fenced_json"
+    assert got.usage.raw["packet_parse_path"] == "output_schema"
+
+
+def test_a_parseable_fenced_reply_to_the_structured_call_is_still_output_schema() -> None:
+    # codex runs the same parse_packet_text on its schema call's reply and calls any success
+    # "output_schema"; the path names the call that produced the packet, not its framing.
+    p, client = make_planner([chat_response(PACKET_REPLY)])
+
+    got = p.plan("t1", "g", "ctx")
+
+    assert got.usage.raw["packet_parse_path"] == "output_schema"
+    assert len(client.requests) == 1
 
 
 def test_an_unparseable_reply_is_retried_once_and_then_raises() -> None:
@@ -163,7 +183,7 @@ def test_an_unparseable_reply_is_retried_once_and_then_raises() -> None:
         p.plan("t1", "g", "ctx")
 
     assert len(client.requests) == 2
-    assert "could not be parsed" in sent_prompt(client, 1)
+    assert sent_prompt(client, 1).endswith(planner_mod.STRUCTURED_OUTPUT_FALLBACK_SUFFIX)
 
 
 def test_a_successful_retry_is_billed_as_two_calls() -> None:
@@ -177,7 +197,155 @@ def test_a_successful_retry_is_billed_as_two_calls() -> None:
     assert got.usage.n_calls == 2
     assert got.usage.input_tokens == 22
     assert got.usage.output_tokens == 10
-    assert got.usage.raw["packet_parse_path"] == "fenced_json_retry"
+    assert got.usage.raw["packet_parse_path"] == "fenced_json"
+
+
+# --- the plan call mirrors CodexExecPlanner._invoke_for_packet ------------------------------
+#
+# LP-1's first ceiling (job 25724309) made the plan call as free text: Qwen3-8B wrapped the
+# packet in an extra `context` key holding the whole API-docs prompt, hit max_tokens before the
+# JSON closed, and every episode ended parse_error at step 0. The hosted planner never makes
+# that request -- it asks with --output-schema and only then falls back -- so the local planner
+# must make the same two requests, or the two arms differ in more than planner identity.
+
+# The hosted fallback sentence as it stood before it became a shared constant (commit 08fe9e2,
+# planner.py `_invoke_for_packet`). Spelled out here, not imported, so a change to the
+# constant shows up as a hosted-prompt change rather than passing silently.
+CODEX_FALLBACK_SENTENCE = (
+    "\nThe structured-output call failed. Reply with a single fenced "
+    "```json block containing the DelegationPacket object."
+)
+
+STRUCTURED_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {"name": "delegation_packet", "schema": DELEGATION_PACKET_SCHEMA, "strict": True},
+}
+
+
+def _codex_jsonl(text: str) -> str:
+    return "".join(json.dumps(row) + "\n" for row in (
+        {"type": "thread.started", "thread_id": "thr-1"},
+        {"type": "item.completed", "item": {"type": "agent_message", "text": text}},
+        {"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}},
+    ))
+
+
+def _codex_plan_calls(tmp_path, *, schema_reply: str | None) -> list[dict]:
+    """Drive CodexExecPlanner.plan through a fake runner; return each call's argv, stdin and schema.
+
+    schema_reply None makes the --output-schema call exit 1 (codex's structured-output failure).
+    """
+    calls: list[dict] = []
+
+    def runner(argv, **kwargs):
+        schema = None
+        if "--output-schema" in argv:
+            with open(argv[argv.index("--output-schema") + 1], encoding="utf-8") as fh:
+                schema = json.load(fh)
+        calls.append({"argv": argv, "input": kwargs["input"], "schema": schema})
+        if schema is not None and schema_reply is None:
+            return subprocess.CompletedProcess(argv, 1, stdout="", stderr="schema fail")
+        reply = schema_reply if schema is not None else PACKET_REPLY
+        return subprocess.CompletedProcess(argv, 0, stdout=_codex_jsonl(reply), stderr="")
+
+    CodexExecPlanner(CodexExecConfig(scratch_parent=str(tmp_path)), runner=runner).plan("t1", "g", "ctx")
+    return calls
+
+
+def test_codexs_fallback_prompt_bytes_are_unchanged(tmp_path) -> None:
+    calls = _codex_plan_calls(tmp_path, schema_reply=None)
+
+    assert len(calls) == 2
+    assert calls[0]["input"] == planner_mod.build_plan_prompt("t1", "g", "ctx")
+    assert "--output-schema" not in calls[1]["argv"]
+    assert calls[1]["input"] == planner_mod.build_plan_prompt("t1", "g", "ctx") + CODEX_FALLBACK_SENTENCE
+    assert planner_mod.STRUCTURED_OUTPUT_FALLBACK_SUFFIX == CODEX_FALLBACK_SENTENCE
+
+
+def test_the_first_plan_request_carries_the_schema_codex_writes(tmp_path) -> None:
+    codex_schema = _codex_plan_calls(tmp_path, schema_reply=json.dumps(PACKET))[0]["schema"]
+    p, client = make_planner([chat_response(json.dumps(PACKET))])
+
+    p.plan("t1", "g", "ctx")
+
+    sent = client.requests[0]["json"]["response_format"]
+    assert sent == STRUCTURED_FORMAT
+    # The very object, so the two backends cannot constrain the packet differently.
+    assert sent["json_schema"]["schema"] is planner_mod.DELEGATION_PACKET_SCHEMA
+    assert json.loads(json.dumps(sent["json_schema"]["schema"])) == codex_schema
+    assert sent_prompt(client) == planner_mod.build_plan_prompt("t1", "g", "ctx")
+
+
+def test_an_unparseable_structured_reply_falls_back_with_codexs_exact_prompt(tmp_path) -> None:
+    codex_fallback = _codex_plan_calls(tmp_path, schema_reply=None)[1]["input"]
+    p, client = make_planner([chat_response('{"packet_id": "p", "context": "API docs ...'), chat_response(PACKET_REPLY)])
+
+    got = p.plan("t1", "g", "ctx")
+
+    assert len(client.requests) == 2
+    assert client.requests[0]["json"]["response_format"] == STRUCTURED_FORMAT
+    assert "response_format" not in client.requests[1]["json"]
+    assert sent_prompt(client, 1) == codex_fallback
+    # The fallback goes out alone: the failed structured exchange is not in the thread.
+    assert sent_messages(client, 1) == [_user(codex_fallback)]
+    assert got.usage.raw["packet_parse_path"] == "fenced_json"
+    assert got.packet.task_id == "t1"
+
+
+def test_a_server_refusing_the_schema_falls_back_like_a_failed_codex_schema_call(tmp_path) -> None:
+    refusal = json.dumps({
+        "object": "error", "type": "BadRequestError", "code": 400,
+        "message": "When response_format type is 'json_schema', the 'json_schema' field must be provided.",
+    })
+    p, client = make_planner([FakeResponse(status_code=400, text=refusal), chat_response(PACKET_REPLY)])
+
+    got = p.plan("t1", "g", "ctx")
+
+    assert "response_format" not in client.requests[1]["json"]
+    assert sent_prompt(client, 1) == _codex_plan_calls(tmp_path, schema_reply=None)[1]["input"]
+    assert got.usage.raw["packet_parse_path"] == "fenced_json"
+    assert got.usage.raw["response_format_rejected"] is True
+    # The refused request generated nothing.
+    assert got.usage.n_calls == 1
+
+
+def test_response_format_rejection_is_a_non_overflow_4xx_naming_the_format_only() -> None:
+    assert is_response_format_rejection(400, '{"message": "... parameter=response_format"}')
+    assert is_response_format_rejection(400, "The provided JSON schema contains features not supported by xgrammar.")
+    assert not is_response_format_rejection(400, OVERFLOW_BODY)
+    assert not is_response_format_rejection(400, '{"message": "temperature must be >= 0"}')
+    assert not is_response_format_rejection(500, "response_format backend crashed")
+
+
+def test_other_plan_errors_do_not_fall_back() -> None:
+    # codex falls back on a failed schema call; a 4xx that is not about the schema is a real
+    # error for the loop to see, not a reason to retry without it.
+    p, client = make_planner([
+        FakeResponse(status_code=400, text='{"message": "temperature must be >= 0"}'),
+        chat_response(PACKET_REPLY),
+    ])
+
+    with pytest.raises(VllmPlannerError):
+        p.plan("t1", "g", "ctx")
+
+    assert len(client.requests) == 1
+
+
+def test_act_and_correct_never_carry_a_response_format() -> None:
+    packet = DelegationPacket(**PACKET)
+    p, client = make_planner([
+        chat_response(json.dumps(PACKET)),
+        chat_response("```python\nx=1\n```"),
+        chat_response("do X"),
+    ])
+
+    p.plan("t1", "g", "ctx")
+    p.act("t1", "tr")
+    p.correct(packet, "delta")
+
+    assert "response_format" in client.requests[0]["json"]
+    assert "response_format" not in client.requests[1]["json"]
+    assert "response_format" not in client.requests[2]["json"]
 
 
 def test_a_packet_without_a_task_id_inherits_it() -> None:
@@ -572,7 +740,7 @@ def test_a_plan_parse_retry_anchors_only_the_successful_exchange() -> None:
     p.act("t1", "tr2")
 
     retry_prompt = sent_prompt(client, 1)
-    assert retry_prompt.startswith(plan_prompt) and "could not be parsed" in retry_prompt
+    assert retry_prompt == plan_prompt + planner_mod.STRUCTURED_OUTPUT_FALLBACK_SUFFIX
     # The retry went out alone, without the failed exchange.
     assert sent_messages(client, 1) == [_user(retry_prompt)]
     # After the compaction only the successful plan exchange is left in front of the new prompt.

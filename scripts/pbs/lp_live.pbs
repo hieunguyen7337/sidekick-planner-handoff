@@ -36,7 +36,9 @@
 #
 # Exit codes: 0 every selected arm complete and crash-free | 2 refused before any server
 #   started | 3 an arm finished with crashed or missing episodes -- resubmit the same line:
-#   completed episodes are skipped and crashed ones purged | anything else: smoke/gate/infra.
+#   completed episodes are skipped and crashed ones purged (ONLY error_type == "crash" or an
+#   unreadable result.json; timeout/parse_error/limit/api_error are scored and kept) |
+#   anything else: smoke/gate/infra.
 #
 # ⚠ gpu_id=H100 is pinned on the select line, not left to qsub-time memory. A 40 GB A100 has
 #   twice taken a job on this box that needed an 80 GB card and died at load.
@@ -81,14 +83,15 @@ OUT=/scratch/n12194778/sidekick/results
 LOGDIR=/scratch/n12194778/sidekick/logs
 PBS_LOGDIR="${REPO}/campaign/workers/logs"
 PY="${PY:-${SIDEKICK_VENV}/bin/python}"
-SUM="${REPO}/scripts/setup/campaign_summarize.py"
+# LP_SUM exists for the resume_purge self-test, which must purge with the summarizer of the tree
+# under test rather than REPO's.
+SUM="${LP_SUM:-${REPO}/scripts/setup/campaign_summarize.py}"
 MODEL_GRANITE="${MODEL_GRANITE:-ibm-granite/granite-4.2-8b}"
 GRANITE_HF_HOME="${GRANITE_HF_HOME:-/scratch/n12194778/hf}"
 ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
 ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b}"
 MAX_LORAS=4
 PLANNER_MAX_LEN="${PLANNER_MAX_LEN:-32768}"
-BROKEN_RE='^(crash|api_error|timeout|parse_error)$'   # campaign_summarize.BROKEN
 
 # system|config|stem. The system is the source arm's (hj12_live.pbs LIVE_ARMS, hj8 sft_plan).
 LP_ARMS=(
@@ -199,6 +202,90 @@ sys.exit(failed)
 PY
 }
 
+# ---- resume bookkeeping (defined before the self-tests, which exercise it) --------------------
+# Crash convention (J10 / A1 §10.1, B2 prereg §3): the only episode a resubmission may refill is
+# one whose result.json says error_type == "crash", or one whose result.json is unreadable.
+# timeout / parse_error / limit / api_error are SCORED outcomes of the arm. Counting them as
+# "broken" -- as this file did through 2026-09-23 with --purge-broken and
+# campaign_summarize.BROKEN -- deleted and re-ran exactly the failed episodes on every
+# resubmission, a second roll at the failures only, which biases the arm upward; and an arm
+# holding a scored parse_error could never count as complete. Same fix as hj12_live.pbs
+# (commit 72899b5).
+lp_n_runs () { find "${OUT}/$1" -name result.json 2>/dev/null | wc -l; }
+
+# "<n_runs> <n_crashed>" over <OUT>/<cid>/**/result.json. n_crashed is the set
+# campaign_summarize.purge_crashed deletes: error_type == "crash", or a result.json that is
+# empty, not JSON, or not an object [scripts/setup/campaign_summarize.py:255-301].
+lp_campaign_stats () {
+  timeout 120 "${PY}" - "${OUT}" "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+n = 0
+nc = 0
+if root.is_dir():
+    for path in root.rglob("result.json"):
+        n += 1
+        try:
+            text = path.read_text(encoding="utf-8").strip()
+            data = json.loads(text) if text else None
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            data = None
+        if not isinstance(data, dict) or data.get("error_type") == "crash":
+            nc += 1
+print(f"{n} {nc}")
+PY
+}
+
+lp_arm_complete () {
+  local cid="$1" stats n_runs n_crashed
+  [[ -f "${OUT}/results/${cid}/manifest.json" ]] || return 1
+  stats="$(lp_campaign_stats "${cid}" || true)"
+  read -r n_runs n_crashed <<< "${stats:-0 0}"
+  [[ "${n_runs:-0}" -eq "${N_PLANNED}" && "${n_crashed:-0}" -eq 0 ]]
+}
+
+# Delete ONLY what lp_campaign_stats counts as n_crashed (plus result-less attempt dirs), so the
+# runner refills it. --purge-broken is the wrong tool here: it also deletes scored episodes.
+lp_purge_crashed () {
+  echo "[lp] purge crashed runs of $1 (timeout/parse_error/limit/api_error are scored and kept)"
+  timeout 300 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "$1" --purge-crashed-only 2>/dev/null | head -n 2
+}
+
+# The replayed first plans. on_missing: fail would abort each episode whose plan the ceiling has
+# not written -- after both servers were paid for -- so count plan events before starting them.
+# One jq verdict per file (-n + inputs): jq 1.6's -e reflects only the LAST input line, and the
+# per-line form this used until 2026-09-23 counted a task only when its plan was the final event
+# -- never, since run_end follows it -- so every arm would have been refused as "incomplete".
+lp_plan_count () {
+  local root="$1" n=0 f
+  for f in "${root}"/*/events.jsonl; do
+    [[ -f "${f}" ]] || continue
+    jq -R -n -e '[inputs | fromjson? | select(.event_type == "plan")] | length > 0' "${f}" >/dev/null 2>&1 && n=$((n + 1))
+  done
+  echo "${n}"
+}
+
+if [[ "${SELFTEST}" == "plan_count" ]]; then
+  lp_plan_count "${LP_PLAN_ROOT:?}"
+  exit 0
+fi
+if [[ "${SELFTEST}" == "resume_purge" ]]; then
+  # The resume path on a constructed tree, through the helpers the resume scan and lp_run_arm
+  # call: completeness before the purge (the scan's view), the crash-only purge, the recount.
+  # Needs <LP_SELFTEST_OUT>/results/<cid>/manifest.json for "complete" to be reachable at all.
+  OUT="${LP_SELFTEST_OUT:?}"
+  N_PLANNED="${LP_SELFTEST_N_PLANNED:?}"
+  _cid="${LP_SELFTEST_CID:?}"; _before=0; _after=0
+  lp_arm_complete "${_cid}" && _before=1
+  lp_purge_crashed "${_cid}"
+  read -r _n _nc <<< "$(lp_campaign_stats "${_cid}" || true)"
+  lp_arm_complete "${_cid}" && _after=1
+  echo "[lp] selftest: resume_purge cid=${_cid} complete_before=${_before} n_runs=${_n:-0} n_crashed=${_nc:-0} n_planned=${N_PLANNED} complete_after=${_after}"
+  exit 0
+fi
 if [[ "${SELFTEST}" == "guard" ]]; then
   read -r -a _cfgs <<< "${LP_GUARD_CONFIGS:?}"
   lp_planner_guard "${_cfgs[@]}"
@@ -237,6 +324,13 @@ else
   echo "[lp] FATAL: no nvcc at ${CU13}/bin/nvcc; vLLM's JIT kernels cannot build"; exit 2
 fi
 export VLLM_USE_FLASHINFER_SAMPLER=0
+# DeepGEMM off, for both servers. The LP-2 ceiling's planner (25724310, Qwen3.8-27B-FP8) died
+# in the profiling dummy run inside DeepGEMM's FP8 GEMM JIT: `RuntimeError: Assertion error
+# (.../deepgemm-src/.../jit/compiler.hpp:234): false and "NVCC compilation failed"`
+# (campaign/workers/logs/lp2_planner_alone_cap81_qwen38_27b_20260923.25724310.aqua_vllm.log:259).
+# vLLM 0.29 reads the switch at vllm/envs.py:1541; at 0, is_deep_gemm_supported() is False
+# (vllm/utils/deep_gemm.py:110). Inert for the bf16 servers (granite, Qwen3-8B).
+export VLLM_USE_DEEP_GEMM=0
 export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
 export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
 export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
@@ -277,16 +371,7 @@ if [[ "${VERIFY_RC}" -ne 0 ]]; then
   echo "[lp] FATAL: verify_configs.py exited ${VERIFY_RC}; no server started"; exit 2
 fi
 
-# The replayed first plans. on_missing: fail would abort each episode whose plan the ceiling has
-# not written -- after both servers were paid for -- so count plan events before starting them.
-lp_plan_count () {
-  local root="$1" n=0 f
-  for f in "${root}"/*/events.jsonl; do
-    [[ -f "${f}" ]] || continue
-    jq -R -e 'fromjson? | select(.event_type == "plan") | true' "${f}" >/dev/null 2>&1 && n=$((n + 1))
-  done
-  echo "${n}"
-}
+# The replayed first plans (lp_plan_count, defined above the self-tests).
 IFS=, read -r -a SEED_LIST <<< "${SEEDS}"
 for cfg in "${cfgs[@]}"; do
   src="${ARM_SRC[${cfg}]}"
@@ -306,17 +391,7 @@ for cfg in "${cfgs[@]}"; do
   done
 done
 
-# ---- resume scan ------------------------------------------------------------------------------
-lp_n_runs () { find "${OUT}/$1" -name result.json 2>/dev/null | wc -l; }
-lp_n_broken () {
-  find "${OUT}/$1" -name result.json -print0 2>/dev/null | xargs -0 -r jq -r '.error_type // "none"' 2>/dev/null \
-    | grep -cE "${BROKEN_RE}"
-}
-lp_arm_complete () {
-  local cid="$1"
-  [[ -f "${OUT}/results/${cid}/manifest.json" ]] || return 1
-  [[ "$(lp_n_runs "${cid}")" -eq "${N_PLANNED}" && "$(lp_n_broken "${cid}")" -eq 0 ]]
-}
+# ---- resume scan (lp_arm_complete: crash-only, see "resume bookkeeping" above) ----------------
 PENDING=()
 for spec in "${SELECTED[@]}"; do
   IFS='|' read -r _sys cfg stem <<< "${spec}"
@@ -505,20 +580,23 @@ nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader 2>/d
 
 # ---- per arm: smoke -> error_type check -> gate -> full -> tally -----------------------------
 # The exit code proves nothing -- job 25713123 exited 0 with 47/57 episodes crashed -- so every
-# phase reads result.json. A crash is error_type == "crash" and nothing else; `limit` is a
-# legitimate ending and api_error/timeout/parse_error are counted as broken separately.
+# phase reads result.json. A crash is error_type == "crash" (or an unreadable result.json) and
+# nothing else; limit/timeout/parse_error/api_error are scored outcomes, shown in the
+# distribution but never refilled.
 lp_tally () {
-  local cid="$1" types
+  local cid="$1" types stats
   types="$(find "${OUT}/${cid}" -name result.json -print0 2>/dev/null | xargs -0 -r jq -r '.error_type // "none"' 2>/dev/null)"
-  TALLY_N="$(lp_n_runs "${cid}")"
-  TALLY_CRASH="$(grep -cx 'crash' <<< "${types}")"
-  TALLY_BROKEN="$(grep -cE "${BROKEN_RE}" <<< "${types}")"
-  echo "[lp] ${cid}: result.json=${TALLY_N} crash=${TALLY_CRASH} broken=${TALLY_BROKEN}; error_type distribution:"
+  stats="$(lp_campaign_stats "${cid}" || true)"
+  read -r TALLY_N TALLY_CRASH <<< "${stats:-0 0}"
+  TALLY_N="${TALLY_N:-0}"; TALLY_CRASH="${TALLY_CRASH:-0}"
+  echo "[lp] ${cid}: result.json=${TALLY_N} crashed=${TALLY_CRASH} (crash or unreadable); error_type distribution:"
   [[ -n "${types}" ]] && sort <<< "${types}" | uniq -c | sort -rn
 }
+# Events carry the error as `error_type` (loop.emit(error=...) -> Event.error_type); matching
+# `.error` printed nothing, so a crash FATAL came with no payloads.
 lp_crash_details () {
   find "${OUT}/$1" -name events.jsonl -print0 2>/dev/null | xargs -0 -r cat 2>/dev/null \
-    | jq -R -c 'fromjson? | select(.error == "crash") | .payload' 2>/dev/null | head -n 5
+    | jq -R -c 'fromjson? | select(.error_type == "crash") | .payload' 2>/dev/null | head -n 5
 }
 # A takeover arm that authored no action ran the advise path. Only damning when some smoke
 # episode got far enough (steps >= k) for a review to have fired.
@@ -542,7 +620,7 @@ lp_run_arm () {
   local n_runs rc camp_rc sum_rc
   echo "[lp] ---- arm ${stem} cid=${cid} system=${system} ----"
   if [[ "${SMOKE_ONLY}" != "1" ]]; then
-    timeout 300 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${cid}" --purge-broken 2>/dev/null | head -n 2
+    lp_purge_crashed "${cid}"
   fi
   n_runs="$(lp_n_runs "${cid}")"
   if [[ "${n_runs}" -eq 0 ]]; then
