@@ -1,0 +1,1553 @@
+{
+  "protocol": "B2",
+  "prereg": "docs/prereg_c1_decomposition_20260923.md",
+  "amendments": [
+    "Amendment 1, 2026-09-23 (Holm x interval rules; pooling)"
+  ],
+  "label": "B2 registered decomposition (dev)",
+  "results_root": "/scratch/n12194778/sidekick/results",
+  "arm_campaigns": {
+    "T": [
+      "hj12_takeover_fixed_k_10_20260923",
+      "b1_takeover_fixed_k_10_s3_20260923"
+    ],
+    "A": [
+      "hj12_advise_fixed_k_10_fullctx_20260923",
+      "b1_advise_fixed_k_10_fullctx_s3_20260923"
+    ],
+    "S": [
+      "b2_show_fixed_k_10_20260923",
+      "b2_show_fixed_k_10_s3_20260923"
+    ],
+    "N": [
+      "b2_advise_neutral_fixed_k_10_fullctx_20260923",
+      "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923"
+    ]
+  },
+  "settings": {
+    "unit": "paired episode, key (task_id, seed), pooled across an arm's campaigns",
+    "expected_pairs": 171,
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "n_tasks": 57,
+    "metric": "goal_pass (field goal_pass_rate); TGC exploratory",
+    "bootstrap": {
+      "n": 10000,
+      "seed": 20260924,
+      "registered": true,
+      "primary_clustering": "scenario",
+      "secondary_clustering": "task",
+      "interval": "95% percentile, j10.cluster_bootstrap_means / percentile_ci"
+    },
+    "p_value": "j10.bootstrap_pvalue(scenario means, 0, 'greater')",
+    "multiplicity": {
+      "method": "Holm step-down",
+      "family": [
+        "D1",
+        "D2",
+        "D3",
+        "D4"
+      ],
+      "alpha": 0.05
+    },
+    "pool04": {
+      "window_pp": 1.0,
+      "seeds": [
+        20260924,
+        1,
+        2,
+        3,
+        7,
+        101,
+        999
+      ]
+    },
+    "signflip": "j10.a1_permutation (cluster_inference.registered_signflip): scenario clusters, exact over 2^G patterns when 2^G <= 2^20 (2^19 here), two-sided at 0",
+    "crash_convention": "drop only error_type == 'crash'; limit and every other error_type is scored"
+  },
+  "ambiguities": [
+    {
+      "id": "holm_p_direction",
+      "what": "Amendment 1 \u00a71 calls p 'two-sided-equivalent' and '2 x the share of resampled means on the far side of zero' without naming a side.",
+      "script_behaviour": "Every rule that consumes the adjusted p is a '> 0' claim, so p = 2 x share of scenario-bootstrap means <= 0 (j10.bootstrap_pvalue 'greater', as A1 r2 \u00a75.3 does for predictions with no reversed outcome). The 2 x min-tail p is reported beside it as p_two_sided; the two coincide whenever the point estimate is positive."
+    },
+    {
+      "id": "pool04_decision_bearing_bounds",
+      "what": "POOL-04 re-checks 'any decision-bearing bound' but the registration does not list them.",
+      "script_behaviour": "D1 and D4 (read as both 'excludes' and 'includes' zero): both bounds, each re-drawn interval classified excludes-positive / includes / excludes-negative. D2 and D3 (read only as 'excludes zero, positive side'): the lower bound. D0 is checked the D1 way for information only."
+    },
+    {
+      "id": "incomplete_contrast_estimates",
+      "what": "\u00a73: 'A contrast is reported only when both arms have all 171 pairs non-crashed; otherwise it is reported as incomplete with the count.'",
+      "script_behaviour": "An incomplete contrast carries counts only: no point estimate, interval or p. Holm is computed only when all of D1-D4 are complete, because a smaller family would change every adjusted p."
+    },
+    {
+      "id": "positive_point_estimate",
+      "what": "'D > 0 with CI excluding zero' names a sign and an interval.",
+      "script_behaviour": "Both are required: point > 0, lo > 0, and Holm-adjusted p <= 0.05."
+    },
+    {
+      "id": "missing_goal_pass_rate",
+      "what": "The registration does not say how a non-crashed episode without goal_pass_rate counts.",
+      "script_behaviour": "It is never coerced to 0: the pair is dropped and counted, which leaves the contrast below 171 and so INCOMPLETE."
+    },
+    {
+      "id": "duplicate_within_one_campaign",
+      "what": "Amendment 1 \u00a75 makes a key in two campaigns of one arm an error; it is silent on a key twice inside one campaign.",
+      "script_behaviour": "Also an error: j10.load_arm_tree would otherwise keep whichever copy sorts first, which is the silent choice \u00a75 forbids."
+    },
+    {
+      "id": "copy_rate_definition",
+      "what": "\u00a75: 'shown code the executor reproduces verbatim (after whitespace normalisation) as its next action' fixes neither the denominator, 'next action', nor the normalisation.",
+      "script_behaviour": "Denominator: every intervention with payload source == 'shown_action' in a non-crashed S episode of the registered matrix, events after the episode's last run_start. Next action: the first executor 'action' event after it and before any further intervention. Comparison: the executor's action rendered by format_executor_action (the renderer that produced the shown text) against the shown text, both with every run of whitespace collapsed to one space. Non-CODE shows are counted and broken out by shown_kind."
+    },
+    {
+      "id": "cost_axes",
+      "what": "\u00a75 names hosted calls, non-cached tokens and cost per episode without fields.",
+      "script_behaviour": "hosted calls = n_planner_calls (j12_cost_axes' convention; it counts the one zero-token cached plan replay every arm makes); non-cached tokens = live planner input + output + reasoning (j8_noncached_cost.usage_noncached_tokens); cost = totals.usd_total."
+    },
+    {
+      "id": "signflip_resolution",
+      "what": "\u00a73 names a scenario-cluster sign-flip p without a permutation count.",
+      "script_behaviour": "Amendment 3: j10.a1_permutation -> cluster_inference.registered_signflip, the routine A1 r2 \u00a75.5 uses. 19 clusters give 2^19 <= 2^20 patterns, so the p is exact enumeration, two-sided at 0."
+    },
+    {
+      "id": "system_labels",
+      "what": "Arms are defined by campaign names; the runner also records a system label.",
+      "script_behaviour": "More than one system label inside an arm is reported as a warning, not a refusal."
+    },
+    {
+      "id": "out_root",
+      "what": "The brief's --out-root is the runner's name for the directory campaigns are written to.",
+      "script_behaviour": "--out-root is read as the root holding the campaign directories (default the raw results root); outputs go to --out, default campaign/results/b2_decomposition_<date>.report.json."
+    }
+  ],
+  "missing_campaigns": [],
+  "status": "COMPLETE",
+  "exit_code": 0,
+  "headline": "COMPLETE: Unresolved. None of the above. Intervals reported; no decomposition claim.",
+  "errors": [],
+  "incomplete_reasons": [],
+  "warnings": [],
+  "n_tasks_observed_union": 57,
+  "arms": {
+    "T": {
+      "name": "takeover",
+      "label": "T",
+      "n_expected": 171,
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "error_types": {
+        "limit": 2,
+        "none": 169
+      },
+      "goal_pass_mean": 0.78986,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.497076,
+      "complete": true,
+      "campaigns": [
+        {
+          "campaign": "hj12_takeover_fixed_k_10_20260923",
+          "path": "/scratch/n12194778/sidekick/results/hj12_takeover_fixed_k_10_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "b1_takeover_fixed_k_10_s3_20260923",
+          "path": "/scratch/n12194778/sidekick/results/b1_takeover_fixed_k_10_s3_20260923",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "dev": 57
+          }
+        }
+      ]
+    },
+    "A": {
+      "name": "advice, registered prompt, full context",
+      "label": "A",
+      "n_expected": 171,
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "error_types": {
+        "limit": 20,
+        "none": 151
+      },
+      "goal_pass_mean": 0.728544,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.444444,
+      "complete": true,
+      "campaigns": [
+        {
+          "campaign": "hj12_advise_fixed_k_10_fullctx_20260923",
+          "path": "/scratch/n12194778/sidekick/results/hj12_advise_fixed_k_10_fullctx_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "b1_advise_fixed_k_10_fullctx_s3_20260923",
+          "path": "/scratch/n12194778/sidekick/results/b1_advise_fixed_k_10_fullctx_s3_20260923",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "dev": 57
+          }
+        }
+      ]
+    },
+    "S": {
+      "name": "show, don't execute",
+      "label": "S",
+      "n_expected": 171,
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "error_types": {
+        "limit": 11,
+        "none": 160
+      },
+      "goal_pass_mean": 0.75155,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.45614,
+      "complete": true,
+      "campaigns": [
+        {
+          "campaign": "b2_show_fixed_k_10_20260923",
+          "path": "/scratch/n12194778/sidekick/results/b2_show_fixed_k_10_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "dev": 114
+          }
+        },
+        {
+          "campaign": "b2_show_fixed_k_10_s3_20260923",
+          "path": "/scratch/n12194778/sidekick/results/b2_show_fixed_k_10_s3_20260923",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "dev": 57
+          }
+        }
+      ]
+    },
+    "N": {
+      "name": "neutral advice",
+      "label": "N",
+      "n_expected": 171,
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "error_types": {
+        "limit": 14,
+        "none": 157
+      },
+      "goal_pass_mean": 0.765819,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.502924,
+      "complete": true,
+      "campaigns": [
+        {
+          "campaign": "b2_advise_neutral_fixed_k_10_fullctx_20260923",
+          "path": "/scratch/n12194778/sidekick/results/b2_advise_neutral_fixed_k_10_fullctx_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "dev": 114
+          }
+        },
+        {
+          "campaign": "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923",
+          "path": "/scratch/n12194778/sidekick/results/b2_advise_neutral_fixed_k_10_fullctx_s3_20260923",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "systems": [
+            "fixed_k"
+          ],
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "split_provenance": {
+            "dev": 57
+          }
+        }
+      ]
+    }
+  },
+  "contrasts": {
+    "D0": {
+      "id": "D0",
+      "definition": "T - A",
+      "left": "T",
+      "right": "A",
+      "isolates": "C1 extended to 171 pairs (114 already seen): an extension, not a replication",
+      "decision_bearing": false,
+      "holm_family": false,
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 171,
+      "n_expected": 171,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "T",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "A",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 6.13,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 171,
+        "n_clusters": 19,
+        "point": 0.061315789473684205,
+        "lo": 0.007456140350877194,
+        "hi": 0.12707602339181287,
+        "diff_pp": 6.13,
+        "ci95_pp": [
+          0.75,
+          12.71
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 171,
+        "n_clusters": 57,
+        "point": 0.061315789473684205,
+        "lo": 0.009719298245614034,
+        "hi": 0.11732163742690058,
+        "diff_pp": 6.13,
+        "ci95_pp": [
+          0.97,
+          11.73
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.0202,
+      "p_raw_direction": "greater",
+      "p_two_sided": 0.0202,
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "hi",
+          "lo"
+        ],
+        "within_window": {
+          "hi": false,
+          "lo": true
+        },
+        "fired": true,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "bounds_by_seed": [
+          {
+            "seed": 20260924,
+            "lo_pp": 0.75,
+            "hi_pp": 12.71,
+            "verdict": "excludes_zero_positive"
+          },
+          {
+            "seed": 1,
+            "lo_pp": 0.76,
+            "hi_pp": 12.58,
+            "verdict": "excludes_zero_positive"
+          },
+          {
+            "seed": 2,
+            "lo_pp": 0.67,
+            "hi_pp": 12.65,
+            "verdict": "excludes_zero_positive"
+          },
+          {
+            "seed": 3,
+            "lo_pp": 0.71,
+            "hi_pp": 12.69,
+            "verdict": "excludes_zero_positive"
+          },
+          {
+            "seed": 7,
+            "lo_pp": 0.63,
+            "hi_pp": 12.57,
+            "verdict": "excludes_zero_positive"
+          },
+          {
+            "seed": 101,
+            "lo_pp": 0.77,
+            "hi_pp": 12.73,
+            "verdict": "excludes_zero_positive"
+          },
+          {
+            "seed": 999,
+            "lo_pp": 0.82,
+            "hi_pp": 12.74,
+            "verdict": "excludes_zero_positive"
+          }
+        ],
+        "verdicts_by_seed": [
+          "excludes_zero_positive"
+        ],
+        "stable": true,
+        "bound_200k": {
+          "n_boot": 200000,
+          "seed": 20260924,
+          "lo_pp": 0.72,
+          "hi_pp": 12.7,
+          "verdict": "excludes_zero_positive",
+          "decision_bearing": false
+        },
+        "on_boundary": false,
+        "status": "stable",
+        "note": "informational: D0 is not decision-bearing"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.06298828125,
+        "method": "exact",
+        "n_patterns": 524288,
+        "n_clusters": 19
+      }
+    },
+    "D1": {
+      "id": "D1",
+      "definition": "T - S",
+      "left": "T",
+      "right": "S",
+      "isolates": "execution (same prompt, same planner output; executed vs shown)",
+      "decision_bearing": true,
+      "holm_family": true,
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 171,
+      "n_expected": 171,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "T",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "S",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 3.83,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 171,
+        "n_clusters": 19,
+        "point": 0.038309941520467836,
+        "lo": -0.015590643274853799,
+        "hi": 0.10812280701754387,
+        "diff_pp": 3.83,
+        "ci95_pp": [
+          -1.56,
+          10.81
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 171,
+        "n_clusters": 57,
+        "point": 0.038309941520467836,
+        "lo": -0.009374269005847952,
+        "hi": 0.088906432748538,
+        "diff_pp": 3.83,
+        "ci95_pp": [
+          -0.94,
+          8.89
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.1992,
+      "p_raw_direction": "greater",
+      "p_two_sided": 0.1992,
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "hi",
+          "lo"
+        ],
+        "within_window": {
+          "hi": false,
+          "lo": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true,
+        "on_boundary": false,
+        "status": "not_fired"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.2831268310546875,
+        "method": "exact",
+        "n_patterns": 524288,
+        "n_clusters": 19
+      },
+      "p_holm": 0.5975999999999999,
+      "holm_rejects": false,
+      "events": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-1.56, +10.81] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-1.56, +10.81] pp includes zero"
+        }
+      }
+    },
+    "D2": {
+      "id": "D2",
+      "definition": "S - A",
+      "left": "S",
+      "right": "A",
+      "isolates": "prompt + content at the same delivery",
+      "decision_bearing": true,
+      "holm_family": true,
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 171,
+      "n_expected": 171,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "S",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "A",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 2.3,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 171,
+        "n_clusters": 19,
+        "point": 0.023005847953216373,
+        "lo": -0.024269005847953218,
+        "hi": 0.07306432748538011,
+        "diff_pp": 2.3,
+        "ci95_pp": [
+          -2.43,
+          7.31
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 171,
+        "n_clusters": 57,
+        "point": 0.023005847953216373,
+        "lo": -0.015812865497076025,
+        "hi": 0.06284795321637426,
+        "diff_pp": 2.3,
+        "ci95_pp": [
+          -1.58,
+          6.28
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.3604,
+      "p_raw_direction": "greater",
+      "p_two_sided": 0.3604,
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "lo"
+        ],
+        "within_window": {
+          "lo": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true,
+        "on_boundary": false,
+        "status": "not_fired"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.382232666015625,
+        "method": "exact",
+        "n_patterns": 524288,
+        "n_clusters": 19
+      },
+      "p_holm": 0.7208,
+      "holm_rejects": false,
+      "events": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-2.43, +7.31] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-2.43, +7.31] pp includes zero"
+        }
+      }
+    },
+    "D3": {
+      "id": "D3",
+      "definition": "N - A",
+      "left": "N",
+      "right": "A",
+      "isolates": "the advice prompt's wording",
+      "decision_bearing": true,
+      "holm_family": true,
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 171,
+      "n_expected": 171,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "N",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "A",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 3.73,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 171,
+        "n_clusters": 19,
+        "point": 0.037274853801169586,
+        "lo": -0.00063157894736842,
+        "hi": 0.08242105263157895,
+        "diff_pp": 3.73,
+        "ci95_pp": [
+          -0.06,
+          8.24
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 171,
+        "n_clusters": 57,
+        "point": 0.037274853801169586,
+        "lo": 0.0004327485380116966,
+        "hi": 0.07657309941520468,
+        "diff_pp": 3.73,
+        "ci95_pp": [
+          0.04,
+          7.66
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.0548,
+      "p_raw_direction": "greater",
+      "p_two_sided": 0.0548,
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "lo"
+        ],
+        "within_window": {
+          "lo": true
+        },
+        "fired": true,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "bounds_by_seed": [
+          {
+            "seed": 20260924,
+            "lo_pp": -0.06,
+            "hi_pp": 8.24,
+            "verdict": "does_not_exclude_zero_positive"
+          },
+          {
+            "seed": 1,
+            "lo_pp": -0.05,
+            "hi_pp": 8.21,
+            "verdict": "does_not_exclude_zero_positive"
+          },
+          {
+            "seed": 2,
+            "lo_pp": -0.1,
+            "hi_pp": 8.14,
+            "verdict": "does_not_exclude_zero_positive"
+          },
+          {
+            "seed": 3,
+            "lo_pp": -0.09,
+            "hi_pp": 8.3,
+            "verdict": "does_not_exclude_zero_positive"
+          },
+          {
+            "seed": 7,
+            "lo_pp": -0.01,
+            "hi_pp": 8.35,
+            "verdict": "does_not_exclude_zero_positive"
+          },
+          {
+            "seed": 101,
+            "lo_pp": -0.1,
+            "hi_pp": 8.31,
+            "verdict": "does_not_exclude_zero_positive"
+          },
+          {
+            "seed": 999,
+            "lo_pp": -0.05,
+            "hi_pp": 8.26,
+            "verdict": "does_not_exclude_zero_positive"
+          }
+        ],
+        "verdicts_by_seed": [
+          "does_not_exclude_zero_positive"
+        ],
+        "stable": true,
+        "bound_200k": {
+          "n_boot": 200000,
+          "seed": 20260924,
+          "lo_pp": -0.06,
+          "hi_pp": 8.26,
+          "verdict": "does_not_exclude_zero_positive",
+          "decision_bearing": false
+        },
+        "on_boundary": false,
+        "status": "stable"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.10888671875,
+        "method": "exact",
+        "n_patterns": 524288,
+        "n_clusters": 19
+      },
+      "p_holm": 0.2192,
+      "holm_rejects": false,
+      "events": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-0.06, +8.24] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-0.06, +8.24] pp includes zero"
+        }
+      }
+    },
+    "D4": {
+      "id": "D4",
+      "definition": "T - N",
+      "left": "T",
+      "right": "N",
+      "isolates": "the channel gap that remains against a fairer advice prompt",
+      "decision_bearing": true,
+      "holm_family": true,
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 171,
+      "n_expected": 171,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "T",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "N",
+          "complete": true,
+          "n_scored": 171,
+          "n_expected": 171,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 2.4,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 171,
+        "n_clusters": 19,
+        "point": 0.02404093567251462,
+        "lo": -0.02943859649122807,
+        "hi": 0.08885964912280701,
+        "diff_pp": 2.4,
+        "ci95_pp": [
+          -2.94,
+          8.89
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 171,
+        "n_clusters": 57,
+        "point": 0.02404093567251462,
+        "lo": -0.019736842105263164,
+        "hi": 0.07047953216374268,
+        "diff_pp": 2.4,
+        "ci95_pp": [
+          -1.97,
+          7.05
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.4266,
+      "p_raw_direction": "greater",
+      "p_two_sided": 0.4266,
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "hi",
+          "lo"
+        ],
+        "within_window": {
+          "hi": false,
+          "lo": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true,
+        "on_boundary": false,
+        "status": "not_fired"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.4814453125,
+        "method": "exact",
+        "n_patterns": 524288,
+        "n_clusters": 19
+      },
+      "p_holm": 0.7208,
+      "holm_rejects": false,
+      "events": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-2.94, +8.89] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-2.94, +8.89] pp includes zero"
+        }
+      }
+    }
+  },
+  "outcome": {
+    "decided": true,
+    "reading": "unresolved",
+    "title": "Unresolved",
+    "text": "None of the above. Intervals reported; no decomposition claim.",
+    "holm": {
+      "method": "Holm step-down",
+      "alpha": 0.05,
+      "family": [
+        "D1",
+        "D2",
+        "D3",
+        "D4"
+      ],
+      "m": 4,
+      "p": {
+        "D1": {
+          "p_raw": 0.1992,
+          "p_holm": 0.5975999999999999,
+          "rejects_at_alpha": false
+        },
+        "D2": {
+          "p_raw": 0.3604,
+          "p_holm": 0.7208,
+          "rejects_at_alpha": false
+        },
+        "D3": {
+          "p_raw": 0.0548,
+          "p_holm": 0.2192,
+          "rejects_at_alpha": false
+        },
+        "D4": {
+          "p_raw": 0.4266,
+          "p_holm": 0.7208,
+          "rejects_at_alpha": false
+        }
+      }
+    },
+    "events": {
+      "D1": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-1.56, +10.81] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-1.56, +10.81] pp includes zero"
+        }
+      },
+      "D2": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-2.43, +7.31] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-2.43, +7.31] pp includes zero"
+        }
+      },
+      "D3": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-0.06, +8.24] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-0.06, +8.24] pp includes zero"
+        }
+      },
+      "D4": {
+        "boundary": false,
+        "excludes_zero_positive_unadjusted": false,
+        "excludes_zero_positive": {
+          "held": false,
+          "why": "scenario CI [-2.94, +8.89] pp does not exclude zero on the positive side (lo <= 0)"
+        },
+        "includes_zero": {
+          "held": true,
+          "why": "unadjusted scenario CI [-2.94, +8.89] pp includes zero"
+        }
+      }
+    },
+    "trace": [
+      {
+        "order": 1,
+        "outcome": "prompt_artefact",
+        "title": "Prompt artefact",
+        "fires": false,
+        "headline": false,
+        "conditions": [
+          {
+            "contrast": "D4",
+            "requires": "includes_zero",
+            "requirement": "CI includes zero: unadjusted 95% scenario CI (Amendment 1 \u00a73)",
+            "held": true,
+            "why": "unadjusted scenario CI [-2.94, +8.89] pp includes zero"
+          },
+          {
+            "contrast": "D3",
+            "requires": "excludes_zero_positive",
+            "requirement": "> 0 with CI excluding zero: unadjusted 95% scenario CI lo > 0 AND Holm-adjusted p <= 0.05 (Amendment 1 \u00a72)",
+            "held": false,
+            "why": "scenario CI [-0.06, +8.24] pp does not exclude zero on the positive side (lo <= 0)"
+          }
+        ],
+        "citation": "docs/prereg_c1_decomposition_20260923.md:84-85"
+      },
+      {
+        "order": 2,
+        "outcome": "execution_matters",
+        "title": "Execution matters",
+        "fires": false,
+        "headline": false,
+        "conditions": [
+          {
+            "contrast": "D1",
+            "requires": "excludes_zero_positive",
+            "requirement": "> 0 with CI excluding zero: unadjusted 95% scenario CI lo > 0 AND Holm-adjusted p <= 0.05 (Amendment 1 \u00a72)",
+            "held": false,
+            "why": "scenario CI [-1.56, +10.81] pp does not exclude zero on the positive side (lo <= 0)"
+          }
+        ],
+        "citation": "docs/prereg_c1_decomposition_20260923.md:86-87"
+      },
+      {
+        "order": 3,
+        "outcome": "content_not_execution",
+        "title": "Content, not execution",
+        "fires": false,
+        "headline": false,
+        "conditions": [
+          {
+            "contrast": "D1",
+            "requires": "includes_zero",
+            "requirement": "CI includes zero: unadjusted 95% scenario CI (Amendment 1 \u00a73)",
+            "held": true,
+            "why": "unadjusted scenario CI [-1.56, +10.81] pp includes zero"
+          },
+          {
+            "contrast": "D2",
+            "requires": "excludes_zero_positive",
+            "requirement": "> 0 with CI excluding zero: unadjusted 95% scenario CI lo > 0 AND Holm-adjusted p <= 0.05 (Amendment 1 \u00a72)",
+            "held": false,
+            "why": "scenario CI [-2.43, +7.31] pp does not exclude zero on the positive side (lo <= 0)"
+          }
+        ],
+        "citation": "docs/prereg_c1_decomposition_20260923.md:88-90"
+      },
+      {
+        "order": 4,
+        "outcome": "unresolved",
+        "title": "Unresolved",
+        "fires": true,
+        "headline": true,
+        "conditions": [
+          {
+            "contrast": null,
+            "requires": "none of the above",
+            "held": true,
+            "why": "no earlier outcome fired"
+          }
+        ],
+        "citation": "docs/prereg_c1_decomposition_20260923.md:91"
+      }
+    ]
+  },
+  "registered_expectations": [
+    {
+      "expectation": "D3 small and positive",
+      "on_point_estimates": true,
+      "note": "stated so that surprise is visible, not a prediction to be tested"
+    },
+    {
+      "expectation": "D1 positive but smaller than D0",
+      "on_point_estimates": true,
+      "note": "stated so that surprise is visible, not a prediction to be tested"
+    },
+    {
+      "expectation": "D4 positive",
+      "on_point_estimates": true,
+      "note": "stated so that surprise is visible, not a prediction to be tested"
+    }
+  ],
+  "exploratory": {
+    "label": "EXPLORATORY: not decision-bearing (prereg \u00a75)",
+    "tgc_contrasts": {
+      "D0": {
+        "status": "COMPLETE",
+        "definition": "T - A",
+        "point_pp": 5.26,
+        "field": "tgc",
+        "n_pairs": 171,
+        "n_shared": 171,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 171,
+          "n_clusters": 19,
+          "point": 0.05263157894736842,
+          "lo": -0.005847953216374269,
+          "hi": 0.12280701754385964,
+          "diff_pp": 5.26,
+          "ci95_pp": [
+            -0.58,
+            12.28
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 171,
+          "n_clusters": 57,
+          "point": 0.05263157894736842,
+          "lo": -0.023391812865497075,
+          "hi": 0.13450292397660818,
+          "diff_pp": 5.26,
+          "ci95_pp": [
+            -2.34,
+            13.45
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "D1": {
+        "status": "COMPLETE",
+        "definition": "T - S",
+        "point_pp": 4.09,
+        "field": "tgc",
+        "n_pairs": 171,
+        "n_shared": 171,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 171,
+          "n_clusters": 19,
+          "point": 0.04093567251461988,
+          "lo": -0.023391812865497075,
+          "hi": 0.10526315789473684,
+          "diff_pp": 4.09,
+          "ci95_pp": [
+            -2.34,
+            10.53
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 171,
+          "n_clusters": 57,
+          "point": 0.04093567251461988,
+          "lo": -0.04093567251461988,
+          "hi": 0.12280701754385964,
+          "diff_pp": 4.09,
+          "ci95_pp": [
+            -4.09,
+            12.28
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "D2": {
+        "status": "COMPLETE",
+        "definition": "S - A",
+        "point_pp": 1.17,
+        "field": "tgc",
+        "n_pairs": 171,
+        "n_shared": 171,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 171,
+          "n_clusters": 19,
+          "point": 0.011695906432748537,
+          "lo": -0.04678362573099415,
+          "hi": 0.08187134502923976,
+          "diff_pp": 1.17,
+          "ci95_pp": [
+            -4.68,
+            8.19
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 171,
+          "n_clusters": 57,
+          "point": 0.011695906432748537,
+          "lo": -0.05263157894736842,
+          "hi": 0.07602339181286549,
+          "diff_pp": 1.17,
+          "ci95_pp": [
+            -5.26,
+            7.6
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "D3": {
+        "status": "COMPLETE",
+        "definition": "N - A",
+        "point_pp": 5.85,
+        "field": "tgc",
+        "n_pairs": 171,
+        "n_shared": 171,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 171,
+          "n_clusters": 19,
+          "point": 0.05847953216374269,
+          "lo": -0.011695906432748537,
+          "hi": 0.14035087719298245,
+          "diff_pp": 5.85,
+          "ci95_pp": [
+            -1.17,
+            14.04
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 171,
+          "n_clusters": 57,
+          "point": 0.05847953216374269,
+          "lo": -0.005847953216374269,
+          "hi": 0.1286549707602339,
+          "diff_pp": 5.85,
+          "ci95_pp": [
+            -0.58,
+            12.87
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "D4": {
+        "status": "COMPLETE",
+        "definition": "T - N",
+        "point_pp": -0.58,
+        "field": "tgc",
+        "n_pairs": 171,
+        "n_shared": 171,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 171,
+          "n_clusters": 19,
+          "point": -0.005847953216374269,
+          "lo": -0.08771929824561403,
+          "hi": 0.07017543859649122,
+          "diff_pp": -0.58,
+          "ci95_pp": [
+            -8.77,
+            7.02
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 171,
+          "n_clusters": 57,
+          "point": -0.005847953216374269,
+          "lo": -0.07602339181286549,
+          "hi": 0.06432748538011696,
+          "diff_pp": -0.58,
+          "ci95_pp": [
+            -7.6,
+            6.43
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      }
+    },
+    "copy_rate": {
+      "label": "EXPLORATORY: not decision-bearing (prereg \u00a75)",
+      "definition": "Denominator: every intervention with payload source == 'shown_action' in a non-crashed S episode of the registered matrix, events after the episode's last run_start. Next action: the first executor 'action' event after it and before any further intervention. Comparison: the executor's action rendered by format_executor_action (the renderer that produced the shown text) against the shown text, both with every run of whitespace collapsed to one space. Non-CODE shows are counted and broken out by shown_kind.",
+      "normalisation": "' '.join(text.split()): every run of whitespace -> one space, ends stripped",
+      "n_episodes": 171,
+      "n_episodes_without_events": 0,
+      "n_episodes_with_a_shown_action": 152,
+      "n_unparseable_event_lines": 0,
+      "n_shown": 228,
+      "n_followed_by_an_executor_action": 228,
+      "n_unrenderable_next_action": 0,
+      "n_copied": 38,
+      "copy_rate": 0.166667,
+      "copy_rate_among_followed": 0.166667,
+      "by_shown_kind": {
+        "ASK_PLANNER": {
+          "n_shown": 5,
+          "n_followed": 5,
+          "n_copied": 0
+        },
+        "CODE": {
+          "n_shown": 213,
+          "n_followed": 213,
+          "n_copied": 31
+        },
+        "COMPLETE": {
+          "n_shown": 10,
+          "n_followed": 10,
+          "n_copied": 7
+        }
+      }
+    },
+    "cost_per_episode": {
+      "T": {
+        "n_episodes": 171,
+        "hosted_calls_per_episode": 2.333333,
+        "n_calls_missing": 0,
+        "noncached_tokens_per_episode": 41807.497076,
+        "n_tokens_missing": 0,
+        "usd_per_episode": 0.004777,
+        "n_usd_missing": 0
+      },
+      "A": {
+        "n_episodes": 171,
+        "hosted_calls_per_episode": 2.520468,
+        "n_calls_missing": 0,
+        "noncached_tokens_per_episode": 53214.461988,
+        "n_tokens_missing": 0,
+        "usd_per_episode": 0.005778,
+        "n_usd_missing": 0
+      },
+      "S": {
+        "n_episodes": 171,
+        "hosted_calls_per_episode": 2.333333,
+        "n_calls_missing": 0,
+        "noncached_tokens_per_episode": 42978.596491,
+        "n_tokens_missing": 0,
+        "usd_per_episode": 0.00515,
+        "n_usd_missing": 0
+      },
+      "N": {
+        "n_episodes": 171,
+        "hosted_calls_per_episode": 2.292398,
+        "n_calls_missing": 0,
+        "noncached_tokens_per_episode": 44957.795322,
+        "n_tokens_missing": 0,
+        "usd_per_episode": 0.005836,
+        "n_usd_missing": 0
+      }
+    },
+    "cost_note": "hosted calls = n_planner_calls (j12_cost_axes' convention; it counts the one zero-token cached plan replay every arm makes); non-cached tokens = live planner input + output + reasoning (j8_noncached_cost.usage_noncached_tokens); cost = totals.usd_total."
+  },
+  "date": "20260923"
+}
