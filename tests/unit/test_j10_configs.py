@@ -21,6 +21,9 @@ ARM3_STEM = "j10_planner_alone_cap81"
 ARM3 = "/scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924"
 LUNA = "gpt-5.6-luna"
 REPLAY = ("planner.packet_source", "planner.packet_source_pending")
+# Arms 2 and 8-12 also change on_missing: a scored arm-3 episode with no plan gets a live first
+# plan for that key only (A1 §4.2). The prefix arms never call plan() and keep "fail".
+PLAN_REPLAY = REPLAY + ("planner.on_missing",)
 PREFIX = ("handoff.source_campaign",) + REPLAY
 
 # Stated here rather than read from the headers, so a header edit that widens what may differ
@@ -28,17 +31,17 @@ PREFIX = ("handoff.source_campaign",) + REPLAY
 REGISTRY: dict[str, tuple[str, tuple[str, ...]]] = {
     "j10_executor_alone": ("configs/hj8_executor_alone_bplus.yaml", ("campaign_id", "executor.lora_name")),
     "j10_executor_alone_bplus": ("configs/hj8_executor_alone_bplus.yaml", ("campaign_id",)),
-    "j10_sft_plan": ("configs/hj8_sft_plan_bplus.yaml", ("campaign_id",) + REPLAY),
+    "j10_sft_plan": ("configs/hj8_sft_plan_bplus.yaml", ("campaign_id",) + PLAN_REPLAY),
     "j10_planner_alone_cap81": ("configs/hj13_planner_alone_cap81.yaml", ("campaign_id",)),
     "j10_prefix_m9": ("configs/hj12_prefix_m9.yaml", ("campaign_id",) + PREFIX),
     "j10_prefix_m11": ("configs/hj12_prefix_m11.yaml", ("campaign_id",) + PREFIX),
     "j10_prefix_zs_m9": ("configs/hj13_prefix_zs_m9.yaml", ("campaign_id",) + PREFIX),
     "j10_prefix_zs_m11": ("configs/hj13_prefix_zs_m11.yaml", ("campaign_id",) + PREFIX),
-    "j10_advise_k1_fullctx": ("configs/hj13_advise_fixed_k_1_fullctx.yaml", ("campaign_id",) + REPLAY),
-    "j10_advise_k10_fullctx": ("configs/hj12_advise_fixed_k_10_fullctx.yaml", ("campaign_id",) + REPLAY),
-    "j10_takeover_k10": ("configs/hj12_takeover_fixed_k_10.yaml", ("campaign_id",) + REPLAY),
-    "j10_show_k10": ("configs/b2_show_fixed_k_10.yaml", ("campaign_id",) + REPLAY),
-    "j10_advise_k10_neutral": ("configs/b2_advise_neutral_fixed_k_10_fullctx.yaml", ("campaign_id",) + REPLAY),
+    "j10_advise_k1_fullctx": ("configs/hj13_advise_fixed_k_1_fullctx.yaml", ("campaign_id",) + PLAN_REPLAY),
+    "j10_advise_k10_fullctx": ("configs/hj12_advise_fixed_k_10_fullctx.yaml", ("campaign_id",) + PLAN_REPLAY),
+    "j10_takeover_k10": ("configs/hj12_takeover_fixed_k_10.yaml", ("campaign_id",) + PLAN_REPLAY),
+    "j10_show_k10": ("configs/b2_show_fixed_k_10.yaml", ("campaign_id",) + PLAN_REPLAY),
+    "j10_advise_k10_neutral": ("configs/b2_advise_neutral_fixed_k_10_fullctx.yaml", ("campaign_id",) + PLAN_REPLAY),
 }
 STEMS = sorted(REGISTRY)
 # Arms 2 and 4-12 (A1 r2 §4.1): everything but the two floors and arm 3, which is the source.
@@ -136,7 +139,9 @@ def test_b_every_planner_involving_arm_replays_arm_3(stem: str):
     assert planner["type"] == "codex"
     assert planner["packet_source"] == ARM3
     assert planner["packet_system"] == "planner_alone"
-    assert planner["on_missing"] == "fail"  # a missing packet aborts; it never buys a live plan
+    # A prefix arm never plans, so any miss aborts; a plan-replay arm plans live only for a scored
+    # arm-3 episode with no plan (A1 §4.2) -- an absent or crashed source still aborts.
+    assert planner["on_missing"] == ("fail" if stem in PREFIX_ARMS else "call_if_planless")
     assert str(planner.get("packet_source_pending") or "").strip()
     if stem in PREFIX_ARMS:
         handoff = _cfg(stem)["handoff"]

@@ -202,7 +202,7 @@ def cluster_signflip_pvalue(
     )["p"]
 
 
-# The registered sign-flip of Amendment A1 r2 §5.5 (docs/prereg_j10_amendment_20260924.md:265-273):
+# The registered sign-flip of Amendment A1 r2 §5.5 (docs/prereg_j10_amendment_20260924.md:310-318):
 # exact when the cluster count gives <= 2**20 sign patterns, otherwise Monte Carlo over 100,000
 # patterns at seed 20260924. j10_report (every A1 prediction) and b2_decomposition (every B2
 # contrast) call this one routine, so the J10 read and the B2 decomposition cannot disagree on it.

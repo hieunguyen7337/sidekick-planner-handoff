@@ -1,7 +1,7 @@
 # J10 confirmatory read on test_normal, arm 2 `sft_plan` of Amendment A1 r2
 # (docs/prereg_j10_amendment_20260924.md §4).
 # Source: configs/hj8_sft_plan_bplus.yaml
-# Differs from source in: campaign_id, planner.packet_source, planner.packet_source_pending
+# Differs from source in: campaign_id, planner.packet_source, planner.packet_source_pending, planner.on_missing
 # tests/unit/test_j10_configs.py diffs the parsed YAML of both files against exactly this list.
 #
 # ⚠ This config deliberately carries NO `split:` key. The split is a command-line
@@ -26,8 +26,10 @@ planner:
   packet_source_pending: "produced by J10 arm 3 (planner_alone cap-81 on test_normal), not yet run"
   packet_system: planner_alone
   # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss
-  # must abort, not fall through to a live Codex call.
-  on_missing: fail
+  # aborts, with one registered exception (A1 §4.2): an arm-3 episode scored without a crash
+  # whose last attempt wrote no plan gets a live first plan, for that key only. An absent
+  # or crashed source episode still aborts. On dev, 285/285 luna planner_alone episodes planned.
+  on_missing: call_if_planless
 executor:
   type: vllm
   model: ibm-granite/granite-4.2-8b

@@ -721,6 +721,89 @@ class MockPlanner:
             raise TimeoutError("mock planner timeout")
 
 
+class NoPlanEventError(FileNotFoundError):
+    """The source episode's log exists, but its last attempt wrote no plan event.
+
+    Still a FileNotFoundError, so every caller that treats a cache miss as fatal keeps doing so;
+    `on_missing="call_if_planless"` is the one mode that tells it apart from an absent episode.
+    """
+
+    def __init__(self, message: str, path: Path) -> None:
+        super().__init__(message)
+        self.path = path
+
+
+def _last_attempt_plan_event(path: Path) -> tuple[Optional[dict[str, Any]], dict[str, Any]]:
+    """(plan-event payload or None, its usage) from the events after the LAST `run_start`.
+
+    Reads the file FORWARDS: a retried run appends to the dead attempt's log, so a file
+    can hold two attempts concatenated with nothing marking the boundary
+    (docs/FOLLOWUPS.md). Ordering comes from file order, never from `ts`:
+    AppWorld freezes time with freezegun, so `ts` is identical across
+    events and cannot order them.
+    """
+    lines = path.read_text(encoding="utf-8").splitlines()
+    last_run_start = -1
+    for i, line in enumerate(lines):
+        if '"run_start"' in line:
+            last_run_start = i
+    plan_payload: dict[str, Any] | None = None
+    plan_usage: dict[str, Any] = {}
+    for line in lines[last_run_start + 1 :]:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue  # a truncated trailing line must not break replay
+        if not isinstance(obj, dict):
+            continue
+        if obj.get("event_type") == "plan" and isinstance(obj.get("payload"), dict):
+            if isinstance(obj["payload"].get("packet"), dict):
+                plan_payload = obj["payload"]
+                plan_usage = obj.get("usage") or {}
+    return plan_payload, plan_usage
+
+
+def _scored_without_crash(result_path: Path) -> bool:
+    """True when result.json exists, parses, and its error_type is not `crash`."""
+    try:
+        row = json.loads(result_path.read_text(encoding="utf-8").strip() or "null")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    return isinstance(row, dict) and row.get("error_type") != "crash"
+
+
+def planless_source_keys(
+    packet_source: str | Path,
+    system: str = "planner_alone",
+    seeds: Iterable[int | str] | None = None,
+) -> list[str]:
+    """Every "<seed>/<task_id>" whose source episode was scored without a crash but wrote no plan.
+
+    These are the only keys `on_missing="call_if_planless"` plans live (J10 A1 §4.2). The J10
+    wrapper counts them before a replay arm starts and j10_report.py excludes them in the
+    key-exclusion sensitivity, so both read this one definition.
+    """
+    root = Path(packet_source) / system
+    wanted = {str(s) for s in seeds} if seeds is not None else None
+    keys: list[str] = []
+    if not root.is_dir():
+        return keys
+    for events in sorted(root.glob("*/*/events.jsonl")):
+        task_dir = events.parent
+        seed = task_dir.parent.name
+        if wanted is not None and seed not in wanted:
+            continue
+        if not _scored_without_crash(task_dir / "result.json"):
+            continue
+        payload, _usage = _last_attempt_plan_event(events)
+        if payload is None:
+            keys.append(f"{seed}/{task_dir.name}")
+    return keys
+
+
 class CachedPacketPlanner:
     """Replays archived planner packets instead of re-calling a live model.
 
@@ -756,8 +839,12 @@ class CachedPacketPlanner:
         on_missing: str = "fail",
         live_plan_keys: Iterable[str] | None = None,
     ) -> None:
-        if on_missing not in ("fail", "call"):
-            raise ValueError(f"on_missing must be 'fail' or 'call', got {on_missing!r}")
+        # "call_if_planless" (J10 A1 §4.2): a live plan only when the source episode was scored
+        # without a crash and its last attempt wrote no plan; an absent or crashed source still raises.
+        if on_missing not in ("fail", "call", "call_if_planless"):
+            raise ValueError(
+                f"on_missing must be 'fail', 'call' or 'call_if_planless', got {on_missing!r}"
+            )
         self.inner = inner
         self.packet_source = Path(packet_source)
         self.system = system
@@ -798,40 +885,19 @@ class CachedPacketPlanner:
     def _load_plan_event(self, task_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
         """Return (plan-event payload, plan-event usage) for this task.
 
-        Reads the file FORWARDS and uses only events after the LAST
-        `run_start`: a retried run appends to the dead attempt's log, so a file
-        can hold two attempts concatenated with nothing marking the boundary
-        (docs/FOLLOWUPS.md). Ordering comes from file order, never from `ts`:
-        AppWorld freezes time with freezegun, so `ts` is identical across
-        events and cannot order them.
+        Only events after the LAST `run_start` count (`_last_attempt_plan_event`).
         """
         path = self._events_path(task_id)
         if not path.is_file():
             raise FileNotFoundError(f"no cached planner packet for task {task_id} at {path}")
-        lines = path.read_text(encoding="utf-8").splitlines()
-        last_run_start = -1
-        for i, line in enumerate(lines):
-            if '"run_start"' in line:
-                last_run_start = i
-        plan_payload: dict[str, Any] | None = None
-        plan_usage: dict[str, Any] = {}
-        for line in lines[last_run_start + 1 :]:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue  # a truncated trailing line must not break replay
-            if not isinstance(obj, dict):
-                continue
-            if obj.get("event_type") == "plan" and isinstance(obj.get("payload"), dict):
-                if isinstance(obj["payload"].get("packet"), dict):
-                    plan_payload = obj["payload"]
-                    plan_usage = obj.get("usage") or {}
+        plan_payload, plan_usage = _last_attempt_plan_event(path)
         if plan_payload is None:
-            raise FileNotFoundError(f"no archived plan event found for task {task_id} at {path}")
+            raise NoPlanEventError(f"no archived plan event found for task {task_id} at {path}", path)
         return plan_payload, plan_usage
+
+    def _source_is_planless(self, err: FileNotFoundError) -> bool:
+        """The miss is a scored, non-crashed source episode that wrote no plan (not an absent one)."""
+        return isinstance(err, NoPlanEventError) and _scored_without_crash(err.path.parent / "result.json")
 
     def plan(self, task_id: str, goal: str, context: str, timeout_s: float | None = None) -> PlannerResponse:
         # Remember what plan() was handed: on a replayed plan there is no prior
@@ -839,9 +905,15 @@ class CachedPacketPlanner:
         self._context = context
         try:
             payload, event_usage = self._load_plan_event(task_id)
-        except FileNotFoundError:
+        except FileNotFoundError as err:
             if self.on_missing == "call" or f"{self.seed}/{task_id}" in self.live_plan_keys:
                 return self.inner.plan(task_id, goal, context, timeout_s=timeout_s)
+            if self.on_missing == "call_if_planless" and self._source_is_planless(err):
+                resp = self.inner.plan(task_id, goal, context, timeout_s=timeout_s)
+                # The inner planner's session now holds the task context, as in an arm that
+                # planned live from the start; prepending the digest again would send it twice.
+                self._digest_prepended = True
+                return resp
             raise
         packet = DelegationPacket.model_validate(payload["packet"])
         # Provenance must point at the ORIGINAL model even though nothing was

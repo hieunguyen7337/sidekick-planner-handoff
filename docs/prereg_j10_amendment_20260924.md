@@ -1,6 +1,6 @@
 # Preregistration Amendment A1 to the J9 Freeze — J10 on `test_normal`
 
-**Status**: **DRAFT, revision 3, pending user review. B2 has landed (unresolved) and §6 P7 is completed (no P7 prediction registered); freezable once the user has reviewed it.**
+**Status**: **DRAFT, revision 4, pending user review. r4 adds one registered contingency (§4.2: an arm-3 episode that wrote no plan). B2 has landed (unresolved) and §6 P7 is completed (no P7 prediction registered); freezable once the user has reviewed it.**
 
 Amends, and does not edit, `docs/prereg_j9_freeze_20260920.md`. Freezing means replacing the status line above
 with one that **begins** `**Status**: FROZEN`, and committing. `scripts/pbs/j10_arm.pbs` refuses a
@@ -21,6 +21,10 @@ with one that **begins** `**Status**: FROZEN`, and committing. `scripts/pbs/j10_
   rule r2 fixed for that outcome: no P7 prediction, arms 11 and 12 exploratory, Holm $m = 4$. P6's 171-pair dev
   value is inserted. The edits are confined to lines that named B2 or P7 as pending (status, H-A1c, §4 arms
   11–12, §5.3, P6, P7, §9).
+- **r4** (2026-09-23): at the user's request, one contingency is registered before the read: **§4.2**, an arm-3
+  episode that is scored but wrote no plan, so arms 2 and 8–12 have nothing to replay. LP prereg Amendment 4
+  met this case with a local planner. Every registered prediction, arm and threshold is unchanged. The other
+  r4 edits only point to §4.2 (status, §4.1, §7 item 9, §9, §10).
 
 **Gate assertion at time of writing**: the AppWorld `test_normal` split has **not** been read, loaded,
 listed, or evaluated by this project, and no file under any `test_normal` or `test_challenge` path has
@@ -165,8 +169,9 @@ Arm 3 is the only arm that generates plans. Every other planner-involving arm **
 
 - **Arms 4–7** re-execute the first $m$ of arm 3's recorded actions on a fresh world, then hand off.
 - **Arms 2 and 8–12** replay arm 3's **first plan packet** for the same `(task_id, seed)`
-  (`planner.packet_source` = arm 3's campaign, `on_missing: fail`). Their live hosted calls are only
-  reviews, advice, takeovers or shown actions.
+  (`planner.packet_source` = arm 3's campaign, `on_missing: call_if_planless`). Their live hosted calls are only
+  reviews, advice, takeovers or shown actions. The one exception is a key whose arm-3 episode wrote no plan
+  (§4.2).
 
 This is the dev design, carried to test **(F1)**. Every dev arm behind P1, P5 and P6 replayed one recorded
 plan per `(task_id, seed)`, so plan-sampling noise cancelled out of every paired contrast
@@ -193,6 +198,46 @@ The 171-pair values come from `j15_pooled_cap81_3seed_20260924.report.json`
 So the striking dev claim that an untailored prefix *significantly beats the planner that would have produced
 it* is **sourcing-dependent**. A1 registers the conservative, like-for-like design and states this correction
 in the paper.
+
+### 4.2 Contingency: an arm-3 episode that wrote no plan (r4)
+
+An arm-3 episode can be scored without its planner ever writing a plan event. For example, the first planner
+output cannot be parsed and the episode ends as `parse_error`. Such an episode is scored as `limit`,
+`parse_error`, `timeout` or `api_error`, never `crash`. Then there is no plan to replay for that
+`(task_id, seed)`, and under `on_missing: fail` every replay arm would abort on it.
+
+**How often on dev:** 0 of 285 luna planner-alone episodes:
+- `hj1b_planner_20260915`: 114;
+- `hj13_planner_alone_cap81_20260923`: 114;
+- `hj13_planner_alone_cap81_seed3_20260924`: 57;
+- counted on the events after each episode's last `run_start`; 0 crashed.
+
+It did happen once with a local planner (LP prereg Amendment 4, key `2/6171bbc_3`). That is why the rule is
+registered here and not decided after the read.
+
+For such a **planless key**, and for no other key:
+
+1. **Arms 2 and 8–12** call `gpt-5.6-luna` live for that episode's first plan (`on_missing: call_if_planless`).
+   - Every other miss still aborts. An arm-3 episode that is absent, or that crashed, is never planned live.
+   - Each arm draws its own plan for that key, so plan-sampling noise returns for those pairs only.
+   - The live plan is ordinary hosted spend: it is counted in the cost table (§7 item 3) and in P2.
+2. **Arms 4–7** never call the planner and are unchanged. For a planless key the prefix they replay holds no
+   executed action (effective depth 0).
+3. **Arm 3 and the primary analysis are unchanged.** All 336 pairs stay in every registered contrast. Arm 3's
+   failure to plan is part of the ceiling it is scored on.
+4. **Key-exclusion sensitivity.** Every contrast prediction (P1, P3–P6) is recomputed with the planless keys
+   removed from every arm: same bootstrap, same Holm family, same rule. POOL-04 and the permutation are not
+   re-run for it.
+   - If a prediction's Holm verdict differs from the primary's, it is reported **"on the boundary"**, as under
+     §5.4, and never as supported or not supported.
+   - P2 is a cost ratio over arm totals and is not re-read.
+5. **Cap.** If more than **16** of arm 3's 336 episodes are planless (5 %), no plan-replaying arm is started.
+   At 0 of 285 on dev, that many would point to a harness defect, not to the planner. The case is handled
+   under §8.
+
+With no planless key, none of this changes anything. `scripts/pbs/j10_arm.pbs` lists the planless keys and
+enforces the cap before any plan-replaying arm starts. `scripts/analysis/j10_report.py` runs the sensitivity.
+Both read one definition, `planless_source_keys` in `src/sidekick/agents/planner.py`.
 
 ---
 
@@ -481,6 +526,8 @@ run; that was true when r1 was written and is not true now (DID-01/02, POOL-03).
 7. SGC (a scenario-seed unit passes only if all its variants pass) for P1 and P6, descriptive.
 8. The provenance statement of §9.1: the model id requested, the CLI version, and the fact that the served
    model is not observable.
+9. The planless keys of §4.2 and their count, including when it is zero. If any exist, also the
+   key-exclusion sensitivity for every contrast prediction, and whether any verdict moved to "on the boundary".
 
 ---
 
@@ -510,7 +557,8 @@ unconstrained:
 | Arms 9 + 10 (the P6 pair) | **1,607** |
 | Arms 11 + 12 (exploratory; B2 unresolved) | **≤ 1,607** |
 | Arm 2 and every other arm | 0 (replay) |
-| **Registered total** | **≤ 15,435**: 13,828 for arms 1–10, and arms 11 and 12 add ≤ 1,607 |
+| Planless keys (§4.2) | ≤ 2 calls per key per plan-replaying arm (schema attempt + fenced-JSON fallback): ≤ 192 at the cap; 0 on dev |
+| **Registered total** | **≤ 15,435**: 13,828 for arms 1–10, and arms 11 and 12 add ≤ 1,607; §4.2 adds ≤ 192 only if it fires |
 | Measured basis | dev live-call rates per episode with the plan packet replayed, as on test |
 | Quota observed | ~5,000 calls per plan window (§10.1), so **≥ 3 windows** |
 | Billing | ChatGPT-plan subscription, `gpt-5.6-luna`, no per-token billing |
@@ -552,8 +600,9 @@ and 12 are abandoned only as a pair and then reported as not run, while P1–P6 
     scored `timeout`/`parse_error`/`api_error` episodes (F5);
   - checks the split with `--expect-split` on the first arm, before the others start.
 - **Configs.** Every arm needs a config with campaign id `j10_<arm>_20260924` and no `split:` key.
-  - Arms 2 and 8–12 carry `planner.packet_source` = arm 3's campaign, with `on_missing: fail` and a
-    `packet_source_pending` note until arm 3 exists (F1).
+  - Arms 2 and 8–12 carry `planner.packet_source` = arm 3's campaign, with `on_missing: call_if_planless`
+    (§4.2; r3 and earlier said `fail`) and a `packet_source_pending` note until arm 3 exists (F1). Arms 4–7
+    keep `on_missing: fail`: they never call the planner.
   - Arms 4–7 carry `handoff.source_campaign` = arm 3's campaign.
   - `j10_prefix_m9.yaml` and `j10_prefix_m11.yaml` gain `env: appworld` (F9).
   - Arms 1b, 10, 11 and 12 need new configs derived from `hj8_executor_alone_bplus`, `hj12_takeover_fixed_k_10`
@@ -622,5 +671,9 @@ reads one. A `split: test_normal` line in a YAML config is **inert**: the campai
 | F7 | P4 with a point estimate of exactly 0 is "not supported" | A4 review |
 | F8 | The adapter directory is named and pinned at freeze | A4 review; adapter trace |
 | F9 | Stale `j10_test.pbs` pointers; missing `env:` keys; the P2 cost report's packet source | A4 review |
+
+**r4** adds §4.2 at the user's request (2026-09-23), after LP prereg Amendment 4 met a planless ceiling
+episode with a local planner. The wrapper cap and the report's sensitivity are tested:
+`tests/unit/test_j10_arm_pbs.py`, `tests/unit/test_j10_report.py` and `tests/unit/test_cached_planner.py`.
 
 *Amendment A1 ends. J9 remains frozen and unedited.*

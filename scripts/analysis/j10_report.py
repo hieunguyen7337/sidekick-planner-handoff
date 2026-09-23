@@ -1602,7 +1602,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "threshold_pp": 0.0,
         "holm_family": True,
         "statement": "advise_k1_fullctx − prefix_m11 on goal_pass is negative, CI excluding zero",
-        "citation": f"{A1_PREREG}:281-291",
+        "citation": f"{A1_PREREG}:326-336",
         "dev_reference": {
             "diff_pp": -14.81,
             "ci95_pp_scenario": [-21.20, -7.96],
@@ -1628,7 +1628,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
             "advise_k1_fullctx spends >= 2x the non-cached planner tokens of prefix_m11 "
             "and strictly more hosted calls per episode"
         ),
-        "citation": f"{A1_PREREG}:293-314",
+        "citation": f"{A1_PREREG}:338-359",
         "notes": (
             "Read from a scripts/analysis/j12_cost_axes.py report over the J10 arms "
             "(--cost-report), whose prefix arms are costed at their attributed source "
@@ -1659,7 +1659,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         # only -- 'greater' on the differences shifted by +0.07 (cluster_inference.registered_signflip).
         "permutation_alternative": "greater",
         "statement": "prefix_m11 − planner_alone_cap81 on goal_pass has CI lower bound above −7.00 pp",
-        "citation": f"{A1_PREREG}:316-337",
+        "citation": f"{A1_PREREG}:361-382",
         "dev_reference": {
             "diff_pp": 4.75,
             "ci95_pp_scenario": [-1.16, 11.75],
@@ -1679,7 +1679,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "threshold_pp": 0.0,
         "holm_family": True,
         "statement": "prefix_zs_m11 − prefix_zs_m9 on goal_pass is positive (registered underpowered)",
-        "citation": f"{A1_PREREG}:339-355",
+        "citation": f"{A1_PREREG}:384-400",
         "dev_reference": {
             "diff_pp": 2.82,
             "ci95_pp_scenario": [-1.55, 7.16],
@@ -1701,7 +1701,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         # adjustment would make it easier to support; it is judged on the unadjusted interval.
         "holm_family": False,
         "statement": "advise_k1_fullctx − sft_plan on goal_pass is NOT positive with a CI excluding zero",
-        "citation": f"{A1_PREREG}:357-369",
+        "citation": f"{A1_PREREG}:402-414",
         "dev_reference": {
             "diff_pp": -5.51,
             "ci95_pp_scenario": [-13.15, 2.51],
@@ -1722,7 +1722,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "threshold_pp": 0.0,
         "holm_family": True,
         "statement": "takeover_k10 − advise_k10_fullctx on goal_pass is positive, 95% scenario CI excluding zero",
-        "citation": f"{A1_PREREG}:371-398",
+        "citation": f"{A1_PREREG}:416-443",
         "dev_reference": {
             "diff_pp": 6.69,
             # A1:377-378 (F4): 13.49 in the registered orientation; 13.48 was the reversed
@@ -1748,65 +1748,65 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
 A1_SUPPORTING: list[dict[str, Any]] = [
     # A1:454 "| `advise_k1 − prefix_m9` | −9.89 pp | [−17.79, −1.99] | dev basis |"
     {"id": "S1", "kind": "paired", "left": "advise_k1_fullctx", "right": "prefix_m9",
-     "citation": f"{A1_PREREG}:454",
+     "citation": f"{A1_PREREG}:499",
      "dev_reference": {"diff_pp": -9.89, "ci95_pp_scenario": [-17.79, -1.99], "source": "dev basis"}},
     # A1:455 "| `advise_k10 − prefix_m11` | −7.73 pp | [−12.60, −3.12] | dev basis |"
     {"id": "S2", "kind": "paired", "left": "advise_k10_fullctx", "right": "prefix_m11",
-     "citation": f"{A1_PREREG}:455",
+     "citation": f"{A1_PREREG}:500",
      "dev_reference": {"diff_pp": -7.73, "ci95_pp_scenario": [-12.60, -3.12], "source": "dev basis"}},
     # A1:456 "| `prefix_m11 − prefix_m9` (tailored depth) | +4.25 pp (171) | [+0.15, +8.75],
     # **on the boundary** (POOL-04) | j15 `t_depth_m9_m11` |"
     {"id": "S3", "kind": "paired", "left": "prefix_m11", "right": "prefix_m9",
-     "label": "tailored depth", "citation": f"{A1_PREREG}:456",
+     "label": "tailored depth", "citation": f"{A1_PREREG}:501",
      "dev_reference": {"diff_pp": 4.25, "ci95_pp_scenario": [0.15, 8.75], "n_pairs": 171,
                        "pool04": "on the boundary", "source": "j15 t_depth_m9_m11"}},
     # A1:457 "| `(m11 − m9)_tailored − (m11 − m9)_untailored` (R2) | +2.81 pp (171) |
     # [−2.57, +8.96] | POOL-03 |"
     {"id": "S4", "kind": "did", "left": ["prefix_m11", "prefix_m9"],
      "right": ["prefix_zs_m11", "prefix_zs_m9"], "label": "tailoring x depth (R2)",
-     "citation": f"{A1_PREREG}:457",
+     "citation": f"{A1_PREREG}:502",
      "dev_reference": {"diff_pp": 2.81, "ci95_pp_scenario": [-2.57, 8.96], "n_pairs": 171,
                        "source": "POOL-03"}},
     # A1:458 "| `prefix_m11 − executor_alone_bplus` (tailored floor → m11) | new arm | — | arm 1b |"
     {"id": "S5", "kind": "paired", "left": "prefix_m11", "right": "executor_alone_bplus",
-     "label": "tailored floor -> m11", "citation": f"{A1_PREREG}:458", "dev_reference": None},
+     "label": "tailored floor -> m11", "citation": f"{A1_PREREG}:503", "dev_reference": None},
     # A1:459 "| handoff-only depth: m9 → m11 restricted to episodes where a handoff occurs at
     # m = 11 | reported for both receivers | — | F-c |"
     {"id": "S6", "kind": "handoff_depth", "label": "handoff-only depth m9 -> m11",
      "receivers": {"tailored": ["prefix_m11", "prefix_m9"],
                    "untailored": ["prefix_zs_m11", "prefix_zs_m9"]},
-     "citation": f"{A1_PREREG}:459", "dev_reference": None},
+     "citation": f"{A1_PREREG}:504", "dev_reference": None},
 ]
 
 # Not in r2's supporting table, so reported as exploratory [A1:250-251]. The ceiling −
-# untailored m11 gap is the number behind the §4.1 sourcing correction [A1:186], which §7
+# untailored m11 gap is the number behind the §4.1 sourcing correction [A1:191], which §7
 # item 6 reports whether or not it helps [A1:480].
 A1_EXPLORATORY: list[dict[str, Any]] = [
     {"id": "E1", "kind": "paired", "left": "planner_alone_cap81", "right": "prefix_zs_m11",
      "label": "ceiling − untailored m11 (sourcing correction)",
-     "citation": f"{A1_PREREG}:186",
+     "citation": f"{A1_PREREG}:191",
      "dev_reference": {"diff_pp": -2.95, "ci95_pp_scenario": [-8.65, 1.91], "n_pairs": 114}},
     # E2-E5: arms 11 and 12, exploratory because B2 was unresolved (A1 r3 §6 P7). Each is
     # B2's contrast in B2's orientation, with its dev value from
     # campaign/results/b2_decomposition_20260923.report.json `contrasts.D1`..`D4`.
     # A1:441 "| E2 | `takeover_k10 − show_k10` (D1) | +3.83 pp | [−1.56, +10.81] | `contrasts.D1` |"
     {"id": "E2", "kind": "paired", "left": "takeover_k10", "right": "show_k10",
-     "label": "execution: takeover − show (B2 D1)", "citation": f"{A1_PREREG}:441",
+     "label": "execution: takeover − show (B2 D1)", "citation": f"{A1_PREREG}:486",
      "dev_reference": {"diff_pp": 3.83, "ci95_pp_scenario": [-1.56, 10.81], "n_pairs": 171,
                        "source": "b2 contrasts.D1"}},
     # A1:442 "| E3 | `show_k10 − advise_k10_fullctx` (D2) | +2.30 pp | [−2.43, +7.31] | `contrasts.D2` |"
     {"id": "E3", "kind": "paired", "left": "show_k10", "right": "advise_k10_fullctx",
-     "label": "prompt + content: show − advice (B2 D2)", "citation": f"{A1_PREREG}:442",
+     "label": "prompt + content: show − advice (B2 D2)", "citation": f"{A1_PREREG}:487",
      "dev_reference": {"diff_pp": 2.30, "ci95_pp_scenario": [-2.43, 7.31], "n_pairs": 171,
                        "source": "b2 contrasts.D2"}},
     # A1:443 "| E4 | `advise_k10_neutral − advise_k10_fullctx` (D3) | +3.73 pp | [−0.06, +8.24] | `contrasts.D3` |"
     {"id": "E4", "kind": "paired", "left": "advise_k10_neutral", "right": "advise_k10_fullctx",
-     "label": "advice prompt wording: neutral − registered (B2 D3)", "citation": f"{A1_PREREG}:443",
+     "label": "advice prompt wording: neutral − registered (B2 D3)", "citation": f"{A1_PREREG}:488",
      "dev_reference": {"diff_pp": 3.73, "ci95_pp_scenario": [-0.06, 8.24], "n_pairs": 171,
                        "source": "b2 contrasts.D3"}},
     # A1:444 "| E5 | `takeover_k10 − advise_k10_neutral` (D4) | +2.40 pp | [−2.94, +8.89] | `contrasts.D4` |"
     {"id": "E5", "kind": "paired", "left": "takeover_k10", "right": "advise_k10_neutral",
-     "label": "channel vs neutral advice: takeover − neutral (B2 D4)", "citation": f"{A1_PREREG}:444",
+     "label": "channel vs neutral advice: takeover − neutral (B2 D4)", "citation": f"{A1_PREREG}:489",
      "dev_reference": {"diff_pp": 2.40, "ci95_pp_scenario": [-2.94, 8.89], "n_pairs": 171,
                        "source": "b2 contrasts.D4"}},
 ]
@@ -1828,7 +1828,7 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "bootstrap_seed_of_dev_references",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:226-229", f"{A1_PREREG_R1}:157", "scripts/setup/hj1_gate.py:29",
+        "citations": [f"{A1_PREREG}:271-274", f"{A1_PREREG_R1}:157", "scripts/setup/hj1_gate.py:29",
                       "scripts/analysis/j8_frontier.py:55-59,1184"],
         "what": (
             "r1 fixed bootstrap seed 20260924 without saying that its dev intervals were "
@@ -1843,7 +1843,7 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "negated_dev_references",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:208-209", f"{A1_PREREG}:322-325", f"{A1_PREREG}:346-347",
+        "citations": [f"{A1_PREREG}:253-254", f"{A1_PREREG}:367-370", f"{A1_PREREG}:391-392",
                       f"{A1_PREREG_R1}:219-222", f"{A1_PREREG_R1}:233-234"],
         "what": (
             "r1 quoted P3 and P4 intervals obtained by negating the stored contrast, and for "
@@ -1860,7 +1860,7 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "holm_family_size",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:237-238", f"{A1_PREREG}:245-249", f"{A1_PREREG_R1}:164"],
+        "citations": [f"{A1_PREREG}:282-283", f"{A1_PREREG}:290-294", f"{A1_PREREG_R1}:164"],
         "what": (
             "r1 §5.3 applied Holm 'across the five predictions on goal_pass', but P2 is a "
             "cost predicate, so P1-P5 contain four goal_pass predictions."
@@ -1875,7 +1875,7 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "holm_vs_ci_rules",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:239-244", f"{A1_PREREG}:247-249", f"{A1_PREREG_R1}:164"],
+        "citations": [f"{A1_PREREG}:284-289", f"{A1_PREREG}:292-294", f"{A1_PREREG_R1}:164"],
         "what": (
             "r1's decision rules were CI conditions while Holm needs p-values; r1 did not say "
             "how the two combine, nor that for P5 a Holm adjustment makes 'supported' EASIER "
@@ -1891,7 +1891,7 @@ A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "residual_crash_scoring",
         "status": "resolved_by_r2",
-        "citations": [f"{A1_PREREG}:214-217", f"{A1_PREREG}:526-528",
+        "citations": [f"{A1_PREREG}:259-262", f"{A1_PREREG}:574-576",
                       f"{A1_PREREG_R1}:148-149", f"{A1_PREREG_R1}:352-355",
                       "scripts/analysis/j8_frontier.py:419-430"],
         "what": (
@@ -2358,7 +2358,7 @@ def a1_no_handoff_counts(
         # "arm 3 finished within m actions": the prefix exhausted the source trajectory.
         "n_no_handoff": sum(1 for v in values if v is False),
         "n_flag_missing": sum(1 for v in values if v is None),
-        "citation": f"{A1_PREREG}:475-478",
+        "citation": f"{A1_PREREG}:520-523",
     }
 
 
@@ -2413,7 +2413,7 @@ def a1_sgc(
         "sgc_right": None if sgc_r is None else round(sgc_r, 6),
         "diff_pp": None if not shared else round((sgc_l - sgc_r) * 100, 2),
         "n_discordant_units": sum(1 for u in shared if ul[u] != ur[u]),
-        "citation": f"{A1_PREREG}:481",
+        "citation": f"{A1_PREREG}:526",
     }
 
 
@@ -2668,7 +2668,10 @@ def a1_evaluate_contrast_prediction(
     *,
     n_boot: int,
     seed: int,
+    stability: bool = True,
 ) -> dict[str, Any]:
+    """One registered contrast. stability=False skips POOL-04, the permutation and the TGC
+    secondary: the key-exclusion sensitivity (A1 §4.2) compares Holm verdicts only."""
     rule = A1_RULES[pred["rule"]]
     out: dict[str, Any] = {k: v for k, v in pred.items()}
     out["rule_text"] = rule["text"]
@@ -2685,7 +2688,7 @@ def a1_evaluate_contrast_prediction(
     out["tgc_secondary"] = (
         _public_contrast(a1_contrast(left["episodes"], right["episodes"], "tgc",
                                      n_boot=n_boot, seed=seed))
-        if pred["metric"] != "tgc"
+        if pred["metric"] != "tgc" and stability
         else None
     )
     incomplete = [a for a in (pred["left"], pred["right"]) if not arms[a]["complete"]]
@@ -2697,9 +2700,10 @@ def a1_evaluate_contrast_prediction(
     out["events_unadjusted"] = {"lo_above_threshold": lo_above, "hi_below_threshold": hi_below}
     out["verdict_unadjusted"] = rule["decide"](primary["point"], lo_above, hi_below)
     out["p_value"] = bootstrap_pvalue(primary["_means"], t, rule["direction"])
-    out["pool04"] = a1_pool04(pred, cmp["_series"], primary, n_boot=n_boot, seed=seed)
-    out["permutation_sensitivity"] = a1_permutation(
-        cmp["_series"], t, pred.get("permutation_alternative", "two-sided"))
+    if stability:
+        out["pool04"] = a1_pool04(pred, cmp["_series"], primary, n_boot=n_boot, seed=seed)
+        out["permutation_sensitivity"] = a1_permutation(
+            cmp["_series"], t, pred.get("permutation_alternative", "two-sided"))
     out["_point"], out["_lo"], out["_hi"] = primary["point"], primary["lo"], primary["hi"]
     if incomplete:
         out.update(decidable=False, verdict="refused_incomplete",
@@ -2807,6 +2811,86 @@ def a1_decide_family(results: list[dict[str, Any]], alpha: float = A1_ALPHA) -> 
     }
 
 
+# ---- A1 §4.2 contingency: arm-3 episodes scored without a crash that wrote no plan -----------
+A1_PLAN_SOURCE_ARM = "planner_alone_cap81"  # arm 3, the only arm that plans
+A1_PLANLESS_CAP_FRACTION = 0.05  # j10_arm.pbs refuses a replay arm above this (TARGET * 5 / 100)
+
+
+def a1_planless_keys(arm_dirs: dict[str, Path], seeds: list[int]) -> Optional[list[tuple[str, int]]]:
+    """(task_id, seed) of every arm-3 episode scored without a crash whose last attempt wrote no
+    plan: the keys arms 2 and 8-12 planned live. None when arm 3 was not given.
+
+    Reads the same definition the wrapper and the planner use (planless_source_keys).
+    """
+    root = arm_dirs.get(A1_PLAN_SOURCE_ARM)
+    if root is None:
+        return None
+    from sidekick.agents.planner import planless_source_keys  # noqa: E402 (pydantic; lazy)
+
+    keys = []
+    for key in planless_source_keys(root, "planner_alone", seeds):
+        seed, _, task_id = key.partition("/")
+        keys.append((task_id, int(seed)))
+    return sorted(keys)
+
+
+def a1_key_exclusion_sensitivity(
+    preds: list[dict[str, Any]],
+    results: list[dict[str, Any]],
+    arms: dict[str, dict[str, Any]],
+    keys: list[tuple[str, int]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """A1 §4.2: every contrast prediction re-read with the planless keys dropped from every arm.
+
+    Same bootstrap, same Holm family, same rule; POOL-04 and the permutation are not re-run.
+    A prediction whose Holm verdict differs is listed in `differs`; the caller reports it as
+    on_boundary. P2 (a cost ratio over arm totals) is not re-read: the live plan calls are real
+    hosted spend and are counted in it like any other call.
+    """
+    excluded = set(keys)
+    arms_x = {
+        label: dict(arm, episodes={k: v for k, v in arm["episodes"].items() if k not in excluded})
+        for label, arm in arms.items()
+    }
+    sens = [
+        a1_evaluate_contrast_prediction(p, arms_x, n_boot=n_boot, seed=seed, stability=False)
+        for p in preds
+        if p.get("kind") != "cost_ratio"
+    ]
+    a1_decide_family(sens)
+    by_id = {r["id"]: r for r in results}
+    rows, differs = [], []
+    for s in sens:
+        r = by_id.get(s["id"], {})
+        differ = bool(
+            r.get("decidable") and s.get("decidable")
+            and r.get("verdict_holm") != s.get("verdict_holm")
+        )
+        if differ:
+            differs.append(s["id"])
+        rows.append({
+            "id": s["id"],
+            "verdict_holm_all_pairs": r.get("verdict_holm"),
+            "verdict_holm_without_keys": s.get("verdict_holm"),
+            "differs": differ,
+            "contrast_without_keys": s.get("contrast"),
+        })
+    return {"rows": rows, "differs": differs, "not_re_read": [p["id"] for p in preds
+                                                              if p.get("kind") == "cost_ratio"]}
+
+
+def a1_apply_key_exclusion(results: list[dict[str, Any]], differs: list[str]) -> None:
+    """A verdict that changes without the planless keys is on the boundary (A1 §4.2, as §5.4)."""
+    for r in results:
+        if r["id"] in differs and r.get("verdict") != "on_boundary":
+            r["verdict_before_key_exclusion"] = r.get("verdict")
+            r["verdict"] = "on_boundary"
+            r["on_boundary_reason"] = "A1 §4.2 key-exclusion sensitivity: the verdict differs without the planless keys"
+
+
 # ---- report -----------------------------------------------------------------
 def a1_protocol_guard(
     split: str,
@@ -2817,13 +2901,13 @@ def a1_protocol_guard(
     registered_settings: bool,
 ) -> Optional[str]:
     if split == "test_challenge":
-        return "refusing test_challenge: it is not read under A1 [docs/prereg_j10_amendment_20260924.md:499]"
+        return "refusing test_challenge: it is not read under A1 [docs/prereg_j10_amendment_20260924.md:546]"
     if split not in A1_SPLIT_N_TASKS:
         return f"unknown split {split!r}; A1 analyses dev (dry runs) or test_normal"
     if split == "test_normal" and not confirm:
         return (
             "refusing test_normal without --confirm-heldout-test-split: A1 is a single "
-            "read [docs/prereg_j10_amendment_20260924.md:487-500]"
+            "read [docs/prereg_j10_amendment_20260924.md:534-547]"
         )
     if split == "test_normal" and plumbing:
         return "refusing --plumbing-check on test_normal"
@@ -2957,6 +3041,25 @@ def build_report_a1(
         else:
             results.append(a1_evaluate_contrast_prediction(pred, arms, n_boot=n_boot, seed=bootstrap_seed))
     multiplicity = a1_decide_family(results)
+
+    # A1 §4.2: the primary keeps every pair; the planless keys are dropped in a sensitivity, and
+    # a verdict that changes is on the boundary.
+    planless = a1_planless_keys(arm_dirs, seeds)
+    planless_cap = int(expected_n_tasks * len(seeds) * A1_PLANLESS_CAP_FRACTION)
+    contingency: dict[str, Any] = {
+        "rule": "A1 §4.2", "source_arm": A1_PLAN_SOURCE_ARM, "cap": planless_cap,
+        "keys": None if planless is None else [f"{s}/{t}" for t, s in planless],
+        "n_keys": None if planless is None else len(planless),
+        "sensitivity": None,
+    }
+    if planless is None:
+        contingency["note"] = f"{A1_PLAN_SOURCE_ARM} not given; the planless keys cannot be listed"
+    elif planless:
+        if len(planless) > planless_cap:
+            reasons.append(f"planless_keys_above_cap:{len(planless)}>{planless_cap}")
+        contingency["sensitivity"] = a1_key_exclusion_sensitivity(
+            preds, results, arms, planless, n_boot=n_boot, seed=bootstrap_seed)
+        a1_apply_key_exclusion(results, contingency["sensitivity"]["differs"])
     for r in results:
         for key in [k for k in r if k.startswith("_")]:
             r.pop(key)
@@ -3029,6 +3132,7 @@ def build_report_a1(
                           if p.get("permutation_alternative", "two-sided") != "two-sided"},
         },
         "multiplicity": multiplicity,
+        "planless_contingency": contingency,
         "arms": {
             label_: {k: v for k, v in arm.items() if k != "episodes"} | {"split_provenance": provenance[label_]}
             for label_, arm in arms.items()

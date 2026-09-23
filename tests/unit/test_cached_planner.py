@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from sidekick.agents.planner import CachedPacketPlanner, MockPlanner
+from sidekick.agents.planner import CachedPacketPlanner, MockPlanner, planless_source_keys
 from sidekick.protocols.schemas import DelegationPacket, PlannerResponse, Usage
 from sidekick.runner import make_planner
 
@@ -189,6 +189,90 @@ def test_a_registered_key_with_a_recorded_plan_still_replays_it(tmp_path):
     planner = CachedPacketPlanner(inner, tmp_path, seed=1, live_plan_keys=["1/copy_hello"])
     planner.plan("copy_hello", "g", "c")
     assert inner.plan_calls == []
+
+
+def _write_result(root: Path, error_type: str | None, seed: int = 1, task_id: str = "copy_hello") -> None:
+    path = root / "planner_alone" / str(seed) / task_id / "result.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"task_id": task_id, "seed": seed, "error_type": error_type}), encoding="utf-8")
+
+
+def _planless_episode(root: Path, error_type: str | None = "parse_error", seed: int = 1,
+                      task_id: str = "copy_hello") -> None:
+    _write_archive(root, [_event("r1", "run_start", {}), _event("r1", "parse_error", {"text": "?"})],
+                   seed=seed, task_id=task_id)
+    _write_result(root, error_type, seed=seed, task_id=task_id)
+
+
+def test_call_if_planless_plans_live_for_a_scored_source_that_wrote_no_plan(tmp_path):
+    # J10 A1 §4.2: arm 3 scored this episode but never planned, so there is nothing to replay.
+    _planless_episode(tmp_path)
+    inner = RecordingInner()
+    planner = CachedPacketPlanner(inner, tmp_path, seed=1, on_missing="call_if_planless")
+    resp = planner.plan("copy_hello", "g", "THE-API-DIGEST")
+    assert inner.plan_calls == ["THE-API-DIGEST"]
+    assert resp.usage.provider == "codex" and resp.usage.n_calls == 1
+    # The live plan's session already holds the context: the first review must not repeat it.
+    planner.correct(DelegationPacket.model_validate(_packet()), "delta-1")
+    assert inner.correct_prompts == ["delta-1"]
+
+
+def test_call_if_planless_raises_for_an_absent_crashed_or_unscored_source(tmp_path):
+    inner = RecordingInner()
+    absent = CachedPacketPlanner(inner, tmp_path, seed=1, on_missing="call_if_planless")
+    with pytest.raises(FileNotFoundError):
+        absent.plan("copy_hello", "g", "c")
+    _planless_episode(tmp_path, error_type="crash")
+    with pytest.raises(FileNotFoundError):
+        CachedPacketPlanner(inner, tmp_path, seed=1, on_missing="call_if_planless").plan("copy_hello", "g", "c")
+    (tmp_path / "planner_alone" / "1" / "copy_hello" / "result.json").unlink()
+    with pytest.raises(FileNotFoundError):
+        CachedPacketPlanner(inner, tmp_path, seed=1, on_missing="call_if_planless").plan("copy_hello", "g", "c")
+    assert inner.plan_calls == []
+
+
+def test_call_if_planless_replays_a_recorded_plan(tmp_path):
+    _write_archive(tmp_path, [_event("r1", "run_start", {}), _plan_line()])
+    _write_result(tmp_path, None)
+    inner = RecordingInner()
+    resp = CachedPacketPlanner(inner, tmp_path, seed=1, on_missing="call_if_planless").plan("copy_hello", "g", "c")
+    assert inner.plan_calls == []
+    assert resp.usage.provider == "cache"
+
+
+def test_on_missing_rejects_an_unknown_mode(tmp_path):
+    with pytest.raises(ValueError, match="call_if_planless"):
+        CachedPacketPlanner(RecordingInner(), tmp_path, seed=1, on_missing="live")
+
+
+def test_planless_source_keys_reads_the_last_attempt_and_skips_crashes(tmp_path):
+    _write_archive(tmp_path, [_event("r1", "run_start", {}), _plan_line(task_id="has_plan")], task_id="has_plan")
+    _write_result(tmp_path, None, task_id="has_plan")
+    _planless_episode(tmp_path, task_id="no_plan")
+    _planless_episode(tmp_path, error_type="crash", task_id="crashed")
+    _planless_episode(tmp_path, seed=3, task_id="no_plan")
+    # A dead attempt planned; the scored, last attempt did not.
+    _write_archive(
+        tmp_path,
+        [_event("r0", "run_start", {}), _plan_line(task_id="retried"), _event("r1", "run_start", {})],
+        seed=2, task_id="retried",
+    )
+    _write_result(tmp_path, "limit", seed=2, task_id="retried")
+    assert planless_source_keys(tmp_path) == ["1/no_plan", "2/retried", "3/no_plan"]
+    assert planless_source_keys(tmp_path, seeds=[1, 2]) == ["1/no_plan", "2/retried"]
+    assert planless_source_keys(tmp_path / "absent") == []
+
+
+def test_make_planner_passes_call_if_planless_through(tmp_path):
+    (tmp_path / "planner_alone").mkdir()
+    planner = make_planner(
+        {"planner": {"type": "mock", "packet_source": str(tmp_path), "packet_system": "planner_alone",
+                     "on_missing": "call_if_planless"}},
+        seed=2,
+        system_name="fixed_k",
+    )
+    assert isinstance(planner, CachedPacketPlanner)
+    assert planner.on_missing == "call_if_planless"
 
 
 def test_two_run_starts_yields_packet_from_second_later_attempt(tmp_path):

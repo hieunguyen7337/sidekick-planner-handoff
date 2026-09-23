@@ -97,7 +97,8 @@ def pending_packet_source(planner_cfg: dict) -> str | None:
     upstream arm has not produced yet (the J10 prefix arms replay arm 3). Such a config
     declares `planner.packet_source_pending: <reason>`. The exemption holds only while the
     path does not exist: once the upstream arm has written it, it must resolve like any
-    other. The runner still aborts on a missing packet (`on_missing: fail`), so this can
+    other. The runner still aborts on a missing packet (`on_missing: fail`; J10's
+    `call_if_planless` also aborts when the source episode is absent), so this can
     never let an episode run against nothing.
     """
     reason = str(planner_cfg.get("packet_source_pending") or "").strip()

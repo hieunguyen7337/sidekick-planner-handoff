@@ -837,6 +837,67 @@ def test_pool04_flip_across_seeds_is_on_boundary_never_supported(tmp_path: Path,
     assert row["verdict"] == "on_boundary"
 
 
+def _planless_arm3(arm_root: Path, keys: list[tuple[str, int]]) -> None:
+    """Arm 3 in its runner layout (planner_alone/<seed>/<task>), with these episodes' last
+    attempt writing no plan -- the keys A1 §4.2 plans live and the sensitivity drops."""
+    (arm_root / "sys").rename(arm_root / "planner_alone")
+    for task_id, seed in keys:
+        (arm_root / "planner_alone" / str(seed) / task_id / "events.jsonl").write_text(
+            json.dumps({"event_type": "run_start", "payload": {}}) + "\n"
+            + json.dumps({"event_type": "parse_error", "payload": {"text": "?"}}) + "\n",
+            encoding="utf-8")
+
+
+def test_a1_planless_keys_are_listed_and_a_stable_verdict_stands(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    _planless_arm3(dirs["planner_alone_cap81"], [("sc1_2", 1)])
+    p6 = [dict(p) for p in j10.A1_PREDICTIONS if p["id"] == "P6"]
+    report, rc = a1_report({k: dirs[k] for k in ("takeover_k10", "advise_k10_fullctx", "planner_alone_cap81")},
+                           predictions=p6, supporting=[])
+    assert rc == 0, report["incomplete_reasons"]
+    c = report["planless_contingency"]
+    assert (c["keys"], c["n_keys"], c["cap"]) == (["1/sc1_2"], 1, 1)  # int(24 * 0.05)
+    [row] = c["sensitivity"]["rows"]
+    assert row["id"] == "P6" and row["differs"] is False
+    assert row["contrast_without_keys"]["n_pairs"] == 23
+    assert c["sensitivity"]["not_re_read"] == []
+    assert by_id(report)["P6"]["verdict"] == "supported"
+
+
+def test_a1_a_verdict_that_changes_without_the_planless_keys_is_on_the_boundary(tmp_path: Path):
+    # +25 pp on every pair but three planless ones in scenario sc0, where takeover fails and
+    # advice passes. With them the scenario CI reaches below zero; without them it is +25 pp.
+    keys = [("sc0_1", 1), ("sc0_2", 1), ("sc0_3", 2)]
+    grid = [(t, s) for t in A1_TASKS for s in A1_SEEDS]
+    dirs = {
+        "takeover_k10": write_a1_arm(tmp_path, "takeover_k10", {k: 0.0 if k in keys else 0.75 for k in grid}),
+        "advise_k10_fullctx": write_a1_arm(tmp_path, "advise_k10_fullctx",
+                                           {k: 1.0 if k in keys else 0.5 for k in grid}),
+        "planner_alone_cap81": write_a1_arm(tmp_path, "planner_alone_cap81", 0.75),
+    }
+    _planless_arm3(dirs["planner_alone_cap81"], keys)
+    p6 = [dict(p) for p in j10.A1_PREDICTIONS if p["id"] == "P6"]
+    report, rc = a1_report(dirs, predictions=p6, supporting=[])
+    row = by_id(report)["P6"]
+    [sens] = report["planless_contingency"]["sensitivity"]["rows"]
+    assert sens["verdict_holm_without_keys"] == "supported"
+    assert sens["verdict_holm_all_pairs"] != "supported" and sens["differs"] is True
+    assert row["verdict"] == "on_boundary"
+    assert row["verdict_before_key_exclusion"] == row["verdict_holm"]
+    assert report["verdicts"]["P6"] == "on_boundary"
+    # 3 of 24 is above the 5 % cap (1): the wrapper would have refused, and the report says so.
+    assert rc == 1 and "planless_keys_above_cap:3>1" in report["incomplete_reasons"]
+
+
+def test_a1_planless_contingency_without_arm_3(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    p6 = [dict(p) for p in j10.A1_PREDICTIONS if p["id"] == "P6"]
+    report, _ = a1_report({k: dirs[k] for k in ("takeover_k10", "advise_k10_fullctx")},
+                          predictions=p6, supporting=[])
+    c = report["planless_contingency"]
+    assert c["keys"] is None and c["sensitivity"] is None and "not given" in c["note"]
+
+
 def test_crash_is_not_an_outcome_limit_is(tmp_path: Path):
     key = (A1_TASKS[0], 1)
     dirs = {
@@ -1052,7 +1113,7 @@ def test_supporting_and_exploratory_contrasts_on_a_constructed_matrix(tmp_path: 
     # No events.jsonl in this tree: every handoff flag is missing, and says so.
     assert report["no_handoff_counts"]["prefix_m11"] == {
         "m": 11, "n_scored": 24, "n_handoff": 0, "n_no_handoff": 0, "n_flag_missing": 24,
-        "citation": f"{j10.A1_PREREG}:475-478"}
+        "citation": f"{j10.A1_PREREG}:520-523"}
 
 
 def test_handoff_only_depth_and_no_handoff_counts(tmp_path: Path):

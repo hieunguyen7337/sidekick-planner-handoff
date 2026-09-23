@@ -139,7 +139,7 @@ fi
 echo "[j10] config ${CFG} sha256=$(sha256sum "${CFG}" | cut -d' ' -f1)"
 
 CFG_CAMPAIGN_ID=""; PLANNER_TYPE=""; PLANNER_MODEL=""; PACKET_SOURCE=""; EXECUTOR_TYPE=""
-EXECUTOR_MODEL=""; LORA_NAME=""; HANDOFF_SOURCE=""; HAS_SPLIT_KEY=""
+EXECUTOR_MODEL=""; LORA_NAME=""; HANDOFF_SOURCE=""; HAS_SPLIT_KEY=""; ON_MISSING=""; PACKET_SYSTEM=""
 FACTS="$(timeout 60 "${PY}" - "${CFG}" <<'PY'
 import sys
 from pathlib import Path
@@ -169,6 +169,8 @@ facts = {
     "LORA_NAME": lora,
     "HANDOFF_SOURCE": clean(handoff.get("source_campaign")),
     "HAS_SPLIT_KEY": "1" if "split" in data else "0",
+    "ON_MISSING": clean(planner.get("on_missing") or "fail"),
+    "PACKET_SYSTEM": clean(planner.get("packet_system") or "planner_alone"),
 }
 for key, value in facts.items():
     print(f"{key}={value}")
@@ -185,6 +187,8 @@ while IFS='=' read -r key value; do
     LORA_NAME) LORA_NAME="${value}";;
     HANDOFF_SOURCE) HANDOFF_SOURCE="${value}";;
     HAS_SPLIT_KEY) HAS_SPLIT_KEY="${value}";;
+    ON_MISSING) ON_MISSING="${value}";;
+    PACKET_SYSTEM) PACKET_SYSTEM="${value}";;
   esac
 done <<< "${FACTS}"
 echo "[j10] config campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} planner.model=${PLANNER_MODEL:-<unset>} packet_source=${PACKET_SOURCE:-<none>} executor=${EXECUTOR_TYPE}:${EXECUTOR_MODEL:-<none>} lora_name=${LORA_NAME:-<none>} handoff.source_campaign=${HANDOFF_SOURCE:-<none>}"
@@ -365,7 +369,7 @@ fi
 # ---- replay arms: the planner run they replay must be complete (A1 r2 §4.1, §10) -----------
 # Arm 3 is the only arm that plans. Arms 4-7 re-execute its first m actions
 # (handoff.source_campaign); arms 2 and 8-12 replay its first plan packet (planner.packet_source,
-# on_missing: fail). Against a partial arm 3 a replay episode either crashes on a missing packet
+# on_missing: call_if_planless). Against a partial arm 3 a replay episode either crashes on a missing packet
 # or replays a packet from an arm-3 episode that crashed -- which arm 3's next resubmission purges
 # and re-plans, leaving this arm paired with a plan arm 3 never scored. So both kinds of source
 # are judged by the one rule the prefix arms always used: the directory exists and holds
@@ -409,6 +413,31 @@ fi
 # A prefix arm's packet_source is its handoff source; judging it twice would only repeat the line.
 if [[ -n "${PACKET_SOURCE}" ]] && ! [[ "${SYSTEM}" == "prefix_handoff" && "${PACKET_SOURCE}" == "${HANDOFF_SOURCE}" ]]; then
   require_complete_source "planner.packet_source" "${PACKET_SOURCE}" "arms 2 and 8-12"
+
+  # ---- A1 §4.2 contingency: arm-3 episodes scored without a crash that wrote no plan -------------
+  # Nothing to replay for those keys, so on_missing: call_if_planless plans them live, one call per
+  # key per arm; every other miss still aborts. Dev had 0 of 285 luna planner_alone episodes without
+  # a plan, so more than the registered cap (5 % of the matrix) points at the harness, not the
+  # planner: the arm is refused and the case goes to A1 §8. The keys printed here are the ones
+  # j10_report.py excludes in the key-exclusion sensitivity (both read planless_source_keys).
+  PLANLESS="$(timeout 300 "${PY}" - "${PACKET_SOURCE}" "${PACKET_SYSTEM}" "${SEEDS}" <<'PY'
+import sys
+
+from sidekick.agents.planner import planless_source_keys
+
+seeds = [s for s in sys.argv[3].split(",") if s]
+print(" ".join(planless_source_keys(sys.argv[1], sys.argv[2], seeds)))
+PY
+)" || fatal "could not list the arm-3 episodes without a plan under ${PACKET_SOURCE}"
+  N_PLANLESS=$(wc -w <<< "${PLANLESS}")
+  PLANLESS_CAP=$(( TARGET * 5 / 100 ))
+  echo "[j10] arm-3 episodes scored without a plan: ${N_PLANLESS} (cap ${PLANLESS_CAP}, A1 §4.2)${PLANLESS:+: ${PLANLESS}}"
+  if (( N_PLANLESS > 0 )) && [[ "${ON_MISSING}" != "call_if_planless" ]]; then
+    fatal "planner.on_missing is '${ON_MISSING}', so the ${N_PLANLESS} arm-3 episode(s) without a plan would crash; A1 §4.2 registers call_if_planless"
+  fi
+  if (( N_PLANLESS > PLANLESS_CAP )); then
+    fatal "${N_PLANLESS} arm-3 episodes wrote no plan, above A1 §4.2's cap of ${PLANLESS_CAP} (5 % of ${TARGET}); diagnose before any replay arm runs (A1 §8)"
+  fi
 fi
 
 # Gate flags: arms that must not call the planner get --gate alone, which asserts ZERO

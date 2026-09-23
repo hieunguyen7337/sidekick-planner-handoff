@@ -328,6 +328,54 @@ def test_packet_source_arm_is_refused_on_test_until_arm_3_is_complete(tmp_path: 
     assert f"planner.packet_source {src}: exists=1 non_crashed=336 crashed=0 unreadable=0" in _out(proc)
 
 
+def _planless(src: Path, keys: list[tuple[str, int]]) -> None:
+    """Give these (already scored) arm-3 episodes an events.jsonl whose last attempt wrote no plan."""
+    for task, seed in keys:
+        ep = src / "planner_alone" / str(seed) / task
+        ep.mkdir(parents=True, exist_ok=True)
+        (ep / "events.jsonl").write_text(
+            json.dumps({"event_type": "run_start", "payload": {}}) + "\n"
+            + json.dumps({"event_type": "parse_error", "payload": {"text": "?"}}) + "\n",
+            encoding="utf-8")
+
+
+def test_planless_arm_3_keys_are_listed_and_capped_at_5_percent(tmp_path: Path):
+    # A1 §4.2: those keys get a live first plan; above 16 of 336 the replay arm is refused.
+    cfg, src = _replay_variant(tmp_path, "j10_takeover_k10.yaml")
+    _complete(src, 168)
+    env = dict(CFG=str(cfg), **_test_normal(tmp_path))
+    _planless(src, [("t3", 2), ("t7", 1)])
+    proc = run_pbs(tmp_path, **env)
+    assert proc.returncode == 0, _out(proc)
+    assert "arm-3 episodes scored without a plan: 2 (cap 16, A1 §4.2): 1/t7 2/t3" in _out(proc)
+    _planless(src, [(f"t{i}", 1) for i in range(20, 35)])  # 17 in all
+    proc = run_pbs(tmp_path, **env)
+    assert proc.returncode == 2, _out(proc)
+    assert "17 arm-3 episodes wrote no plan, above A1 §4.2's cap of 16 (5 % of 336)" in _out(proc)
+
+
+def test_a_replay_arm_that_would_abort_on_a_planless_key_is_refused(tmp_path: Path):
+    cfg, src = _replay_variant(tmp_path, "j10_sft_plan.yaml")
+    text = cfg.read_text(encoding="utf-8")
+    assert "on_missing: call_if_planless" in text
+    cfg.write_text(text.replace("on_missing: call_if_planless", "on_missing: fail"), encoding="utf-8")
+    _complete(src, 168)
+    _planless(src, [("t0", 1)])
+    proc = run_pbs(tmp_path, CFG=str(cfg), **_test_normal(tmp_path))
+    assert proc.returncode == 2, _out(proc)
+    assert "planner.on_missing is 'fail', so the 1 arm-3 episode(s) without a plan would crash" in _out(proc)
+
+
+def test_prefix_arms_do_not_count_planless_keys(tmp_path: Path):
+    # A prefix arm never calls plan(); a planless source episode is a step-0 handoff (A1 §4.2).
+    cfg, src = _replay_variant(tmp_path, "j10_prefix_m11.yaml")
+    _complete(src, 168)
+    _planless(src, [("t0", 1)])
+    proc = run_pbs(tmp_path, CFG=str(cfg), **_test_normal(tmp_path))
+    assert proc.returncode == 0, _out(proc)
+    assert "scored without a plan" not in _out(proc)
+
+
 def test_dryrun_packet_source_arm_replays_the_dryrun_planner_and_requires_it_complete(tmp_path: Path):
     cfg, src = _replay_variant(tmp_path, "j10_sft_plan.yaml")
     dry = Path(str(src) + "_dryrun")
