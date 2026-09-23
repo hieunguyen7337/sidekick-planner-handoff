@@ -128,27 +128,29 @@ spliced in verbatim.
 
 ### Theme 7 — Advice, critique and self-correction limits
 
-> The established negative results here concern *self*-correction, and are therefore adjacent to our
-> finding rather than identical to it: our critique is externally authored by a materially stronger
-> model, which is the condition under which that literature expects correction to work. Our
-> contribution is to put a price on it and compare it, at matched spend, against the same strong
-> model spending the same budget on actions instead of words. That comparison is what the literature
-> lacks, and it is also the claim our own evidence does not yet support: at matched budget our two
-> channels are currently indistinguishable, and advice has never been priced at the budget where the
-> action channel wins. Until the full-context and step-level advice arms run, the honest statement is
-> that advice saturates early — cheaply — and that whether it would ever catch up is untested.
+> The established negative results here concern *self*-correction and are adjacent to our finding
+> but not identical to it: our critique is externally authored by a materially stronger model,
+> the condition under which that literature expects correction to work. The registered C1 contrast
+> establishes that at a matched trigger ($k = 10$) and full context, executed actions beat advice
+> written under our registered correction prompt: +6.13 pp over 171 pairs (scenario [+0.75, +12.71];
+> significant under the registered percentile bootstrap, stable across seven bootstrap seeds; an exact
+> cluster randomization test gives p = 0.063; DEC-02). Advice bought at 3.2× the deepest prefix's
+> tokens still loses (CHAN-PRICE-01). But B2 shows much of the gap may be the advice prompt's
+> wording: a neutral prompt recovers +3.73 pp of it ([−0.06, +8.24]; DEC-03), and the registered
+> decomposition is unresolved. The gap we fill is the priced, matched comparison, *conditional on the
+> advice prompt*; it is not evidence that the channel itself carries the difference.
 
 ### Theme 8 — Long-horizon failure mechanics and learning-to-defer
 
-> This literature supplies the mechanism our curve needs and, read carefully, predicts the wrong
-> shape. If early errors are unrecoverable, buying the strong model's first few actions should pay
-> immediately, and quality should rise steeply and then saturate. We observe the opposite: nothing is
-> bought until roughly the seventh step, after which quality climbs. That mismatch is the most
-> interesting thing in our data, and our mechanism chapter takes it as its subject — testing whether
-> the threshold coincides with where novel API discovery ends rather than with where errors begin.
-> Against learning-to-defer, our allocation is deliberately *not* learned: every gate we measured sat
-> at chance, so we fix the allocation by construction and characterise the frontier a learned deferral
-> policy would have to beat.
+> This literature supplies the mechanism our curve needs: if early errors are unrecoverable, the
+> strong model's first actions should pay, and they do, though not at a step we can name. The earlier
+> reading that nothing is bought until roughly the seventh step is withdrawn: depth is a rise across a
+> span with no localizable breakpoint (untailored +7.70 pp from $m = 6$ to $m = 11$, POOL-01), no
+> adjacent step survives Holm correction, and the registered threshold test fails (MULT-01). The
+> mechanism evidence is front-loaded API discovery (78.3% of the planner's first API uses fall in its
+> first nine actions; MECH-08) and error suppression (a deeper prefix roughly halves the chance the
+> executor errors at all; MECH-05, MECH-07). Against learning-to-defer: every gate we measured sat at
+> chance, so we characterise the fixed-allocation frontier a learned deferral policy must beat.
 
 ### Theme 9 — AppWorld, its state of the art, and evaluation statistics
 
@@ -176,6 +178,8 @@ spliced in verbatim.
 5. Never describe m7–m11 as anything but exploratory, and never describe the shape test on the
    existing arms as confirmatory.
 6. Replay-handoff as an evaluation protocol is cited to Reach-or-Solve, not claimed.
+7. Never state the channel result without "the registered advice prompt" and the neutral-prompt
+   recovery in the same paragraph.
 
 ## 4. What would make this thesis not worth publishing
 

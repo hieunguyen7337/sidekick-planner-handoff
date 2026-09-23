@@ -1,23 +1,24 @@
 ---
-title: "Steering Local Agentic Executors via Action Prefixes: Channel Dominance, Prefix Depth, and Mechanism on the AppWorld Benchmark"
+title: "Steering Local Agentic Executors via Action Prefixes: Prefix Depth, a Channel Comparison, and Mechanism on AppWorld"
 date: "2026-09-23"
 author: "Sidekick Research Group"
 abstract: |
-  We examine compute allocation when pairing a compact local model (IBM Granite 4.2 8B) with a strong hosted planner (GPT-5.6 Luna) on complex interactive environments. Across paired evaluations on the AppWorld dev benchmark (57 tasks, $n = 114$ paired episodes across 19 scenario clusters), we establish four primary empirical findings. First, spending hosted budget as executable action prefixes strictly dominates spending it as natural-language prose advice: at matched triggers ($k = 10$) and full context, action execution outperforms prose critique by +6.69 percentage points in goal pass rate (95% scenario-clustered bootstrap interval [+1.29, +13.48], task-clustered [+1.47, +12.35]) while reducing non-cached tokens (41,464 vs. 49,819), provider dollars ($0.004820 vs. $0.005494), and hosted calls (2.316 vs. 2.465) per episode. Second, handoff quality rises with prefix depth across a span—gaining +10.21 pp on goal pass rate ([+2.60, +18.20] scenario, [+3.80, +16.81] task) and +16.67 pp on Total Goal Criterion (TGC; [+5.26, +28.07] scenario, [+7.02, +26.32] task) between depths $m = 6$ and $m = 9$ zero-shot. However, Holm correction yields adjusted $p = 1.0$ across all eight adjacent transitions, and segmented regression yields $\tau = 8$ with CI [4, 9] (failing registered threshold test S3), confirming a continuous span gain rather than a discrete threshold jump. Third, environment resets show that what the prefix conveys is largely informational, but how far that goes depends on the receiver: rendering the planner's actions as plain text into a fresh environment matches physical execution at every depth tested on a receiver fine-tuned on the planner's trajectories (−2.51, −1.84 and −0.49 pp at $m = 6, 9, 11$, all intervals including zero, and non-inferior at $m \ge 9$ against a 7.00 pp margin), while on an untailored receiver execution wins at the deep end (−6.58 pp, scenario [−9.98, −3.64] at $m = 11$) and the narrated curve saturates after $m = 9$. Fourth, in a pre-registered test of the obvious objection that the action channel merely buys more planner effort, prose advice reviewed at every step consumes 3.2$\times$ the non-cached tokens and 1.7$\times$ the hosted calls of the deepest action prefix and still scores 14.68 pp lower (scenario [−22.09, −7.04]). All evaluations are conducted strictly on the AppWorld development split.
+  We study how to spend a strong hosted planner's budget (GPT-5.6 Luna) on a compact local executor (IBM Granite 4.2 8B) in AppWorld, using paired, cluster-bootstrapped contrasts on the dev split only (57 tasks). Handing control to the executor after $m$ replayed planner actions helps across a span of depths with no localizable breakpoint: from $m = 6$ to $m = 11$ over 171 pooled pairs, `goal_pass` rises +7.70 pp on the untailored receiver (scenario 95% CI [+3.69, +12.06]) and +8.39 pp on the tailored one, yet no adjacent step survives Holm correction and the registered threshold test fails. Against a cap-81 planner-alone ceiling, three of four $m = 11$ arms are non-inferior on both metrics within the registered 7.00 pp margin; against the higher-scoring cap-25 ceiling none is on TGC. At a matched trigger, executed planner actions beat advice written under the registered correction prompt by +6.13 pp over 171 pairs ([+0.75, +12.71]; significant under the registered percentile bootstrap, stable across seven bootstrap seeds; an exact cluster randomization test gives $p = 0.063$), but a neutral advice prompt recovers about three-fifths of that gap (+3.73 pp, [−0.06, +8.24]). A pre-registered decomposition of the gap is unresolved. Mechanistically, deeper prefixes front-load API discovery and suppress compounding errors.
 ---
 
-# Steering Local Agentic Executors via Action Prefixes: Channel Dominance, Prefix Depth, and Mechanism on the AppWorld Benchmark
+# Steering Local Agentic Executors via Action Prefixes: Prefix Depth, a Channel Comparison, and Mechanism on AppWorld
 
 ## 1. Introduction
 
 Language agents in digital environments must navigate long horizons, discover multi-application APIs and maintain coherent state. Frontier models plan well but are expensive and privacy-sensitive to run as interactive loops; compact local models (e.g., 8B open weights) are cheap, yet compound errors and explore poorly when deployed alone. Hybrid systems pair a small local executor with a strong hosted planner, which raises the question: **through which channel, and at what depth of intervention, should the hosted budget be spent?** Existing approaches typically use the hosted model as a critic or upfront planner emitting natural-language advice or plans.
 
-In this work, we show that on AppWorld natural-language advice is the weaker medium for steering a local executor. At a matched trigger and matched context, spending hosted budget as concrete, executable **action prefixes** scores higher than natural-language critique and, as point estimates, costs less in non-cached tokens, provider dollars and hosted calls; of the three cost differences only the dollar saving is itself resolved (§4). We do not measure wall-clock latency and make no claim about it.
+In this work, we show that on AppWorld, at a matched trigger and matched context, spending hosted budget as concrete, executable **action prefixes** scores higher than advice written under our registered correction prompt and, as point estimates, costs less in non-cached tokens, provider dollars and hosted calls; of the three cost differences only the dollar saving is itself resolved (§4). A neutral advice prompt recovers about three-fifths of that gap (§3.1), so we claim only that actions beat the registered advice prompt. We do not measure wall-clock latency and make no claim about it.
 
 Every number below traces to a claims ledger (`docs/claims_ledger.md`) that records its source report and JSON key and whether the contrast was registered in advance; exploratory results are marked as such.
 
-- **Channel at matched trigger (registered; CHAN-C1-02, COST-01).** At $k = 10$ with full transcript context, action takeover beats prose advice by +6.69 pp on `goal_pass` (scenario 95% CI [+1.29, +13.48], task [+1.47, +12.35]; exact 19-scenario randomization test $p = 0.0469$, ROB-02; the TGC version does not survive it), at lower non-cached tokens (41,464 vs. 49,819), dollars ($0.004820 vs. $0.005494) and hosted calls (2.316 vs. 2.465) as point estimates.
-- **Advice bought above the action channel's price (registered primary H2; CHAN-PRICE-01).** Advice at every step spends 1,414,410 non-cached tokens and 19.02 hosted calls per episode — 3.2$\times$ and 1.7$\times$ the deepest action prefix — and still scores 14.68 pp lower on `goal_pass` (scenario [−22.09, −7.04], task [−21.56, −7.79]).
+- **Actions beat the registered advice prompt at a matched trigger (registered; CHAN-C1-02, DEC-02, DEC-03, COST-01).** At $k = 10$ with full transcript context, action takeover beats advice written under the registered correction prompt by +6.69 pp on `goal_pass` (scenario 95% CI [+1.29, +13.48]; exact 19-scenario randomization test $p = 0.0469$, ROB-02; the TGC version does not survive it), at no greater point-estimate cost on any axis. At 171 pairs the gap is +6.13 pp ([+0.75, +12.71]; exact test $p = 0.063$), and a neutral advice prompt recovers about three-fifths of it (+3.73 pp, [−0.06, +8.24]).
+- **The gap's decomposition is unresolved (registered B2; DEC-01 to DEC-04).** Showing the planner's action without executing it (0.7516) or requesting advice under a neutral prompt (0.7658) lands between registered advice (0.7285) and takeover (0.7899); no registered decision rule fires (§3.1).
+- **Registered-prompt advice bought above the action channel's price (registered primary H2; CHAN-PRICE-01).** Advice at every step spends 1,414,410 non-cached tokens and 19.02 hosted calls per episode — 3.2$\times$ and 1.7$\times$ the deepest action prefix — and still scores 14.68 pp lower on `goal_pass` (scenario [−22.09, −7.04]).
 - **Live takeover matches oracle replay (exploratory; CHAN-C1-03)** at $m = 9$ (+1.55 pp, scenario [−3.46, +7.04]) and $m = 11$ (−0.91 pp, [−6.74, +5.94]).
 - **Depth helps across a span; no breakpoint can be localized (MULT-01, F1-RESULT-01..04, ROB-15; SHAPE-10 exploratory).** Untailored `goal_pass` rises +10.21 pp from $m = 6$ to $m = 9$ ([+2.60, +18.20]) and TGC +16.67 pp ([+5.26, +28.07]), but no adjacent step survives Holm correction, the registered threshold test S3 fails, and the prefix arms alone fit a straight line at +1.43 pp per step ([+0.80, +2.04]).
 - **What the prefix conveys depends on the receiver (exploratory; NARR-03, NARR-04, DID-01).** Narrating the planner's actions into a fresh environment matches execution at every depth on the tailored receiver (−2.51, −1.84, −0.49 pp at $m = 6, 9, 11$), while on the untailored receiver execution wins at $m = 11$ by 6.58 pp ([−9.98, −3.64]); the difference-in-differences resolves at $m = 11$ only (**+6.09 pp**, scenario [+1.56, +11.00], task [+0.63, +11.85]).
@@ -57,8 +58,9 @@ We compare four interaction paradigms:
 
 #### Trajectory Sourcing
 
-Every prefix arm in this paper *replays* a recorded planner campaign rather than calling the planner
-online. That is what removes planner sampling noise from the depth curve — measured at 0.04 pp of
+Every prefix arm in this paper *replays* its prefix from a recorded planner campaign rather than calling
+the planner online. After handoff the executor may still ask the planner; in six arms (Appendix A.5)
+hosted luna answered 1–31 such asks per arm, and the headline depth curves contain none. Replay is what removes planner sampling noise from the depth curve — measured at 0.04 pp of
 executor-side replicate variation against 6.47 pp between two planner runs (CEIL-08) — and it is what
 makes the receiver comparisons exactly paired, since both receivers consume byte-identical prefixes.
 
@@ -69,27 +71,49 @@ wherever it matters, and §5.3 reports a ceiling claim that does not survive bei
 
 ---
 
-## 3. The Action Channel Beats the Advice Channel at Matched Trigger
+## 3. Actions Versus Advice at a Matched Trigger
 
-To resolve whether hosted budget is more effectively spent as supervisory prose or direct environment actions, we examine pre-registered primary channel contrast C1 (CHAN-C1-00, CHAN-C1-02). We compare live action takeover (`takeover_fixed_k_10`) against full-context prose advice (`advise_fixed_k_10_fullctx`). Both arms are matched: identical trigger condition ($k = 10$), same cached initial plan, identical executor model and adapter, and both supply the complete episode transcript to the planner (CHAN-C1-00).
+We examine the pre-registered primary channel contrast C1 (CHAN-C1-00, CHAN-C1-02): live action takeover (`takeover_fixed_k_10`) against full-context advice (`advise_fixed_k_10_fullctx`), which the planner writes under the registered correction prompt ("The executor needs a correction. Reply with concise correction text only."). The arms share the trigger ($k = 10$), the cached initial plan, the executor and adapter, and the full transcript given to the planner (CHAN-C1-00).
 
-The action channel decisively outperforms prose advice. On `goal_pass`, `takeover_fixed_k_10` achieves 0.8007 compared to 0.7339 for `advise_fixed_k_10_fullctx` (TGC 0.5175 vs. 0.4386). The paired difference is **+6.69 pp**, with a 95% scenario-clustered CI of **[+1.29, +13.48]** and task-clustered CI of **[+1.47, +12.35]** (CHAN-C1-02). Because both intervals strictly exclude zero under 10,000 bootstrap draws, the superiority of the action channel is established at the pre-registered trigger. Against the one-plan floor (`sft_plan`, 0.7181), takeover provides a significant gain of **+8.26 pp [+3.84, +13.11]**, whereas advice provides only **+1.57 pp [−2.91, +5.91]**, failing to show a resolvable difference from the floor.
+Takeover scores 0.8007 `goal_pass` against advice's 0.7339 (TGC 0.5175 vs. 0.4386), a paired difference of **+6.69 pp** (scenario 95% CI **[+1.29, +13.48]**, task **[+1.47, +12.35]**; CHAN-C1-02). Both intervals exclude zero under 10,000 bootstrap draws, so at the pre-registered trigger actions beat the registered advice prompt; a neutral prompt recovers about three-fifths of the gap (§3.1).
 
-The `goal_pass` result also survives an exact randomization test over the 19 scenario clusters, though narrowly ($p = 0.0469$; wild cluster bootstrap [+0.88, +12.48]; ROB-02), so we describe it as significant under both the percentile bootstrap and an exact cluster randomization test rather than as robust. Two companion versions do not resolve: on TGC (+7.89 pp) the scenario percentile interval excludes zero but the exact test gives $p = 0.0781$, and on scenario goal completion, which credits a scenario only when all three of its tasks pass, advice minus takeover is −7.89 pp with an interval of [−21.05, +2.63] (ROB-11).
+The `goal_pass` result also survives an exact randomization test over the 19 scenario clusters, though narrowly ($p = 0.0469$; wild cluster bootstrap [+0.88, +12.48]; ROB-02), so we describe it as significant under both the percentile bootstrap and an exact cluster randomization test rather than as robust. Its TGC companion (+7.89 pp) fails the exact test ($p = 0.0781$), and scenario goal completion does not resolve (ROB-11).
 
-A central methodological concern regarding prefix handoffs is that replaying recorded oracle trajectories cannot be deployed live without ground-truth traces. We address this directly via CHAN-C1-03, an exploratory comparison, by evaluating online live takeover against oracle replayed prefixes. Against oracle prefix replay at depth $m = 9$ (0.7852) and depth $m = 11$ (0.8098), live takeover (0.8007) yields paired differences of **+1.55 pp** (scenario [−3.46, +7.04], task [−4.41, +8.01]) and **−0.91 pp** (scenario [−6.74, +5.94], task [−6.90, +5.16]) respectively. Crucially, because both confidence intervals span zero (widths ±6–7 pp), we conclude that **we cannot distinguish live takeover from oracle prefix replay at $n = 114$**. We do not claim mathematical equality, but rather that live execution achieves parity within experimental resolution, validating deployability.
+**Extension to 171 pairs (DEC-02).** A third seed adds 57 pairs with plan packets from the cap-81 rather than the cap-25 planner campaign; seeds 1–2 are CHAN-C1-02's pairs, so this is an extension, not a replication. The gap is **+6.13 pp** (scenario [+0.75, +12.71], task [+0.97, +11.73]; TGC +5.26 pp [−0.58, +12.28]): significant under the registered percentile bootstrap, stable across seven bootstrap seeds; an exact cluster randomization test gives $p = 0.063$. A neutral advice prompt recovers +3.73 pp of it (§3.1).
 
-Finally, we confirm that the poor performance of prose advice is not an artifact of critic context starvation (ADV-FC-01, ADV-FC-02). Evaluating full-transcript control (`advise_fixed_k_10_fullctx`, 0.7339) against the context-starved baseline (`advise_fixed_k_10`, 0.6964) yields a non-significant difference of **+3.74 pp** (scenario [−1.39, +9.13], task [−1.72, +9.53]). Furthermore, full-context advice exceeds the matched adapter plan floor (`hj8_sft_plan_bplus_20260921iaware`, 0.7181) by only **+1.57 pp** (scenario [−2.91, +5.91], task [−3.04, +6.30]; TGC +4.39 pp [−4.39, +12.28]). Advice remains indistinguishable from the floor under both truncated and complete reviewer contexts (Figure F2).
+Live takeover is indistinguishable from oracle prefix replay, which needs recorded traces (CHAN-C1-03, exploratory: **+1.55 pp** [−3.46, +7.04] at $m = 9$, **−0.91 pp** [−6.74, +5.94] at $m = 11$). Registered advice's weakness is not context starvation (ADV-FC-01, ADV-FC-02): full-transcript minus 8-line-window advice is **+3.74 pp** ([−1.39, +9.13]), and full-context advice exceeds the plan floor (0.7181) by only **+1.57 pp** ([−2.91, +5.91]) against takeover's **+8.26 pp** ([+3.84, +13.11]; Figure F2).
+
+### 3.1 Decomposing the Gap (B2, pre-registered)
+
+Takeover differs from registered advice in content (an action), in execution, and in prompt: advice is requested under a prompt that presumes an error and caps length. B2 (`docs/prereg_c1_decomposition_20260923.md`) adds two arms at the same trigger and context: **S** shows the planner's action, from takeover's byte-identical act prompt, as advice text and never executes it; **N** requests advice under a neutral prompt. With takeover (**T**) and registered advice (**A**), all four arms have 171 pairs over seeds 1–3 and no crashes (DEC-01).
+
+Table 1a: The B2 decomposition ($n = 171$ paired; `goal_pass`; scenario 95% CI; Holm over D1–D4).
+
+| Arm | `goal_pass` | Contrast | Difference | Scenario 95% CI | Holm $p$ |
+|---|---|---|---|---|---|
+| T, takeover | 0.7899 | D0 = T − A | +6.13 pp | [+0.75, +12.71] | — |
+| A, registered advice | 0.7285 | D1 = T − S (execution) | +3.83 pp | [−1.56, +10.81] | 0.5976 |
+| S, action shown, not executed | 0.7516 | D2 = S − A (prompt + content) | +2.30 pp | [−2.43, +7.31] | 0.7208 |
+| N, neutral advice | 0.7658 | D3 = N − A (prompt) | +3.73 pp | [−0.06, +8.24] | 0.2192 |
+| | | D4 = T − N | +2.40 pp | [−2.94, +8.89] | 0.7208 |
+
+No registered decision rule fires (DEC-01). *Prompt artefact* needed D4's interval to include zero (held) and D3's to exclude it (lower bound −0.06); *execution matters* and *content, not execution* needed D1's and D2's to exclude zero (−1.56, −2.43). The outcome is **unresolved**; we make no decomposition claim. The D3 near miss is stable: its lower bound is below zero at all seven POOL-04 seeds, and the exact sign-flip test gives $p = 0.1089$ (DEC-03).
+
+The neutral prompt alone recovers +3.73 of the +6.13 pp, about three-fifths; takeover's remaining lead over it does not resolve, and on TGC it is −0.58 pp ([−8.77, +7.02]). The executor seldom copies a shown action (exploratory): 38 of 228 were reproduced verbatim as its next action (0.1667), and 182 of 213 shown code actions were not (DEC-04).
+
+**Reading.** The registered advice prompt, not the channel alone, may carry much of the takeover−advice gap; these data cannot apportion it.
 
 ---
 
-### 3.1 Advice at the Action Channel's Price
+### 3.2 Advice at the Action Channel's Price
 
-The obvious objection to Section 3 is that the action channel simply buys more planner effort. We
-pre-registered a test of it (`docs/prereg_h2_advice_at_price_20260923.md`), naming the arm, the four
-predictions, the analysis script and the output path before the run. The arm, `advise_fixed_k_1_fullctx`,
-reviews the executor's work at **every step** with full context — ten times the review frequency of the
-$k = 10$ advice arm.
+The obvious objection is that the action channel simply buys more planner effort. We
+pre-registered a test of it (`docs/prereg_h2_advice_at_price_20260923.md`): the arm
+`advise_fixed_k_1_fullctx` reviews the executor's work at **every step** with full context, ten times
+the review frequency of the $k = 10$ advice arm. Like every advice arm here it uses the registered
+correction prompt, so this and all our advice comparisons are conditional on that prompt; at $k = 10$ a
+neutral prompt closes about three-fifths of the takeover−advice gap (§3.1), and neutral advice was not
+run at $k = 1$.
 
 Table 1b: Advice bought at the action channel's budget (n = 114 paired, scenario 95% CI).
 
@@ -102,36 +126,28 @@ Table 1b: Advice bought at the action channel's budget (n = 114 paired, scenario
 
 Advice at every step consumes **3.2× the non-cached tokens** and **1.7× the hosted calls** of the deepest
 action prefix, and scores **14.68 pp lower** on `goal_pass` (scenario [−22.09, −7.04], task
-[−21.56, −7.79]) and 15.79 pp lower on TGC ([−28.07, −3.51]). Against `prefix_m9` the gap is −12.21 pp
-([−19.81, −3.72]).
+[−21.56, −7.79]) and 15.79 pp lower on TGC ([−28.07, −3.51]).
 
 Three of the four registered predictions held. **P1** (advice minus the one-plan floor includes zero) held
 at −5.51 pp ([−13.15, +2.51]), though the registered *point* prediction of [−2, +5] pp was missed on the
-low side: reviewing every step leaves the executor numerically *below* the one-plan floor. **P2** (advice
-minus `prefix_m11` negative, excluding zero) held decisively, and also under the exact sign-flip test
-($p = 0.0024$) and both wild intervals (ROB-03). **P3** (ten times the review frequency does not buy
+low side. **P2** (advice minus `prefix_m11` negative, excluding zero) held, also under the exact sign-flip
+test ($p = 0.0024$) and both wild intervals (ROB-03). **P3** (ten times the review frequency does not buy
 quality) held on the registered scenario clustering at −7.08 pp ([−14.78, +0.67]) under every inference
-method. On the task clustering the published upper bound of +0.01 is a favourable Monte Carlo draw:
-re-run at the seven stability seeds it is negative at six of them, and −0.1184 at 200,000 resamples
-(ROB-04). There, if anything, advice at every step is significantly *worse* than advice every ten steps.
+method (ROB-04; task-clustered detail in Appendix A.4). **P4 failed**: it predicted non-cached tokens in [300k, 700k], and the arm spent
+1,414,410; we report P2 as tested and flag that judgement as a deviation (CHAN-PRICE-02; Appendix B.1).
+**Figure F8** places all four arms on cost and quality axes.
 
-**P4 failed**: it predicted non-cached tokens in [300k, 700k] and the arm spent 1,414,410. The prereg's
-remedy is written for an arm priced *below* the action channel's budget, not above it, so we report P2 as
-tested and flag that judgement as a deviation (CHAN-PRICE-02; Appendix B.1).
-
-**Figure F8** places all four arms on cost and quality axes: the advice arms sit at the bottom of the quality range at both ends of the cost range, while the action prefixes sit above them in between.
-
-By the prereg's own decision rule, P1 and P2 both holding establishes the channel claim at matched budget:
-**advice does not reach the action channel's quality even when priced at or above it; the difference is the
-channel, not the budget.**
+By the prereg's own decision rule, P1 and P2 both holding establishes the claim at matched budget:
+**advice under the registered prompt does not reach the action channel's quality even when priced at or
+above it, so the gap is not a budget effect.** Whether it is a channel effect is what §3.1 leaves unresolved.
 
 ---
 
 ## 4. Cost on Three Axes
 
-We evaluate whether supervisory critique is cheaper across three cost currencies: non-cached input/output tokens, provider dollars billed under published price cards, and total hosted API calls (COST-01, COST-02, COST-03).
+We price every arm in three currencies: non-cached input/output tokens, provider dollars under published price cards, and hosted API calls (COST-01, COST-02, COST-03).
 
-On the registered matched-trigger pair the action channel scores higher and, as point estimates, is cheaper on all three axes (COST-01): per episode, `takeover_fixed_k_10` spends 41,464 non-cached tokens against 49,819 for `advise_fixed_k_10_fullctx` (8,355 fewer), $0.004820 against $0.005494 ($0.000674 less) and 2.316 hosted calls against 2.465 (0.149 fewer). Paired intervals resolve only the dollar saving (ROB-18): −8,356 non-cached tokens [−17,744, +617], −$0.000674 [−0.001361, −0.000024] (scenario clustering only) and −0.149 hosted calls [−0.368, +0.070]; takeover also uses fewer local executor tokens (−65,070 [−107,348, −23,744]). Takeover scores +6.69 pp higher at no greater point-estimate cost on any axis; it is not shown to be significantly cheaper on all three.
+On the registered matched-trigger pair takeover scores above registered advice and, as point estimates, is cheaper on all three axes (COST-01): per episode, `takeover_fixed_k_10` spends 41,464 non-cached tokens against 49,819 for `advise_fixed_k_10_fullctx`, $0.004820 against $0.005494, and 2.316 hosted calls against 2.465. Paired intervals resolve only the dollar saving (ROB-18): −8,356 non-cached tokens [−17,744, +617], −$0.000674 [−0.001361, −0.000024] (scenario clustering only) and −0.149 hosted calls [−0.368, +0.070]; takeover also uses fewer local executor tokens (−65,070 [−107,348, −23,744]). At 171 pairs (DEC-05; point estimates only) takeover is still the cheapest of B2's four arms in non-cached tokens (41.8k against 53.2k for registered advice) and dollars ($0.00478 against $0.00578), while neutral advice, which recovers about three-fifths of the quality gap (§3.1), makes marginally the fewest hosted calls (2.29 against 2.33).
 
 ```
 Table 1: Unified Cost and Quality Frontier on AppWorld Dev Split (n = 114).
@@ -153,7 +169,7 @@ ceiling_cap81 (planner alone)      0.7637    0.5702           1,160,215   $0.048
 --------------------------------------------------------------------------------------------------
 ```
 
-Cost ordering is consistent across currencies (COST-02) except that takeover costs slightly more dollars than starved-context advice ($0.004820 vs. $0.004386) while spending fewer tokens (41,464 vs. 43,823) and calls (2.32 vs. 2.42). `advise_fixed_k_3` ran only with the starved context (ROB-20); against `prefix_m6` it is −1.33 pp ([−8.02, +5.44]) at a lower dollar cost, but that pair confounds depth with context starvation and is not a fair near-matched version of §3.1's test.
+Cost ordering is consistent across currencies (COST-02) except that takeover costs slightly more dollars than starved-context advice ($0.004820 vs. $0.004386) while spending fewer tokens (41,464 vs. 43,823) and calls (2.32 vs. 2.42). `advise_fixed_k_3` ran only with the starved context, so its −1.33 pp against `prefix_m6` ([−8.02, +5.44]) confounds depth with starvation and is no fair version of §3.2's test (ROB-20).
 
 Non-inferiority (NI) to the cap-81 planner ceiling (`ceiling_cap81`, 0.5702 TGC) under the registered 7.00 pp margin is **currency-invariant** (COST-03): the same two arms pass under all three cost axes. Reported as arm minus ceiling, `prefix_m11` scores **+3.51 pp** on TGC (scenario 95% CI [−6.14, +13.16], task [−5.26, +12.28]) while saving 716,854 non-cached tokens ([−1,314,868, −292,751]), $0.0217 ([−0.0390, −0.0094]) and 6.10 hosted calls ([−9.25, −3.34]) per episode; `ceiling_cap25` also passes (+11.40 pp, [+1.75, +21.05]). NI fails for `prefix_m9` (−0.88 pp, [−9.65, +7.89]) because its lower bound falls below −7.00 pp, an interval-width failure rather than a degraded point estimate: NI is not established at $m = 9$, which is not the same as $m = 9$ being inferior. Two qualifications apply (ROB-05, ROB-21). The `prefix_m11` TGC lower bound (−6.14) is stable across bootstrap seeds but, TGC being discrete, one attainable value from failing, and an exact one-sided sign-flip test of NI gives $p = 0.0264$, just above the 2.5% level. Against the higher, trajectory-paired cap-25 ceiling the same arm fails TGC NI (−7.89 pp [−17.54, +2.63]); §5.5 gives both ceilings.
 
@@ -273,7 +289,7 @@ against the one-plan floor with 95 percent intervals; asterisks mark lifts whose
 The intervals overlap at this depth; other depths are in NARR-03 (untailored) and NARR-04 (tailored).
 ```
 
-**At moderate depth, then, the prefix works as concrete, executable instructions rather than as an environment mutator**: prose critique fails (CHAN-C1-02, −6.69 pp), while the same actions delivered as text in a fresh environment succeed.
+**At moderate depth, then, the prefix works as concrete, executable instructions rather than as an environment mutator**: prose critique under the registered correction prompt fails (CHAN-C1-02, −6.69 pp; against a neutral prompt an unresolved 2.40 pp remains, DEC-03), while the same actions delivered as text in a fresh environment succeed.
 
 ---
 
@@ -489,9 +505,10 @@ split with one planner, not benchmark results.
 2. **Single Planner Family:** Every trajectory and critique comes from `gpt-5.6-luna` at `medium` reasoning effort; transfer to other planners is unmeasured.
 3. **Cap-81 Ceiling Inversion (CEIL-07, CEIL-04, CEIL-06):** Raising the planner call cap from 25 to 81 lowered its score by 6.47 pp on `goal_pass` (scenario [−11.68, −1.37]), and five planner samples separate cleanly by cap, so every ceiling comparison names its cap (§5.5; detail in Appendix B.7).
 4. **Second-Family Floors:** Both Qwen floors, zero-shot and tailored, measure termination-format acquisition rather than task competence (QWEN-02, QWEN-03, QWEN-06), so neither may serve as a denominator, and the tailored Qwen depth curve is reported as confounded rather than as a second-family tailoring result.
-5. **Small-Cluster Inference:** With 19 clusters, exact sign-flip tests (ROB-01 to ROB-08) pass the matched-trigger `goal_pass` result only narrowly, reject neither TGC version of the channel and interaction claims, and leave one registered TGC non-inferiority (COST-03) marginal.
+5. **Small-Cluster Inference:** With 19 clusters, exact sign-flip tests (ROB-01 to ROB-08) pass the matched-trigger `goal_pass` result only narrowly at 114 pairs and not at 171 ($p = 0.063$; DEC-02), reject neither TGC version of the channel and interaction claims, and leave one registered TGC non-inferiority (COST-03) marginal.
 6. **Tailoring × Depth Is Unresolved, Not Absent (DID-02, POOL-03):** The interaction resolves on neither planner sample — cap-25 **−2.53 pp** (scenario [−7.66, +2.53]), cap-81 **+2.10 pp** ([−4.71, +9.01]) — nor when pooled to $n = 171$ (**+2.81 pp**, scenario [−2.57, +8.96], task [−2.05, +7.95]; the wider $m = 6 \rightarrow 11$ version +0.69 pp [−4.40, +5.92]). It is unmeasurable at this power, which is not evidence that it is absent.
 7. **Deviation from a Frozen Pre-Registration (CHAN-PRICE-02):** H2's cost prediction P4 failed in the direction its attached remedy does not cover; we report the primary contrast as supported and flag the judgement (Appendix B.1). A reader who declines it can rely on the matched-trigger result in Section 3, which carries no budget question.
+8. **Advice Prompt and an Unresolved Decomposition (DEC-01, DEC-03):** Every advice arm, the advice-at-price arm included, uses the registered correction prompt, so every advice comparison is conditional on it. At $k = 10$ a neutral prompt closes about three-fifths of the takeover−advice gap; neutral advice was not run at $k = 1$. The registered decomposition is unresolved, so we do not attribute the gap to the channel.
 
 Analysis and test-suite defects found and repaired during the campaign are recorded in Appendix C.
 
@@ -499,7 +516,7 @@ Analysis and test-suite defects found and repaired during the campaign are recor
 
 ## 12. Conclusion
 
-On AppWorld, hosted budget spent as concrete action prefixes outperforms the same budget spent as natural-language advice. At a matched trigger and context, action execution scores higher than prose critique while costing no more on any of three cost axes as a point estimate, and prose does not catch up when bought at 3.2× the token budget. The benefit of a prefix accumulates across a span of depths, with no threshold the data can localize. At moderate depth the prefix works largely through information rather than environment state, and in an exploratory analysis how much narration recovers at $m = 11$ depends on whether the receiver was fine-tuned on that planner's trajectories.
+On AppWorld, the benefit of a hosted planner's action prefix accumulates across a span of depths, with no threshold the data can localize. At a matched trigger and context, executed actions score higher than advice written under the registered correction prompt while costing no more on any of three cost axes as a point estimate, and that advice does not catch up when bought at 3.2× the token budget. A neutral advice prompt, however, recovers about three-fifths of that gap, and the registered decomposition is unresolved. At moderate depth the prefix works largely through information rather than environment state, and in an exploratory analysis how much narration recovers at $m = 11$ depends on whether the receiver was fine-tuned on that planner's trajectories.
 
 Two boundaries stand beside the result. The depth effect replicates in a second executor family, but the fine-tuning recipe does not: the second family never acquires a terminal convention that is 2.44% of its training targets. And every number here is one environment, one planner model and the development split; the confirmatory read is registered and not yet run.
 
@@ -552,7 +569,8 @@ Both tailored adapters were trained on the identical file
 64 / alpha 128, two epochs, `max_length` 32768, bf16, on an H100. Decoding is temperature 0.7,
 `max_tokens` 2048, with stop sequences ending generation at the close of the first action.
 
-⚠ **An untailored arm must be configured under the `prompt_only` system, never under `sft_plan`.**
+One configuration rule matters for anyone reproducing an untailored arm: it must be configured under the
+`prompt_only` system, never under `sft_plan`.
 `SftPlan.policy_defaults` sets `adapter_name: "sft_plan"` (`src/sidekick/policies/sft_plan.py:18`), so
 an untailored config placed under `sft_plan` silently receives the base model while every log line
 still names the alias (`src/sidekick/runner.py:256-258`). The arm then measures a configuration no one
@@ -567,6 +585,7 @@ intended and returns entirely plausible numbers.
 | `docs/prereg_hj12_dev_20260922.md` | the dev frontier and its gates |
 | `docs/prereg_hj13_shape_20260923.md` | the depth-shape hypotheses, the replicate floor and the kill conditions |
 | `docs/prereg_h2_advice_at_price_20260923.md` | advice bought above the action channel's price |
+| `docs/prereg_c1_decomposition_20260923.md` | B2, the decomposition of the matched-trigger gap (§3.1) |
 | `docs/prereg_j10_amendment_20260924.md` | the registered confirmatory read, **not yet run** |
 
 Registered text is amended by appending, never by editing what it already says; the amendment record
@@ -596,7 +615,7 @@ precise — stability there reflects the attainable value grid, not resolution.
 **Retrospective application.** Applied to the paper's other thin bounds, the rule leaves the $m = 11$
 narration × receiver interaction of §6.1 intact: its lower bound is strictly positive at every seed on both
 clusterings (scenario 1.46–1.56, task 0.45–0.63) and at 200,000 resamples (POOL-04). The task-clustered
-upper bound of +0.01 pp on the H2 review-frequency contrast (§3.1), computed by a different script, was
+upper bound of +0.01 pp on the H2 review-frequency contrast (§3.2), computed by a different script, was
 probed the same way once that script accepted a seed: it is negative at six of the seven seeds and −0.1184
 at 200,000 resamples (ROB-04), so the near-miss it appeared to be was a favourable draw.
 
@@ -615,7 +634,7 @@ seeds, the full `error_type` distribution, the adapter, the replayed source camp
 behind each of the 49 campaigns the reports read from. All 49 are present; nothing a report depends on
 is missing.
 
-⚠ Three gaps remain, and the first two are wider than earlier drafts of this appendix admitted.
+Three gaps remain, and the first two are wider than earlier drafts of this appendix admitted.
 
 1. **The run record stores less than the index reports.** An episode's `manifest.json` carries the
    campaign id, run id, host, environment, Python version and timestamp — but **no config path, no
@@ -649,6 +668,20 @@ for the confirmatory read and for anything run afterwards, not retrospectively. 
 matters most: it is a command-line argument that no config carries, so before this change nothing in
 an episode's artifacts distinguished a development episode from a test one.
 
+**Refills and live answers in replay arms.** Until commits 72899b5 / 5c331bf, resubmissions ran
+`--purge-broken`, which also re-runs `timeout`, `parse_error` and `api_error` episodes. No published
+campaign is proven to contain a second roll of a scored failure (PROV-01): the ceiling and planner
+refills were exactly the prior job's crashes, and the two floors whose refill split cannot be recovered are bounded
+(`hj1r_exec8b` at most +2.03 pp `goal_pass` and +0.88 pp TGC; `hj1r_prompt_only` at most +0.44 pp,
+0 TGC), so gains measured over them (CHAN-ZS-01, TAILOR-06, NARR-02) can only be understated.
+Separately, `prefix_handoff` honours an executor's ask with a live planner call, and in six published
+prefix arms hosted luna answered (PROV-02; episodes/calls/bound on the arm-mean `goal_pass` lift):
+the handoff-adapter arms of Appendix B.4, `hj13_prefix_hf_m6` 7/10/2.15 pp, `_m9` 3/3/0.88 pp
+and `_m11` 4/31/0.85 pp; and three Qwen arms, `hj14_prefix_m9` 4/6/1.36 pp,
+`hj15_prefix_zsq_m11` 1/1/0.18 pp and `hj19_prefix_m11_qwen_notk` 2/2/0.35 pp. Every other
+prefix arm has none, including the headline depth curves. The run-time gate flagged
+`hj13_prefix_hf_m6`; the arm was reported anyway.
+
 ## Appendix B. Supplementary Analyses
 
 The material below was moved out of the main text to keep it short. Nothing has been removed, and each
@@ -663,8 +696,9 @@ actually priced at the action channel's budget, in which case P2 must be reporte
 is excluded here *a fortiori*: advice was bought far above the action channel's budget, not below it. We
 therefore report P2 as tested and supported, while flagging that this is a deviation from the literal text
 of a frozen prereg. A reader who declines that judgement should treat P2 as untested at the registered
-budget and rely on Section 3, which establishes the same channel ordering at **matched trigger and matched
-context**, where no budget question arises.
+budget and rely on Section 3, which establishes the same ordering against the registered advice prompt at
+**matched trigger and matched context**, where no budget question arises; a neutral prompt recovers about
+three-fifths of that gap (§3.1).
 
 ### B.2 Third Planner Seed: Detail (POOL-01 to POOL-04)
 
@@ -759,14 +793,14 @@ Handoff-Suffix Tailored (sft_b_plus_handoff)     0.7480             0.7840      
 --------------------------------------------------------------------------------------------------
 ```
 
-Paired scenario-clustered contrasts reveal a striking, monotonic pattern (Figure F3, HF-02):
-- **At $m = 6$:** Trained receivers hold a directional lead: base minus standard adapter is **−4.12 pp [−10.41, +1.64]**; base minus handoff adapter is **−6.55 pp [−13.92, +0.23]**; standard minus handoff is **−2.43 pp [−7.42, +2.97]**.
-- **At $m = 9$:** All three receivers converge to within 0.12 pp: base minus standard is **−0.06 pp [−7.06, +6.77]**; base minus handoff is **+0.05 pp [−6.35, +6.17]**; standard minus handoff is **+0.12 pp [−3.08, +3.12]**.
+Paired scenario-clustered contrasts follow (Figure F3, HF-02). The handoff-adapter arms are not pure replay: hosted luna answered executor asks live in 7, 3 and 4 of their episodes at $m = 6, 9, 11$, which bounds the lift on each arm mean at 2.15, 0.88 and 0.85 pp (PROV-02; Appendix A.5).
+- **At $m = 6$:** base minus standard adapter is **−4.12 pp [−10.41, +1.64]**; base minus handoff adapter is **−6.55 pp [−13.92, +0.23]**; standard minus handoff is **−2.43 pp [−7.42, +2.97]**. We withdraw the handoff adapter's directional lead as a claim: its 2.15 pp bound is nearly the whole of its 2.43 pp lead over the standard adapter (HF-01).
+- **At $m = 9$:** base minus standard is **−0.06 pp [−7.06, +6.77]**; base minus handoff is **+0.05 pp [−6.35, +6.17]**; standard minus handoff is **+0.12 pp [−3.08, +3.12]**. The earlier reading that the three receivers converge to within 0.12 pp does not survive the handoff arm's 0.88 pp bound and is withdrawn (HF-02).
 - **At $m = 11$:** The ordering reverses, with the untailored receiver leading numerically: base minus standard is **+2.46 pp [−1.48, +6.43]**; base minus handoff is **+3.12 pp [−1.97, +8.15]**; standard minus handoff is **+0.65 pp [−4.21, +5.37]**.
 
 While all individual paired intervals include zero at $n = 114$, overarching curve spans over $m = 6 \rightarrow 11$ differ substantially: untailored climbs **15.20 pp**, standard adapter climbs **8.61 pp**, and handoff-suffix adapter climbs only **5.53 pp**.
 
-The pre-registered hypothesis C3—asking whether training specifically on handoff suffixes extends the upper ceiling—is answered in the **negative**. Handoff-suffix fine-tuning raises shallow-depth performance but flattens the curve thereafter. Taken together with TAILOR-06 and MECH-07, **prefix depth, general executor tailoring, and suffix-specific training are partially substitutable and do not stack**. Each intervention provides the executor with domain syntax and API conventions; whichever is applied first captures the available gains, leaving the least specialized receiver with the greatest headroom to benefit from deep prefixes.
+The pre-registered hypothesis C3—asking whether training specifically on handoff suffixes extends the upper ceiling—is answered in the **negative**, and every within-depth interval above includes zero. Handoff-suffix fine-tuning flattens the curve; whether it also raises shallow-depth performance cannot be separated from the live planner answers its $m = 6$ arm received (HF-01, PROV-02). Taken together with TAILOR-06 and MECH-07, **prefix depth, general executor tailoring, and suffix-specific training are partially substitutable and do not stack**. Each intervention provides the executor with domain syntax and API conventions; whichever is applied first captures the available gains, leaving the least specialized receiver with the greatest headroom to benefit from deep prefixes.
 
 ```
 Figure F3: Receiver gap (untailored base minus tailored sft_b_plus) across handoff depths
