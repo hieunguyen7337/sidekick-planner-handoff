@@ -195,6 +195,60 @@ def test_reversed_and_fails_is_luna_specific(tmp_path: Path):
     assert report["overall_claim"]["claim"] == "luna_specific"
 
 
+def test_amendment4_sensitivity_drops_the_key_from_every_arm(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(lp, "SENSITIVITY_EXCLUDE", {"P27": (("sc00_1", 2),)})
+    root = write_tree(tmp_path, {"P8": REPLICATE, "P27": REPLICATE})
+    # T - A is +.25 on every key but the excluded one, where it is +.50.
+    write_episode(root / CAMPAIGNS["P27"]["T"]["campaign"], 2, "sc00_1", 1.0)
+    report, rc = lp.build_report(results_root=root)
+    assert rc == 0
+    p8, p27 = report["planners"]["P8"], report["planners"]["P27"]
+    assert p8["sensitivity_amendment4"] is None
+    s = p27["sensitivity_amendment4"]
+    assert s["excluded_keys"] == ["2/sc00_1"] and s["n_expected"] == 113
+    assert s["gate"]["n_pairs"] == 113 and s["gate"]["verdict"] == "passes"
+    assert {c: s["contrasts"][c]["n_pairs"] for c in lp.L_IDS} == {c: 113 for c in lp.L_IDS}
+    assert s["contrasts"]["L1"]["point_pp"] == 25.0
+    assert p27["contrasts"]["L1"]["point_pp"] == pytest.approx(100 * (113 * 0.25 + 0.5) / 114, abs=0.01)
+    assert p27["contrasts"]["L1"]["n_pairs"] == 114
+    # The reading agrees without the key, so Amendment 4 changes nothing.
+    assert readings(p27) == ALL_SUPPORTED
+    md = lp.render_markdown(report)
+    assert "Sensitivity (Amendment 4): without 2/sc00_1, 113 pairs." in md
+
+
+def test_amendment4_a_reading_or_gate_that_differs_is_on_the_boundary():
+    sens = {"excluded_keys": ["2/6171bbc_3"], "n_expected": 113, "gate": {"verdict": "passes"},
+            "contrasts": {c: {"reading": r} for c, r in ALL_SUPPORTED.items()}}
+    sens["contrasts"]["L1"] = {"reading": "fails_to_replicate"}
+    read = {"holm": None, "readings": {c: {"reading": r, "why": "x"} for c, r in ALL_SUPPORTED.items()}}
+    gate = {"status": "COMPLETE", "verdict": "passes"}
+    g, out = lp.apply_key_exclusion(gate, read, sens)
+    assert g["verdict"] == "passes"
+    assert out["readings"]["L1"]["reading"] == lp.ON_BOUNDARY and "113 pairs" in out["readings"]["L1"]["why"]
+    assert {c: out["readings"][c]["reading"] for c in ("L2", "L3", "L4", "L5")} == {
+        c: ALL_SUPPORTED[c] for c in ("L2", "L3", "L4", "L5")}
+    # A gate verdict that flips: on the boundary, and no L is read.
+    g, out = lp.apply_key_exclusion(gate, read, dict(sens, gate={"verdict": "too_weak"}))
+    assert g["verdict"] == lp.ON_BOUNDARY and g["verdict_all_pairs"] == "passes"
+    assert {r["reading"] for r in out["readings"].values()} == {lp.NONE_GATE_BOUNDARY}
+    assert lp.overall_claim({"P8": {"gate": "passes", "L1": "replicates"},
+                             "P27": {"gate": g["verdict"], "L1": lp.NONE_GATE_BOUNDARY}})["claim"] == "not_registered_case"
+    # A planner with no reading drawn stays that way whatever the sensitivity says.
+    none_read = {"holm": None, "readings": {c: {"reading": NONE_GATE, "why": "x"} for c in lp.L_IDS}}
+    _, out = lp.apply_key_exclusion({"status": "COMPLETE", "verdict": "too_weak"}, none_read,
+                                    dict(sens, gate={"verdict": "too_weak"}))
+    assert {r["reading"] for r in out["readings"].values()} == {NONE_GATE}
+    assert lp.apply_key_exclusion(gate, read, None) == (gate, read)
+
+
+def test_amendment4_key_matches_the_config_generator():
+    from scripts.setup import make_lp_configs as mk
+    assert lp.SENSITIVITY_EXCLUDE == {"P27": (("6171bbc_3", 2),)}
+    assert mk.LIVE_PLAN_KEYS == {"lp2": ["2/6171bbc_3"]}
+    assert CAMPAIGNS["P27"]["C"]["campaign"].startswith("lp2_")
+
+
 def _rec(point, lo, hi, p, boundary=False):
     return {"status": "COMPLETE", "point": point / 100, "lo": lo / 100, "hi": hi / 100,
             "p_raw": p, "boundary": boundary}

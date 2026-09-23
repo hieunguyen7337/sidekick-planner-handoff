@@ -626,6 +626,88 @@ def read_planner(gate: dict[str, Any], records: dict[str, dict[str, Any]],
     return {"holm": holm, "readings": readings, "incomplete_contrasts": incomplete}
 
 
+# Amendment 4: the LP-2 ceiling's (6171bbc_3, seed 2) ended at step 0 before its planner wrote a plan,
+# so the LP-2 live arms drew that key's first plan live and the prefix arms replayed no plan. The gate
+# and L1-L5 are also read without it; a verdict or reading that differs is on the boundary.
+SENSITIVITY_EXCLUDE: dict[str, tuple[tuple[str, int], ...]] = {"P27": (("6171bbc_3", 2),)}
+NONE_GATE_BOUNDARY = "none (informativeness gate on the boundary: its verdict differs without the Amendment 4 key)"
+_NO_READING = (NONE_GATE, NONE_GATE_UNEVALUABLE, NONE_GATE_BOUNDARY, NONE_FAMILY, INCOMPLETE, ON_BOUNDARY)
+
+
+def key_exclusion_sensitivity(planner: str, arms: dict[str, dict[str, Any]], gate: dict[str, Any],
+                              records: dict[str, dict[str, Any]], *, n_boot: int,
+                              seed: int) -> Optional[dict[str, Any]]:
+    """The gate and L1-L5 re-read with the Amendment 4 keys dropped from every arm; None if none apply."""
+    excluded = set(SENSITIVITY_EXCLUDE.get(planner, ()))
+    if not excluded:
+        return None
+
+    def drop(code: str) -> dict[tuple[str, int], dict[str, Any]]:
+        return {k: v for k, v in arms[code]["episodes"].items() if k not in excluded}
+
+    gate_x: dict[str, Any] = {"status": gate.get("status"), "verdict": gate.get("verdict")}
+    if gate.get("status") == "COMPLETE":
+        cmp = j10.a1_contrast(drop(GATE["left"]), drop(GATE["right"]), FIELD, n_boot=n_boot, seed=seed)
+        point = float(cmp["scenario"]["point"])
+        gate_x = {"status": "COMPLETE", "n_pairs": len(cmp["_series"]["diffs"]),
+                  "point_pp": cmp["scenario"]["diff_pp"], "scenario": j10._public(cmp["scenario"]),
+                  "verdict": "passes" if point > GATE_ZERO_TOL else "too_weak"}
+    records_x: dict[str, dict[str, Any]] = {}
+    contrasts_x: dict[str, dict[str, Any]] = {}
+    for spec in CONTRASTS:
+        c = spec["id"]
+        if (records.get(c) or {}).get("status") != "COMPLETE":
+            records_x[c] = contrasts_x[c] = {"status": "INCOMPLETE"}
+            continue
+        cmp = j10.a1_contrast(drop(spec["left"]), drop(spec["right"]), FIELD, n_boot=n_boot, seed=seed)
+        primary = cmp["scenario"]
+        p_raw = j10.bootstrap_pvalue(primary["_means"], float(spec["threshold_pp"]) / 100.0, spec["p_direction"])
+        # POOL-04 is not re-run here: the sensitivity is not decision-bearing.
+        records_x[c] = {"status": "COMPLETE", "point": primary["point"], "lo": primary["lo"],
+                        "hi": primary["hi"], "p_raw": p_raw, "boundary": False}
+        contrasts_x[c] = {"status": "COMPLETE", "n_pairs": len(cmp["_series"]["diffs"]),
+                          "point_pp": primary["diff_pp"], "scenario": j10._public(primary),
+                          "task": j10._public(cmp["task"]), "p_raw": p_raw}
+    read_x = read_planner(gate_x, records_x)
+    for c in L_IDS:
+        contrasts_x[c] = dict(contrasts_x[c], reading=read_x["readings"][c]["reading"])
+    return {
+        "label": "SENSITIVITY: not decision-bearing, except that a verdict or reading that differs is on the boundary",
+        "citation": f"{PREREG}: Amendment 4",
+        "excluded_keys": sorted(f"{s}/{t}" for t, s in excluded),
+        "n_expected": EXPECTED_PAIRS - len(excluded),
+        "gate": gate_x,
+        "contrasts": contrasts_x,
+        "holm": read_x["holm"],
+    }
+
+
+def apply_key_exclusion(gate: dict[str, Any], read: dict[str, Any],
+                        sensitivity: Optional[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Amendment 4's rule: a gate verdict or an L reading that differs without the key is on the boundary."""
+    if sensitivity is None:
+        return gate, read
+    keys = ", ".join(sensitivity["excluded_keys"])
+    n_x = sensitivity["n_expected"]
+    if gate.get("status") == "COMPLETE" and sensitivity["gate"].get("verdict") != gate.get("verdict"):
+        why = (f"Amendment 4: the gate reads {gate.get('verdict')!r} on {EXPECTED_PAIRS} pairs but "
+               f"{sensitivity['gate'].get('verdict')!r} without {keys} ({n_x} pairs)")
+        gate = dict(gate, verdict=ON_BOUNDARY, verdict_all_pairs=gate.get("verdict"), why=why)
+        readings = {c: {"reading": NONE_GATE_BOUNDARY, "why": why + "; no reading is drawn from L1-L5"}
+                    for c in L_IDS}
+        return gate, dict(read, readings=readings)
+    readings = {c: dict(r) for c, r in read["readings"].items()}
+    for c in L_IDS:
+        r_all = readings[c]["reading"]
+        r_x = sensitivity["contrasts"][c].get("reading")
+        if r_all in _NO_READING or r_x is None or r_x == r_all:
+            continue
+        readings[c] = {"reading": ON_BOUNDARY,
+                       "why": (f"Amendment 4: reads {r_all!r} on {EXPECTED_PAIRS} pairs but {r_x!r} without "
+                               f"{keys} ({n_x} pairs); on the boundary, never resolved")}
+    return gate, dict(read, readings=readings)
+
+
 def overall_claim(summary: dict[str, dict[str, str]]) -> dict[str, Any]:
     """§4's overall claim from L1 among planners that pass the gate [prereg:109-114].
 
@@ -709,6 +791,8 @@ def _planner_block(
     for spec in CONTRASTS:
         contrasts[spec["id"]], records[spec["id"]] = evaluate_contrast(spec, arms, n_boot=n_boot, seed=seed)
     read = read_planner(gate, records)
+    sensitivity = key_exclusion_sensitivity(planner, arms, gate, records, n_boot=n_boot, seed=seed)
+    gate, read = apply_key_exclusion(gate, read, sensitivity)
     for c in L_IDS:
         contrasts[c]["reading"] = read["readings"][c]["reading"]
         contrasts[c]["reading_why"] = read["readings"][c]["why"]
@@ -729,6 +813,7 @@ def _planner_block(
         "contrasts": contrasts,
         "holm": read["holm"],
         "readings": read["readings"],
+        "sensitivity_amendment4": sensitivity,
         "descriptive": {
             "label": "DESCRIPTIVE: no direction, no verdict (prereg:116-122)",
             "delta_vs_luna": evaluate_delta(arms, n_boot=n_boot, seed=seed),
@@ -934,6 +1019,24 @@ def render_markdown(report: dict[str, Any], json_path: Optional[Path] = None) ->
         L += ["", "Readings:"]
         L += [f"- {cid}: **{r['reading']}** ({r['why']})" for cid, r in b["readings"].items()]
         L.append("")
+
+        s = b.get("sensitivity_amendment4")
+        if s:
+            L.append(f"Sensitivity (Amendment 4): without {', '.join(s['excluded_keys'])}, "
+                     f"{s['n_expected']} pairs. {s['label']}.")
+            L.append("")
+            L.append("| contrast | n pairs | point (pp) | scenario CI (pp) | reading without the key |")
+            L.append("|---|---|---|---|---|")
+            sg = s["gate"]
+            if sg.get("status") == "COMPLETE":
+                L.append(f"| gate C - E | {sg['n_pairs']} | {sg['point_pp']:+.2f} | {_ci(sg['scenario'])} "
+                         f"| {sg['verdict']} |")
+            for cid, c in s["contrasts"].items():
+                if c.get("status") == "COMPLETE":
+                    L.append(f"| {cid} | {c['n_pairs']} | {c['point_pp']:+.2f} | {_ci(c['scenario'])} | {c['reading']} |")
+                else:
+                    L.append(f"| {cid} | - | - | - | incomplete |")
+            L.append("")
 
         d = b["descriptive"]
         delta = d["delta_vs_luna"]
