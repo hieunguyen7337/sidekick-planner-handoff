@@ -137,3 +137,25 @@ visible: we expect L1 > 0 for both local planners, and have no expectation for t
 - No decomposition of the local planners' channel contrast. B2 is luna-only.
 
 <!-- end of registration; amendments below -->
+
+## Amendment 1 — disclosure of a harness check (2026-09-23 ~10:45 AEST; no registered item changes)
+
+While LP-1 v2 was running, 16 of its first 24 episodes ended `limit` (`max_steps`, 40), none of them
+`planner_context`. To rule out a harness defect before any LP arm consumes the ceiling, the following was read.
+**Nothing above the end marker is changed.**
+
+- **Read:** the action kinds, planner code and observations of two `limit` episodes (`50e1ac9_1` and
+  `fac291d_2`, seed 2), and their `goal_pass_rate`: **0.5 each**. These are the only LP scores seen. No mean,
+  no arm-level score and no contrast has been computed.
+- **Found:** the planner guesses placeholder credentials (`username="your_spotify_username"`, …), receives
+  `401 Invalid credentials`, and then emits the non-terminal `REPORT:` action until the step cap. `REPORT` is
+  offered to every planner by the same act prompt (`src/sidekick/agents/planner.py:152`) and handled identically
+  (`src/sidekick/systems/loop.py:1129-1139`).
+- **Comparison with the luna reference, counted by `grep -l` over `events.jsonl`:**
+  - `apis.supervisor.show_account_passwords` appears in 0 of the first 29 LP-1 episodes and in all 114 episodes
+    of `hj13_planner_alone_cap81_20260923`.
+  - `apis.api_docs` appears in 3 of the 29 and in 113 of the 114.
+  - No prompt builder in `src/sidekick` mentions the supervisor app. Luna reaches the password route through the
+    environment's own documentation endpoints, which the local planner mostly does not call.
+- **Reading:** a capability difference, not a harness defect. The harness is unchanged and LP-1 v2 continues
+  under this registration. Whether P8 is informative is decided by the §4 gate, as registered.
