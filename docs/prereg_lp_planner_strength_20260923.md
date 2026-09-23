@@ -159,3 +159,29 @@ While LP-1 v2 was running, 16 of its first 24 episodes ended `limit` (`max_steps
     environment's own documentation endpoints, which the local planner mostly does not call.
 - **Reading:** a capability difference, not a harness defect. The harness is unchanged and LP-1 v2 continues
   under this registration. Whether P8 is informative is decided by the §4 gate, as registered.
+
+## Amendment 2 — the replay arms answer executor asks with the local planner; first attempt void (2026-09-23 ~11:50 AEST)
+
+The registered arms and contrasts are unchanged. This amendment fixes how M^r_{p,m} is run so that it matches the system
+the luna reference arms ran.
+
+- **What the system does.** `prefix_handoff` honours executor asks (`src/sidekick/systems/prefix_handoff.py:42`,
+  `allow_executor_ask=True`). A stuck executor's `ASK_PLANNER` calls the replaying planner's `correct()` live
+  (`src/sidekick/systems/loop.py:1042-1085`). In the published luna prefix arms such asks were answered by hosted luna.
+  - Among the luna reference arms named in §2, the HJ-17 cap-81 prefix arms recorded **0** ask events.
+  - Other published prefix arms recorded a few, e.g. `hj13_prefix_hf_m6_20260923` with 7 episodes and 10 live calls.
+    Those are audited separately (ledger PROV-02).
+- **What went wrong.** The LP replay arms were first submitted through `scripts/pbs/hj12_prefix.pbs` (PBS 25725094).
+  That job starts only the executor server, so every honoured ask hit a closed planner port and ended `crash`
+  (`ConnectError`, connection refused). Refilling those crashes would re-draw exactly the episodes whose executor got
+  stuck enough to ask, which is selection on outcome. The job was stopped.
+- **Rule from here.**
+  - M^r_{p,m} runs with the local planner p served, through `scripts/pbs/lp_live.pbs` (`ARMSET=lp{n}_prefix`), so
+    asks are answered as luna answered them.
+  - All 12 LP prefix configs move to new campaign ids `lp{n}_prefix_{r}_m{m}_v2_20260923`, and each arm is run
+    **whole**.
+  - The old ids `lp{n}_prefix_{r}_m{m}_20260923` are **VOID** and never analysed. Only
+    `lp1_prefix_zs_m6_20260923` has any episodes: 114 written before the stop, 24 of them crashes. Only its episode
+    count, error types and crash payloads were read; no score of it has been computed or inspected.
+- **Reported, not corrected:** the number of honoured asks per LP prefix arm, beside the arm's mean. That lets a reader
+  see how much of the arm is live planner help, as PROV-02 does for the luna arms.
