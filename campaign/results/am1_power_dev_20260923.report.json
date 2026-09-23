@@ -1,0 +1,350 @@
+{
+  "generated_by": "scripts/analysis/am1_power.py",
+  "split": "dev",
+  "purpose": "power of A1 P1/P3/P4/P6 and the proposed Amendment 1 content family at the test design",
+  "design": {
+    "n_scenarios": 56,
+    "tasks_per_scenario": "as on dev (3)",
+    "seeds_per_task": 2,
+    "dev_seeds_available": [
+      1,
+      2,
+      3
+    ]
+  },
+  "n_sims": 1000,
+  "n_boot_per_sim": 2000,
+  "seed": 20260924,
+  "alpha": 0.05,
+  "arms": {
+    "takeover_k10": [
+      "hj12_takeover_fixed_k_10_20260923",
+      "b1_takeover_fixed_k_10_s3_20260923"
+    ],
+    "advise_k10_fullctx": [
+      "hj12_advise_fixed_k_10_fullctx_20260923",
+      "b1_advise_fixed_k_10_fullctx_s3_20260923"
+    ],
+    "show_k10": [
+      "b2_show_fixed_k_10_20260923",
+      "b2_show_fixed_k_10_s3_20260923"
+    ],
+    "advise_k10_neutral": [
+      "b2_advise_neutral_fixed_k_10_fullctx_20260923",
+      "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923"
+    ],
+    "advise_k1_fullctx": [
+      "hj13_advise_fixed_k_1_fullctx_20260923"
+    ],
+    "prefix_m11": [
+      "hj17_prefix_c81_bplus_m11_20260923",
+      "hj18_prefix_c81s3_bplus_m11_20260924"
+    ],
+    "planner_alone_cap81": [
+      "hj13_planner_alone_cap81_20260923",
+      "hj13_planner_alone_cap81_seed3_20260924"
+    ],
+    "prefix_zs_m11": [
+      "hj17_prefix_c81_zs_m11_20260923",
+      "hj18_prefix_c81s3_zs_m11_20260924"
+    ],
+    "prefix_zs_m9": [
+      "hj17_prefix_c81_zs_m9_20260923",
+      "hj18_prefix_c81s3_zs_m9_20260924"
+    ]
+  },
+  "contrasts": {
+    "P1": {
+      "left": "advise_k1_fullctx",
+      "right": "prefix_m11",
+      "direction": "less",
+      "threshold": 0.0,
+      "family": "A1"
+    },
+    "P3": {
+      "left": "prefix_m11",
+      "right": "planner_alone_cap81",
+      "direction": "greater",
+      "threshold": -0.07,
+      "family": "A1"
+    },
+    "P4": {
+      "left": "prefix_zs_m11",
+      "right": "prefix_zs_m9",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "A1"
+    },
+    "P6": {
+      "left": "takeover_k10",
+      "right": "advise_k10_fullctx",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "A1"
+    },
+    "CF1": {
+      "left": "advise_k10_neutral",
+      "right": "advise_k10_fullctx",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "CF"
+    },
+    "CF2": {
+      "left": "show_k10",
+      "right": "advise_k10_fullctx",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": null
+    },
+    "CF3": {
+      "left": "takeover_k10",
+      "right": "advise_k10_neutral",
+      "direction": "two-sided",
+      "threshold": 0.0,
+      "family": null
+    },
+    "P3_handoff_only": {
+      "left": "prefix_m11",
+      "right": "planner_alone_cap81",
+      "direction": "greater",
+      "threshold": -0.07,
+      "family": null,
+      "handoff_only": true
+    }
+  },
+  "dev": {
+    "P1": {
+      "n_pairs": 114,
+      "diff_pp": -14.81,
+      "ci95_pp_scenario": [
+        -21.11,
+        -7.88
+      ],
+      "ci95_pp_task": [
+        -21.89,
+        -8.0
+      ]
+    },
+    "P3": {
+      "n_pairs": 171,
+      "diff_pp": 4.41,
+      "ci95_pp_scenario": [
+        -0.74,
+        10.67
+      ],
+      "ci95_pp_task": [
+        0.34,
+        8.65
+      ]
+    },
+    "P4": {
+      "n_pairs": 171,
+      "diff_pp": 1.44,
+      "ci95_pp_scenario": [
+        -2.56,
+        5.52
+      ],
+      "ci95_pp_task": [
+        -2.6,
+        5.64
+      ]
+    },
+    "P6": {
+      "n_pairs": 171,
+      "diff_pp": 6.13,
+      "ci95_pp_scenario": [
+        0.75,
+        12.71
+      ],
+      "ci95_pp_task": [
+        0.97,
+        11.73
+      ]
+    },
+    "CF1": {
+      "n_pairs": 171,
+      "diff_pp": 3.73,
+      "ci95_pp_scenario": [
+        -0.06,
+        8.24
+      ],
+      "ci95_pp_task": [
+        0.04,
+        7.66
+      ]
+    },
+    "CF2": {
+      "n_pairs": 171,
+      "diff_pp": 2.3,
+      "ci95_pp_scenario": [
+        -2.43,
+        7.31
+      ],
+      "ci95_pp_task": [
+        -1.58,
+        6.28
+      ]
+    },
+    "CF3": {
+      "n_pairs": 171,
+      "diff_pp": 2.4,
+      "ci95_pp_scenario": [
+        -2.94,
+        8.89
+      ],
+      "ci95_pp_task": [
+        -1.97,
+        7.05
+      ]
+    },
+    "P3_handoff_only": {
+      "n_pairs": 171,
+      "n_handoff": 71,
+      "diff_pp": -0.94,
+      "ci95_pp_scenario": [
+        -9.51,
+        7.26
+      ],
+      "note": "ratio estimator \u03a3d\u00b7h/\u03a3h, numpy scenario bootstrap (10k, seed 20260924)"
+    }
+  },
+  "power_at_dev_effect": {
+    "per_contrast": {
+      "P1": {
+        "excludes_on_predicted_side": 1.0,
+        "lower_above": 0.0,
+        "upper_below": 1.0,
+        "holm_supported": 1.0
+      },
+      "P3": {
+        "excludes_on_predicted_side": 1.0,
+        "lower_above": 1.0,
+        "upper_below": 0.0,
+        "holm_supported": 1.0
+      },
+      "P4": {
+        "excludes_on_predicted_side": 0.192,
+        "lower_above": 0.192,
+        "upper_below": 0.002,
+        "holm_supported": 0.182
+      },
+      "P6": {
+        "excludes_on_predicted_side": 0.953,
+        "lower_above": 0.953,
+        "upper_below": 0.0,
+        "holm_supported": 0.924
+      },
+      "CF1": {
+        "excludes_on_predicted_side": 0.722,
+        "lower_above": 0.722,
+        "upper_below": 0.0,
+        "holm_supported": 0.722
+      },
+      "CF2": {
+        "excludes_on_predicted_side": 0.285,
+        "lower_above": 0.285,
+        "upper_below": 0.001,
+        "holm_supported": 0.0
+      },
+      "CF3": {
+        "excludes_on_predicted_side": 0.25,
+        "lower_above": 0.249,
+        "upper_below": 0.001,
+        "holm_supported": 0.0
+      },
+      "P3_handoff_only": {
+        "excludes_on_predicted_side": 0.576,
+        "lower_above": 0.576,
+        "upper_below": 0.0,
+        "holm_supported": 0.0
+      }
+    },
+    "families_all_supported": {
+      "A1": 0.17,
+      "CF": 0.722
+    },
+    "cf_readings": {
+      "CF1 not supported": 0.278,
+      "CF1 supported, CF3 < 0": 0.001,
+      "CF1 supported, CF3 > 0": 0.123,
+      "CF1 supported, CF3 includes 0": 0.598
+    }
+  },
+  "power_at_half_effect": {
+    "per_contrast": {
+      "P1": {
+        "excludes_on_predicted_side": 0.924,
+        "lower_above": 0.0,
+        "upper_below": 0.924,
+        "holm_supported": 0.856
+      },
+      "P3": {
+        "excludes_on_predicted_side": 0.94,
+        "lower_above": 0.94,
+        "upper_below": 0.0,
+        "holm_supported": 0.868
+      },
+      "P4": {
+        "excludes_on_predicted_side": 0.082,
+        "lower_above": 0.082,
+        "upper_below": 0.005,
+        "holm_supported": 0.052
+      },
+      "P6": {
+        "excludes_on_predicted_side": 0.38,
+        "lower_above": 0.38,
+        "upper_below": 0.0,
+        "holm_supported": 0.27
+      },
+      "CF1": {
+        "excludes_on_predicted_side": 0.213,
+        "lower_above": 0.213,
+        "upper_below": 0.003,
+        "holm_supported": 0.213
+      },
+      "CF2": {
+        "excludes_on_predicted_side": 0.122,
+        "lower_above": 0.122,
+        "upper_below": 0.006,
+        "holm_supported": 0.0
+      },
+      "CF3": {
+        "excludes_on_predicted_side": 0.093,
+        "lower_above": 0.084,
+        "upper_below": 0.009,
+        "holm_supported": 0.0
+      },
+      "P3_handoff_only": {
+        "excludes_on_predicted_side": 0.173,
+        "lower_above": 0.173,
+        "upper_below": 0.003,
+        "holm_supported": 0.0
+      }
+    },
+    "families_all_supported": {
+      "A1": 0.018,
+      "CF": 0.213
+    },
+    "cf_readings": {
+      "CF1 not supported": 0.787,
+      "CF1 supported, CF3 < 0": 0.006,
+      "CF1 supported, CF3 > 0": 0.004,
+      "CF1 supported, CF3 includes 0": 0.203
+    }
+  },
+  "half_effect_shift_pp": {
+    "P1": -7.405,
+    "P3": 5.705,
+    "P4": 0.722,
+    "P6": 3.066,
+    "CF1": 1.864,
+    "CF2": 1.15,
+    "CF3": 1.202,
+    "P3_handoff_only": 3.03
+  },
+  "caveats": [
+    "Resampling dev scenarios treats the dev effect as the truth; the half-effect rows are the guard against that optimism.",
+    "B per simulated read is below the registered 10,000; interval endpoints carry Monte Carlo error of a few tenths of a pp.",
+    "P1 uses dev seeds 1-2 only (its advice arm was not run at seed 3)."
+  ]
+}
