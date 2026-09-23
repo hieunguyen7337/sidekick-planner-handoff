@@ -185,3 +185,22 @@ the luna reference arms ran.
     count, error types and crash payloads were read; no score of it has been computed or inspected.
 - **Reported, not corrected:** the number of honoured asks per LP prefix arm, beside the arm's mean. That lets a reader
   see how much of the arm is live planner help, as PROV-02 does for the luna arms.
+
+## Amendment 3 — correction to Amendment 2's crash attribution, and a disclosure (2026-09-23 ~12:35 AEST; no registered item changes)
+
+- **Correction.** Amendment 2 reasoned as if the 24 crashes in the void `lp1_prefix_zs_m6_20260923` were episodes
+  whose executor asked. Only **3** were. Result-file mtimes and event logs show:
+  - 3 crashes before the stop, at 11:36:24, 11:39:04 and 11:39:09 AEST, are exactly the 3 episodes with an `ask`
+    event (`2/d4e9306_2`, `2/383cbac_2`, `2/23cf851_1`). They are the outcome-linked ones Amendment 2 describes.
+  - The other **21** were written in a 9-second burst, 11:42:21–11:42:30, when job 25725094 was stopped. They are
+    in-flight episodes whose executor server went down under them (`ConnectError` at the next executor call, e.g.
+    step 7 = the first post-handoff call at m = 6). That is an infrastructure artefact.
+
+  The decision is unchanged. The arm had to be re-run with the planner served in any case, so that asks are
+  answered, and it was re-run whole under the v2 id.
+- **Disclosure.** Checking the v2 harness, one v2 episode's `goal_pass_rate` was displayed:
+  `lp1_prefix_zs_m6_v2_20260923`, seed 1, `6171bbc_3`. `scripts/analysis/lp_report.py` was committed before it
+  (c474a5c, ea7e775), and no aggregate of any LP arm has been computed.
+- **v2 check.** `lp1_prefix_zs_m6_v2_20260923` completed 114/114 episodes with 0 crash. It recorded **0** `ask` and
+  **0** `intervention` events, so its honoured-ask count is 0. The rate matches the void run's 3/114 asks, and the
+  HJ-17 luna reference arms' 0.
