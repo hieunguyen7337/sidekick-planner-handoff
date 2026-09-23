@@ -656,6 +656,45 @@ def test_lp_live_counts_plan_events_that_are_not_the_last_line(tmp_path) -> None
     assert r.stdout.strip() == "2"
 
 
+def test_lp_live_plan_gaps_separates_registered_from_unregistered_keys(tmp_path) -> None:
+    # LP prereg Amendment 4: the LP-2 ceiling's 2/6171bbc_3 ended in a step-0 parse_error before any
+    # plan (jobs 25739215/25739216 refused). A live arm may start only if every key without a plan
+    # is registered in planner.live_plan_keys, for that seed.
+    shapes = {
+        "t_ok": ["run_start", "observation", "plan", "evaluate", "run_end"],
+        "t_reg": ["run_start", "observation", "error", "evaluate", "run_end"],
+        "t_unreg": ["run_start", "error", "run_end"],
+    }
+    for name, types in shapes.items():
+        dest = tmp_path / name
+        dest.mkdir()
+        (dest / "events.jsonl").write_text("".join(json.dumps({"event_type": t}) + "\n" for t in types), encoding="utf-8")
+    r = _pbs(
+        LP_SELFTEST="plan_gaps",
+        LP_PLAN_ROOT=str(tmp_path),
+        LP_SELFTEST_SEED="2",
+        LP_SELFTEST_LIVE_KEYS="2/t_reg,1/t_unreg",  # t_unreg is registered for seed 1 only
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert sorted(line for line in r.stdout.splitlines() if line) == ["registered 2/t_reg", "unregistered 2/t_unreg"]
+
+
+def test_lp_live_plan_check_skips_prefix_arms_and_honours_live_plan_keys() -> None:
+    text = PBS.read_text(encoding="utf-8")
+    assert '[[ "${ARM_SYS[${cfg}]}" == "prefix_handoff" ]]' in text
+    assert 'lp_plan_gaps "${src}/${ARM_PSYS[${cfg}]}/${seed}" "${seed}" "${ARM_LIVEKEYS[${cfg}]}"' in text
+
+
+def test_only_the_lp2_live_configs_register_live_plan_keys() -> None:
+    for spec in SPECS:
+        planner = _cfg(spec)["planner"]
+        assert planner["on_missing"] == "fail", spec.stem
+        if spec.lp == "lp2" and spec.kind == "live":
+            assert planner["live_plan_keys"] == ["2/6171bbc_3"], spec.stem
+        else:
+            assert "live_plan_keys" not in planner, spec.stem
+
+
 def test_lp_live_no_longer_purges_scored_episodes() -> None:
     text = PBS.read_text(encoding="utf-8")
     assert "--purge-crashed-only" in text

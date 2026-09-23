@@ -182,6 +182,7 @@ def make_planner(
             system=system,
             seed=seed,
             on_missing=str(planner_cfg.get("on_missing", "fail")),
+            live_plan_keys=planner_cfg.get("live_plan_keys") or None,
         )
     return planner
 

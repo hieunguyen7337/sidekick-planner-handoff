@@ -1,0 +1,2008 @@
+{
+  "protocol": "LP",
+  "prereg": "docs/prereg_lp_planner_strength_20260923.md",
+  "amendments": [
+    "Amendment 1, 2026-09-23 (disclosure of a harness check; no registered item changes)"
+  ],
+  "label": "NON-REGISTERED settings or planner subset: not the LP result",
+  "results_root": "/scratch/n12194778/sidekick/results",
+  "analysed_planners": [
+    "P8"
+  ],
+  "reference_campaigns": {
+    "E": "hj8_executor_alone_bplus_20260919",
+    "T_luna": "hj12_takeover_fixed_k_10_20260923",
+    "A_luna": "hj12_advise_fixed_k_10_fullctx_20260923",
+    "C_luna": "hj13_planner_alone_cap81_20260923"
+  },
+  "settings": {
+    "unit": "paired episode, key (task_id, seed)",
+    "expected_pairs": 114,
+    "seeds": [
+      1,
+      2
+    ],
+    "n_tasks": 57,
+    "metric": "goal_pass (field goal_pass_rate) decision-bearing; TGC secondary (j10.score_tgc)",
+    "bootstrap": {
+      "n": 10000,
+      "seed": 20260924,
+      "registered": false,
+      "primary_clustering": "scenario",
+      "secondary_clustering": "task",
+      "interval": "95% percentile, j10.cluster_bootstrap_means / percentile_ci"
+    },
+    "p_values": {
+      "L1": "two-sided: 2 x min(share of draws <= 0, share >= 0) (j10.bootstrap_pvalue 'two-sided' at +0.00 pp)",
+      "L2": "2 x share of draws >= 0 (j10.bootstrap_pvalue 'less' at +0.00 pp)",
+      "L3": "2 x share of draws <= 0 (j10.bootstrap_pvalue 'greater' at +0.00 pp)",
+      "L4": "2 x share of draws >= +7.00 pp (j10.bootstrap_pvalue 'less' at +7.00 pp)",
+      "L5": "2 x share of draws <= 0 (j10.bootstrap_pvalue 'greater' at +0.00 pp)"
+    },
+    "multiplicity": {
+      "method": "Holm step-down",
+      "family": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "m": 5,
+      "scope": "within each planner; none across planners",
+      "alpha": 0.05
+    },
+    "reading_excludes": "unadjusted scenario interval meets the condition AND Holm-adjusted p <= 0.05; 'includes zero' judged on the unadjusted interval (\u00a73)",
+    "pool04": {
+      "window_pp": 1.0,
+      "seeds": [
+        20260924,
+        1,
+        2,
+        3,
+        7,
+        101,
+        999
+      ]
+    },
+    "signflip": "j10.a1_permutation (cluster_inference.registered_signflip): scenario clusters, exact over 2^G patterns when 2^G <= 2^20 (2^19 here), in each contrast's direction",
+    "crash_convention": "drop only error_type == 'crash'; limit (incl. planner_context), parse_error, timeout and every other error_type are scored"
+  },
+  "ambiguities": [
+    {
+      "id": "holm_family_incomplete",
+      "what": "\u00a73 makes an incomplete contrast yield no reading, and Holm runs across L1-L5 (m = 5); it does not say what the other four read when one member is incomplete.",
+      "script_behaviour": "B2's convention: Holm is computed only when all five are complete, because a smaller family would change every adjusted p. Until then every complete L reads 'none (Holm family incomplete)' and the incomplete one reads 'incomplete'."
+    },
+    {
+      "id": "gate_incomplete",
+      "what": "\u00a74 defines the gate by the point estimate of C_p - E but not what happens when C_p or E lacks 114 pairs.",
+      "script_behaviour": "The gate is a paired contrast and follows \u00a73: below 114 non-crashed pairs it is INCOMPLETE, every L reads 'none (informativeness gate not evaluable: C_p - E incomplete)', and the planner does not count as passing for the overall claim."
+    },
+    {
+      "id": "gate_estimator",
+      "what": "'C_p - E has a point estimate <= 0' does not name the estimator or say whether POOL-04 applies.",
+      "script_behaviour": "The paired mean over the 114 (task_id, seed) keys (reported with its scenario and task intervals). The decision is on a point, not a bound, so POOL-04 does not apply. A point within 1e-09 of zero (float noise) counts as zero."
+    },
+    {
+      "id": "point_on_predicted_side",
+      "what": "'L1 replicates: > 0 with the interval excluding zero' names a sign and an interval.",
+      "script_behaviour": "As B2: every 'supported' / 'replicates' / 'reversed' also needs the point estimate on the predicted side of the threshold. With a percentile interval this binds only in a degenerate case."
+    },
+    {
+      "id": "l1_not_resolved",
+      "what": "An L1 interval can exclude zero while its Holm p exceeds .05; \u00a74 names no reading for it, and \u00a74's overall claim counts only 'replicates'.",
+      "script_behaviour": "'not_resolved'. For the overall claim it is a reading that does not replicate (as are fails_to_replicate and reversed)."
+    },
+    {
+      "id": "overall_claim_scope",
+      "what": "\u00a74's claims are stated for 'both local planners that pass the gate'; fewer than two passing, or an unread L1, is not covered.",
+      "script_behaviour": "'not_registered_case' with the reason whenever a planner is not analysed (--planners), fewer than two pass the gate, or a passing planner's L1 is incomplete, on_the_boundary or unread. L1 of a planner that fails the gate is never consulted."
+    },
+    {
+      "id": "pool04_decision_bearing_bounds",
+      "what": "POOL-04 re-checks 'any decision-bearing bound' without listing them.",
+      "script_behaviour": "L1: both bounds against 0 (three-way, A1's P6 rule). L2: the upper bound against 0. L3, L5: the lower bound against 0. L4: the upper bound against +7.00 pp. The seven re-draws are classified on the unadjusted interval, as j10.a1_pool04 does for A1 and B2. The gate has no bound."
+    },
+    {
+      "id": "signflip_direction",
+      "what": "\u00a73 names the sign-flip p as sensitivity without a side per contrast.",
+      "script_behaviour": "The contrast's own p side, at its own threshold: L1 two-sided at 0; L2 'less' at 0; L3, L5 'greater' at 0; L4 'less' at +7.00 pp; the gate 'greater' at 0 (informational). 19 scenario clusters: exact enumeration of 2^19 patterns."
+    },
+    {
+      "id": "planner_strength_luna",
+      "what": "'Planner strength ... is indexed by each ceiling's mean goal_pass' [prereg:119].",
+      "script_behaviour": "C_P8, C_P27 and luna's ceiling hj13_planner_alone_cap81_20260923 [prereg:64], each on the 57 x {1, 2} matrix. Descriptive: no direction, no verdict."
+    },
+    {
+      "id": "delta_scope",
+      "what": "\u0394_p is 'on the shared (task_id, seed) keys' but \u00a73's completeness rule is stated for contrasts.",
+      "script_behaviour": "B2's exploratory convention: \u0394_p is estimated only when T_p, A_p, T_luna and A_luna are each complete and share all 114 keys; otherwise counts only."
+    },
+    {
+      "id": "m9_arms",
+      "what": "The m = 9 prefix arms are registered [prereg:59] but no contrast reads them.",
+      "script_behaviour": "They are loaded and inventoried (counts, means) only."
+    },
+    {
+      "id": "missing_goal_pass_rate",
+      "what": "The registration does not say how a non-crashed episode without goal_pass_rate counts.",
+      "script_behaviour": "As B2: it is never coerced to 0; the pair is dropped and counted, which leaves the contrast below 114 and so INCOMPLETE."
+    },
+    {
+      "id": "duplicate_within_one_campaign",
+      "what": "The registration is silent on a (task_id, seed) key present twice inside one campaign.",
+      "script_behaviour": "As B2: a protocol error (exit 2), since keeping either copy would be a choice."
+    },
+    {
+      "id": "analysis_code",
+      "what": "\u00a75 names 'j8_frontier.py / the pooled-contrast code with the settings in \u00a73'.",
+      "script_behaviour": "The J10 A1 functions B2 uses; j10.cluster_bootstrap_means is draw-for-draw j8_frontier.paired_diff_scenario's algorithm (its docstring), at \u00a73's settings."
+    }
+  ],
+  "campaigns": {
+    "P8": {
+      "C": {
+        "config": "configs/lp1_planner_alone_cap81_qwen8b.yaml",
+        "campaign": "lp1_planner_alone_cap81_qwen8b_v2_20260923"
+      },
+      "T": {
+        "config": "configs/lp1_hj12_takeover_fixed_k_10.yaml",
+        "campaign": "lp1_hj12_takeover_fixed_k_10_20260923"
+      },
+      "A": {
+        "config": "configs/lp1_hj12_advise_fixed_k_10_fullctx.yaml",
+        "campaign": "lp1_hj12_advise_fixed_k_10_fullctx_20260923"
+      },
+      "A1": {
+        "config": "configs/lp1_hj13_advise_fixed_k_1_fullctx.yaml",
+        "campaign": "lp1_hj13_advise_fixed_k_1_fullctx_20260923"
+      },
+      "F": {
+        "config": "configs/lp1_hj8_sft_plan_bplus.yaml",
+        "campaign": "lp1_hj8_sft_plan_bplus_20260923"
+      },
+      "M_bplus_6": {
+        "config": "configs/lp1_prefix_bplus_m6.yaml",
+        "campaign": "lp1_prefix_bplus_m6_v2_20260923"
+      },
+      "M_bplus_9": {
+        "config": "configs/lp1_prefix_bplus_m9.yaml",
+        "campaign": "lp1_prefix_bplus_m9_v2_20260923"
+      },
+      "M_bplus_11": {
+        "config": "configs/lp1_prefix_bplus_m11.yaml",
+        "campaign": "lp1_prefix_bplus_m11_v2_20260923"
+      },
+      "M_zs_6": {
+        "config": "configs/lp1_prefix_zs_m6.yaml",
+        "campaign": "lp1_prefix_zs_m6_v2_20260923"
+      },
+      "M_zs_9": {
+        "config": "configs/lp1_prefix_zs_m9.yaml",
+        "campaign": "lp1_prefix_zs_m9_v2_20260923"
+      },
+      "M_zs_11": {
+        "config": "configs/lp1_prefix_zs_m11.yaml",
+        "campaign": "lp1_prefix_zs_m11_v2_20260923"
+      }
+    }
+  },
+  "missing_campaigns": [],
+  "status": "COMPLETE",
+  "exit_code": 0,
+  "headline": "COMPLETE: P8 gate too_weak, L1 none (planner failed the informativeness gate). Overall: not_registered_case. No registered overall claim applies. (P27 not analysed (--planners); the claim is registered over both local planners)",
+  "errors": [],
+  "planners": {
+    "P8": {
+      "planner": "P8",
+      "model": "Qwen/Qwen3-8B",
+      "campaigns": {
+        "C": {
+          "config": "configs/lp1_planner_alone_cap81_qwen8b.yaml",
+          "campaign": "lp1_planner_alone_cap81_qwen8b_v2_20260923"
+        },
+        "T": {
+          "config": "configs/lp1_hj12_takeover_fixed_k_10.yaml",
+          "campaign": "lp1_hj12_takeover_fixed_k_10_20260923"
+        },
+        "A": {
+          "config": "configs/lp1_hj12_advise_fixed_k_10_fullctx.yaml",
+          "campaign": "lp1_hj12_advise_fixed_k_10_fullctx_20260923"
+        },
+        "A1": {
+          "config": "configs/lp1_hj13_advise_fixed_k_1_fullctx.yaml",
+          "campaign": "lp1_hj13_advise_fixed_k_1_fullctx_20260923"
+        },
+        "F": {
+          "config": "configs/lp1_hj8_sft_plan_bplus.yaml",
+          "campaign": "lp1_hj8_sft_plan_bplus_20260923"
+        },
+        "M_bplus_6": {
+          "config": "configs/lp1_prefix_bplus_m6.yaml",
+          "campaign": "lp1_prefix_bplus_m6_v2_20260923"
+        },
+        "M_bplus_9": {
+          "config": "configs/lp1_prefix_bplus_m9.yaml",
+          "campaign": "lp1_prefix_bplus_m9_v2_20260923"
+        },
+        "M_bplus_11": {
+          "config": "configs/lp1_prefix_bplus_m11.yaml",
+          "campaign": "lp1_prefix_bplus_m11_v2_20260923"
+        },
+        "M_zs_6": {
+          "config": "configs/lp1_prefix_zs_m6.yaml",
+          "campaign": "lp1_prefix_zs_m6_v2_20260923"
+        },
+        "M_zs_9": {
+          "config": "configs/lp1_prefix_zs_m9.yaml",
+          "campaign": "lp1_prefix_zs_m9_v2_20260923"
+        },
+        "M_zs_11": {
+          "config": "configs/lp1_prefix_zs_m11.yaml",
+          "campaign": "lp1_prefix_zs_m11_v2_20260923"
+        }
+      },
+      "n_tasks_observed_union": 57,
+      "incomplete_reasons": [],
+      "warnings": [],
+      "incomplete": [],
+      "gate": {
+        "id": "gate",
+        "definition": "C - E",
+        "left": "C",
+        "right": "E",
+        "rule": "point estimate of C_p - E <= 0 => too_weak; > 0 => passes",
+        "citation": "docs/prereg_lp_planner_strength_20260923.md:98-101",
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "n_pairs": 114,
+        "n_expected": 114,
+        "n_dropped_missing_field": 0,
+        "counts": [
+          {
+            "arm": "C",
+            "complete": true,
+            "n_scored": 114,
+            "n_expected": 114,
+            "n_crash": 0,
+            "n_missing": 0
+          },
+          {
+            "arm": "E",
+            "complete": true,
+            "n_scored": 114,
+            "n_expected": 114,
+            "n_crash": 0,
+            "n_missing": 0
+          }
+        ],
+        "status": "COMPLETE",
+        "point_pp": -26.23,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 114,
+          "n_clusters": 19,
+          "point": -0.2623245614035088,
+          "lo": -0.34731578947368424,
+          "hi": -0.17673684210526316,
+          "diff_pp": -26.23,
+          "ci95_pp": [
+            -34.73,
+            -17.67
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 114,
+          "n_clusters": 57,
+          "point": -0.2623245614035088,
+          "lo": -0.3218859649122807,
+          "hi": -0.20285087719298245,
+          "diff_pp": -26.23,
+          "ci95_pp": [
+            -32.19,
+            -20.29
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "verdict": "too_weak",
+        "why": "point estimate -26.23 pp <= 0: too weak to test the channel; L1-L5 are reported and no reading is drawn",
+        "signflip": {
+          "decision_bearing": false,
+          "clusters": "scenario",
+          "null": "cluster sums of (difference - threshold) symmetric about zero",
+          "threshold": 0.0,
+          "seed": 20260924,
+          "alternative": "greater",
+          "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+          "status": "ok",
+          "p_value": 1.0,
+          "method": "exact",
+          "n_patterns": 524288,
+          "n_clusters": 19
+        },
+        "tgc_secondary": {
+          "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+          "point_pp": -13.16,
+          "field": "tgc",
+          "n_pairs": 114,
+          "n_shared": 114,
+          "n_left_only": 0,
+          "n_right_only": 0,
+          "n_dropped_missing_field": 0,
+          "scenario": {
+            "clustering": "scenario",
+            "n_pairs": 114,
+            "n_clusters": 19,
+            "point": -0.13157894736842105,
+            "lo": -0.2631578947368421,
+            "hi": -0.02631578947368421,
+            "diff_pp": -13.16,
+            "ci95_pp": [
+              -26.32,
+              -2.63
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "task": {
+            "clustering": "task",
+            "n_pairs": 114,
+            "n_clusters": 57,
+            "point": -0.13157894736842105,
+            "lo": -0.21929824561403508,
+            "hi": -0.06140350877192982,
+            "diff_pp": -13.16,
+            "ci95_pp": [
+              -21.93,
+              -6.14
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          }
+        }
+      },
+      "contrasts": {
+        "L1": {
+          "id": "L1",
+          "definition": "T - A",
+          "left": "T",
+          "right": "A",
+          "claim": "action beats advice at a matched trigger",
+          "predicted": "> 0",
+          "threshold_pp": 0.0,
+          "rule_text": "replicates: lo > 0 and Holm p <= .05; reversed: hi < 0 and Holm p <= .05; fails_to_replicate: unadjusted interval includes 0; else not_resolved",
+          "citation": "docs/prereg_lp_planner_strength_20260923.md:92,104-106",
+          "metric": "goal_pass",
+          "field": "goal_pass_rate",
+          "n_pairs": 114,
+          "n_expected": 114,
+          "n_dropped_missing_field": 0,
+          "counts": [
+            {
+              "arm": "T",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "A",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            }
+          ],
+          "status": "COMPLETE",
+          "point_pp": -5.34,
+          "scenario": {
+            "clustering": "scenario",
+            "n_pairs": 114,
+            "n_clusters": 19,
+            "point": -0.053350877192982454,
+            "lo": -0.11390350877192983,
+            "hi": 0.00560526315789474,
+            "diff_pp": -5.34,
+            "ci95_pp": [
+              -11.39,
+              0.56
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "task": {
+            "clustering": "task",
+            "n_pairs": 114,
+            "n_clusters": 57,
+            "point": -0.053350877192982454,
+            "lo": -0.10700877192982455,
+            "hi": 0.0015175438596491265,
+            "diff_pp": -5.34,
+            "ci95_pp": [
+              -10.7,
+              0.15
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "p_raw": 0.0744,
+          "p_raw_direction": "two-sided",
+          "p_raw_text": "two-sided: 2 x min(share of draws <= 0, share >= 0)",
+          "pool04": {
+            "rule": "POOL-04",
+            "window_pp": 1.0,
+            "threshold_pp": 0.0,
+            "bounds_checked": [
+              "lo",
+              "hi"
+            ],
+            "within_window": {
+              "lo": false,
+              "hi": true
+            },
+            "fired": true,
+            "seeds": [
+              20260924,
+              1,
+              2,
+              3,
+              7,
+              101,
+              999
+            ],
+            "bounds_by_seed": [
+              {
+                "seed": 20260924,
+                "lo_pp": -11.39,
+                "hi_pp": 0.56,
+                "verdict": "includes_zero"
+              },
+              {
+                "seed": 1,
+                "lo_pp": -11.3,
+                "hi_pp": 0.63,
+                "verdict": "includes_zero"
+              },
+              {
+                "seed": 2,
+                "lo_pp": -11.47,
+                "hi_pp": 0.34,
+                "verdict": "includes_zero"
+              },
+              {
+                "seed": 3,
+                "lo_pp": -11.44,
+                "hi_pp": 0.4,
+                "verdict": "includes_zero"
+              },
+              {
+                "seed": 7,
+                "lo_pp": -11.45,
+                "hi_pp": 0.25,
+                "verdict": "includes_zero"
+              },
+              {
+                "seed": 101,
+                "lo_pp": -11.47,
+                "hi_pp": 0.41,
+                "verdict": "includes_zero"
+              },
+              {
+                "seed": 999,
+                "lo_pp": -11.52,
+                "hi_pp": 0.42,
+                "verdict": "includes_zero"
+              }
+            ],
+            "verdicts_by_seed": [
+              "includes_zero"
+            ],
+            "stable": true,
+            "bound_200k": {
+              "n_boot": 200000,
+              "seed": 20260924,
+              "lo_pp": -11.43,
+              "hi_pp": 0.39,
+              "verdict": "includes_zero",
+              "decision_bearing": false
+            },
+            "on_boundary": false,
+            "status": "stable"
+          },
+          "signflip": {
+            "decision_bearing": false,
+            "clusters": "scenario",
+            "null": "cluster sums of (difference - threshold) symmetric about zero",
+            "threshold": 0.0,
+            "seed": 20260924,
+            "alternative": "two-sided",
+            "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+            "status": "ok",
+            "p_value": 0.1029052734375,
+            "method": "exact",
+            "n_patterns": 524288,
+            "n_clusters": 19
+          },
+          "tgc_secondary": {
+            "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+            "point_pp": -6.14,
+            "field": "tgc",
+            "n_pairs": 114,
+            "n_shared": 114,
+            "n_left_only": 0,
+            "n_right_only": 0,
+            "n_dropped_missing_field": 0,
+            "scenario": {
+              "clustering": "scenario",
+              "n_pairs": 114,
+              "n_clusters": 19,
+              "point": -0.06140350877192982,
+              "lo": -0.19298245614035087,
+              "hi": 0.06140350877192982,
+              "diff_pp": -6.14,
+              "ci95_pp": [
+                -19.3,
+                6.14
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            },
+            "task": {
+              "clustering": "task",
+              "n_pairs": 114,
+              "n_clusters": 57,
+              "point": -0.06140350877192982,
+              "lo": -0.15789473684210525,
+              "hi": 0.02631578947368421,
+              "diff_pp": -6.14,
+              "ci95_pp": [
+                -15.79,
+                2.63
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            }
+          },
+          "reading": "none (planner failed the informativeness gate)",
+          "reading_why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)",
+          "p_holm": 0.2976,
+          "holm_rejects": false
+        },
+        "L2": {
+          "id": "L2",
+          "definition": "A1 - M_bplus_11",
+          "left": "A1",
+          "right": "M_bplus_11",
+          "claim": "advice at every step does not reach the 11-action prefix",
+          "predicted": "< 0",
+          "threshold_pp": 0.0,
+          "rule_text": "supported iff hi < 0 and Holm p <= .05",
+          "citation": "docs/prereg_lp_planner_strength_20260923.md:93",
+          "metric": "goal_pass",
+          "field": "goal_pass_rate",
+          "n_pairs": 114,
+          "n_expected": 114,
+          "n_dropped_missing_field": 0,
+          "counts": [
+            {
+              "arm": "A1",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "M_bplus_11",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            }
+          ],
+          "status": "COMPLETE",
+          "point_pp": 21.52,
+          "scenario": {
+            "clustering": "scenario",
+            "n_pairs": 114,
+            "n_clusters": 19,
+            "point": 0.21521052631578946,
+            "lo": 0.1297543859649123,
+            "hi": 0.30466666666666664,
+            "diff_pp": 21.52,
+            "ci95_pp": [
+              12.98,
+              30.47
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "task": {
+            "clustering": "task",
+            "n_pairs": 114,
+            "n_clusters": 57,
+            "point": 0.21521052631578946,
+            "lo": 0.14744736842105263,
+            "hi": 0.2829561403508772,
+            "diff_pp": 21.52,
+            "ci95_pp": [
+              14.74,
+              28.3
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "p_raw": 1.0,
+          "p_raw_direction": "less",
+          "p_raw_text": "2 x share of draws >= 0",
+          "pool04": {
+            "rule": "POOL-04",
+            "window_pp": 1.0,
+            "threshold_pp": 0.0,
+            "bounds_checked": [
+              "hi"
+            ],
+            "within_window": {
+              "hi": false
+            },
+            "fired": false,
+            "seeds": [
+              20260924,
+              1,
+              2,
+              3,
+              7,
+              101,
+              999
+            ],
+            "stable": true,
+            "on_boundary": false,
+            "status": "not_fired"
+          },
+          "signflip": {
+            "decision_bearing": false,
+            "clusters": "scenario",
+            "null": "cluster sums of (difference - threshold) symmetric about zero",
+            "threshold": 0.0,
+            "seed": 20260924,
+            "alternative": "less",
+            "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+            "status": "ok",
+            "p_value": 0.9999465942382812,
+            "method": "exact",
+            "n_patterns": 524288,
+            "n_clusters": 19
+          },
+          "tgc_secondary": {
+            "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+            "point_pp": 15.79,
+            "field": "tgc",
+            "n_pairs": 114,
+            "n_shared": 114,
+            "n_left_only": 0,
+            "n_right_only": 0,
+            "n_dropped_missing_field": 0,
+            "scenario": {
+              "clustering": "scenario",
+              "n_pairs": 114,
+              "n_clusters": 19,
+              "point": 0.15789473684210525,
+              "lo": 0.05263157894736842,
+              "hi": 0.2894736842105263,
+              "diff_pp": 15.79,
+              "ci95_pp": [
+                5.26,
+                28.95
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            },
+            "task": {
+              "clustering": "task",
+              "n_pairs": 114,
+              "n_clusters": 57,
+              "point": 0.15789473684210525,
+              "lo": 0.07017543859649122,
+              "hi": 0.2543859649122807,
+              "diff_pp": 15.79,
+              "ci95_pp": [
+                7.02,
+                25.44
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            }
+          },
+          "reading": "none (planner failed the informativeness gate)",
+          "reading_why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)",
+          "p_holm": 1.0,
+          "holm_rejects": false
+        },
+        "L3": {
+          "id": "L3",
+          "definition": "M_bplus_11 - M_bplus_6",
+          "left": "M_bplus_11",
+          "right": "M_bplus_6",
+          "claim": "depth span, tailored receiver",
+          "predicted": "> 0",
+          "threshold_pp": 0.0,
+          "rule_text": "supported iff lo > 0 and Holm p <= .05",
+          "citation": "docs/prereg_lp_planner_strength_20260923.md:94",
+          "metric": "goal_pass",
+          "field": "goal_pass_rate",
+          "n_pairs": 114,
+          "n_expected": 114,
+          "n_dropped_missing_field": 0,
+          "counts": [
+            {
+              "arm": "M_bplus_11",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "M_bplus_6",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            }
+          ],
+          "status": "COMPLETE",
+          "point_pp": -1.31,
+          "scenario": {
+            "clustering": "scenario",
+            "n_pairs": 114,
+            "n_clusters": 19,
+            "point": -0.01306140350877193,
+            "lo": -0.044561403508771934,
+            "hi": 0.019473684210526317,
+            "diff_pp": -1.31,
+            "ci95_pp": [
+              -4.46,
+              1.95
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "task": {
+            "clustering": "task",
+            "n_pairs": 114,
+            "n_clusters": 57,
+            "point": -0.01306140350877193,
+            "lo": -0.05031578947368421,
+            "hi": 0.023728070175438595,
+            "diff_pp": -1.31,
+            "ci95_pp": [
+              -5.03,
+              2.37
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "p_raw": 1.0,
+          "p_raw_direction": "greater",
+          "p_raw_text": "2 x share of draws <= 0",
+          "pool04": {
+            "rule": "POOL-04",
+            "window_pp": 1.0,
+            "threshold_pp": 0.0,
+            "bounds_checked": [
+              "lo"
+            ],
+            "within_window": {
+              "lo": false
+            },
+            "fired": false,
+            "seeds": [
+              20260924,
+              1,
+              2,
+              3,
+              7,
+              101,
+              999
+            ],
+            "stable": true,
+            "on_boundary": false,
+            "status": "not_fired"
+          },
+          "signflip": {
+            "decision_bearing": false,
+            "clusters": "scenario",
+            "null": "cluster sums of (difference - threshold) symmetric about zero",
+            "threshold": 0.0,
+            "seed": 20260924,
+            "alternative": "greater",
+            "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+            "status": "ok",
+            "p_value": 0.77734375,
+            "method": "exact",
+            "n_patterns": 524288,
+            "n_clusters": 19
+          },
+          "tgc_secondary": {
+            "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+            "point_pp": 0.88,
+            "field": "tgc",
+            "n_pairs": 114,
+            "n_shared": 114,
+            "n_left_only": 0,
+            "n_right_only": 0,
+            "n_dropped_missing_field": 0,
+            "scenario": {
+              "clustering": "scenario",
+              "n_pairs": 114,
+              "n_clusters": 19,
+              "point": 0.008771929824561403,
+              "lo": -0.017543859649122806,
+              "hi": 0.03508771929824561,
+              "diff_pp": 0.88,
+              "ci95_pp": [
+                -1.75,
+                3.51
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            },
+            "task": {
+              "clustering": "task",
+              "n_pairs": 114,
+              "n_clusters": 57,
+              "point": 0.008771929824561403,
+              "lo": -0.017543859649122806,
+              "hi": 0.03508771929824561,
+              "diff_pp": 0.88,
+              "ci95_pp": [
+                -1.75,
+                3.51
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            }
+          },
+          "reading": "none (planner failed the informativeness gate)",
+          "reading_why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)",
+          "p_holm": 1.0,
+          "holm_rejects": false
+        },
+        "L4": {
+          "id": "L4",
+          "definition": "C - M_bplus_11",
+          "left": "C",
+          "right": "M_bplus_11",
+          "claim": "non-inferiority of the 11-action prefix to the ceiling at the J9 margin",
+          "predicted": "upper bound < +7.00 pp",
+          "threshold_pp": 7.0,
+          "rule_text": "supported iff hi < +7.00 pp and Holm p <= .05",
+          "citation": "docs/prereg_lp_planner_strength_20260923.md:95",
+          "metric": "goal_pass",
+          "field": "goal_pass_rate",
+          "n_pairs": 114,
+          "n_expected": 114,
+          "n_dropped_missing_field": 0,
+          "counts": [
+            {
+              "arm": "C",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "M_bplus_11",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            }
+          ],
+          "status": "COMPLETE",
+          "point_pp": -3.3,
+          "scenario": {
+            "clustering": "scenario",
+            "n_pairs": 114,
+            "n_clusters": 19,
+            "point": -0.033008771929824564,
+            "lo": -0.05993859649122807,
+            "hi": -0.00994736842105263,
+            "diff_pp": -3.3,
+            "ci95_pp": [
+              -5.99,
+              -0.99
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "task": {
+            "clustering": "task",
+            "n_pairs": 114,
+            "n_clusters": 57,
+            "point": -0.033008771929824564,
+            "lo": -0.05921929824561404,
+            "hi": -0.011403508771929825,
+            "diff_pp": -3.3,
+            "ci95_pp": [
+              -5.92,
+              -1.14
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "p_raw": 0.0,
+          "p_raw_direction": "less",
+          "p_raw_text": "2 x share of draws >= +7.00 pp",
+          "pool04": {
+            "rule": "POOL-04",
+            "window_pp": 1.0,
+            "threshold_pp": 7.0,
+            "bounds_checked": [
+              "hi"
+            ],
+            "within_window": {
+              "hi": false
+            },
+            "fired": false,
+            "seeds": [
+              20260924,
+              1,
+              2,
+              3,
+              7,
+              101,
+              999
+            ],
+            "stable": true,
+            "on_boundary": false,
+            "status": "not_fired"
+          },
+          "signflip": {
+            "decision_bearing": false,
+            "clusters": "scenario",
+            "null": "cluster sums of (difference - threshold) symmetric about zero",
+            "threshold": 0.07,
+            "seed": 20260924,
+            "alternative": "less",
+            "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+            "status": "ok",
+            "p_value": 1.9073486328125e-06,
+            "method": "exact",
+            "n_patterns": 524288,
+            "n_clusters": 19
+          },
+          "tgc_secondary": {
+            "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+            "point_pp": -1.75,
+            "field": "tgc",
+            "n_pairs": 114,
+            "n_shared": 114,
+            "n_left_only": 0,
+            "n_right_only": 0,
+            "n_dropped_missing_field": 0,
+            "scenario": {
+              "clustering": "scenario",
+              "n_pairs": 114,
+              "n_clusters": 19,
+              "point": -0.017543859649122806,
+              "lo": -0.043859649122807015,
+              "hi": 0.0,
+              "diff_pp": -1.75,
+              "ci95_pp": [
+                -4.39,
+                0.0
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            },
+            "task": {
+              "clustering": "task",
+              "n_pairs": 114,
+              "n_clusters": 57,
+              "point": -0.017543859649122806,
+              "lo": -0.043859649122807015,
+              "hi": 0.0,
+              "diff_pp": -1.75,
+              "ci95_pp": [
+                -4.39,
+                0.0
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            }
+          },
+          "reading": "none (planner failed the informativeness gate)",
+          "reading_why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)",
+          "p_holm": 0.0,
+          "holm_rejects": true
+        },
+        "L5": {
+          "id": "L5",
+          "definition": "M_zs_11 - M_zs_6",
+          "left": "M_zs_11",
+          "right": "M_zs_6",
+          "claim": "depth span, untailored receiver",
+          "predicted": "> 0",
+          "threshold_pp": 0.0,
+          "rule_text": "supported iff lo > 0 and Holm p <= .05",
+          "citation": "docs/prereg_lp_planner_strength_20260923.md:96",
+          "metric": "goal_pass",
+          "field": "goal_pass_rate",
+          "n_pairs": 114,
+          "n_expected": 114,
+          "n_dropped_missing_field": 0,
+          "counts": [
+            {
+              "arm": "M_zs_11",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "M_zs_6",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            }
+          ],
+          "status": "COMPLETE",
+          "point_pp": 2.92,
+          "scenario": {
+            "clustering": "scenario",
+            "n_pairs": 114,
+            "n_clusters": 19,
+            "point": 0.029201754385964913,
+            "lo": -0.01275438596491228,
+            "hi": 0.07890350877192982,
+            "diff_pp": 2.92,
+            "ci95_pp": [
+              -1.28,
+              7.89
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "task": {
+            "clustering": "task",
+            "n_pairs": 114,
+            "n_clusters": 57,
+            "point": 0.029201754385964913,
+            "lo": -0.009824561403508772,
+            "hi": 0.07082456140350878,
+            "diff_pp": 2.92,
+            "ci95_pp": [
+              -0.98,
+              7.08
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "p_raw": 0.1984,
+          "p_raw_direction": "greater",
+          "p_raw_text": "2 x share of draws <= 0",
+          "pool04": {
+            "rule": "POOL-04",
+            "window_pp": 1.0,
+            "threshold_pp": 0.0,
+            "bounds_checked": [
+              "lo"
+            ],
+            "within_window": {
+              "lo": false
+            },
+            "fired": false,
+            "seeds": [
+              20260924,
+              1,
+              2,
+              3,
+              7,
+              101,
+              999
+            ],
+            "stable": true,
+            "on_boundary": false,
+            "status": "not_fired"
+          },
+          "signflip": {
+            "decision_bearing": false,
+            "clusters": "scenario",
+            "null": "cluster sums of (difference - threshold) symmetric about zero",
+            "threshold": 0.0,
+            "seed": 20260924,
+            "alternative": "greater",
+            "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+            "status": "ok",
+            "p_value": 0.125457763671875,
+            "method": "exact",
+            "n_patterns": 524288,
+            "n_clusters": 19
+          },
+          "tgc_secondary": {
+            "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+            "point_pp": 0.0,
+            "field": "tgc",
+            "n_pairs": 114,
+            "n_shared": 114,
+            "n_left_only": 0,
+            "n_right_only": 0,
+            "n_dropped_missing_field": 0,
+            "scenario": {
+              "clustering": "scenario",
+              "n_pairs": 114,
+              "n_clusters": 19,
+              "point": 0.0,
+              "lo": 0.0,
+              "hi": 0.0,
+              "diff_pp": 0.0,
+              "ci95_pp": [
+                0.0,
+                0.0
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            },
+            "task": {
+              "clustering": "task",
+              "n_pairs": 114,
+              "n_clusters": 57,
+              "point": 0.0,
+              "lo": 0.0,
+              "hi": 0.0,
+              "diff_pp": 0.0,
+              "ci95_pp": [
+                0.0,
+                0.0
+              ],
+              "n_boot": 10000,
+              "seed": 20260924
+            }
+          },
+          "reading": "none (planner failed the informativeness gate)",
+          "reading_why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)",
+          "p_holm": 0.5952,
+          "holm_rejects": false
+        }
+      },
+      "holm": {
+        "method": "Holm step-down",
+        "alpha": 0.05,
+        "family": [
+          "L1",
+          "L2",
+          "L3",
+          "L4",
+          "L5"
+        ],
+        "m": 5,
+        "scope": "within this planner; no correction across planners (prereg:81-82)",
+        "p": {
+          "L1": {
+            "p_raw": 0.0744,
+            "p_holm": 0.2976,
+            "rejects_at_alpha": false
+          },
+          "L2": {
+            "p_raw": 1.0,
+            "p_holm": 1.0,
+            "rejects_at_alpha": false
+          },
+          "L3": {
+            "p_raw": 1.0,
+            "p_holm": 1.0,
+            "rejects_at_alpha": false
+          },
+          "L4": {
+            "p_raw": 0.0,
+            "p_holm": 0.0,
+            "rejects_at_alpha": true
+          },
+          "L5": {
+            "p_raw": 0.1984,
+            "p_holm": 0.5952,
+            "rejects_at_alpha": false
+          }
+        }
+      },
+      "readings": {
+        "L1": {
+          "reading": "none (planner failed the informativeness gate)",
+          "why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)"
+        },
+        "L2": {
+          "reading": "none (planner failed the informativeness gate)",
+          "why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)"
+        },
+        "L3": {
+          "reading": "none (planner failed the informativeness gate)",
+          "why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)"
+        },
+        "L4": {
+          "reading": "none (planner failed the informativeness gate)",
+          "why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)"
+        },
+        "L5": {
+          "reading": "none (planner failed the informativeness gate)",
+          "why": "C_p - E point estimate <= 0: L1-L5 are reported and no reading is drawn (\u00a74)"
+        }
+      },
+      "descriptive": {
+        "label": "DESCRIPTIVE: no direction, no verdict (prereg:116-122)",
+        "delta_vs_luna": {
+          "label": "DESCRIPTIVE: no direction, no verdict (prereg:116-122)",
+          "definition": "(T_p - A_p) - (T_luna - A_luna)",
+          "unit": "shared (task_id, seed) keys",
+          "n_pairs": 114,
+          "n_shared": 114,
+          "n_expected": 114,
+          "n_dropped_missing_field": 0,
+          "counts": [
+            {
+              "arm": "T",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "A",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "T_luna",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            },
+            {
+              "arm": "A_luna",
+              "complete": true,
+              "n_scored": 114,
+              "n_expected": 114,
+              "n_crash": 0,
+              "n_missing": 0
+            }
+          ],
+          "status": "COMPLETE",
+          "point_pp": -12.02,
+          "scenario": {
+            "clustering": "scenario",
+            "n_pairs": 114,
+            "n_clusters": 19,
+            "point": -0.12021052631578946,
+            "lo": -0.21545614035087718,
+            "hi": -0.02835087719298245,
+            "diff_pp": -12.02,
+            "ci95_pp": [
+              -21.55,
+              -2.84
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          },
+          "task": {
+            "clustering": "task",
+            "n_pairs": 114,
+            "n_clusters": 57,
+            "point": -0.12021052631578946,
+            "lo": -0.20919298245614035,
+            "hi": -0.03443859649122807,
+            "diff_pp": -12.02,
+            "ci95_pp": [
+              -20.92,
+              -3.44
+            ],
+            "n_boot": 10000,
+            "seed": 20260924
+          }
+        },
+        "ceiling_goal_pass": {
+          "campaign": "lp1_planner_alone_cap81_qwen8b_v2_20260923",
+          "goal_pass_mean": 0.266561,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_goal_pass_missing": 0,
+          "complete": true
+        },
+        "F_goal_pass": {
+          "campaign": "lp1_hj8_sft_plan_bplus_20260923",
+          "goal_pass_mean": 0.66593,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_goal_pass_missing": 0,
+          "complete": true
+        }
+      },
+      "arms": {
+        "C": {
+          "name": "planner alone, cap 81 (ceiling)",
+          "label": "C",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "planner_alone"
+          ],
+          "error_types": {
+            "limit": 89,
+            "none": 25
+          },
+          "goal_pass_mean": 0.266561,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.0,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_planner_alone_cap81_qwen8b_v2_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_planner_alone_cap81_qwen8b_v2_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "planner_alone"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "T": {
+          "name": "takeover at k = 10",
+          "label": "T",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "fixed_k"
+          ],
+          "error_types": {
+            "limit": 23,
+            "none": 91
+          },
+          "goal_pass_mean": 0.617342,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.236842,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_hj12_takeover_fixed_k_10_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_hj12_takeover_fixed_k_10_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "fixed_k"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "A": {
+          "name": "prose advice at k = 10, full context",
+          "label": "A",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "fixed_k"
+          ],
+          "error_types": {
+            "limit": 17,
+            "none": 96,
+            "parse_error": 1
+          },
+          "goal_pass_mean": 0.670693,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.298246,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_hj12_advise_fixed_k_10_fullctx_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_hj12_advise_fixed_k_10_fullctx_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "fixed_k"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "A1": {
+          "name": "prose advice at every step, full context",
+          "label": "A1",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "fixed_k"
+          ],
+          "error_types": {
+            "limit": 52,
+            "none": 62
+          },
+          "goal_pass_mean": 0.514781,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.175439,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_hj13_advise_fixed_k_1_fullctx_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_hj13_advise_fixed_k_1_fullctx_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "fixed_k"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "F": {
+          "name": "plan only, tailored receiver (descriptive)",
+          "label": "F",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "sft_plan"
+          ],
+          "error_types": {
+            "limit": 22,
+            "none": 92
+          },
+          "goal_pass_mean": 0.66593,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.280702,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_hj8_sft_plan_bplus_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_hj8_sft_plan_bplus_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "sft_plan"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "M_bplus_6": {
+          "name": "prefix m = 6, tailored receiver",
+          "label": "M_bplus_6",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "prefix_handoff"
+          ],
+          "error_types": {
+            "limit": 77,
+            "none": 37
+          },
+          "goal_pass_mean": 0.312632,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.008772,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_prefix_bplus_m6_v2_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_prefix_bplus_m6_v2_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "prefix_handoff"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "M_bplus_9": {
+          "name": "prefix m = 9, tailored receiver (no registered contrast)",
+          "label": "M_bplus_9",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "prefix_handoff"
+          ],
+          "error_types": {
+            "limit": 76,
+            "none": 38
+          },
+          "goal_pass_mean": 0.322395,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.035088,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_prefix_bplus_m9_v2_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_prefix_bplus_m9_v2_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "prefix_handoff"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "M_bplus_11": {
+          "name": "prefix m = 11, tailored receiver",
+          "label": "M_bplus_11",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "prefix_handoff"
+          ],
+          "error_types": {
+            "limit": 79,
+            "none": 35
+          },
+          "goal_pass_mean": 0.29957,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.017544,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_prefix_bplus_m11_v2_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_prefix_bplus_m11_v2_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "prefix_handoff"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "M_zs_6": {
+          "name": "prefix m = 6, untailored receiver",
+          "label": "M_zs_6",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "prefix_handoff"
+          ],
+          "error_types": {
+            "limit": 28,
+            "none": 86
+          },
+          "goal_pass_mean": 0.253289,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.0,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_prefix_zs_m6_v2_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_prefix_zs_m6_v2_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "prefix_handoff"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "M_zs_9": {
+          "name": "prefix m = 9, untailored receiver (no registered contrast)",
+          "label": "M_zs_9",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "prefix_handoff"
+          ],
+          "error_types": {
+            "limit": 33,
+            "none": 81
+          },
+          "goal_pass_mean": 0.257719,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.0,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_prefix_zs_m9_v2_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_prefix_zs_m9_v2_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "prefix_handoff"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "M_zs_11": {
+          "name": "prefix m = 11, untailored receiver",
+          "label": "M_zs_11",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "prefix_handoff"
+          ],
+          "error_types": {
+            "limit": 33,
+            "none": 81
+          },
+          "goal_pass_mean": 0.282491,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.0,
+          "complete": true,
+          "campaign": {
+            "campaign": "lp1_prefix_zs_m11_v2_20260923",
+            "path": "/scratch/n12194778/sidekick/results/lp1_prefix_zs_m11_v2_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "prefix_handoff"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          }
+        },
+        "E": {
+          "name": "tailored executor alone (gate reference)",
+          "label": "E",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "executor_alone"
+          ],
+          "error_types": {
+            "limit": 31,
+            "none": 83
+          },
+          "goal_pass_mean": 0.528886,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.131579,
+          "complete": true,
+          "campaign": {
+            "campaign": "hj8_executor_alone_bplus_20260919",
+            "path": "/scratch/n12194778/sidekick/results/hj8_executor_alone_bplus_20260919",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "executor_alone"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "unrecorded": 114
+            }
+          }
+        },
+        "T_luna": {
+          "name": "luna takeover at k = 10 (\u0394_p reference)",
+          "label": "T_luna",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "fixed_k"
+          ],
+          "error_types": {
+            "limit": 1,
+            "none": 113
+          },
+          "goal_pass_mean": 0.800719,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.517544,
+          "complete": true,
+          "campaign": {
+            "campaign": "hj12_takeover_fixed_k_10_20260923",
+            "path": "/scratch/n12194778/sidekick/results/hj12_takeover_fixed_k_10_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "fixed_k"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "unrecorded": 114
+            }
+          }
+        },
+        "A_luna": {
+          "name": "luna advice at k = 10, full context (\u0394_p reference)",
+          "label": "A_luna",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "fixed_k"
+          ],
+          "error_types": {
+            "limit": 13,
+            "none": 101
+          },
+          "goal_pass_mean": 0.73386,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.438596,
+          "complete": true,
+          "campaign": {
+            "campaign": "hj12_advise_fixed_k_10_fullctx_20260923",
+            "path": "/scratch/n12194778/sidekick/results/hj12_advise_fixed_k_10_fullctx_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "fixed_k"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "unrecorded": 114
+            }
+          }
+        },
+        "C_luna": {
+          "name": "luna planner alone, cap 81 (planner-strength reference)",
+          "label": "C_luna",
+          "n_expected": 114,
+          "n_scored": 114,
+          "n_crash": 0,
+          "n_missing": 0,
+          "n_extra_ignored": 0,
+          "n_empty_files": 0,
+          "n_unreadable": 0,
+          "n_duplicates": 0,
+          "root_missing": false,
+          "systems_in_tree": [
+            "planner_alone"
+          ],
+          "error_types": {
+            "limit": 18,
+            "none": 96
+          },
+          "goal_pass_mean": 0.763693,
+          "n_goal_pass_missing": 0,
+          "tgc_mean": 0.570175,
+          "complete": true,
+          "campaign": {
+            "campaign": "hj13_planner_alone_cap81_20260923",
+            "path": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "present": true,
+            "n_results": 114,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "systems": [
+              "planner_alone"
+            ],
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "unrecorded": 114
+            }
+          }
+        }
+      }
+    }
+  },
+  "overall_claim": {
+    "citation": "docs/prereg_lp_planner_strength_20260923.md:109-114",
+    "computed_from": "L1 among local planners that pass the gate",
+    "claim": "not_registered_case",
+    "which": null,
+    "reason": "P27 not analysed (--planners); the claim is registered over both local planners",
+    "text": "No registered overall claim applies."
+  },
+  "descriptive": {
+    "label": "DESCRIPTIVE: no direction, no verdict (prereg:116-122)",
+    "planner_strength": {
+      "index": "each ceiling's mean goal_pass_rate on the 57 x {1, 2} matrix",
+      "by_planner": {
+        "luna": {
+          "campaign": "hj13_planner_alone_cap81_20260923",
+          "goal_pass_mean": 0.763693,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_goal_pass_missing": 0,
+          "complete": true
+        },
+        "P8": {
+          "campaign": "lp1_planner_alone_cap81_qwen8b_v2_20260923",
+          "goal_pass_mean": 0.266561,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_goal_pass_missing": 0,
+          "complete": true
+        }
+      }
+    },
+    "note": "Three planners cannot establish a trend; no direction is registered for \u0394_p."
+  },
+  "date": "20260923"
+}

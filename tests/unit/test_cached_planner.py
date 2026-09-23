@@ -162,6 +162,35 @@ def test_miss_under_on_missing_call_falls_through(tmp_path):
     assert resp.usage.provider == "codex" and resp.usage.n_calls == 1
 
 
+def test_live_plan_keys_call_live_only_for_the_registered_seed_and_task(tmp_path):
+    # LP prereg Amendment 4: a key whose ceiling episode wrote no plan is registered by
+    # "<seed>/<task_id>"; only it falls through, and on_missing="fail" holds for every other miss.
+    inner = RecordingInner()
+    planner = CachedPacketPlanner(inner, tmp_path, seed=2, live_plan_keys=["2/copy_hello"])
+    resp = planner.plan("copy_hello", "g", "c")
+    assert inner.plan_calls == ["c"]
+    assert resp.usage.provider == "codex" and resp.usage.n_calls == 1
+    with pytest.raises(FileNotFoundError):
+        planner.plan("other_task", "g", "c")
+    same_task_other_seed = CachedPacketPlanner(RecordingInner(), tmp_path, seed=1, live_plan_keys=["2/copy_hello"])
+    with pytest.raises(FileNotFoundError):
+        same_task_other_seed.plan("copy_hello", "g", "c")
+
+
+def test_live_plan_keys_must_name_seed_and_task(tmp_path):
+    for bad in ("copy_hello", "x/copy_hello", "2/"):
+        with pytest.raises(ValueError, match="live_plan_keys"):
+            CachedPacketPlanner(RecordingInner(), tmp_path, seed=2, live_plan_keys=[bad])
+
+
+def test_a_registered_key_with_a_recorded_plan_still_replays_it(tmp_path):
+    _write_archive(tmp_path, [_event("r1", "run_start", {}), _plan_line()])
+    inner = RecordingInner()
+    planner = CachedPacketPlanner(inner, tmp_path, seed=1, live_plan_keys=["1/copy_hello"])
+    planner.plan("copy_hello", "g", "c")
+    assert inner.plan_calls == []
+
+
 def test_two_run_starts_yields_packet_from_second_later_attempt(tmp_path):
     dead = _plan_line(thread_id="th-dead")
     dead["payload"]["packet"]["packet_id"] = "pkt-dead"

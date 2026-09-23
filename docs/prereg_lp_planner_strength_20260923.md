@@ -204,3 +204,52 @@ the luna reference arms ran.
 - **v2 check.** `lp1_prefix_zs_m6_v2_20260923` completed 114/114 episodes with 0 crash. It recorded **0** `ask` and
   **0** `intervention` events, so its honoured-ask count is 0. The rate matches the void run's 3/114 asks, and the
   HJ-17 luna reference arms' 0.
+
+## Amendment 4 — one LP-2 ceiling key has no plan to replay; LP-1 complete (2026-09-23 ~17:20 AEST; no registered prediction changes)
+
+Written before any LP-2 arm has run: at 17:15 AEST the results root holds only the LP-2 ceiling and its smoke run.
+
+- **What happened.** LP-2 jobs 25739215 (live arms) and 25739216 (prefix arms) both exited 2 at start, before any
+  server came up or any episode ran. `lp_live.pbs` counts `plan` events in the ceiling, per seed, and found 57/57
+  at seed 1 but **56/57 at seed 2**.
+  - The missing plan is `lp2_planner_alone_cap81_qwen38_27b_20260923`, seed 2, `6171bbc_3`. Its one planner call
+    returned an unparseable first plan, and the episode ended at step 0 as `parse_error` (`steps` 0,
+    `n_planner_calls` 1). It is one of the ceiling's four parse errors.
+  - The episode is scored, not a crash, so §3 does not refill it.
+  - No other replay source used by an LP arm or a published arm has a step-0 episode. Checked: the LP-1 ceiling,
+    and luna's `hj13_planner_alone_cap81` (seeds 1–2 and seed 3) and `hj1b_planner_20260915`.
+- **Rule for the live arms (T, A, A1, F).**
+  - Each arm still replays the ceiling's first plan for every key that has one.
+  - For `2/6171bbc_3` only, the arm asks the same served planner (`Qwen/Qwen3.8-27B-FP8`, same settings) for its
+    first plan live. The four LP-2 live configs carry `planner.live_plan_keys: ["2/6171bbc_3"]`
+    (`CachedPacketPlanner`, `src/sidekick/agents/planner.py`).
+  - `on_missing: fail` still holds for every other key.
+  - The planner samples at temperature 0.7, so the four arms draw independent first plans for this key. That adds
+    noise to 1 key of 114. It adds no systematic difference between arms.
+- **Rule for the prefix arms.**
+  - A prefix arm never calls `plan()`; it takes the plan from the replayed prefix
+    (`src/sidekick/systems/loop.py:697`).
+  - For this key the source has no plan and no executed action. The replayed prefix is therefore empty
+    (`effective_m` = 0, `handoff_occurred` = false), and the receiver starts at step 1 with no plan. This replays
+    faithfully what the planner produced.
+  - `prefix_is_terminal` is false (the initial observation is not `done`, and there is no action), so the episode
+    runs.
+  - The plan-count check in `lp_live.pbs` no longer applies to prefix arms. Their source is checked by
+    `lp_require_complete_sources`.
+- **Sensitivity (not decision-bearing).** One key moves any paired mean by at most 1/114 = 0.88 pp.
+  - Every LP-2 contrast and the gate are also reported with `2/6171bbc_3` excluded (113 pairs), by
+    `lp_report.py`, before any LP-2 aggregate is read.
+  - A reading that differs between the 114-pair and 113-pair versions is reported as **on the boundary**.
+- **LP-1 complete (disclosure).**
+  - All ten LP-1 arms have 114/114 episodes and 0 crashes. The zero-shot m9 arm's one crash (`2/4fab96f_1`, a
+    `UnicodeEncodeError`) was refilled by job 25743506.
+  - A subset run, `lp_report.py --planners P8` (labelled non-registered; `campaign/results/lp1_only_subset/`),
+    was read before this amendment was written.
+  - Result: **P8 (Qwen3-8B) fails the informativeness gate.** C − E = −26.23 pp, scenario [−34.73, −17.67], and
+    its ceiling hit the 40-step limit in 89/114 episodes. None of these was a context overflow.
+  - Per §4, P8's L1–L5 are reported and no reading is drawn from them.
+  - With fewer than two planners passing the gate, `lp_report.py`'s committed reading of §4
+    (`overall_claim_scope`) gives **no registered overall claim**. That reading is left unchanged. P27's L1–L5
+    are read on their own rules.
+  - Nothing in this amendment is chosen from P8's contrasts. The rule above concerns a key of the LP-2 ceiling
+    only.

@@ -63,6 +63,14 @@ PREFIX_WHY = "the seeds-1,2 half of the pooled cap-81 prefix arm (ledger POOL-01
 PREFIX_ID_TAG = "v2"
 VOID_PREFIX_CAMPAIGNS = frozenset(f"{lp}_{suffix}_{DATE}" for lp in CEILINGS for suffix in PREFIX_SOURCES)
 
+# LP tag -> "<seed>/<task_id>" keys whose ceiling episode ended before the planner wrote any plan,
+# so there is nothing to replay (prereg_lp_planner_strength Amendment 4). In the LIVE arms only these
+# keys fall back to a live plan from the same served planner; on_missing stays "fail" for every
+# other key. Prefix arms carry no such key (see derived_planner).
+LIVE_PLAN_KEYS = {
+    "lp2": ["2/6171bbc_3"],  # step-0 parse_error in lp2_planner_alone_cap81_qwen38_27b_20260923
+}
+
 # Planner keys only CodexExecPlanner reads. Dropped, not carried: run provenance stamps
 # planner.reasoning_effort into every manifest, and "medium" there would describe a knob the
 # local planner does not have.
@@ -119,7 +127,9 @@ class Spec:
 
     @property
     def declared(self) -> frozenset[str]:
-        return PREFIX_DECLARED if self.kind == "prefix" else LIVE_DECLARED
+        if self.kind == "prefix":
+            return PREFIX_DECLARED
+        return LIVE_DECLARED | {"planner.live_plan_keys"} if self.lp in LIVE_PLAN_KEYS else LIVE_DECLARED
 
     @property
     def campaign_id(self) -> str:
@@ -206,6 +216,10 @@ def derived_planner(spec: Spec) -> dict[str, Any]:
         if key in planner or key in CODEX_ONLY_KEYS or key in ("packet_source", "packet_source_pending"):
             continue
         planner[key] = value  # packet_system, on_missing, and anything else the source set
+    # Live arms only: a prefix arm never calls plan() (it takes the plan from the replayed prefix,
+    # src/sidekick/systems/loop.py:697), so for it a source episode with no plan replays as no plan.
+    if spec.lp in LIVE_PLAN_KEYS and spec.kind == "live":
+        planner["live_plan_keys"] = list(LIVE_PLAN_KEYS[spec.lp])
     return planner
 
 
@@ -238,6 +252,11 @@ _PLANNER_COMMENTS = {
     ],
     "on_missing": [
         "# Load-bearing: a cache miss must abort, never fall through to a live plan.",
+    ],
+    "live_plan_keys": [
+        "# The registered exceptions (LP prereg Amendment 4): the {lp} ceiling episode for each key",
+        "# ended before its planner wrote a plan, so there is none to replay. Only these keys ask the",
+        "# served planner for a first plan live; every other miss still aborts.",
     ],
 }
 

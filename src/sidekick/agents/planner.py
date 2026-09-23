@@ -10,7 +10,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional, Protocol
+from typing import Any, Callable, Iterable, Optional, Protocol
 
 from sidekick.protocols.schemas import (
     DelegationPacket,
@@ -754,6 +754,7 @@ class CachedPacketPlanner:
         system: str = "planner_alone",
         seed: int | None = None,
         on_missing: str = "fail",
+        live_plan_keys: Iterable[str] | None = None,
     ) -> None:
         if on_missing not in ("fail", "call"):
             raise ValueError(f"on_missing must be 'fail' or 'call', got {on_missing!r}")
@@ -765,6 +766,15 @@ class CachedPacketPlanner:
         # episode it is about to run, so it is fixed at construction time.
         self.seed = seed
         self.on_missing = on_missing
+        # Registered exceptions to on_missing="fail", as "<seed>/<task_id>": keys whose source
+        # episode ended before the planner wrote any plan (e.g. a step-0 parse_error), so there is
+        # nothing to replay. Only these call the inner planner live; any other miss still raises.
+        keys = [str(k) for k in (live_plan_keys or [])]
+        for key in keys:
+            seed_part, sep, task_part = key.partition("/")
+            if not sep or not seed_part.isdigit() or not task_part:
+                raise ValueError(f"live_plan_keys entries must be '<seed>/<task_id>', got {key!r}")
+        self.live_plan_keys = frozenset(keys)
         self._context: str | None = None
         self._digest_prepended = False
 
@@ -830,7 +840,7 @@ class CachedPacketPlanner:
         try:
             payload, event_usage = self._load_plan_event(task_id)
         except FileNotFoundError:
-            if self.on_missing == "call":
+            if self.on_missing == "call" or f"{self.seed}/{task_id}" in self.live_plan_keys:
                 return self.inner.plan(task_id, goal, context, timeout_s=timeout_s)
             raise
         packet = DelegationPacket.model_validate(payload["packet"])

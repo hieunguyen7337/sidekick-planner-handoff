@@ -238,7 +238,8 @@ for raw in sys.argv[3:]:
         failed = 1
     cids[cid] = path.name
     k = data.get("fixed_k")
-    print(f"ARM|{path}|{cid}|{planner.get('packet_source') or ''}|{planner.get('packet_system') or 'planner_alone'}|{'' if k is None else k}")
+    live_keys = ",".join(str(x) for x in (planner.get("live_plan_keys") or []))
+    print(f"ARM|{path}|{cid}|{planner.get('packet_source') or ''}|{planner.get('packet_system') or 'planner_alone'}|{'' if k is None else k}|{live_keys}")
 if len(models) > 1:
     print(f"[lp] FATAL: one job serves one planner; the selected arms name {sorted(models)}")
     failed = 1
@@ -312,6 +313,24 @@ lp_plan_count () {
     jq -R -n -e '[inputs | fromjson? | select(.event_type == "plan")] | length > 0' "${f}" >/dev/null 2>&1 && n=$((n + 1))
   done
   echo "${n}"
+}
+
+# One line per task under one seed's replay root whose episode wrote no plan event: "registered
+# <seed>/<task>" when the key is in the arm's planner.live_plan_keys (comma-joined in $3; LP prereg
+# Amendment 4: the ceiling ended before its planner wrote a plan, so that key alone gets a live first
+# plan), else "unregistered <seed>/<task>". Same per-file jq verdict as lp_plan_count.
+lp_plan_gaps () {
+  local root="$1" seed="$2" keys="$3" f t
+  for f in "${root}"/*/events.jsonl; do
+    [[ -f "${f}" ]] || continue
+    jq -R -n -e '[inputs | fromjson? | select(.event_type == "plan")] | length > 0' "${f}" >/dev/null 2>&1 && continue
+    t="$(basename "$(dirname "${f}")")"
+    if [[ ",${keys}," == *",${seed}/${t},"* ]]; then
+      echo "registered ${seed}/${t}"
+    else
+      echo "unregistered ${seed}/${t}"
+    fi
+  done
 }
 
 # ---- prefix arms: the replayed trajectory's campaign must be complete --------------------------
@@ -465,6 +484,10 @@ if [[ "${SELFTEST}" == "plan_count" ]]; then
   lp_plan_count "${LP_PLAN_ROOT:?}"
   exit 0
 fi
+if [[ "${SELFTEST}" == "plan_gaps" ]]; then
+  lp_plan_gaps "${LP_PLAN_ROOT:?}" "${LP_SELFTEST_SEED:?}" "${LP_SELFTEST_LIVE_KEYS:-}"
+  exit 0
+fi
 if [[ "${SELFTEST}" == "resume_purge" ]]; then
   # The resume path on a constructed tree, through the helpers the resume scan and lp_run_arm
   # call: completeness before the purge (the scan's view), the crash-only purge, the recount.
@@ -532,7 +555,7 @@ ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || true
 
 # ---- arms and the planner guard: all before any GPU is touched ------------------------------
 lp_select_arms
-declare -A ARM_CID ARM_SRC ARM_PSYS ARM_K
+declare -A ARM_CID ARM_SRC ARM_PSYS ARM_K ARM_LIVEKEYS ARM_SYS
 cfgs=()
 for spec in "${SELECTED[@]}"; do
   IFS='|' read -r _sys cfg _stem <<< "${spec}"
@@ -540,6 +563,7 @@ for spec in "${SELECTED[@]}"; do
     echo "[lp] FATAL: config absent: ${cfg} (run scripts/setup/make_lp_configs.py)"; exit 2
   fi
   cfgs+=("${cfg}")
+  ARM_SYS["${cfg}"]="${_sys}"
 done
 GUARD_OUT="$(lp_planner_guard "${cfgs[@]}")"
 GUARD_RC=$?
@@ -547,8 +571,9 @@ grep -v '^ARM|\|^PLANNER_MODEL|' <<< "${GUARD_OUT}"
 if [[ "${GUARD_RC}" -ne 0 ]]; then
   echo "[lp] FATAL: planner guard refused (rc=${GUARD_RC}); no server started"; exit 2
 fi
-while IFS='|' read -r _tag cfg cid src psys k; do
+while IFS='|' read -r _tag cfg cid src psys k lkeys; do
   ARM_CID["${cfg}"]="${cid}"; ARM_SRC["${cfg}"]="${src}"; ARM_PSYS["${cfg}"]="${psys}"; ARM_K["${cfg}"]="${k}"
+  ARM_LIVEKEYS["${cfg}"]="${lkeys}"
 done < <(grep '^ARM|' <<< "${GUARD_OUT}")
 PLANNER_MODEL="$(grep '^PLANNER_MODEL|' <<< "${GUARD_OUT}" | cut -d'|' -f2)"
 if [[ -z "${PLANNER_MODEL}" ]]; then
@@ -576,14 +601,27 @@ for cfg in "${cfgs[@]}"; do
   if [[ -z "${src}" ]]; then
     echo "[lp] FATAL: $(basename "${cfg}") has no planner.packet_source; the LP arms replay the ceiling's first plan"; exit 2
   fi
+  if [[ "${ARM_SYS[${cfg}]}" == "prefix_handoff" ]]; then
+    # A prefix arm never calls plan(): it takes the plan from the replayed prefix
+    # (src/sidekick/systems/loop.py:697), whose source lp_require_complete_sources has checked.
+    # A source episode that wrote no plan replays as no plan (LP prereg Amendment 4).
+    echo "[lp] $(basename "${cfg}"): prefix arm; its plan comes from the replayed prefix, not the packet cache"
+    continue
+  fi
   for seed in "${SEED_LIST[@]}"; do
     n_plans="$(lp_plan_count "${src}/${ARM_PSYS[${cfg}]}/${seed}")"
     echo "[lp] replay source $(basename "${src}") seed ${seed}: ${n_plans}/${N_FULL_TASKS} tasks carry a plan event"
     if [[ "${n_plans}" -lt "${N_FULL_TASKS}" ]]; then
-      if [[ "${SMOKE_ONLY}" == "1" ]]; then
+      gaps="$(lp_plan_gaps "${src}/${ARM_PSYS[${cfg}]}/${seed}" "${seed}" "${ARM_LIVEKEYS[${cfg}]}")"
+      reg="$(grep '^registered ' <<< "${gaps}" | cut -d' ' -f2 | tr '\n' ' ')"
+      unreg="$(grep '^unregistered ' <<< "${gaps}" | cut -d' ' -f2 | tr '\n' ' ')"
+      n_reg="$(grep -c '^registered ' <<< "${gaps}")"
+      if [[ -z "${unreg// /}" && $((n_plans + n_reg)) -ge "${N_FULL_TASKS}" ]]; then
+        echo "[lp] replay source seed ${seed}: ${n_reg} key(s) without a plan are registered in planner.live_plan_keys and get a live first plan (LP prereg Amendment 4): ${reg}"
+      elif [[ "${SMOKE_ONLY}" == "1" ]]; then
         echo "[lp] WARN: incomplete replay source; SMOKE_ONLY=1 continues, a smoke task without a plan will abort"
       else
-        echo "[lp] FATAL: replay source incomplete; wait for the ceiling run to finish"; exit 2
+        echo "[lp] FATAL: replay source incomplete (keys without a plan and not in planner.live_plan_keys: ${unreg:-none, but task directories are missing}); wait for the ceiling run to finish"; exit 2
       fi
     fi
   done
