@@ -207,10 +207,16 @@ if curl -sf "http://127.0.0.1:${PORT}/v1/models" >/dev/null 2>&1; then
   exit 1
 fi
 
+# --max-num-seqs 64: Qwen3.8-27B is a hybrid (linear-attention) model, and vLLM's default of 1024
+# concurrent sequences exceeds the 706 Mamba cache blocks one H100 holds, so CUDA-graph capture
+# refuses to start (job 25724730, "max_num_seqs (1024) exceeds available Mamba cache blocks (706)").
+# The runner drives at most 6 workers, so 64 never binds; it caps scheduling, not what is generated.
+# Set for both planners so LP-1 and LP-2 are served alike.
 setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
   --served-model-name "${MODEL}" \
   --dtype bfloat16 \
   --max-model-len 32768 \
+  --max-num-seqs 64 \
   --host 127.0.0.1 --port "${PORT}" \
   --gpu-memory-utilization 0.85 \
   > "${VLOG}" 2>&1 &

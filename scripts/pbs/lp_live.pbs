@@ -563,11 +563,14 @@ export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${EXEC_PORT}"
 PLANNER_PORT="$(lp_pick_port $(( EXEC_PORT + 1 )) "${EXEC_PORT}")" || exit 1
 PLANNER_VLOG="${LOGDIR}/${JOB_CID}.${JOBTAG}_planner_vllm.log"
 echo "[lp] planner: ${PLANNER_MODEL} port=${PLANNER_PORT} HF_HOME=${PLANNER_HF_HOME} max_len=${PLANNER_MAX_LEN} log=${PLANNER_VLOG}"
+# --max-num-seqs 64, as in lp1_planner_alone.pbs: the hybrid 27B's Mamba cache (706 blocks on one
+# H100) cannot back vLLM's default 1024 sequences; 64 is far above WORKERS and changes no output.
 CUDA_VISIBLE_DEVICES="${PLANNER_DEV}" HF_HOME="${PLANNER_HF_HOME}" HF_HUB_OFFLINE=1 \
 setsid "${SIDEKICK_VENV}/bin/vllm" serve "${PLANNER_MODEL}" \
   --served-model-name "${PLANNER_MODEL}" \
   --dtype bfloat16 \
   --max-model-len "${PLANNER_MAX_LEN}" \
+  --max-num-seqs 64 \
   --host 127.0.0.1 --port "${PLANNER_PORT}" \
   --gpu-memory-utilization "${PLANNER_GPU_UTIL}" \
   > "${PLANNER_VLOG}" 2>&1 &
