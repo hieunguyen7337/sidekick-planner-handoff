@@ -1,6 +1,6 @@
 # Preregistration Amendment A1 to the J9 Freeze — J10 on `test_normal`
 
-**Status**: **DRAFT, revision 4, pending user review. r4 adds one registered contingency (§4.2: an arm-3 episode that wrote no plan). B2 has landed (unresolved) and §6 P7 is completed (no P7 prediction registered); freezable once the user has reviewed it.**
+**Status**: **FROZEN** on commit, 2026-09-23, at revision 4. Frozen by Claude on the user's explicit instruction of 2026-09-23 ("consider yourself whether it is suitable to freeze it, explain why in detail and do it"), after the user had reviewed the r4 diff (d14b553). The freeze commit makes two wording clarifications and nothing else: §4.2 item 4 names each prediction's §5.3 verdict (P5 carries no Holm adjustment), and the §9 registered total includes §4.2's ≤ 192 calls. Checked at freeze: `test_normal` unread and no `j10_*` campaign exists; codex CLI 0.153.4 installed, as §9.1 pins; the §4 adapter directory present. Amendments are appended below the end marker, never edited in.
 
 Amends, and does not edit, `docs/prereg_j9_freeze_20260920.md`. Freezing means replacing the status line above
 with one that **begins** `**Status**: FROZEN`, and committing. `scripts/pbs/j10_arm.pbs` refuses a
@@ -228,8 +228,8 @@ For such a **planless key**, and for no other key:
 4. **Key-exclusion sensitivity.** Every contrast prediction (P1, P3–P6) is recomputed with the planless keys
    removed from every arm: same bootstrap, same Holm family, same rule. POOL-04 and the permutation are not
    re-run for it.
-   - If a prediction's Holm verdict differs from the primary's, it is reported **"on the boundary"**, as under
-     §5.4, and never as supported or not supported.
+   - If a prediction's §5.3 verdict (Holm-adjusted for P1, P3, P4, P6; unadjusted for P5) differs from the
+     primary's, it is reported **"on the boundary"**, as under §5.4, and never as supported or not supported.
    - P2 is a cost ratio over arm totals and is not re-read.
 5. **Cap.** If more than **16** of arm 3's 336 episodes are planless (5 %), no plan-replaying arm is started.
    At 0 of 285 on dev, that many would point to a harness defect, not to the planner. The case is handled
@@ -558,7 +558,7 @@ unconstrained:
 | Arms 11 + 12 (exploratory; B2 unresolved) | **≤ 1,607** |
 | Arm 2 and every other arm | 0 (replay) |
 | Planless keys (§4.2) | ≤ 2 calls per key per plan-replaying arm (schema attempt + fenced-JSON fallback): ≤ 192 at the cap; 0 on dev |
-| **Registered total** | **≤ 15,435**: 13,828 for arms 1–10, and arms 11 and 12 add ≤ 1,607; §4.2 adds ≤ 192 only if it fires |
+| **Registered total** | **≤ 15,627**: 13,828 for arms 1–10, arms 11 and 12 add ≤ 1,607, and §4.2 adds ≤ 192 only if it fires |
 | Measured basis | dev live-call rates per episode with the plan packet replayed, as on test |
 | Quota observed | ~5,000 calls per plan window (§10.1), so **≥ 3 windows** |
 | Billing | ChatGPT-plan subscription, `gpt-5.6-luna`, no per-token billing |
