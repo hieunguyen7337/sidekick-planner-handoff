@@ -1,0 +1,1514 @@
+{
+  "protocol": "J17-channel",
+  "label": "EXPLORATORY dev analyses for review F2/F4/F7; nothing here decides a registered verdict",
+  "fix_rows": [
+    "R2.1",
+    "R2.2",
+    "R2.3",
+    "R4.3",
+    "R4.4",
+    "R7.1",
+    "G12"
+  ],
+  "status": "COMPLETE",
+  "warnings": [],
+  "contrasts": {
+    "D0": "takeover_k10 - advise_k10",
+    "N": "advise_k10_neutral - advise_k10",
+    "S": "show_k10 - advise_k10",
+    "TN": "takeover_k10 - advise_k10_neutral"
+  },
+  "limits": {
+    "per_arm": {
+      "advise_k1": {
+        "n": 114,
+        "n_limit": 12,
+        "rate": 0.105263
+      },
+      "advise_k10": {
+        "n": 171,
+        "n_limit": 20,
+        "rate": 0.116959
+      },
+      "advise_k10_neutral": {
+        "n": 171,
+        "n_limit": 14,
+        "rate": 0.081871
+      },
+      "hj13_planner_alone_cap81_20260923": {
+        "n": 114,
+        "n_limit": 18,
+        "rate": 0.157895
+      },
+      "hj17_prefix_c81_bplus_m11_20260923": {
+        "n": 114,
+        "n_limit": 8,
+        "rate": 0.070175
+      },
+      "hj17_prefix_c81_bplus_m6_20260923": {
+        "n": 114,
+        "n_limit": 9,
+        "rate": 0.078947
+      },
+      "hj17_prefix_c81_bplus_m9_20260923": {
+        "n": 114,
+        "n_limit": 8,
+        "rate": 0.070175
+      },
+      "hj17_prefix_c81_zs_m11_20260923": {
+        "n": 114,
+        "n_limit": 9,
+        "rate": 0.078947
+      },
+      "hj17_prefix_c81_zs_m6_20260923": {
+        "n": 114,
+        "n_limit": 18,
+        "rate": 0.157895
+      },
+      "hj17_prefix_c81_zs_m9_20260923": {
+        "n": 114,
+        "n_limit": 7,
+        "rate": 0.061404
+      },
+      "hj8_executor_alone_bplus_20260919": {
+        "n": 114,
+        "n_limit": 31,
+        "rate": 0.27193
+      },
+      "hj8_sft_plan_bplus_20260919": {
+        "n": 114,
+        "n_limit": 21,
+        "rate": 0.184211
+      },
+      "show_k10": {
+        "n": 171,
+        "n_limit": 11,
+        "rate": 0.064327
+      },
+      "takeover_k10": {
+        "n": 171,
+        "n_limit": 2,
+        "rate": 0.011696
+      }
+    },
+    "split": {
+      "D0": {
+        "definition": "takeover_k10 - advise_k10",
+        "label": "post-treatment mechanism, not a corrected estimate",
+        "metric": "goal_pass",
+        "n_pairs": 171,
+        "n_limit_left": 2,
+        "n_limit_right": 20,
+        "status": "ok",
+        "either_limit": {
+          "n": 22,
+          "mean_diff_pp": 31.63,
+          "mean_diff_ci95_pp_scenario": [
+            11.16,
+            48.76
+          ],
+          "mean_diff_ci95_pp_task": [
+            14.57,
+            48.86
+          ],
+          "contribution_pp": 4.07,
+          "contribution_ci95_pp_scenario": [
+            0.93,
+            7.72
+          ],
+          "contribution_ci95_pp_task": [
+            1.52,
+            7.12
+          ]
+        },
+        "neither": {
+          "n": 149,
+          "mean_diff_pp": 2.37,
+          "mean_diff_ci95_pp_scenario": [
+            -0.59,
+            6.34
+          ],
+          "mean_diff_ci95_pp_task": [
+            -1.67,
+            6.86
+          ],
+          "contribution_pp": 2.06,
+          "contribution_ci95_pp_scenario": [
+            -0.53,
+            5.22
+          ],
+          "contribution_ci95_pp_task": [
+            -1.49,
+            5.84
+          ]
+        },
+        "whole": {
+          "diff_pp": 6.13,
+          "ci95_pp_scenario": [
+            0.75,
+            12.71
+          ],
+          "ci95_pp_task": [
+            0.97,
+            11.73
+          ]
+        },
+        "contributions_sum_pp": 6.13
+      },
+      "N": {
+        "definition": "advise_k10_neutral - advise_k10",
+        "label": "post-treatment mechanism, not a corrected estimate",
+        "metric": "goal_pass",
+        "n_pairs": 171,
+        "n_limit_left": 14,
+        "n_limit_right": 20,
+        "status": "ok",
+        "either_limit": {
+          "n": 31,
+          "mean_diff_pp": 13.54,
+          "mean_diff_ci95_pp_scenario": [
+            -0.98,
+            29.48
+          ],
+          "mean_diff_ci95_pp_task": [
+            -2.3,
+            28.03
+          ],
+          "contribution_pp": 2.45,
+          "contribution_ci95_pp_scenario": [
+            -0.15,
+            5.45
+          ],
+          "contribution_ci95_pp_task": [
+            -0.37,
+            5.37
+          ]
+        },
+        "neither": {
+          "n": 140,
+          "mean_diff_pp": 1.55,
+          "mean_diff_ci95_pp_scenario": [
+            -1.95,
+            5.59
+          ],
+          "mean_diff_ci95_pp_task": [
+            -1.76,
+            5.06
+          ],
+          "contribution_pp": 1.27,
+          "contribution_ci95_pp_scenario": [
+            -1.66,
+            4.41
+          ],
+          "contribution_ci95_pp_task": [
+            -1.46,
+            4.09
+          ]
+        },
+        "whole": {
+          "diff_pp": 3.73,
+          "ci95_pp_scenario": [
+            -0.06,
+            8.24
+          ],
+          "ci95_pp_task": [
+            0.04,
+            7.66
+          ]
+        },
+        "contributions_sum_pp": 3.72
+      },
+      "S": {
+        "definition": "show_k10 - advise_k10",
+        "label": "post-treatment mechanism, not a corrected estimate",
+        "metric": "goal_pass",
+        "n_pairs": 171,
+        "n_limit_left": 11,
+        "n_limit_right": 20,
+        "status": "ok",
+        "either_limit": {
+          "n": 27,
+          "mean_diff_pp": 10.47,
+          "mean_diff_ci95_pp_scenario": [
+            -12.49,
+            31.46
+          ],
+          "mean_diff_ci95_pp_task": [
+            -8.56,
+            28.01
+          ],
+          "contribution_pp": 1.65,
+          "contribution_ci95_pp_scenario": [
+            -1.52,
+            5.37
+          ],
+          "contribution_ci95_pp_task": [
+            -1.15,
+            4.59
+          ]
+        },
+        "neither": {
+          "n": 144,
+          "mean_diff_pp": 0.77,
+          "mean_diff_ci95_pp_scenario": [
+            -1.76,
+            3.45
+          ],
+          "mean_diff_ci95_pp_task": [
+            -2.11,
+            3.66
+          ],
+          "contribution_pp": 0.65,
+          "contribution_ci95_pp_scenario": [
+            -1.53,
+            2.81
+          ],
+          "contribution_ci95_pp_task": [
+            -1.78,
+            3.07
+          ]
+        },
+        "whole": {
+          "diff_pp": 2.3,
+          "ci95_pp_scenario": [
+            -2.43,
+            7.31
+          ],
+          "ci95_pp_task": [
+            -1.58,
+            6.28
+          ]
+        },
+        "contributions_sum_pp": 2.3
+      },
+      "TN": {
+        "definition": "takeover_k10 - advise_k10_neutral",
+        "label": "post-treatment mechanism, not a corrected estimate",
+        "metric": "goal_pass",
+        "n_pairs": 171,
+        "n_limit_left": 2,
+        "n_limit_right": 14,
+        "status": "ok",
+        "either_limit": {
+          "n": 16,
+          "mean_diff_pp": 37.91,
+          "mean_diff_ci95_pp_scenario": [
+            15.88,
+            58.21
+          ],
+          "mean_diff_ci95_pp_task": [
+            19.43,
+            57.96
+          ],
+          "contribution_pp": 3.55,
+          "contribution_ci95_pp_scenario": [
+            1.0,
+            7.03
+          ],
+          "contribution_ci95_pp_task": [
+            1.34,
+            6.19
+          ]
+        },
+        "neither": {
+          "n": 155,
+          "mean_diff_pp": -1.26,
+          "mean_diff_ci95_pp_scenario": [
+            -6.04,
+            3.61
+          ],
+          "mean_diff_ci95_pp_task": [
+            -5.04,
+            2.59
+          ],
+          "contribution_pp": -1.14,
+          "contribution_ci95_pp_scenario": [
+            -5.44,
+            3.2
+          ],
+          "contribution_ci95_pp_task": [
+            -4.59,
+            2.35
+          ]
+        },
+        "whole": {
+          "diff_pp": 2.4,
+          "ci95_pp_scenario": [
+            -2.94,
+            8.89
+          ],
+          "ci95_pp_task": [
+            -1.97,
+            7.05
+          ]
+        },
+        "contributions_sum_pp": 2.41
+      }
+    },
+    "as_zero": {
+      "D0": {
+        "definition": "takeover_k10 - advise_k10",
+        "sensitivity": true,
+        "decision_bearing": false,
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 9.77,
+        "ci95_pp_scenario": [
+          2.6,
+          17.97
+        ],
+        "ci95_pp_task": [
+          3.51,
+          16.41
+        ],
+        "p_two_sided": 0.0048,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "N": {
+        "definition": "advise_k10_neutral - advise_k10",
+        "sensitivity": true,
+        "decision_bearing": false,
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 5.72,
+        "ci95_pp_scenario": [
+          1.26,
+          10.74
+        ],
+        "ci95_pp_task": [
+          0.87,
+          10.7
+        ],
+        "p_two_sided": 0.0074,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "S": {
+        "definition": "show_k10 - advise_k10",
+        "sensitivity": true,
+        "decision_bearing": false,
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 4.38,
+        "ci95_pp_scenario": [
+          -1.33,
+          10.14
+        ],
+        "ci95_pp_task": [
+          -0.47,
+          9.36
+        ],
+        "p_two_sided": 0.1312,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "TN": {
+        "definition": "takeover_k10 - advise_k10_neutral",
+        "sensitivity": true,
+        "decision_bearing": false,
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 4.05,
+        "ci95_pp_scenario": [
+          -1.66,
+          10.71
+        ],
+        "ci95_pp_task": [
+          -0.72,
+          9.15
+        ],
+        "p_two_sided": 0.1744,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      }
+    }
+  },
+  "content": {
+    "advise_k10": {
+      "label": "EXPLORATORY (R2.3, ledger DEC-06)",
+      "n_episodes": 171,
+      "n_episodes_without_events": 0,
+      "n_unparseable_event_lines": 0,
+      "n_episodes_with_an_intervention": 150,
+      "n_interventions": 260,
+      "n_by_source": {
+        "advice": 260
+      },
+      "n_fenced_code": 3,
+      "share_fenced_code": {
+        "share": 0.011538,
+        "n_fenced": 3,
+        "n": 260,
+        "ci95_scenario": [
+          0.0,
+          0.026316
+        ],
+        "ci95_task": [
+          0.0,
+          0.026415
+        ]
+      },
+      "n_fenced_python": 3,
+      "median_chars": 242.0,
+      "mean_chars": 247.38,
+      "copy_rate": 0.011538,
+      "copy": {
+        "definition": "b2's next-action rule, renderer and whitespace normalisation, with the shown text widened to the advice text OR any ```python block inside it; denominator every intervention",
+        "n_copied": 3,
+        "n_copied_among_fenced_python": 1
+      }
+    },
+    "advise_k10_neutral": {
+      "label": "EXPLORATORY (R2.3, ledger DEC-06)",
+      "n_episodes": 171,
+      "n_episodes_without_events": 0,
+      "n_unparseable_event_lines": 0,
+      "n_episodes_with_an_intervention": 147,
+      "n_interventions": 221,
+      "n_by_source": {
+        "advice": 221
+      },
+      "n_fenced_code": 207,
+      "share_fenced_code": {
+        "share": 0.936652,
+        "n_fenced": 207,
+        "n": 221,
+        "ci95_scenario": [
+          0.884444,
+          0.980392
+        ],
+        "ci95_task": [
+          0.901869,
+          0.970443
+        ]
+      },
+      "n_fenced_python": 198,
+      "median_chars": 1098,
+      "mean_chars": 1181.19,
+      "copy_rate": 0.199095,
+      "copy": {
+        "definition": "b2's next-action rule, renderer and whitespace normalisation, with the shown text widened to the advice text OR any ```python block inside it; denominator every intervention",
+        "n_copied": 44,
+        "n_copied_among_fenced_python": 44
+      }
+    },
+    "show_k10": {
+      "label": "EXPLORATORY (R2.3, ledger DEC-06)",
+      "n_episodes": 171,
+      "n_episodes_without_events": 0,
+      "n_unparseable_event_lines": 0,
+      "n_episodes_with_an_intervention": 152,
+      "n_interventions": 228,
+      "n_by_source": {
+        "shown_action": 228
+      },
+      "n_fenced_code": 213,
+      "share_fenced_code": {
+        "share": 0.934211,
+        "n_fenced": 213,
+        "n": 228,
+        "ci95_scenario": [
+          0.902041,
+          0.964646
+        ],
+        "ci95_task": [
+          0.901515,
+          0.963855
+        ]
+      },
+      "n_fenced_python": 213,
+      "median_chars": 107.0,
+      "mean_chars": 355.09,
+      "copy_rate": 0.166667,
+      "copy": {
+        "definition": "b2_decomposition.copy_rate, the registered S definition, unchanged",
+        "n_shown": 228,
+        "n_followed_by_an_executor_action": 228,
+        "n_copied": 38,
+        "copy_rate_among_followed": 0.166667,
+        "by_shown_kind": {
+          "ASK_PLANNER": {
+            "n_shown": 5,
+            "n_followed": 5,
+            "n_copied": 0
+          },
+          "CODE": {
+            "n_shown": 213,
+            "n_followed": 213,
+            "n_copied": 31
+          },
+          "COMPLETE": {
+            "n_shown": 10,
+            "n_followed": 10,
+            "n_copied": 7
+          }
+        }
+      }
+    }
+  },
+  "metrics": {
+    "D0": {
+      "definition": "takeover_k10 - advise_k10",
+      "goal_pass": {
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 6.13,
+        "ci95_pp_scenario": [
+          0.75,
+          12.71
+        ],
+        "ci95_pp_task": [
+          0.97,
+          11.73
+        ],
+        "p_two_sided": 0.0202,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "tgc": {
+        "metric": "tgc",
+        "field": "tgc",
+        "diff_pp": 5.26,
+        "ci95_pp_scenario": [
+          -0.58,
+          12.28
+        ],
+        "ci95_pp_task": [
+          -2.34,
+          13.45
+        ],
+        "p_two_sided": 0.1164,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "sgc": {
+        "metric": "sgc",
+        "unit": "(scenario, seed); passes only if every task of the scenario succeeded",
+        "diff_pp": 3.51,
+        "ci95_pp_scenario": [
+          -3.51,
+          10.53
+        ],
+        "ci95_pp_task": null,
+        "ci95_pp_task_note": "SGC is scenario-level: no task clustering exists",
+        "p_two_sided": 0.4374,
+        "threshold_pp": 0.0,
+        "n_pairs": 57,
+        "n_units_unscored_left": 0,
+        "n_units_unscored_right": 0,
+        "sgc_left": 0.315789,
+        "sgc_right": 0.280702,
+        "n_clusters_scenario": 19
+      }
+    },
+    "N": {
+      "definition": "advise_k10_neutral - advise_k10",
+      "goal_pass": {
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 3.73,
+        "ci95_pp_scenario": [
+          -0.06,
+          8.24
+        ],
+        "ci95_pp_task": [
+          0.04,
+          7.66
+        ],
+        "p_two_sided": 0.0548,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "tgc": {
+        "metric": "tgc",
+        "field": "tgc",
+        "diff_pp": 5.85,
+        "ci95_pp_scenario": [
+          -1.17,
+          14.04
+        ],
+        "ci95_pp_task": [
+          -0.58,
+          12.87
+        ],
+        "p_two_sided": 0.1432,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "sgc": {
+        "metric": "sgc",
+        "unit": "(scenario, seed); passes only if every task of the scenario succeeded",
+        "diff_pp": 1.75,
+        "ci95_pp_scenario": [
+          -5.26,
+          8.77
+        ],
+        "ci95_pp_task": null,
+        "ci95_pp_task_note": "SGC is scenario-level: no task clustering exists",
+        "p_two_sided": 0.823,
+        "threshold_pp": 0.0,
+        "n_pairs": 57,
+        "n_units_unscored_left": 0,
+        "n_units_unscored_right": 0,
+        "sgc_left": 0.298246,
+        "sgc_right": 0.280702,
+        "n_clusters_scenario": 19
+      }
+    },
+    "S": {
+      "definition": "show_k10 - advise_k10",
+      "goal_pass": {
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 2.3,
+        "ci95_pp_scenario": [
+          -2.43,
+          7.31
+        ],
+        "ci95_pp_task": [
+          -1.58,
+          6.28
+        ],
+        "p_two_sided": 0.3604,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "tgc": {
+        "metric": "tgc",
+        "field": "tgc",
+        "diff_pp": 1.17,
+        "ci95_pp_scenario": [
+          -4.68,
+          8.19
+        ],
+        "ci95_pp_task": [
+          -5.26,
+          7.6
+        ],
+        "p_two_sided": 0.8108,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "sgc": {
+        "metric": "sgc",
+        "unit": "(scenario, seed); passes only if every task of the scenario succeeded",
+        "diff_pp": 3.51,
+        "ci95_pp_scenario": [
+          -5.26,
+          12.28
+        ],
+        "ci95_pp_task": null,
+        "ci95_pp_task_note": "SGC is scenario-level: no task clustering exists",
+        "p_two_sided": 0.5302,
+        "threshold_pp": 0.0,
+        "n_pairs": 57,
+        "n_units_unscored_left": 0,
+        "n_units_unscored_right": 0,
+        "sgc_left": 0.315789,
+        "sgc_right": 0.280702,
+        "n_clusters_scenario": 19
+      }
+    },
+    "TN": {
+      "definition": "takeover_k10 - advise_k10_neutral",
+      "goal_pass": {
+        "metric": "goal_pass",
+        "field": "goal_pass_rate",
+        "diff_pp": 2.4,
+        "ci95_pp_scenario": [
+          -2.94,
+          8.89
+        ],
+        "ci95_pp_task": [
+          -1.97,
+          7.05
+        ],
+        "p_two_sided": 0.4266,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "tgc": {
+        "metric": "tgc",
+        "field": "tgc",
+        "diff_pp": -0.58,
+        "ci95_pp_scenario": [
+          -8.77,
+          7.02
+        ],
+        "ci95_pp_task": [
+          -7.6,
+          6.43
+        ],
+        "p_two_sided": 0.9878,
+        "threshold_pp": 0.0,
+        "n_pairs": 171,
+        "n_clusters_scenario": 19,
+        "n_clusters_task": 57,
+        "n_dropped_missing_field": 0
+      },
+      "sgc": {
+        "metric": "sgc",
+        "unit": "(scenario, seed); passes only if every task of the scenario succeeded",
+        "diff_pp": 1.75,
+        "ci95_pp_scenario": [
+          -5.26,
+          8.77
+        ],
+        "ci95_pp_task": null,
+        "ci95_pp_task_note": "SGC is scenario-level: no task clustering exists",
+        "p_two_sided": 0.8102,
+        "threshold_pp": 0.0,
+        "n_pairs": 57,
+        "n_units_unscored_left": 0,
+        "n_units_unscored_right": 0,
+        "sgc_left": 0.315789,
+        "sgc_right": 0.298246,
+        "n_clusters_scenario": 19
+      }
+    }
+  },
+  "latency": {
+    "takeover_k10": {
+      "per_episode_wall_s": {
+        "status": "ok",
+        "n": 171,
+        "median": 41.161,
+        "mean": 54.2,
+        "n_episodes": 171,
+        "n_without_manifest_start": 0,
+        "n_without_run_end": 0,
+        "n_end_before_start": 0,
+        "source": "manifest.json created_at (written just before system.run, src/sidekick/runner.py:369-388) to the run_end event's ts. Every other event ts is AppWorld's freezegun clock (src/sidekick/replay.py:76)"
+      },
+      "per_planner_call_latency_s": {
+        "status": "no_timestamps",
+        "n_live_planner_events": 228,
+        "reason": "every live planner event's ts is the frozen AppWorld clock and its usage.latency_s is 0 or absent; no per-call timing was recorded",
+        "source": "usage.latency_s of live planner events (provider not 'cache', n_calls >= 1); perf_counter runs under the same freezegun clock"
+      }
+    },
+    "advise_k10": {
+      "per_episode_wall_s": {
+        "status": "ok",
+        "n": 171,
+        "median": 40.307,
+        "mean": 69.106,
+        "n_episodes": 171,
+        "n_without_manifest_start": 0,
+        "n_without_run_end": 0,
+        "n_end_before_start": 0,
+        "source": "manifest.json created_at (written just before system.run, src/sidekick/runner.py:369-388) to the run_end event's ts. Every other event ts is AppWorld's freezegun clock (src/sidekick/replay.py:76)"
+      },
+      "per_planner_call_latency_s": {
+        "status": "no_timestamps",
+        "n_live_planner_events": 260,
+        "reason": "every live planner event's ts is the frozen AppWorld clock and its usage.latency_s is 0 or absent; no per-call timing was recorded",
+        "source": "usage.latency_s of live planner events (provider not 'cache', n_calls >= 1); perf_counter runs under the same freezegun clock"
+      }
+    },
+    "advise_k10_neutral": {
+      "per_episode_wall_s": {
+        "status": "ok",
+        "n": 171,
+        "median": 45.61,
+        "mean": 66.781,
+        "n_episodes": 171,
+        "n_without_manifest_start": 0,
+        "n_without_run_end": 0,
+        "n_end_before_start": 0,
+        "source": "manifest.json created_at (written just before system.run, src/sidekick/runner.py:369-388) to the run_end event's ts. Every other event ts is AppWorld's freezegun clock (src/sidekick/replay.py:76)"
+      },
+      "per_planner_call_latency_s": {
+        "status": "no_timestamps",
+        "n_live_planner_events": 221,
+        "reason": "every live planner event's ts is the frozen AppWorld clock and its usage.latency_s is 0 or absent; no per-call timing was recorded",
+        "source": "usage.latency_s of live planner events (provider not 'cache', n_calls >= 1); perf_counter runs under the same freezegun clock"
+      }
+    },
+    "show_k10": {
+      "per_episode_wall_s": {
+        "status": "ok",
+        "n": 171,
+        "median": 42.301,
+        "mean": 59.666,
+        "n_episodes": 171,
+        "n_without_manifest_start": 0,
+        "n_without_run_end": 0,
+        "n_end_before_start": 0,
+        "source": "manifest.json created_at (written just before system.run, src/sidekick/runner.py:369-388) to the run_end event's ts. Every other event ts is AppWorld's freezegun clock (src/sidekick/replay.py:76)"
+      },
+      "per_planner_call_latency_s": {
+        "status": "no_timestamps",
+        "n_live_planner_events": 228,
+        "reason": "every live planner event's ts is the frozen AppWorld clock and its usage.latency_s is 0 or absent; no per-call timing was recorded",
+        "source": "usage.latency_s of live planner events (provider not 'cache', n_calls >= 1); perf_counter runs under the same freezegun clock"
+      }
+    },
+    "advise_k1": {
+      "per_episode_wall_s": {
+        "status": "ok",
+        "n": 114,
+        "median": 230.402,
+        "mean": 265.742,
+        "n_episodes": 114,
+        "n_without_manifest_start": 0,
+        "n_without_run_end": 0,
+        "n_end_before_start": 0,
+        "source": "manifest.json created_at (written just before system.run, src/sidekick/runner.py:369-388) to the run_end event's ts. Every other event ts is AppWorld's freezegun clock (src/sidekick/replay.py:76)"
+      },
+      "per_planner_call_latency_s": {
+        "status": "no_timestamps",
+        "n_live_planner_events": 2054,
+        "reason": "every live planner event's ts is the frozen AppWorld clock and its usage.latency_s is 0 or absent; no per-call timing was recorded",
+        "source": "usage.latency_s of live planner events (provider not 'cache', n_calls >= 1); perf_counter runs under the same freezegun clock"
+      }
+    }
+  },
+  "noop_floor": null,
+  "census": {
+    "campaign_index": "campaign/campaign_index.json",
+    "index_scope": "Campaign-granularity provenance for every campaign referenced by a report under campaign/results/. Generated by scripts/analysis/campaign_index.py; do not hand-edit. Per-episode git SHA is still missing (X16) and this index does not supply it.",
+    "n_campaigns_in_index": 70,
+    "n_not_present": 21,
+    "dev_rule": "present and n_tasks == 57 (the dev split)",
+    "n_dev_campaigns": 47,
+    "n_non_dev_present": 2,
+    "arm_rule": "the config file's stem when the index records one, else the campaign name minus its _YYYYMMDD suffix",
+    "n_distinct_dev_arms": 39,
+    "dev_arms": {
+      "hj12_prefix_m10": [
+        "hj12_prefix_m10_20260922",
+        "hj12_prefix_m10_20260923"
+      ],
+      "hj12_prefix_m11": [
+        "hj12_prefix_m11_20260922",
+        "hj12_prefix_m11_20260923"
+      ],
+      "hj12_prefix_m2": [
+        "hj12_prefix_m2_20260922",
+        "hj12_prefix_m2_20260923"
+      ],
+      "hj12_prefix_m4": [
+        "hj12_prefix_m4_20260922",
+        "hj12_prefix_m4_20260923"
+      ],
+      "hj12_prefix_m6": [
+        "hj12_prefix_m6_20260922",
+        "hj12_prefix_m6_20260923"
+      ],
+      "hj12_prefix_m7": [
+        "hj12_prefix_m7_20260922",
+        "hj12_prefix_m7_20260923"
+      ],
+      "hj12_prefix_m8": [
+        "hj12_prefix_m8_20260922",
+        "hj12_prefix_m8_20260923"
+      ],
+      "hj12_prefix_m9": [
+        "hj12_prefix_m9_20260922",
+        "hj12_prefix_m9_20260923"
+      ],
+      "hj13_planner_alone_cap81": [
+        "hj13_planner_alone_cap81_20260923"
+      ],
+      "hj13_planner_alone_cap81_seed3": [
+        "hj13_planner_alone_cap81_seed3_20260924"
+      ],
+      "hj13_prefix_zs_m11": [
+        "hj13_prefix_zs_m11_20260923"
+      ],
+      "hj13_prefix_zs_m6": [
+        "hj13_prefix_zs_m6_20260923"
+      ],
+      "hj13_prefix_zs_m9": [
+        "hj13_prefix_zs_m9_20260923"
+      ],
+      "hj16_narrated_m11_bplus": [
+        "hj16_narrated_m11_bplus_20260923"
+      ],
+      "hj16_narrated_m11_zs": [
+        "hj16_narrated_m11_zs_20260923"
+      ],
+      "hj16_narrated_m6_bplus": [
+        "hj16_narrated_m6_bplus_20260923"
+      ],
+      "hj16_narrated_m6_zs": [
+        "hj16_narrated_m6_zs_20260923"
+      ],
+      "hj16_narrated_m9_bplus": [
+        "hj16_narrated_m9_bplus_20260923"
+      ],
+      "hj16_narrated_m9_zs": [
+        "hj16_narrated_m9_zs_20260923"
+      ],
+      "hj17_prefix_c81_bplus_m11": [
+        "hj17_prefix_c81_bplus_m11_20260923"
+      ],
+      "hj17_prefix_c81_bplus_m6": [
+        "hj17_prefix_c81_bplus_m6_20260923"
+      ],
+      "hj17_prefix_c81_bplus_m9": [
+        "hj17_prefix_c81_bplus_m9_20260923"
+      ],
+      "hj17_prefix_c81_zs_m11": [
+        "hj17_prefix_c81_zs_m11_20260923"
+      ],
+      "hj17_prefix_c81_zs_m6": [
+        "hj17_prefix_c81_zs_m6_20260923"
+      ],
+      "hj17_prefix_c81_zs_m9": [
+        "hj17_prefix_c81_zs_m9_20260923"
+      ],
+      "hj18_prefix_c81s3_bplus_m11": [
+        "hj18_prefix_c81s3_bplus_m11_20260924"
+      ],
+      "hj18_prefix_c81s3_bplus_m6": [
+        "hj18_prefix_c81s3_bplus_m6_20260924"
+      ],
+      "hj18_prefix_c81s3_bplus_m9": [
+        "hj18_prefix_c81s3_bplus_m9_20260924"
+      ],
+      "hj18_prefix_c81s3_zs_m11": [
+        "hj18_prefix_c81s3_zs_m11_20260924"
+      ],
+      "hj18_prefix_c81s3_zs_m6": [
+        "hj18_prefix_c81s3_zs_m6_20260924"
+      ],
+      "hj18_prefix_c81s3_zs_m9": [
+        "hj18_prefix_c81s3_zs_m9_20260924"
+      ],
+      "pilot_planner_alone": [
+        "hj1b_planner_20260915"
+      ],
+      "pilot_fixed_k": [
+        "hj1c_fixed_k_20260916"
+      ],
+      "pilot_prompt_only": [
+        "hj1c_prompt_only_20260916"
+      ],
+      "hj1r_exec8b": [
+        "hj1r_exec8b_20260916"
+      ],
+      "hj1r_prompt_only": [
+        "hj1r_prompt_only_20260916"
+      ],
+      "hj4b_fixed_k_dev": [
+        "hj4b_fixed_k_dev_20260917"
+      ],
+      "hj8_fixed_k_10": [
+        "hj8_fixed_k_10_20260921iaware"
+      ],
+      "hj8_sft_plan_bplus": [
+        "hj8_sft_plan_bplus_20260921iaware"
+      ]
+    },
+    "ledger": {
+      "path": "docs/claims_ledger.md",
+      "n_rows": 149,
+      "status_rule": "the status column of every table headed claim_id, cells split outside backtick spans; the class is the cell's first word with ** and ` stripped",
+      "by_status": {
+        "registered": 32,
+        "exploratory": 86,
+        "other": 31
+      },
+      "other_by_first_word": {
+        "amended": 4,
+        "correction": 1,
+        "descriptive": 1,
+        "design": 1,
+        "invalid": 1,
+        "method": 4,
+        "pending": 10,
+        "process": 2,
+        "reported": 1,
+        "resolved": 3,
+        "supporting": 2,
+        "wording": 1
+      }
+    }
+  },
+  "inputs": {
+    "results_root": "/scratch/n12194778/sidekick/results",
+    "arms": {
+      "takeover_k10": {
+        "campaigns": [
+          {
+            "campaign": "hj12_takeover_fixed_k_10_20260923",
+            "path": "/scratch/n12194778/sidekick/results/hj12_takeover_fixed_k_10_20260923",
+            "present": true,
+            "n_results": 114,
+            "n_crash": 0,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "unrecorded": 114
+            }
+          },
+          {
+            "campaign": "b1_takeover_fixed_k_10_s3_20260923",
+            "path": "/scratch/n12194778/sidekick/results/b1_takeover_fixed_k_10_s3_20260923",
+            "present": true,
+            "n_results": 57,
+            "n_crash": 0,
+            "by_seed": {
+              "3": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 57
+            }
+          }
+        ],
+        "n_expected": 171,
+        "n_scored": 171,
+        "n_crash": 0,
+        "n_missing": 0,
+        "systems": [
+          "fixed_k"
+        ]
+      },
+      "advise_k10": {
+        "campaigns": [
+          {
+            "campaign": "hj12_advise_fixed_k_10_fullctx_20260923",
+            "path": "/scratch/n12194778/sidekick/results/hj12_advise_fixed_k_10_fullctx_20260923",
+            "present": true,
+            "n_results": 114,
+            "n_crash": 0,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "unrecorded": 114
+            }
+          },
+          {
+            "campaign": "b1_advise_fixed_k_10_fullctx_s3_20260923",
+            "path": "/scratch/n12194778/sidekick/results/b1_advise_fixed_k_10_fullctx_s3_20260923",
+            "present": true,
+            "n_results": 57,
+            "n_crash": 0,
+            "by_seed": {
+              "3": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 57
+            }
+          }
+        ],
+        "n_expected": 171,
+        "n_scored": 171,
+        "n_crash": 0,
+        "n_missing": 0,
+        "systems": [
+          "fixed_k"
+        ]
+      },
+      "advise_k10_neutral": {
+        "campaigns": [
+          {
+            "campaign": "b2_advise_neutral_fixed_k_10_fullctx_20260923",
+            "path": "/scratch/n12194778/sidekick/results/b2_advise_neutral_fixed_k_10_fullctx_20260923",
+            "present": true,
+            "n_results": 114,
+            "n_crash": 0,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          },
+          {
+            "campaign": "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923",
+            "path": "/scratch/n12194778/sidekick/results/b2_advise_neutral_fixed_k_10_fullctx_s3_20260923",
+            "present": true,
+            "n_results": 57,
+            "n_crash": 0,
+            "by_seed": {
+              "3": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 57
+            }
+          }
+        ],
+        "n_expected": 171,
+        "n_scored": 171,
+        "n_crash": 0,
+        "n_missing": 0,
+        "systems": [
+          "fixed_k"
+        ]
+      },
+      "show_k10": {
+        "campaigns": [
+          {
+            "campaign": "b2_show_fixed_k_10_20260923",
+            "path": "/scratch/n12194778/sidekick/results/b2_show_fixed_k_10_20260923",
+            "present": true,
+            "n_results": 114,
+            "n_crash": 0,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 114
+            }
+          },
+          {
+            "campaign": "b2_show_fixed_k_10_s3_20260923",
+            "path": "/scratch/n12194778/sidekick/results/b2_show_fixed_k_10_s3_20260923",
+            "present": true,
+            "n_results": 57,
+            "n_crash": 0,
+            "by_seed": {
+              "3": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "dev": 57
+            }
+          }
+        ],
+        "n_expected": 171,
+        "n_scored": 171,
+        "n_crash": 0,
+        "n_missing": 0,
+        "systems": [
+          "fixed_k"
+        ]
+      },
+      "advise_k1": {
+        "campaigns": [
+          {
+            "campaign": "hj13_advise_fixed_k_1_fullctx_20260923",
+            "path": "/scratch/n12194778/sidekick/results/hj13_advise_fixed_k_1_fullctx_20260923",
+            "present": true,
+            "n_results": 114,
+            "n_crash": 0,
+            "by_seed": {
+              "1": 57,
+              "2": 57
+            },
+            "n_empty_files": 0,
+            "n_unreadable": 0,
+            "split_provenance": {
+              "unrecorded": 114
+            }
+          }
+        ],
+        "n_expected": 171,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_missing": 57,
+        "systems": [
+          "fixed_k"
+        ]
+      }
+    },
+    "limit_rate_campaigns": {
+      "hj13_planner_alone_cap81_20260923": {
+        "campaign": "hj13_planner_alone_cap81_20260923",
+        "path": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj17_prefix_c81_bplus_m6_20260923": {
+        "campaign": "hj17_prefix_c81_bplus_m6_20260923",
+        "path": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m6_20260923",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj17_prefix_c81_bplus_m9_20260923": {
+        "campaign": "hj17_prefix_c81_bplus_m9_20260923",
+        "path": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m9_20260923",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj17_prefix_c81_bplus_m11_20260923": {
+        "campaign": "hj17_prefix_c81_bplus_m11_20260923",
+        "path": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m11_20260923",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj17_prefix_c81_zs_m6_20260923": {
+        "campaign": "hj17_prefix_c81_zs_m6_20260923",
+        "path": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m6_20260923",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj17_prefix_c81_zs_m9_20260923": {
+        "campaign": "hj17_prefix_c81_zs_m9_20260923",
+        "path": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m9_20260923",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj17_prefix_c81_zs_m11_20260923": {
+        "campaign": "hj17_prefix_c81_zs_m11_20260923",
+        "path": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m11_20260923",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj8_sft_plan_bplus_20260919": {
+        "campaign": "hj8_sft_plan_bplus_20260919",
+        "path": "/scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260919",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      },
+      "hj8_executor_alone_bplus_20260919": {
+        "campaign": "hj8_executor_alone_bplus_20260919",
+        "path": "/scratch/n12194778/sidekick/results/hj8_executor_alone_bplus_20260919",
+        "present": true,
+        "n_results": 114,
+        "n_crash": 0,
+        "by_seed": {
+          "1": 57,
+          "2": 57
+        },
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "unrecorded": 114
+        }
+      }
+    },
+    "n_tasks_observed_union": 57,
+    "depth_report": null,
+    "noop_campaign": null
+  },
+  "settings": {
+    "n_boot": 10000,
+    "seed": 20260924,
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "alpha": 0.05,
+    "expected_pairs": 171,
+    "clustering": "scenario (primary: every p and ci95_pp_scenario) and task (ci95_pp_task)",
+    "interval": "95% percentile, j10.cluster_bootstrap_means / percentile_ci",
+    "p_value": "j10.bootstrap_pvalue(scenario means, threshold, 'two-sided'): 2 x the smaller tail",
+    "crash_convention": "error_type == 'crash' is dropped from every pair and counted in inputs",
+    "definitions": {
+      "limit": "error_type == 'limit' (the 40-step limit), scored; only error_type == 'crash' is dropped",
+      "tgc": "j10.a1_arm_episodes' tgc (j10.score_tgc: a scored failure is 0), per-task binary",
+      "sgc": "j10.a1_sgc_units [j10_report.py:2379-2400]: a (scenario, seed) unit passes iff every task of the scenario succeeded, scored only when all its tasks are non-crashed episodes; the rule of hj1_gate.scenario_goal_completion. Paired on shared units; scenario clusters",
+      "fenced_code": "the intervention text contains an opening ``` line, text and a closing ``` (FENCED_BLOCK_RE)",
+      "chars": "len() of the intervention text (payload.correction), in characters",
+      "interventions": "every event_type == 'intervention' in the episode's last run_start segment (b2.read_events), over the arm's non-crashed episodes",
+      "copy_rate_show": "b2_decomposition.copy_rate, the registered S definition, unchanged",
+      "copy_rate_advice": "b2's next-action rule, renderer and whitespace normalisation, with the shown text widened to the advice text OR any ```python block inside it; denominator every intervention",
+      "per_episode_wall_s": "manifest.json created_at (written just before system.run, src/sidekick/runner.py:369-388) to the run_end event's ts. Every other event ts is AppWorld's freezegun clock (src/sidekick/replay.py:76)",
+      "planner_call_latency_s": "usage.latency_s of live planner events (provider not 'cache', n_calls >= 1); perf_counter runs under the same freezegun clock"
+    }
+  },
+  "by_fdr": {
+    "method": "Benjamini-Yekutieli, cluster_inference.by_fdr",
+    "alpha": 0.05,
+    "decision_bearing": false,
+    "family_rule": "every contrast object with metric == 'goal_pass' in this report and in --depth-report, each counted once; one without a p is listed and not in m",
+    "m": 8,
+    "not_in_family": [],
+    "rows": [
+      {
+        "id": "limits.as_zero.D0",
+        "source": "J17-channel",
+        "diff_pp": 9.77,
+        "p_two_sided": 0.0048,
+        "p_by": 0.08044857142857144,
+        "survives_0_05": false
+      },
+      {
+        "id": "limits.as_zero.N",
+        "source": "J17-channel",
+        "diff_pp": 5.72,
+        "p_two_sided": 0.0074,
+        "p_by": 0.08044857142857144,
+        "survives_0_05": false
+      },
+      {
+        "id": "limits.as_zero.S",
+        "source": "J17-channel",
+        "diff_pp": 4.38,
+        "p_two_sided": 0.1312,
+        "p_by": 0.5705325714285715,
+        "survives_0_05": false
+      },
+      {
+        "id": "limits.as_zero.TN",
+        "source": "J17-channel",
+        "diff_pp": 4.05,
+        "p_two_sided": 0.1744,
+        "p_by": 0.631992380952381,
+        "survives_0_05": false
+      },
+      {
+        "id": "metrics.D0.goal_pass",
+        "source": "J17-channel",
+        "diff_pp": 6.13,
+        "p_two_sided": 0.0202,
+        "p_by": 0.14640190476190476,
+        "survives_0_05": false
+      },
+      {
+        "id": "metrics.N.goal_pass",
+        "source": "J17-channel",
+        "diff_pp": 3.73,
+        "p_two_sided": 0.0548,
+        "p_by": 0.2978771428571429,
+        "survives_0_05": false
+      },
+      {
+        "id": "metrics.S.goal_pass",
+        "source": "J17-channel",
+        "diff_pp": 2.3,
+        "p_two_sided": 0.3604,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "metrics.TN.goal_pass",
+        "source": "J17-channel",
+        "diff_pp": 2.4,
+        "p_two_sided": 0.4266,
+        "p_by": 1.0,
+        "survives_0_05": false
+      }
+    ]
+  }
+}
