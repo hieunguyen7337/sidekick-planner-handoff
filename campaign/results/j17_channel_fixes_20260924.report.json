@@ -1407,7 +1407,7 @@
       }
     },
     "n_tasks_observed_union": 57,
-    "depth_report": null,
+    "depth_report": "campaign/results/j17_depth_fixes_20260924.report.json",
     "noop_campaign": null
   },
   "settings": {
@@ -1442,7 +1442,7 @@
     "alpha": 0.05,
     "decision_bearing": false,
     "family_rule": "every contrast object with metric == 'goal_pass' in this report and in --depth-report, each counted once; one without a p is listed and not in m",
-    "m": 8,
+    "m": 28,
     "not_in_family": [],
     "rows": [
       {
@@ -1450,7 +1450,7 @@
         "source": "J17-channel",
         "diff_pp": 9.77,
         "p_two_sided": 0.0048,
-        "p_by": 0.08044857142857144,
+        "p_by": 0.052781178763707984,
         "survives_0_05": false
       },
       {
@@ -1458,7 +1458,7 @@
         "source": "J17-channel",
         "diff_pp": 5.72,
         "p_two_sided": 0.0074,
-        "p_by": 0.08044857142857144,
+        "p_by": 0.0696418330910036,
         "survives_0_05": false
       },
       {
@@ -1466,7 +1466,7 @@
         "source": "J17-channel",
         "diff_pp": 4.38,
         "p_two_sided": 0.1312,
-        "p_by": 0.5705325714285715,
+        "p_by": 0.8486385605145206,
         "survives_0_05": false
       },
       {
@@ -1474,7 +1474,7 @@
         "source": "J17-channel",
         "diff_pp": 4.05,
         "p_two_sided": 0.1744,
-        "p_by": 0.631992380952381,
+        "p_by": 1.0,
         "survives_0_05": false
       },
       {
@@ -1482,7 +1482,7 @@
         "source": "J17-channel",
         "diff_pp": 6.13,
         "p_two_sided": 0.0202,
-        "p_by": 0.14640190476190476,
+        "p_by": 0.15865770997424125,
         "survives_0_05": false
       },
       {
@@ -1490,7 +1490,7 @@
         "source": "J17-channel",
         "diff_pp": 3.73,
         "p_two_sided": 0.0548,
-        "p_by": 0.2978771428571429,
+        "p_by": 0.37661570263687466,
         "survives_0_05": false
       },
       {
@@ -1506,6 +1506,166 @@
         "source": "J17-channel",
         "diff_pp": 2.4,
         "p_two_sided": 0.4266,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 8.391228,
+        "p_two_sided": 0.0002,
+        "p_by": 0.004398431563642332,
+        "survives_0_05": true
+      },
+      {
+        "id": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 12.028169,
+        "p_two_sided": 0.001,
+        "p_by": 0.01832679818184305,
+        "survives_0_05": true
+      },
+      {
+        "id": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.silenced",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 5.809,
+        "p_two_sided": 0.0146,
+        "p_by": 0.12349442467149625,
+        "survives_0_05": false
+      },
+      {
+        "id": "handoff_only_contrasts.bplus.m9_to_m11.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 4.249708,
+        "p_two_sided": 0.041,
+        "p_by": 0.30055949018222605,
+        "survives_0_05": false
+      },
+      {
+        "id": "handoff_only_contrasts.bplus.m9_to_m11.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 7.729577,
+        "p_two_sided": 0.0034,
+        "p_by": 0.04398431563642332,
+        "survives_0_05": true
+      },
+      {
+        "id": "handoff_only_contrasts.bplus.m9_to_m11.goal_pass.silenced",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 1.779,
+        "p_two_sided": 0.375,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 7.69883,
+        "p_two_sided": 0.0,
+        "p_by": 0.0,
+        "survives_0_05": true
+      },
+      {
+        "id": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 13.932394,
+        "p_two_sided": 0.0036,
+        "p_by": 0.04398431563642332,
+        "survives_0_05": true
+      },
+      {
+        "id": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.silenced",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 3.273,
+        "p_two_sided": 0.1884,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "handoff_only_contrasts.zs.m9_to_m11.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 1.443275,
+        "p_two_sided": 0.4918,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "handoff_only_contrasts.zs.m9_to_m11.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 0.274648,
+        "p_two_sided": 0.9648,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "handoff_only_contrasts.zs.m9_to_m11.goal_pass.silenced",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 2.273,
+        "p_two_sided": 0.2936,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "ni.bplus.m9.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 0.160819,
+        "p_two_sided": 0.0012,
+        "p_by": 0.018850420987038565,
+        "survives_0_05": true
+      },
+      {
+        "id": "ni.bplus.m9.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": -4.205128,
+        "p_two_sided": 0.258,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "ni.bplus.m11.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 4.410526,
+        "p_two_sided": 0.0,
+        "p_by": 0.0,
+        "survives_0_05": true
+      },
+      {
+        "id": "ni.bplus.m11.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": -0.940845,
+        "p_two_sided": 0.166,
+        "p_by": 1.0,
+        "survives_0_05": false
+      },
+      {
+        "id": "ni.zs.m9.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 0.498246,
+        "p_two_sided": 0.0,
+        "p_by": 0.0,
+        "survives_0_05": true
+      },
+      {
+        "id": "ni.zs.m9.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": -0.305983,
+        "p_two_sided": 0.0076,
+        "p_by": 0.0696418330910036,
+        "survives_0_05": false
+      },
+      {
+        "id": "ni.zs.m11.goal_pass.all",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": 1.94152,
+        "p_two_sided": 0.0,
+        "p_by": 0.0,
+        "survives_0_05": true
+      },
+      {
+        "id": "ni.zs.m11.goal_pass.handoff_only",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "diff_pp": -4.359155,
+        "p_two_sided": 0.5096,
         "p_by": 1.0,
         "survives_0_05": false
       }

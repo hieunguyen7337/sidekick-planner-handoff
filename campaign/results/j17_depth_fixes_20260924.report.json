@@ -1,0 +1,3848 @@
+{
+  "generated_by": "scripts/analysis/j17_depth_fixes.py",
+  "generated_at": "2026-09-24T18:11:29+10:00",
+  "purpose": "Adversarial review F1 fixes R1.1-R1.4 and R7.2 on dev: handoff-only and silenced numbers, their decomposition, NI at -7 pp, the registered chord, Ganz metrics and cost shares, on the pooled cap-81 prefix family (seeds 1-3) against the planner alone at cap 81.",
+  "sources": {
+    "review": "docs/review_paperA_adversarial_20260923.md \u00a7F1",
+    "fix_register": "docs/plan_review_fixes_20260923.md \u00a71 (R1.1-R1.4, R7.2)",
+    "chord_registration": {
+      "bplus": "docs/prereg_hj12_dev_20260922.md:40 (C2: the chord joins sft_plan and planner_alone); docs/claims_ledger.md:16 (UF-07, chord.floor_arm 'sft_plan')",
+      "zs": "docs/prereg_j10_amendment_20260924.md:739-742 (J10 Amendment 1 B3: prefix_zs_m9 and prefix_zs_m11 take floor arm 2 `sft_plan`, the sft_b_plus arm of :133). No dev registration names a zero-shot sft_plan floor."
+    }
+  },
+  "conventions": {
+    "population": "error_type == 'crash' excluded from every pair (counted in inputs); 'limit' scored",
+    "pairing": "(task_id, seed); both rows j10-clean (j16_robustness.paired_diffs)",
+    "handoff_flag": "the prefix arm's handoff_occurred; missing counts as silenced (h = 0) and is counted",
+    "handoff_only_estimand": "sum(d*h) / sum(h), whole clusters resampled",
+    "clusterings": "scenario (19) primary, task (57) secondary; percentile int(0.025 B), int(0.975 B)",
+    "p_two_sided": "2 x smaller tail share of the scenario bootstrap statistic at threshold_pp (j10_report.bootstrap_pvalue); p_signflip_two_sided is cluster_inference.registered_signflip over scenarios at the same threshold",
+    "ni_margin_pp": 7.0,
+    "units": "*_pp in percentage points; means, ratios, shares, qrec and savings in native units"
+  },
+  "handoff_only": {
+    "bplus": {
+      "m6": {
+        "n": 171,
+        "n_handoff": 167,
+        "n_silenced": 4,
+        "n_handoff_flag_missing": 0,
+        "n_handoff_occurred_false": 4,
+        "n_executor_never_acted": 4,
+        "n_handoff_false_but_executor_acted": 0,
+        "goal_pass": {
+          "n_scored": 171,
+          "n_handoff": 167,
+          "n_silenced": 4,
+          "mean_all": 0.729942,
+          "mean_handoff": 0.723473,
+          "mean_silenced": 1.0,
+          "ci95_scenario": {
+            "all": [
+              0.628175,
+              0.820339
+            ],
+            "handoff": [
+              0.620438,
+              0.815356
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.66883,
+              0.790474
+            ],
+            "handoff": [
+              0.661325,
+              0.784635
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          }
+        },
+        "tgc": {
+          "n_scored": 171,
+          "n_handoff": 167,
+          "n_silenced": 4,
+          "mean_all": 0.438596,
+          "mean_handoff": 0.42515,
+          "mean_silenced": 1.0,
+          "ci95_scenario": {
+            "all": [
+              0.274854,
+              0.602339
+            ],
+            "handoff": [
+              0.263473,
+              0.592814
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.339181,
+              0.538012
+            ],
+            "handoff": [
+              0.325444,
+              0.52439
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          }
+        }
+      },
+      "m9": {
+        "n": 171,
+        "n_handoff": 117,
+        "n_silenced": 54,
+        "n_handoff_flag_missing": 0,
+        "n_handoff_occurred_false": 54,
+        "n_executor_never_acted": 43,
+        "n_handoff_false_but_executor_acted": 11,
+        "goal_pass": {
+          "n_scored": 171,
+          "n_handoff": 117,
+          "n_silenced": 54,
+          "mean_all": 0.771357,
+          "mean_handoff": 0.737949,
+          "mean_silenced": 0.843741,
+          "ci95_scenario": {
+            "all": [
+              0.668257,
+              0.859076
+            ],
+            "handoff": [
+              0.62919,
+              0.839307
+            ],
+            "silenced": [
+              0.7419,
+              0.922964
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.708368,
+              0.830117
+            ],
+            "handoff": [
+              0.665115,
+              0.805437
+            ],
+            "silenced": [
+              0.750542,
+              0.921211
+            ]
+          }
+        },
+        "tgc": {
+          "n_scored": 171,
+          "n_handoff": 117,
+          "n_silenced": 54,
+          "mean_all": 0.526316,
+          "mean_handoff": 0.452991,
+          "mean_silenced": 0.685185,
+          "ci95_scenario": {
+            "all": [
+              0.368421,
+              0.684211
+            ],
+            "handoff": [
+              0.285714,
+              0.630631
+            ],
+            "silenced": [
+              0.509091,
+              0.840909
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.426901,
+              0.625731
+            ],
+            "handoff": [
+              0.346154,
+              0.561404
+            ],
+            "silenced": [
+              0.53125,
+              0.826923
+            ]
+          }
+        }
+      },
+      "m11": {
+        "n": 171,
+        "n_handoff": 71,
+        "n_silenced": 100,
+        "n_handoff_flag_missing": 0,
+        "n_handoff_occurred_false": 100,
+        "n_executor_never_acted": 83,
+        "n_handoff_false_but_executor_acted": 17,
+        "goal_pass": {
+          "n_scored": 171,
+          "n_handoff": 71,
+          "n_silenced": 100,
+          "mean_all": 0.813854,
+          "mean_handoff": 0.798085,
+          "mean_silenced": 0.82505,
+          "ci95_scenario": {
+            "all": [
+              0.731012,
+              0.887766
+            ],
+            "handoff": [
+              0.673343,
+              0.908
+            ],
+            "silenced": [
+              0.754131,
+              0.888907
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.755994,
+              0.867187
+            ],
+            "handoff": [
+              0.713062,
+              0.874833
+            ],
+            "silenced": [
+              0.759869,
+              0.886323
+            ]
+          }
+        },
+        "tgc": {
+          "n_scored": 171,
+          "n_handoff": 71,
+          "n_silenced": 100,
+          "mean_all": 0.596491,
+          "mean_handoff": 0.56338,
+          "mean_silenced": 0.62,
+          "ci95_scenario": {
+            "all": [
+              0.444444,
+              0.748538
+            ],
+            "handoff": [
+              0.348485,
+              0.767442
+            ],
+            "silenced": [
+              0.47,
+              0.760417
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.491228,
+              0.701754
+            ],
+            "handoff": [
+              0.421875,
+              0.701299
+            ],
+            "silenced": [
+              0.494949,
+              0.742574
+            ]
+          }
+        }
+      }
+    },
+    "zs": {
+      "m6": {
+        "n": 171,
+        "n_handoff": 167,
+        "n_silenced": 4,
+        "n_handoff_flag_missing": 0,
+        "n_handoff_occurred_false": 4,
+        "n_executor_never_acted": 4,
+        "n_handoff_false_but_executor_acted": 0,
+        "goal_pass": {
+          "n_scored": 171,
+          "n_handoff": 167,
+          "n_silenced": 4,
+          "mean_all": 0.712175,
+          "mean_handoff": 0.705281,
+          "mean_silenced": 1.0,
+          "ci95_scenario": {
+            "all": [
+              0.615117,
+              0.797696
+            ],
+            "handoff": [
+              0.609018,
+              0.790945
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.650181,
+              0.772082
+            ],
+            "handoff": [
+              0.643299,
+              0.765399
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          }
+        },
+        "tgc": {
+          "n_scored": 171,
+          "n_handoff": 167,
+          "n_silenced": 4,
+          "mean_all": 0.444444,
+          "mean_handoff": 0.431138,
+          "mean_silenced": 1.0,
+          "ci95_scenario": {
+            "all": [
+              0.315789,
+              0.578947
+            ],
+            "handoff": [
+              0.304094,
+              0.560241
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.350877,
+              0.538012
+            ],
+            "handoff": [
+              0.339286,
+              0.52439
+            ],
+            "silenced": [
+              1.0,
+              1.0
+            ]
+          }
+        }
+      },
+      "m9": {
+        "n": 171,
+        "n_handoff": 117,
+        "n_silenced": 54,
+        "n_handoff_flag_missing": 0,
+        "n_handoff_occurred_false": 54,
+        "n_executor_never_acted": 43,
+        "n_handoff_false_but_executor_acted": 11,
+        "goal_pass": {
+          "n_scored": 171,
+          "n_handoff": 117,
+          "n_silenced": 54,
+          "mean_all": 0.774731,
+          "mean_handoff": 0.77694,
+          "mean_silenced": 0.769944,
+          "ci95_scenario": {
+            "all": [
+              0.705602,
+              0.837953
+            ],
+            "handoff": [
+              0.706034,
+              0.844057
+            ],
+            "silenced": [
+              0.640809,
+              0.873125
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.717877,
+              0.828942
+            ],
+            "handoff": [
+              0.720957,
+              0.831418
+            ],
+            "silenced": [
+              0.660316,
+              0.865667
+            ]
+          }
+        },
+        "tgc": {
+          "n_scored": 171,
+          "n_handoff": 117,
+          "n_silenced": 54,
+          "mean_all": 0.538012,
+          "mean_handoff": 0.495726,
+          "mean_silenced": 0.62963,
+          "ci95_scenario": {
+            "all": [
+              0.403509,
+              0.666667
+            ],
+            "handoff": [
+              0.357798,
+              0.638462
+            ],
+            "silenced": [
+              0.442308,
+              0.791045
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.444444,
+              0.631579
+            ],
+            "handoff": [
+              0.389381,
+              0.6
+            ],
+            "silenced": [
+              0.468085,
+              0.775862
+            ]
+          }
+        }
+      },
+      "m11": {
+        "n": 171,
+        "n_handoff": 71,
+        "n_silenced": 100,
+        "n_handoff_flag_missing": 0,
+        "n_handoff_occurred_false": 100,
+        "n_executor_never_acted": 83,
+        "n_handoff_false_but_executor_acted": 17,
+        "goal_pass": {
+          "n_scored": 171,
+          "n_handoff": 71,
+          "n_silenced": 100,
+          "mean_all": 0.789164,
+          "mean_handoff": 0.763901,
+          "mean_silenced": 0.8071,
+          "ci95_scenario": {
+            "all": [
+              0.705696,
+              0.860994
+            ],
+            "handoff": [
+              0.656138,
+              0.860833
+            ],
+            "silenced": [
+              0.721653,
+              0.877198
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.731076,
+              0.844339
+            ],
+            "handoff": [
+              0.682345,
+              0.838818
+            ],
+            "silenced": [
+              0.736706,
+              0.871615
+            ]
+          }
+        },
+        "tgc": {
+          "n_scored": 171,
+          "n_handoff": 71,
+          "n_silenced": 100,
+          "mean_all": 0.561404,
+          "mean_handoff": 0.492958,
+          "mean_silenced": 0.61,
+          "ci95_scenario": {
+            "all": [
+              0.421053,
+              0.695906
+            ],
+            "handoff": [
+              0.30303,
+              0.677419
+            ],
+            "silenced": [
+              0.462366,
+              0.747475
+            ]
+          },
+          "ci95_task": {
+            "all": [
+              0.461988,
+              0.660819
+            ],
+            "handoff": [
+              0.354839,
+              0.626667
+            ],
+            "silenced": [
+              0.48913,
+              0.73
+            ]
+          }
+        }
+      }
+    }
+  },
+  "handoff_only_contrasts": {
+    "bplus": {
+      "m6_to_m11": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 8.391228,
+            "ci95_pp_scenario": [
+              4.202339,
+              12.628655
+            ],
+            "ci95_pp_task": [
+              4.091228,
+              12.963158
+            ],
+            "p_two_sided": 0.0002,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0002,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.001434,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 12.028169,
+            "ci95_pp_scenario": [
+              5.494118,
+              18.568056
+            ],
+            "ci95_pp_task": [
+              5.066667,
+              19.192754
+            ],
+            "p_two_sided": 0.001,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.001,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.003616,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 5.809,
+            "ci95_pp_scenario": [
+              1.00463,
+              11.167391
+            ],
+            "ci95_pp_task": [
+              0.509615,
+              11.277895
+            ],
+            "p_two_sided": 0.0146,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0298,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.032471,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 4.994152,
+              "ci95_pp_scenario": [
+                2.149123,
+                7.694737
+              ],
+              "ci95_pp_task": [
+                2.02807,
+                8.195906
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 3.397076,
+              "ci95_pp_scenario": [
+                0.611696,
+                6.277193
+              ],
+              "ci95_pp_task": [
+                0.304678,
+                6.543275
+              ]
+            },
+            "share_handoff": {
+              "point": 0.595163,
+              "point_raw": 0.595163,
+              "ci95_scenario": [
+                0.368754,
+                0.892065
+              ],
+              "ci95_task": [
+                0.333809,
+                0.94365
+              ],
+              "n_resamples_rise_not_positive_scenario": 1,
+              "n_resamples_rise_not_positive_task": 1
+            },
+            "delta_total": {
+              "point_pp": 8.391228,
+              "ci95_pp_scenario": [
+                4.202339,
+                12.628655
+              ],
+              "ci95_pp_task": [
+                4.091228,
+                12.963158
+              ]
+            },
+            "contributions_sum_pp": 8.391228,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.813854,
+            "mean_right": 0.729942,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": 15.789474,
+            "ci95_pp_scenario": [
+              8.187135,
+              23.976608
+            ],
+            "ci95_pp_task": [
+              8.77193,
+              23.391813
+            ],
+            "p_two_sided": 0.0,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.001709,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 15.492958,
+            "ci95_pp_scenario": [
+              3.030303,
+              30.15873
+            ],
+            "ci95_pp_task": [
+              4.6875,
+              27.39726
+            ],
+            "p_two_sided": 0.0182,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0068,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.057129,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 16.0,
+            "ci95_pp_scenario": [
+              7.446809,
+              24.545455
+            ],
+            "ci95_pp_task": [
+              7.142857,
+              25.490196
+            ],
+            "p_two_sided": 0.0002,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0006,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.004395,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 6.432749,
+              "ci95_pp_scenario": [
+                1.169591,
+                12.280702
+              ],
+              "ci95_pp_task": [
+                1.754386,
+                11.111111
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 9.356725,
+              "ci95_pp_scenario": [
+                4.093567,
+                14.619883
+              ],
+              "ci95_pp_task": [
+                4.093567,
+                14.619883
+              ]
+            },
+            "share_handoff": {
+              "point": 0.407407,
+              "point_raw": 0.407407,
+              "ci95_scenario": [
+                0.12,
+                0.62963
+              ],
+              "ci95_task": [
+                0.172414,
+                0.62963
+              ],
+              "n_resamples_rise_not_positive_scenario": 0,
+              "n_resamples_rise_not_positive_task": 0
+            },
+            "delta_total": {
+              "point_pp": 15.789474,
+              "ci95_pp_scenario": [
+                8.187135,
+                23.976608
+              ],
+              "ci95_pp_task": [
+                8.77193,
+                23.391813
+              ]
+            },
+            "contributions_sum_pp": 15.789474,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.596491,
+            "mean_right": 0.438596,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        }
+      },
+      "m9_to_m11": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 4.249708,
+            "ci95_pp_scenario": [
+              0.152632,
+              8.747368
+            ],
+            "ci95_pp_task": [
+              0.899415,
+              7.866667
+            ],
+            "p_two_sided": 0.041,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.011,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.07489,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 7.729577,
+            "ci95_pp_scenario": [
+              2.512121,
+              13.049254
+            ],
+            "ci95_pp_task": [
+              2.483607,
+              12.998592
+            ],
+            "p_two_sided": 0.0034,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.003,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.018555,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 1.779,
+            "ci95_pp_scenario": [
+              -2.029358,
+              6.581188
+            ],
+            "ci95_pp_task": [
+              -2.091209,
+              6.123711
+            ],
+            "p_two_sided": 0.375,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.3882,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.425781,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 3.209357,
+              "ci95_pp_scenario": [
+                0.950292,
+                5.761404
+              ],
+              "ci95_pp_task": [
+                0.953216,
+                5.778947
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 1.040351,
+              "ci95_pp_scenario": [
+                -1.268421,
+                3.517544
+              ],
+              "ci95_pp_task": [
+                -1.237427,
+                3.456725
+              ]
+            },
+            "share_handoff": {
+              "point": 0.755195,
+              "point_raw": 0.755195,
+              "ci95_scenario": [
+                0.504908,
+                2.172222
+              ],
+              "ci95_task": [
+                0.369326,
+                1.777627
+              ],
+              "n_resamples_rise_not_positive_scenario": 205,
+              "n_resamples_rise_not_positive_task": 55
+            },
+            "delta_total": {
+              "point_pp": 4.249708,
+              "ci95_pp_scenario": [
+                0.152632,
+                8.747368
+              ],
+              "ci95_pp_task": [
+                0.899415,
+                7.866667
+              ]
+            },
+            "contributions_sum_pp": 4.249708,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.813854,
+            "mean_right": 0.771357,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": 7.017544,
+            "ci95_pp_scenario": [
+              1.169591,
+              13.450292
+            ],
+            "ci95_pp_task": [
+              1.754386,
+              12.865497
+            ],
+            "p_two_sided": 0.0134,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0086,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.058594,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 9.859155,
+            "ci95_pp_scenario": [
+              2.597403,
+              20.0
+            ],
+            "ci95_pp_task": [
+              2.985075,
+              18.032787
+            ],
+            "p_two_sided": 0.0058,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0028,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.0625,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 5.0,
+            "ci95_pp_scenario": [
+              -0.961538,
+              11.627907
+            ],
+            "ci95_pp_task": [
+              -1.052632,
+              11.764706
+            ],
+            "p_two_sided": 0.1366,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.1568,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.234375,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 4.093567,
+              "ci95_pp_scenario": [
+                1.169591,
+                8.187135
+              ],
+              "ci95_pp_task": [
+                1.169591,
+                7.602339
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 2.923977,
+              "ci95_pp_scenario": [
+                -0.584795,
+                6.432749
+              ],
+              "ci95_pp_task": [
+                -0.584795,
+                6.432749
+              ]
+            },
+            "share_handoff": {
+              "point": 0.583333,
+              "point_raw": 0.583333,
+              "ci95_scenario": [
+                0.285714,
+                1.125
+              ],
+              "ci95_task": [
+                0.25,
+                1.2
+              ],
+              "n_resamples_rise_not_positive_scenario": 67,
+              "n_resamples_rise_not_positive_task": 43
+            },
+            "delta_total": {
+              "point_pp": 7.017544,
+              "ci95_pp_scenario": [
+                1.169591,
+                13.450292
+              ],
+              "ci95_pp_task": [
+                1.754386,
+                12.865497
+              ]
+            },
+            "contributions_sum_pp": 7.017544,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.596491,
+            "mean_right": 0.526316,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        }
+      }
+    },
+    "zs": {
+      "m6_to_m11": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 7.69883,
+            "ci95_pp_scenario": [
+              3.689474,
+              12.057895
+            ],
+            "ci95_pp_task": [
+              3.143275,
+              12.302924
+            ],
+            "p_two_sided": 0.0,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0008,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.001892,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 13.932394,
+            "ci95_pp_scenario": [
+              5.11875,
+              21.223171
+            ],
+            "ci95_pp_task": [
+              5.478788,
+              22.423529
+            ],
+            "p_two_sided": 0.0036,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.001,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.014404,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 3.273,
+            "ci95_pp_scenario": [
+              -1.712,
+              8.10102
+            ],
+            "ci95_pp_task": [
+              -1.809901,
+              8.510891
+            ],
+            "p_two_sided": 0.1884,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.2046,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.203339,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 5.784795,
+              "ci95_pp_scenario": [
+                1.823392,
+                10.111696
+              ],
+              "ci95_pp_task": [
+                2.14386,
+                9.849123
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 1.914035,
+              "ci95_pp_scenario": [
+                -0.973684,
+                4.678363
+              ],
+              "ci95_pp_task": [
+                -1.054386,
+                4.924561
+              ]
+            },
+            "share_handoff": {
+              "point": 0.751386,
+              "point_raw": 0.751386,
+              "ci95_scenario": [
+                0.354274,
+                1.163383
+              ],
+              "ci95_task": [
+                0.415914,
+                1.239185
+              ],
+              "n_resamples_rise_not_positive_scenario": 0,
+              "n_resamples_rise_not_positive_task": 4
+            },
+            "delta_total": {
+              "point_pp": 7.69883,
+              "ci95_pp_scenario": [
+                3.689474,
+                12.057895
+              ],
+              "ci95_pp_task": [
+                3.143275,
+                12.302924
+              ]
+            },
+            "contributions_sum_pp": 7.69883,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.789164,
+            "mean_right": 0.712175,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": 11.695906,
+            "ci95_pp_scenario": [
+              6.432749,
+              16.959064
+            ],
+            "ci95_pp_task": [
+              4.678363,
+              18.71345
+            ],
+            "p_two_sided": 0.0,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0012,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.001099,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 15.492958,
+            "ci95_pp_scenario": [
+              4.285714,
+              26.470588
+            ],
+            "ci95_pp_task": [
+              4.411765,
+              26.923077
+            ],
+            "p_two_sided": 0.0108,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0068,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.038086,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 9.0,
+            "ci95_pp_scenario": [
+              1.052632,
+              16.666667
+            ],
+            "ci95_pp_task": [
+              0.0,
+              17.777778
+            ],
+            "p_two_sided": 0.0324,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0544,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.0625,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 6.432749,
+              "ci95_pp_scenario": [
+                1.754386,
+                11.695906
+              ],
+              "ci95_pp_task": [
+                1.754386,
+                11.695906
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 5.263158,
+              "ci95_pp_scenario": [
+                0.584795,
+                9.94152
+              ],
+              "ci95_pp_task": [
+                0.0,
+                10.526316
+              ]
+            },
+            "share_handoff": {
+              "point": 0.55,
+              "point_raw": 0.55,
+              "ci95_scenario": [
+                0.1875,
+                0.928571
+              ],
+              "ci95_task": [
+                0.222222,
+                1.0
+              ],
+              "n_resamples_rise_not_positive_scenario": 0,
+              "n_resamples_rise_not_positive_task": 6
+            },
+            "delta_total": {
+              "point_pp": 11.695906,
+              "ci95_pp_scenario": [
+                6.432749,
+                16.959064
+              ],
+              "ci95_pp_task": [
+                4.678363,
+                18.71345
+              ]
+            },
+            "contributions_sum_pp": 11.695906,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.561404,
+            "mean_right": 0.444444,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        }
+      },
+      "m9_to_m11": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 1.443275,
+            "ci95_pp_scenario": [
+              -2.562573,
+              5.524561
+            ],
+            "ci95_pp_task": [
+              -2.597076,
+              5.64152
+            ],
+            "p_two_sided": 0.4918,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.502,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.50119,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 0.274648,
+            "ci95_pp_scenario": [
+              -6.566667,
+              6.955932
+            ],
+            "ci95_pp_task": [
+              -7.591429,
+              7.83125
+            ],
+            "p_two_sided": 0.9648,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.9486,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.940918,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 2.273,
+            "ci95_pp_scenario": [
+              -1.77234,
+              6.97957
+            ],
+            "ci95_pp_task": [
+              -1.714583,
+              6.639806
+            ],
+            "p_two_sided": 0.2936,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.2888,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.310547,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 0.114035,
+              "ci95_pp_scenario": [
+                -2.690643,
+                2.970175
+              ],
+              "ci95_pp_task": [
+                -3.132749,
+                3.295322
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 1.32924,
+              "ci95_pp_scenario": [
+                -1.032164,
+                3.929825
+              ],
+              "ci95_pp_task": [
+                -1.008772,
+                3.852047
+              ]
+            },
+            "share_handoff": {
+              "point": 0.079011,
+              "point_raw": 0.079011,
+              "ci95_scenario": [
+                -6.594848,
+                1.524748
+              ],
+              "ci95_task": [
+                -6.681034,
+                1.710069
+              ],
+              "n_resamples_rise_not_positive_scenario": 2459,
+              "n_resamples_rise_not_positive_task": 2510
+            },
+            "delta_total": {
+              "point_pp": 1.443275,
+              "ci95_pp_scenario": [
+                -2.562573,
+                5.524561
+              ],
+              "ci95_pp_task": [
+                -2.597076,
+                5.64152
+              ]
+            },
+            "contributions_sum_pp": 1.443275,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.789164,
+            "mean_right": 0.774731,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": 2.339181,
+            "ci95_pp_scenario": [
+              -2.339181,
+              7.017544
+            ],
+            "ci95_pp_task": [
+              -2.923977,
+              8.187135
+            ],
+            "p_two_sided": 0.3984,
+            "threshold_pp": 0.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.5006,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.48877,
+            "signflip_method": "exact"
+          },
+          "handoff_only": {
+            "diff_pp": 2.816901,
+            "ci95_pp_scenario": [
+              -7.142857,
+              13.559322
+            ],
+            "ci95_pp_task": [
+              -8.108108,
+              14.0625
+            ],
+            "p_two_sided": 0.7076,
+            "threshold_pp": 0.0,
+            "n_pairs": 71,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.7172,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.794922,
+            "signflip_method": "exact"
+          },
+          "silenced": {
+            "diff_pp": 2.0,
+            "ci95_pp_scenario": [
+              -3.296703,
+              7.777778
+            ],
+            "ci95_pp_task": [
+              -3.191489,
+              7.843137
+            ],
+            "p_two_sided": 0.5846,
+            "threshold_pp": 0.0,
+            "n_pairs": 100,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.6066,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.726562,
+            "signflip_method": "exact"
+          },
+          "decomposition": {
+            "contribution_handoff": {
+              "point_pp": 1.169591,
+              "ci95_pp_scenario": [
+                -2.923977,
+                5.263158
+              ],
+              "ci95_pp_task": [
+                -3.508772,
+                5.847953
+              ]
+            },
+            "contribution_silenced": {
+              "point_pp": 1.169591,
+              "ci95_pp_scenario": [
+                -1.754386,
+                4.678363
+              ],
+              "ci95_pp_task": [
+                -1.754386,
+                4.678363
+              ]
+            },
+            "share_handoff": {
+              "point": 0.5,
+              "point_raw": 0.5,
+              "ci95_scenario": [
+                -2.0,
+                2.0
+              ],
+              "ci95_task": [
+                -1.666667,
+                2.0
+              ],
+              "n_resamples_rise_not_positive_scenario": 1992,
+              "n_resamples_rise_not_positive_task": 2503
+            },
+            "delta_total": {
+              "point_pp": 2.339181,
+              "ci95_pp_scenario": [
+                -2.339181,
+                7.017544
+              ],
+              "ci95_pp_task": [
+                -2.923977,
+                8.187135
+              ]
+            },
+            "contributions_sum_pp": 2.339181,
+            "contributions_sum_to_all": true,
+            "n": 171,
+            "handoff_count": 71,
+            "silenced_count": 100,
+            "share_interval_note": "Percentile interval over resamples whose total rise is > 0; the count of resamples with a non-positive rise is reported. If that count exceeds 2.5% of B the total rise itself is unresolved and the share interval should not be read.",
+            "source": "j16_robustness.decomposition (the j13_mechanism.measure_m3 estimand); h from the target arm"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.561404,
+            "mean_right": 0.538012,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          }
+        }
+      }
+    }
+  },
+  "ni": {
+    "bplus": {
+      "m9": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 0.160819,
+            "ci95_pp_scenario": [
+              -4.046199,
+              4.652047
+            ],
+            "ci95_pp_task": [
+              -4.289474,
+              4.712281
+            ],
+            "p_two_sided": 0.0012,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0018,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.004536,
+            "signflip_method": "exact",
+            "reading": "holds",
+            "reading_task": "holds"
+          },
+          "handoff_only": {
+            "diff_pp": -4.205128,
+            "ci95_pp_scenario": [
+              -8.827273,
+              1.288073
+            ],
+            "ci95_pp_task": [
+              -9.42541,
+              0.928205
+            ],
+            "p_two_sided": 0.258,
+            "threshold_pp": -7.0,
+            "n_pairs": 117,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.2974,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.284027,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.771357,
+            "mean_right": 0.769749,
+            "n_handoff": 117,
+            "n_silenced": 54,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": -6.432749,
+            "ci95_pp_scenario": [
+              -12.280702,
+              -0.584795
+            ],
+            "ci95_pp_task": [
+              -12.865497,
+              -0.584795
+            ],
+            "p_two_sided": 0.9138,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.9098,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.852306,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "handoff_only": {
+            "diff_pp": -12.820513,
+            "ci95_pp_scenario": [
+              -20.833333,
+              -4.347826
+            ],
+            "ci95_pp_task": [
+              -21.138211,
+              -4.878049
+            ],
+            "p_two_sided": 0.1714,
+            "threshold_pp": -7.0,
+            "n_pairs": 117,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.1644,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.201607,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.526316,
+            "mean_right": 0.590643,
+            "n_handoff": 117,
+            "n_silenced": 54,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        }
+      },
+      "m11": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 4.410526,
+            "ci95_pp_scenario": [
+              -0.739181,
+              10.671345
+            ],
+            "ci95_pp_task": [
+              0.336842,
+              8.647368
+            ],
+            "p_two_sided": 0.0,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.000263,
+            "signflip_method": "exact",
+            "reading": "holds",
+            "reading_task": "holds"
+          },
+          "handoff_only": {
+            "diff_pp": -0.940845,
+            "ci95_pp_scenario": [
+              -9.52623,
+              7.448571
+            ],
+            "ci95_pp_task": [
+              -7.868966,
+              5.965753
+            ],
+            "p_two_sided": 0.166,
+            "threshold_pp": -7.0,
+            "n_pairs": 71,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0882,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.234257,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.813854,
+            "mean_right": 0.769749,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": 0.584795,
+            "ci95_pp_scenario": [
+              -5.847953,
+              7.602339
+            ],
+            "ci95_pp_task": [
+              -4.678363,
+              5.847953
+            ],
+            "p_two_sided": 0.018,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0066,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.028137,
+            "signflip_method": "exact",
+            "reading": "holds",
+            "reading_task": "holds"
+          },
+          "handoff_only": {
+            "diff_pp": -8.450704,
+            "ci95_pp_scenario": [
+              -21.538462,
+              3.529412
+            ],
+            "ci95_pp_task": [
+              -18.461538,
+              1.515152
+            ],
+            "p_two_sided": 0.8074,
+            "threshold_pp": -7.0,
+            "n_pairs": 71,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.7918,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.828487,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.596491,
+            "mean_right": 0.590643,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        }
+      }
+    },
+    "zs": {
+      "m9": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 0.498246,
+            "ci95_pp_scenario": [
+              -3.020468,
+              5.359649
+            ],
+            "ci95_pp_task": [
+              -3.50117,
+              4.801754
+            ],
+            "p_two_sided": 0.0,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0002,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.000183,
+            "signflip_method": "exact",
+            "reading": "holds",
+            "reading_task": "holds"
+          },
+          "handoff_only": {
+            "diff_pp": -0.305983,
+            "ci95_pp_scenario": [
+              -5.535833,
+              6.718269
+            ],
+            "ci95_pp_task": [
+              -6.024324,
+              5.693277
+            ],
+            "p_two_sided": 0.0076,
+            "threshold_pp": -7.0,
+            "n_pairs": 117,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.021,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.024712,
+            "signflip_method": "exact",
+            "reading": "holds",
+            "reading_task": "holds"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.774731,
+            "mean_right": 0.769749,
+            "n_handoff": 117,
+            "n_silenced": 54,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": -5.263158,
+            "ci95_pp_scenario": [
+              -9.94152,
+              -0.584795
+            ],
+            "ci95_pp_task": [
+              -10.526316,
+              0.584795
+            ],
+            "p_two_sided": 0.5502,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.608,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.479362,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "handoff_only": {
+            "diff_pp": -8.547009,
+            "ci95_pp_scenario": [
+              -15.789474,
+              -0.943396
+            ],
+            "ci95_pp_task": [
+              -16.806723,
+              0.0
+            ],
+            "p_two_sided": 0.6764,
+            "threshold_pp": -7.0,
+            "n_pairs": 117,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.7152,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.68499,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.538012,
+            "mean_right": 0.590643,
+            "n_handoff": 117,
+            "n_silenced": 54,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        }
+      },
+      "m11": {
+        "goal_pass": {
+          "all": {
+            "diff_pp": 1.94152,
+            "ci95_pp_scenario": [
+              -2.172515,
+              6.398246
+            ],
+            "ci95_pp_task": [
+              -1.657895,
+              5.749123
+            ],
+            "p_two_sided": 0.0,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.000465,
+            "signflip_method": "exact",
+            "reading": "holds",
+            "reading_task": "holds"
+          },
+          "handoff_only": {
+            "diff_pp": -4.359155,
+            "ci95_pp_scenario": [
+              -11.891667,
+              3.212903
+            ],
+            "ci95_pp_task": [
+              -10.68125,
+              2.432099
+            ],
+            "p_two_sided": 0.5096,
+            "threshold_pp": -7.0,
+            "n_pairs": 71,
+            "metric": "goal_pass",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.4378,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.534897,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.789164,
+            "mean_right": 0.769749,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        },
+        "tgc": {
+          "all": {
+            "diff_pp": -2.923977,
+            "ci95_pp_scenario": [
+              -7.017544,
+              1.169591
+            ],
+            "ci95_pp_task": [
+              -7.602339,
+              1.754386
+            ],
+            "p_two_sided": 0.0694,
+            "threshold_pp": -7.0,
+            "n_pairs": 171,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.1258,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.074421,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "handoff_only": {
+            "diff_pp": -15.492958,
+            "ci95_pp_scenario": [
+              -25.757576,
+              -5.797101
+            ],
+            "ci95_pp_task": [
+              -24.637681,
+              -6.849315
+            ],
+            "p_two_sided": 0.0886,
+            "threshold_pp": -7.0,
+            "n_pairs": 71,
+            "metric": "tgc",
+            "n_clusters_scenario": 19,
+            "n_resamples_undefined_scenario": 0,
+            "p_two_sided_task": 0.0538,
+            "n_clusters_task": 57,
+            "n_resamples_undefined_task": 0,
+            "p_signflip_two_sided": 0.115772,
+            "signflip_method": "exact",
+            "reading": "fails",
+            "reading_task": "fails"
+          },
+          "pairing": {
+            "n_shared": 171,
+            "n_pairs": 171,
+            "n_dropped_not_j10_clean": 0,
+            "n_dropped_missing_field": 0,
+            "mean_left": 0.561404,
+            "mean_right": 0.590643,
+            "n_handoff": 71,
+            "n_silenced": 100,
+            "n_silenced_flag_missing": 0,
+            "handoff_flag_from": "target (prefix) arm"
+          },
+          "rule": "prefix - planner_alone_cap81; holds iff round(scenario lower bound, 2) >= -7.00 (j16_robustness.ni_holds, the j8_frontier rule), else fails"
+        }
+      }
+    }
+  },
+  "chord": {
+    "bplus": {
+      "m9": {
+        "metric": "goal_pass",
+        "residual_mean_pp": 3.02,
+        "ci95_pp_scenario": [
+          -1.48,
+          7.21
+        ],
+        "ci95_pp_task": [
+          -1.28,
+          7.26
+        ],
+        "p_two_sided": 0.1882,
+        "p_two_sided_task": 0.165,
+        "threshold_pp": 0.0,
+        "n_pairs": 114,
+        "f": 0.298365,
+        "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "floor_label": "sft_plan",
+        "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+        "cost_key": "planner_tokens_noncached",
+        "cost_arm": 362940.745614,
+        "cost_floor": 23905.587719,
+        "cost_reference": 1160215.149123,
+        "n_pairs_shared": 114,
+        "n_pairs_dropped_crash": 0,
+        "pairs_dropped_missing_cost": 0,
+        "pairs_dropped_missing_quality": 0,
+        "positive_means_above_chord": true,
+        "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+        "seeds_paired": [
+          1,
+          2
+        ],
+        "p_recomputation": {
+          "residual_mean_pp_unrounded": 3.016569,
+          "f_unrounded": 0.298365,
+          "n_pairs": 114,
+          "matches_j8": true
+        },
+        "floor_registration": "docs/prereg_hj12_dev_20260922.md:40 (C2: the chord joins sft_plan and planner_alone); docs/claims_ledger.md:16 (UF-07, chord.floor_arm 'sft_plan')",
+        "tgc": {
+          "metric": "tgc",
+          "residual_mean_pp": 6.17,
+          "ci95_pp_scenario": [
+            -2.08,
+            13.63
+          ],
+          "ci95_pp_task": [
+            -1.46,
+            13.99
+          ],
+          "p_two_sided": 0.1342,
+          "p_two_sided_task": 0.1108,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "f": 0.298365,
+          "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+          "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+          "floor_label": "sft_plan",
+          "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+          "cost_key": "planner_tokens_noncached",
+          "cost_arm": 362940.745614,
+          "cost_floor": 23905.587719,
+          "cost_reference": 1160215.149123,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_crash": 0,
+          "pairs_dropped_missing_cost": 0,
+          "pairs_dropped_missing_quality": 0,
+          "positive_means_above_chord": true,
+          "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+          "seeds_paired": [
+            1,
+            2
+          ],
+          "p_recomputation": {
+            "residual_mean_pp_unrounded": 6.169033,
+            "f_unrounded": 0.298365,
+            "n_pairs": 114,
+            "matches_j8": true
+          }
+        }
+      },
+      "m11": {
+        "metric": "goal_pass",
+        "residual_mean_pp": 7.56,
+        "ci95_pp_scenario": [
+          2.96,
+          12.35
+        ],
+        "ci95_pp_task": [
+          3.3,
+          11.98
+        ],
+        "p_two_sided": 0.001,
+        "p_two_sided_task": 0.0006,
+        "threshold_pp": 0.0,
+        "n_pairs": 114,
+        "f": 0.381919,
+        "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "floor_label": "sft_plan",
+        "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+        "cost_key": "planner_tokens_noncached",
+        "cost_arm": 457884.149123,
+        "cost_floor": 23905.587719,
+        "cost_reference": 1160215.149123,
+        "n_pairs_shared": 114,
+        "n_pairs_dropped_crash": 0,
+        "pairs_dropped_missing_cost": 0,
+        "pairs_dropped_missing_quality": 0,
+        "positive_means_above_chord": true,
+        "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+        "seeds_paired": [
+          1,
+          2
+        ],
+        "p_recomputation": {
+          "residual_mean_pp_unrounded": 7.560592,
+          "f_unrounded": 0.381919,
+          "n_pairs": 114,
+          "matches_j8": true
+        },
+        "floor_registration": "docs/prereg_hj12_dev_20260922.md:40 (C2: the chord joins sft_plan and planner_alone); docs/claims_ledger.md:16 (UF-07, chord.floor_arm 'sft_plan')",
+        "tgc": {
+          "metric": "tgc",
+          "residual_mean_pp": 13.48,
+          "ci95_pp_scenario": [
+            5.17,
+            22.2
+          ],
+          "ci95_pp_task": [
+            5.84,
+            21.45
+          ],
+          "p_two_sided": 0.0008,
+          "p_two_sided_task": 0.0008,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "f": 0.381919,
+          "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+          "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+          "floor_label": "sft_plan",
+          "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+          "cost_key": "planner_tokens_noncached",
+          "cost_arm": 457884.149123,
+          "cost_floor": 23905.587719,
+          "cost_reference": 1160215.149123,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_crash": 0,
+          "pairs_dropped_missing_cost": 0,
+          "pairs_dropped_missing_quality": 0,
+          "positive_means_above_chord": true,
+          "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+          "seeds_paired": [
+            1,
+            2
+          ],
+          "p_recomputation": {
+            "residual_mean_pp_unrounded": 13.4751,
+            "f_unrounded": 0.381919,
+            "n_pairs": 114,
+            "matches_j8": true
+          }
+        }
+      }
+    },
+    "zs": {
+      "m9": {
+        "metric": "goal_pass",
+        "residual_mean_pp": 3.32,
+        "ci95_pp_scenario": [
+          -1.26,
+          8.23
+        ],
+        "ci95_pp_task": [
+          -1.97,
+          8.75
+        ],
+        "p_two_sided": 0.1638,
+        "p_two_sided_task": 0.2206,
+        "threshold_pp": 0.0,
+        "n_pairs": 114,
+        "f": 0.298365,
+        "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "floor_label": "sft_plan",
+        "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+        "cost_key": "planner_tokens_noncached",
+        "cost_arm": 362940.745614,
+        "cost_floor": 23905.587719,
+        "cost_reference": 1160215.149123,
+        "n_pairs_shared": 114,
+        "n_pairs_dropped_crash": 0,
+        "pairs_dropped_missing_cost": 0,
+        "pairs_dropped_missing_quality": 0,
+        "positive_means_above_chord": true,
+        "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+        "seeds_paired": [
+          1,
+          2
+        ],
+        "p_recomputation": {
+          "residual_mean_pp_unrounded": 3.323586,
+          "f_unrounded": 0.298365,
+          "n_pairs": 114,
+          "matches_j8": true
+        },
+        "floor_registration": "docs/prereg_j10_amendment_20260924.md:739-742 (J10 Amendment 1 B3: prefix_zs_m9 and prefix_zs_m11 take floor arm 2 `sft_plan`, the sft_b_plus arm of :133). No dev registration names a zero-shot sft_plan floor.",
+        "tgc": {
+          "metric": "tgc",
+          "residual_mean_pp": 7.92,
+          "ci95_pp_scenario": [
+            0.63,
+            16.09
+          ],
+          "ci95_pp_task": [
+            -0.6,
+            16.62
+          ],
+          "p_two_sided": 0.033,
+          "p_two_sided_task": 0.0686,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "f": 0.298365,
+          "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+          "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+          "floor_label": "sft_plan",
+          "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+          "cost_key": "planner_tokens_noncached",
+          "cost_arm": 362940.745614,
+          "cost_floor": 23905.587719,
+          "cost_reference": 1160215.149123,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_crash": 0,
+          "pairs_dropped_missing_cost": 0,
+          "pairs_dropped_missing_quality": 0,
+          "positive_means_above_chord": true,
+          "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+          "seeds_paired": [
+            1,
+            2
+          ],
+          "p_recomputation": {
+            "residual_mean_pp_unrounded": 7.923419,
+            "f_unrounded": 0.298365,
+            "n_pairs": 114,
+            "matches_j8": true
+          }
+        }
+      },
+      "m11": {
+        "metric": "goal_pass",
+        "residual_mean_pp": 5.76,
+        "ci95_pp_scenario": [
+          2.15,
+          9.44
+        ],
+        "ci95_pp_task": [
+          2.17,
+          9.55
+        ],
+        "p_two_sided": 0.001,
+        "p_two_sided_task": 0.0006,
+        "threshold_pp": 0.0,
+        "n_pairs": 114,
+        "f": 0.381919,
+        "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "floor_label": "sft_plan",
+        "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+        "cost_key": "planner_tokens_noncached",
+        "cost_arm": 457884.149123,
+        "cost_floor": 23905.587719,
+        "cost_reference": 1160215.149123,
+        "n_pairs_shared": 114,
+        "n_pairs_dropped_crash": 0,
+        "pairs_dropped_missing_cost": 0,
+        "pairs_dropped_missing_quality": 0,
+        "positive_means_above_chord": true,
+        "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+        "seeds_paired": [
+          1,
+          2
+        ],
+        "p_recomputation": {
+          "residual_mean_pp_unrounded": 5.764101,
+          "f_unrounded": 0.381919,
+          "n_pairs": 114,
+          "matches_j8": true
+        },
+        "floor_registration": "docs/prereg_j10_amendment_20260924.md:739-742 (J10 Amendment 1 B3: prefix_zs_m9 and prefix_zs_m11 take floor arm 2 `sft_plan`, the sft_b_plus arm of :133). No dev registration names a zero-shot sft_plan floor.",
+        "tgc": {
+          "metric": "tgc",
+          "residual_mean_pp": 9.09,
+          "ci95_pp_scenario": [
+            1.86,
+            16.89
+          ],
+          "ci95_pp_task": [
+            2.53,
+            16.06
+          ],
+          "p_two_sided": 0.0136,
+          "p_two_sided_task": 0.0068,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "f": 0.381919,
+          "f_note": "plug-in (c_arm - c_floor) / (c_ref - c_floor) from mean non-cached planner tokens over the paired triples; not resampled",
+          "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+          "floor_label": "sft_plan",
+          "reference_arm": "planner_alone_cap81 (hj13_planner_alone_cap81_20260923 seeds 1-2 + hj13_planner_alone_cap81_seed3_20260924 seed 3)",
+          "cost_key": "planner_tokens_noncached",
+          "cost_arm": 457884.149123,
+          "cost_floor": 23905.587719,
+          "cost_reference": 1160215.149123,
+          "n_pairs_shared": 114,
+          "n_pairs_dropped_crash": 0,
+          "pairs_dropped_missing_cost": 0,
+          "pairs_dropped_missing_quality": 0,
+          "positive_means_above_chord": true,
+          "source": "j8_frontier.chord_residual(population='survivors', cluster='scenario')",
+          "seeds_paired": [
+            1,
+            2
+          ],
+          "p_recomputation": {
+            "residual_mean_pp_unrounded": 9.089135,
+            "f_unrounded": 0.381919,
+            "n_pairs": 114,
+            "matches_j8": true
+          }
+        }
+      }
+    }
+  },
+  "ganz": {
+    "bplus": {
+      "m6": {
+        "qrec": {
+          "point": 0.649076,
+          "ci95_scenario": [
+            -6.618182,
+            7.546828
+          ],
+          "n_resamples_undefined_scenario": 1,
+          "ci95_task": [
+            -3.407748,
+            5.102367
+          ],
+          "n_resamples_undefined_task": 0
+        },
+        "savings_retained": {
+          "hosted_calls": {
+            "point": 0.632511,
+            "ci95_scenario": [
+              0.553233,
+              0.69542
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.58011,
+              0.67597
+            ],
+            "n_resamples_undefined_task": 0
+          },
+          "usd": {
+            "point": 0.705794,
+            "ci95_scenario": [
+              0.585535,
+              0.793614
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.631325,
+              0.76373
+            ],
+            "n_resamples_undefined_task": 0
+          }
+        },
+        "means": {
+          "goal_pass": {
+            "arm": 0.747711,
+            "floor": 0.718149,
+            "ceiling": 0.763693
+          },
+          "hosted_calls": {
+            "arm": 7.008772,
+            "floor": 1.0,
+            "ceiling": 17.350877
+          },
+          "usd": {
+            "arm": 0.016311,
+            "floor": 0.003015,
+            "ceiling": 0.048208
+          }
+        },
+        "n_triples": 114,
+        "seeds": [
+          1,
+          2
+        ],
+        "n_triples_dropped_missing": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        },
+        "definition": {
+          "qrec": "(q_arm - q_floor) / (q_ceiling - q_floor) on goal_pass",
+          "savings_retained": "(c_ceiling - c_arm) / (c_ceiling - c_floor), per cost axis"
+        },
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "reference_arm": "planner_alone_cap81"
+      },
+      "m9": {
+        "qrec": {
+          "point": 0.960709,
+          "ci95_scenario": [
+            -3.091228,
+            5.325056
+          ],
+          "n_resamples_undefined_scenario": 1,
+          "ci95_task": [
+            -2.634429,
+            5.285383
+          ],
+          "n_resamples_undefined_task": 0
+        },
+        "savings_retained": {
+          "hosted_calls": {
+            "point": 0.45279,
+            "ci95_scenario": [
+              0.339856,
+              0.544157
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.378026,
+              0.514054
+            ],
+            "n_resamples_undefined_task": 0
+          },
+          "usd": {
+            "point": 0.554462,
+            "ci95_scenario": [
+              0.382327,
+              0.682195
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.446,
+              0.63902
+            ],
+            "n_resamples_undefined_task": 0
+          }
+        },
+        "means": {
+          "goal_pass": {
+            "arm": 0.761904,
+            "floor": 0.718149,
+            "ceiling": 0.763693
+          },
+          "hosted_calls": {
+            "arm": 9.947368,
+            "floor": 1.0,
+            "ceiling": 17.350877
+          },
+          "usd": {
+            "arm": 0.02315,
+            "floor": 0.003015,
+            "ceiling": 0.048208
+          }
+        },
+        "n_triples": 114,
+        "seeds": [
+          1,
+          2
+        ],
+        "n_triples_dropped_missing": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        },
+        "definition": {
+          "qrec": "(q_arm - q_floor) / (q_ceiling - q_floor) on goal_pass",
+          "savings_retained": "(c_ceiling - c_arm) / (c_ceiling - c_floor), per cost axis"
+        },
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "reference_arm": "planner_alone_cap81"
+      },
+      "m11": {
+        "qrec": {
+          "point": 2.041988,
+          "ci95_scenario": [
+            -14.286036,
+            17.765306
+          ],
+          "n_resamples_undefined_scenario": 1,
+          "ci95_task": [
+            -8.593123,
+            14.74364
+          ],
+          "n_resamples_undefined_task": 0
+        },
+        "savings_retained": {
+          "hosted_calls": {
+            "point": 0.360515,
+            "ci95_scenario": [
+              0.233121,
+              0.46558
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.274896,
+              0.433862
+            ],
+            "n_resamples_undefined_task": 0
+          },
+          "usd": {
+            "point": 0.468405,
+            "ci95_scenario": [
+              0.270652,
+              0.616782
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.340691,
+              0.570145
+            ],
+            "n_resamples_undefined_task": 0
+          }
+        },
+        "means": {
+          "goal_pass": {
+            "arm": 0.811149,
+            "floor": 0.718149,
+            "ceiling": 0.763693
+          },
+          "hosted_calls": {
+            "arm": 11.45614,
+            "floor": 1.0,
+            "ceiling": 17.350877
+          },
+          "usd": {
+            "arm": 0.027039,
+            "floor": 0.003015,
+            "ceiling": 0.048208
+          }
+        },
+        "n_triples": 114,
+        "seeds": [
+          1,
+          2
+        ],
+        "n_triples_dropped_missing": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        },
+        "definition": {
+          "qrec": "(q_arm - q_floor) / (q_ceiling - q_floor) on goal_pass",
+          "savings_retained": "(c_ceiling - c_arm) / (c_ceiling - c_floor), per cost axis"
+        },
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "reference_arm": "planner_alone_cap81"
+      }
+    },
+    "zs": {
+      "m6": {
+        "qrec": {
+          "point": 0.043336,
+          "ci95_scenario": [
+            -4.742529,
+            4.262944
+          ],
+          "n_resamples_undefined_scenario": 1,
+          "ci95_task": [
+            -5.373563,
+            4.168662
+          ],
+          "n_resamples_undefined_task": 0
+        },
+        "savings_retained": {
+          "hosted_calls": {
+            "point": 0.632511,
+            "ci95_scenario": [
+              0.553233,
+              0.69542
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.58011,
+              0.67597
+            ],
+            "n_resamples_undefined_task": 0
+          },
+          "usd": {
+            "point": 0.705794,
+            "ci95_scenario": [
+              0.585535,
+              0.793614
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.631325,
+              0.76373
+            ],
+            "n_resamples_undefined_task": 0
+          }
+        },
+        "means": {
+          "goal_pass": {
+            "arm": 0.720123,
+            "floor": 0.718149,
+            "ceiling": 0.763693
+          },
+          "hosted_calls": {
+            "arm": 7.008772,
+            "floor": 1.0,
+            "ceiling": 17.350877
+          },
+          "usd": {
+            "arm": 0.016311,
+            "floor": 0.003015,
+            "ceiling": 0.048208
+          }
+        },
+        "n_triples": 114,
+        "seeds": [
+          1,
+          2
+        ],
+        "n_triples_dropped_missing": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        },
+        "definition": {
+          "qrec": "(q_arm - q_floor) / (q_ceiling - q_floor) on goal_pass",
+          "savings_retained": "(c_ceiling - c_arm) / (c_ceiling - c_floor), per cost axis"
+        },
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "reference_arm": "planner_alone_cap81"
+      },
+      "m9": {
+        "qrec": {
+          "point": 1.02812,
+          "ci95_scenario": [
+            -3.016447,
+            5.043398
+          ],
+          "n_resamples_undefined_scenario": 1,
+          "ci95_task": [
+            -2.199148,
+            4.904286
+          ],
+          "n_resamples_undefined_task": 0
+        },
+        "savings_retained": {
+          "hosted_calls": {
+            "point": 0.45279,
+            "ci95_scenario": [
+              0.339856,
+              0.544157
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.378026,
+              0.514054
+            ],
+            "n_resamples_undefined_task": 0
+          },
+          "usd": {
+            "point": 0.554462,
+            "ci95_scenario": [
+              0.382327,
+              0.682195
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.446,
+              0.63902
+            ],
+            "n_resamples_undefined_task": 0
+          }
+        },
+        "means": {
+          "goal_pass": {
+            "arm": 0.764974,
+            "floor": 0.718149,
+            "ceiling": 0.763693
+          },
+          "hosted_calls": {
+            "arm": 9.947368,
+            "floor": 1.0,
+            "ceiling": 17.350877
+          },
+          "usd": {
+            "arm": 0.02315,
+            "floor": 0.003015,
+            "ceiling": 0.048208
+          }
+        },
+        "n_triples": 114,
+        "seeds": [
+          1,
+          2
+        ],
+        "n_triples_dropped_missing": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        },
+        "definition": {
+          "qrec": "(q_arm - q_floor) / (q_ceiling - q_floor) on goal_pass",
+          "savings_retained": "(c_ceiling - c_arm) / (c_ceiling - c_floor), per cost axis"
+        },
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "reference_arm": "planner_alone_cap81"
+      },
+      "m11": {
+        "qrec": {
+          "point": 1.647535,
+          "ci95_scenario": [
+            -10.11007,
+            12.601594
+          ],
+          "n_resamples_undefined_scenario": 1,
+          "ci95_task": [
+            -6.32553,
+            12.078098
+          ],
+          "n_resamples_undefined_task": 0
+        },
+        "savings_retained": {
+          "hosted_calls": {
+            "point": 0.360515,
+            "ci95_scenario": [
+              0.233121,
+              0.46558
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.274896,
+              0.433862
+            ],
+            "n_resamples_undefined_task": 0
+          },
+          "usd": {
+            "point": 0.468405,
+            "ci95_scenario": [
+              0.270652,
+              0.616782
+            ],
+            "n_resamples_undefined_scenario": 0,
+            "ci95_task": [
+              0.340691,
+              0.570145
+            ],
+            "n_resamples_undefined_task": 0
+          }
+        },
+        "means": {
+          "goal_pass": {
+            "arm": 0.793184,
+            "floor": 0.718149,
+            "ceiling": 0.763693
+          },
+          "hosted_calls": {
+            "arm": 11.45614,
+            "floor": 1.0,
+            "ceiling": 17.350877
+          },
+          "usd": {
+            "arm": 0.027039,
+            "floor": 0.003015,
+            "ceiling": 0.048208
+          }
+        },
+        "n_triples": 114,
+        "seeds": [
+          1,
+          2
+        ],
+        "n_triples_dropped_missing": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        },
+        "definition": {
+          "qrec": "(q_arm - q_floor) / (q_ceiling - q_floor) on goal_pass",
+          "savings_retained": "(c_ceiling - c_arm) / (c_ceiling - c_floor), per cost axis"
+        },
+        "floor_arm": "sft_plan (hj8_sft_plan_bplus_20260921iaware/sft_plan, seeds 1-2): the floor of the registered chord test C2, docs/prereg_hj12_dev_20260922.md:40; ledger UF-07, docs/claims_ledger.md:16",
+        "reference_arm": "planner_alone_cap81"
+      }
+    }
+  },
+  "cost_share": {
+    "bplus": {
+      "m6": {
+        "calls_fraction": {
+          "point": 0.404794,
+          "ci95_scenario": [
+            0.340516,
+            0.479375
+          ],
+          "ci95_task": [
+            0.362074,
+            0.453581
+          ],
+          "calls_arm": 7.011696,
+          "calls_ceiling": 17.321637,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "dollar_saving_retained": {
+          "point": 0.650792,
+          "ci95_scenario": [
+            0.543136,
+            0.742293
+          ],
+          "ci95_task": [
+            0.581191,
+            0.709766
+          ],
+          "usd_fraction": 0.349208,
+          "usd_arm": 0.016624,
+          "usd_ceiling": 0.047603,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "reference_arm": "planner_alone_cap81",
+        "definition": {
+          "calls_fraction": "mean arm hosted calls / mean ceiling hosted calls (replay-inclusive)",
+          "dollar_saving_retained": "(usd_ceiling - usd_arm) / usd_ceiling = 1 - usd ratio"
+        }
+      },
+      "m9": {
+        "calls_fraction": {
+          "point": 0.572248,
+          "ci95_scenario": [
+            0.485965,
+            0.670373
+          ],
+          "ci95_task": [
+            0.514719,
+            0.636569
+          ],
+          "calls_arm": 9.912281,
+          "calls_ceiling": 17.321637,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "dollar_saving_retained": {
+          "point": 0.508272,
+          "ci95_scenario": [
+            0.36268,
+            0.633836
+          ],
+          "ci95_task": [
+            0.412116,
+            0.589543
+          ],
+          "usd_fraction": 0.491728,
+          "usd_arm": 0.023408,
+          "usd_ceiling": 0.047603,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "reference_arm": "planner_alone_cap81",
+        "definition": {
+          "calls_fraction": "mean arm hosted calls / mean ceiling hosted calls (replay-inclusive)",
+          "dollar_saving_retained": "(usd_ceiling - usd_arm) / usd_ceiling = 1 - usd ratio"
+        }
+      },
+      "m11": {
+        "calls_fraction": {
+          "point": 0.654963,
+          "ci95_scenario": [
+            0.557326,
+            0.764283
+          ],
+          "ci95_task": [
+            0.589438,
+            0.729318
+          ],
+          "calls_arm": 11.345029,
+          "calls_ceiling": 17.321637,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "dollar_saving_retained": {
+          "point": 0.429199,
+          "ci95_scenario": [
+            0.263422,
+            0.57425
+          ],
+          "ci95_task": [
+            0.319111,
+            0.523132
+          ],
+          "usd_fraction": 0.570801,
+          "usd_arm": 0.027172,
+          "usd_ceiling": 0.047603,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "reference_arm": "planner_alone_cap81",
+        "definition": {
+          "calls_fraction": "mean arm hosted calls / mean ceiling hosted calls (replay-inclusive)",
+          "dollar_saving_retained": "(usd_ceiling - usd_arm) / usd_ceiling = 1 - usd ratio"
+        }
+      }
+    },
+    "zs": {
+      "m6": {
+        "calls_fraction": {
+          "point": 0.404794,
+          "ci95_scenario": [
+            0.340516,
+            0.479375
+          ],
+          "ci95_task": [
+            0.362074,
+            0.453581
+          ],
+          "calls_arm": 7.011696,
+          "calls_ceiling": 17.321637,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "dollar_saving_retained": {
+          "point": 0.650792,
+          "ci95_scenario": [
+            0.543136,
+            0.742293
+          ],
+          "ci95_task": [
+            0.581191,
+            0.709766
+          ],
+          "usd_fraction": 0.349208,
+          "usd_arm": 0.016624,
+          "usd_ceiling": 0.047603,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "reference_arm": "planner_alone_cap81",
+        "definition": {
+          "calls_fraction": "mean arm hosted calls / mean ceiling hosted calls (replay-inclusive)",
+          "dollar_saving_retained": "(usd_ceiling - usd_arm) / usd_ceiling = 1 - usd ratio"
+        }
+      },
+      "m9": {
+        "calls_fraction": {
+          "point": 0.572248,
+          "ci95_scenario": [
+            0.485965,
+            0.670373
+          ],
+          "ci95_task": [
+            0.514719,
+            0.636569
+          ],
+          "calls_arm": 9.912281,
+          "calls_ceiling": 17.321637,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "dollar_saving_retained": {
+          "point": 0.508272,
+          "ci95_scenario": [
+            0.36268,
+            0.633836
+          ],
+          "ci95_task": [
+            0.412116,
+            0.589543
+          ],
+          "usd_fraction": 0.491728,
+          "usd_arm": 0.023408,
+          "usd_ceiling": 0.047603,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "reference_arm": "planner_alone_cap81",
+        "definition": {
+          "calls_fraction": "mean arm hosted calls / mean ceiling hosted calls (replay-inclusive)",
+          "dollar_saving_retained": "(usd_ceiling - usd_arm) / usd_ceiling = 1 - usd ratio"
+        }
+      },
+      "m11": {
+        "calls_fraction": {
+          "point": 0.654963,
+          "ci95_scenario": [
+            0.557326,
+            0.764283
+          ],
+          "ci95_task": [
+            0.589438,
+            0.729318
+          ],
+          "calls_arm": 11.345029,
+          "calls_ceiling": 17.321637,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "dollar_saving_retained": {
+          "point": 0.429199,
+          "ci95_scenario": [
+            0.263422,
+            0.57425
+          ],
+          "ci95_task": [
+            0.319111,
+            0.523132
+          ],
+          "usd_fraction": 0.570801,
+          "usd_arm": 0.027172,
+          "usd_ceiling": 0.047603,
+          "n_pairs": 171,
+          "n_dropped_missing": 0
+        },
+        "reference_arm": "planner_alone_cap81",
+        "definition": {
+          "calls_fraction": "mean arm hosted calls / mean ceiling hosted calls (replay-inclusive)",
+          "dollar_saving_retained": "(usd_ceiling - usd_arm) / usd_ceiling = 1 - usd ratio"
+        }
+      }
+    }
+  },
+  "inputs": {
+    "campaign_dirs": {
+      "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923/planner_alone": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923/planner_alone",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "ceiling planner_alone_cap81",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 1160215.149123,
+            "usd_per_episode": 0.048208,
+            "hosted_calls_per_episode": 17.350877
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924/planner_alone": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924/planner_alone",
+        "seeds": [
+          3
+        ],
+        "n_episodes": 57,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 57
+        },
+        "role": "ceiling planner_alone_cap81",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+          "n_cost_rows": 57,
+          "means": {
+            "noncached_tokens_per_episode": 1039353.333333,
+            "usd_per_episode": 0.046395,
+            "hosted_calls_per_episode": 17.263158
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 57,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260921iaware/sft_plan": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260921iaware/sft_plan",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "chord and Ganz floor sft_plan",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj1b_planner_20260915",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 23905.587719,
+            "usd_per_episode": 0.003015,
+            "hosted_calls_per_episode": 1.0
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": true,
+            "route": "source_plan_event",
+            "n_sft_plan_rows": 114,
+            "n_mapped": 114,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": 23905.587719,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj1b_planner_20260915",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m6_20260923/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m6_20260923/prefix_handoff",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "prefix bplus m6 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 218489.447368,
+            "usd_per_episode": 0.016311,
+            "hosted_calls_per_episode": 7.008772
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m6_20260924/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m6_20260924/prefix_handoff",
+        "seeds": [
+          3
+        ],
+        "n_episodes": 57,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 57
+        },
+        "role": "prefix bplus m6 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+          "n_cost_rows": 57,
+          "means": {
+            "noncached_tokens_per_episode": 220056.368421,
+            "usd_per_episode": 0.017248,
+            "hosted_calls_per_episode": 7.017544
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 57,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m9_20260923/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m9_20260923/prefix_handoff",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "prefix bplus m9 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 362940.745614,
+            "usd_per_episode": 0.02315,
+            "hosted_calls_per_episode": 9.947368
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m9_20260924/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m9_20260924/prefix_handoff",
+        "seeds": [
+          3
+        ],
+        "n_episodes": 57,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 57
+        },
+        "role": "prefix bplus m9 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+          "n_cost_rows": 57,
+          "means": {
+            "noncached_tokens_per_episode": 359048.070175,
+            "usd_per_episode": 0.023924,
+            "hosted_calls_per_episode": 9.842105
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 57,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m11_20260923/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m11_20260923/prefix_handoff",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "prefix bplus m11 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 457884.149123,
+            "usd_per_episode": 0.027039,
+            "hosted_calls_per_episode": 11.45614
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m11_20260924/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m11_20260924/prefix_handoff",
+        "seeds": [
+          3
+        ],
+        "n_episodes": 57,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 57
+        },
+        "role": "prefix bplus m11 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+          "n_cost_rows": 57,
+          "means": {
+            "noncached_tokens_per_episode": 437126.877193,
+            "usd_per_episode": 0.027438,
+            "hosted_calls_per_episode": 11.122807
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 57,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m6_20260923/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m6_20260923/prefix_handoff",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "prefix zs m6 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 218489.447368,
+            "usd_per_episode": 0.016311,
+            "hosted_calls_per_episode": 7.008772
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m6_20260924/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m6_20260924/prefix_handoff",
+        "seeds": [
+          3
+        ],
+        "n_episodes": 57,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 57
+        },
+        "role": "prefix zs m6 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+          "n_cost_rows": 57,
+          "means": {
+            "noncached_tokens_per_episode": 220056.368421,
+            "usd_per_episode": 0.017248,
+            "hosted_calls_per_episode": 7.017544
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 57,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m9_20260923/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m9_20260923/prefix_handoff",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "prefix zs m9 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 362940.745614,
+            "usd_per_episode": 0.02315,
+            "hosted_calls_per_episode": 9.947368
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m9_20260924/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m9_20260924/prefix_handoff",
+        "seeds": [
+          3
+        ],
+        "n_episodes": 57,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 57
+        },
+        "role": "prefix zs m9 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+          "n_cost_rows": 57,
+          "means": {
+            "noncached_tokens_per_episode": 359048.070175,
+            "usd_per_episode": 0.023924,
+            "hosted_calls_per_episode": 9.842105
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 57,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m11_20260923/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m11_20260923/prefix_handoff",
+        "seeds": [
+          1,
+          2
+        ],
+        "n_episodes": 114,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 114
+        },
+        "role": "prefix zs m11 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+          "n_cost_rows": 114,
+          "means": {
+            "noncached_tokens_per_episode": 457884.149123,
+            "usd_per_episode": 0.027039,
+            "hosted_calls_per_episode": 11.45614
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      },
+      "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m11_20260924/prefix_handoff": {
+        "campaign_dir": "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m11_20260924/prefix_handoff",
+        "seeds": [
+          3
+        ],
+        "n_episodes": 57,
+        "n_crash": 0,
+        "n_crash_excluded_from_pairs": 0,
+        "load_diagnostics": {
+          "loaded": 57
+        },
+        "role": "prefix zs m11 (pooled cap-81 family)",
+        "cost_rows": {
+          "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+          "n_cost_rows": 57,
+          "means": {
+            "noncached_tokens_per_episode": 437126.877193,
+            "usd_per_episode": 0.027438,
+            "hosted_calls_per_episode": 11.122807
+          },
+          "pricing_diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 57,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "sft_plan_floor_costing": {
+            "applied": false,
+            "route": null,
+            "n_sft_plan_rows": 0,
+            "n_mapped": 0,
+            "n_missing": 0,
+            "mean_noncached_plan_tokens": null,
+            "packet_source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+            "packet_system": "planner_alone",
+            "understatement": null
+          }
+        }
+      }
+    },
+    "n_campaign_dirs": 15,
+    "n_episodes_total": 1311,
+    "n_crash_total": 0,
+    "packet_sources": {
+      "/scratch/n12194778/sidekick/results/hj1b_planner_20260915": {
+        "role": "the sft_plan floor's plan packet source: its plan-event tokens and USD only",
+        "n_plan_events_mapped": 114,
+        "n_missing": 0
+      },
+      "prefix arms": "each prefix root is priced against its own ceiling root (hj17 -> hj13_planner_alone_cap81_20260923, hj18 -> hj13_planner_alone_cap81_seed3_20260924), listed under campaign_dirs"
+    },
+    "loader_agreement": {
+      "ceiling": {
+        "n_depth_rows": 171,
+        "n_cost_rows": 171,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      },
+      "floor": {
+        "n_depth_rows": 114,
+        "n_cost_rows": 114,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      },
+      "bplus_m6": {
+        "n_depth_rows": 171,
+        "n_cost_rows": 171,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      },
+      "bplus_m9": {
+        "n_depth_rows": 171,
+        "n_cost_rows": 171,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      },
+      "bplus_m11": {
+        "n_depth_rows": 171,
+        "n_cost_rows": 171,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      },
+      "zs_m6": {
+        "n_depth_rows": 171,
+        "n_cost_rows": 171,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      },
+      "zs_m9": {
+        "n_depth_rows": 171,
+        "n_cost_rows": 171,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      },
+      "zs_m11": {
+        "n_depth_rows": 171,
+        "n_cost_rows": 171,
+        "n_keys_only_in_depth_rows": 0,
+        "n_keys_only_in_cost_rows": 0,
+        "n_goal_pass_mismatch": 0,
+        "n_handoff_flag_mismatch": 0
+      }
+    }
+  },
+  "settings": {
+    "n_boot": 10000,
+    "seed": 20260924,
+    "results_root": "/scratch/n12194778/sidekick/results"
+  }
+}
