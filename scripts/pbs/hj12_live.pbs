@@ -188,11 +188,20 @@ REVIEW_ARMS=(
   "fixed_k|${REPO}/configs/dev_advise_structured_fixed_k_10_fullctx.yaml|dev_advise_structured_fixed_k_10_fullctx"
 )
 
+# Planning controls (brief campaign/workers/briefs/20260924_ctrl_planning_controls.md): the
+# sft_plan floor with a wrong-task plan (WTP) and with the executor's own plan (SP). Dev only,
+# exploratory. Like REVIEW_ARMS, selectable ONLY by an explicit ARMS=..., never by ARMSET.
+# SP is the one arm here whose planner is not hosted: see hj12_planner_guard.
+CONTROL_ARMS=(
+  "sft_plan|${REPO}/configs/dev_sft_plan_wrongtask_bplus.yaml|dev_sft_plan_wrongtask_bplus"
+  "sft_plan|${REPO}/configs/dev_sft_plan_selfplan_bplus.yaml|dev_sft_plan_selfplan_bplus"
+)
+
 hj12_select_arms () {
   SELECTED_ARMS=()
   local all_specs valid_stems spec sys cfg s matches
   local -a given=()
-  all_specs=("${LIVE_ARMS[@]}" "${WAVE_B_ARMS[@]}" "${REVIEW_ARMS[@]}")
+  all_specs=("${LIVE_ARMS[@]}" "${WAVE_B_ARMS[@]}" "${REVIEW_ARMS[@]}" "${CONTROL_ARMS[@]}")
   valid_stems=()
   for spec in "${all_specs[@]}"; do
     IFS='|' read -r sys cfg s <<<"${spec}"
@@ -276,15 +285,17 @@ hj12_assert_selected_configs_exist () {
 # gpt-5.6-luna [OBSERVED src/sidekick/agents/planner.py:23, runner.py:114].
 # packet_source is allowed: takeover/advise arms replay the HJ-1 plan and spend
 # on reviews. A mock or non-luna model is fatal before any episode.
-assert_live_configs_are_hosted_codex () {
-  local configs=()
-  local spec cfg
-  for spec in "${SELECTED_ARMS[@]}"; do
-    IFS='|' read -r _system cfg _stem <<<"${spec}"
-    configs+=("${cfg}")
-  done
-  echo "[hj12] ---- live-set hosted-planner guard (${#configs[@]} configs) ----"
-  timeout 120 "${PY}" - "${configs[@]}" <<'PY'
+#
+# One exception, the self-plan control SP (brief 20260924_ctrl_planning_controls): a
+# type:vllm planner is accepted ONLY as the executor itself -- planner.model ==
+# executor.lora_name == ALIAS_SFT_B_PLUS, and no packet_source -- because this job
+# serves one model (granite + that alias) on one port. Any other vllm planner is
+# FATAL: nothing here would serve it. Each accepted config has a route, "hosted" or
+# "self"; with HJ12_ROUTE_ONLY=1 (hj12_planner_route) the guard prints only that.
+hj12_planner_guard () {
+  timeout 120 env HJ12_SELF_PLAN_ALIAS="${ALIAS_SFT_B_PLUS}" HJ12_ROUTE_ONLY="${HJ12_ROUTE_ONLY:-0}" \
+    "${PY}" - "$@" <<'PY'
+import os
 import sys
 from pathlib import Path
 
@@ -294,6 +305,9 @@ except ImportError:
     print("[hj12] FATAL: PyYAML missing; cannot inspect planner keys independently")
     sys.exit(2)
 
+alias = os.environ.get("HJ12_SELF_PLAN_ALIAS", "").strip()
+route_only = os.environ.get("HJ12_ROUTE_ONLY") == "1"
+routes = []
 failed = 0
 for raw in sys.argv[1:]:
     path = Path(raw)
@@ -316,10 +330,30 @@ for raw in sys.argv[1:]:
     packet_source = planner.get("packet_source")
     if isinstance(packet_source, str):
         packet_source = packet_source.strip() or None
-    print(
-        f"[hj12] guard {path.name}: planner.type={kind!r} model={model!r} "
-        f"({model_src}) packet_source={'set' if packet_source else 'absent'}"
-    )
+    executor = data.get("executor") or {}
+    lora = str(executor.get("lora_name") or "").strip() if isinstance(executor, dict) else ""
+    if not route_only:
+        print(
+            f"[hj12] guard {path.name}: planner.type={kind!r} model={model!r} "
+            f"({model_src}) packet_source={'set' if packet_source else 'absent'}"
+        )
+    if kind == "vllm":
+        if alias and model == alias and lora == alias and not packet_source:
+            if not route_only:
+                print(
+                    f"[hj12] guard {path.name}: self-plan route -- planner.model={model!r} is "
+                    f"executor.lora_name, served by this job's vLLM (ALIAS_SFT_B_PLUS={alias!r})"
+                )
+            routes.append("self")
+            continue
+        print(
+            f"[hj12] FATAL: {path} has a type:vllm planner (model={model!r}, "
+            f"executor.lora_name={lora!r}, packet_source={'set' if packet_source else 'absent'}); "
+            f"hj12_live serves no second model, so a vllm planner must be the executor itself: "
+            f"planner.model == executor.lora_name == {alias!r}, with no packet_source"
+        )
+        failed = 1
+        continue
     if kind != "codex":
         print(
             f"[hj12] FATAL: {path} does not resolve to a live type:codex planner "
@@ -332,8 +366,62 @@ for raw in sys.argv[1:]:
             f"[hj12] FATAL: {path} planner.model={model!r} (need gpt-5.6-luna)"
         )
         failed = 1
+        continue
+    routes.append("hosted")
+if route_only and not failed:
+    print(" ".join(routes))
 sys.exit(failed)
 PY
+}
+
+assert_live_configs_are_hosted_codex () {
+  local configs=()
+  local spec cfg
+  for spec in "${SELECTED_ARMS[@]}"; do
+    IFS='|' read -r _system cfg _stem <<<"${spec}"
+    configs+=("${cfg}")
+  done
+  echo "[hj12] ---- live-set hosted-planner guard (${#configs[@]} configs) ----"
+  hj12_planner_guard "${configs[@]}"
+}
+
+# "hosted" or "self" for one config (the guard's verdict); non-zero with the FATAL line otherwise.
+hj12_planner_route () {
+  local HJ12_ROUTE_ONLY=1
+  hj12_planner_guard "$1"
+}
+
+# The model id the campaign gate must see on every planner usage record of a route.
+hj12_expect_model () {
+  if [[ "$1" == "self" ]]; then
+    echo "${ALIAS_SFT_B_PLUS}"
+  else
+    echo "gpt-5.6-luna"
+  fi
+}
+
+# SP plans on the executor's own server, so its planner URL is the executor URL plus /v1
+# (VllmPlanner posts to <base>/chat/completions; the executor adds /v1 itself). Every
+# other arm must not inherit a planner URL from an earlier SP arm in the same job.
+hj12_apply_planner_route () {
+  case "$1" in
+    self)
+      if [[ -z "${SIDEKICK_VLLM_BASE_URL:-}" ]]; then
+        echo "[hj12] FATAL: self-plan route needs SIDEKICK_VLLM_BASE_URL (the executor server) set first"
+        return 2
+      fi
+      export SIDEKICK_PLANNER_BASE_URL="${SIDEKICK_VLLM_BASE_URL}/v1"
+      echo "[hj12] planner route=self SIDEKICK_PLANNER_BASE_URL=${SIDEKICK_PLANNER_BASE_URL} model=${ALIAS_SFT_B_PLUS}"
+      ;;
+    hosted)
+      unset SIDEKICK_PLANNER_BASE_URL
+      echo "[hj12] planner route=hosted (codex gpt-5.6-luna; SIDEKICK_PLANNER_BASE_URL unset)"
+      ;;
+    *)
+      echo "[hj12] FATAL: unknown planner route '$1'"
+      return 2
+      ;;
+  esac
 }
 
 # Crash convention (J10 / A1 §10.1, B2 prereg §3): the only episode a resubmission may
@@ -935,6 +1023,27 @@ hj12_run_guard_selftest () {
       hj12_select_arms
       printf '%s\n' "${SELECTED_ARMS[@]}"
       ;;
+    planner_route)
+      # The planner guard, then the route run_arm applies, for one config (GUARD_CFG) against
+      # a faked executor URL; nothing is run (tests/unit/test_dev_controls.py).
+      SELECTED_ARMS=("sft_plan|${GUARD_CFG:?}|selftest")
+      assert_live_configs_are_hosted_codex || exit $?
+      export SIDEKICK_VLLM_BASE_URL="${SIDEKICK_VLLM_BASE_URL:-http://127.0.0.1:21003}"
+      pr_route="$(hj12_planner_route "${GUARD_CFG}")" || { echo "${pr_route}"; exit 2; }
+      hj12_apply_planner_route "${pr_route}" || exit $?
+      echo "[hj12] selftest: route=${pr_route} planner_base_url=${SIDEKICK_PLANNER_BASE_URL:-unset} expect_model=$(hj12_expect_model "${pr_route}")"
+      ;;
+    identity_probe)
+      # hj12_vllm_identity_check against a stub /v1/models: curl (and ss) come from
+      # HJ8_STUB_DIR, so the served-id list is whatever the test's stub prints.
+      export VLLM_PORT="${VLLM_PORT:-21004}"
+      export VLLM_PID="${VLLM_PID:-12345}"
+      VLOG="$(mktemp)"
+      : > "${VLOG}"
+      LORA_MODULES=("${ALIAS_SFT_B_PLUS}=/tmp/selftest_identity_probe")
+      hj12_vllm_identity_check
+      echo "[hj12] selftest: identity_probe passed"
+      ;;
     health_missing_alias)
       export VLLM_PORT="${VLLM_PORT:-21001}"
       export VLLM_PID="${VLLM_PID:-12345}"
@@ -1026,7 +1135,8 @@ assert_live_configs_are_hosted_codex || exit $?
 # Does not purge or write a manifest on the real cid, so a later full
 # run still sees n_runs=0 and will smoke itself. Live arms always pass
 # --expect-planner --expect-model gpt-5.6-luna: a silent mock would produce a
-# full set of plausible numbers measuring nothing.
+# full set of plausible numbers measuring nothing. The self-plan route passes
+# --expect-model ${ALIAS_SFT_B_PLUS} instead, and points the planner at this job's server.
 run_arm () {
   local system="$1"
   local cfg="$2"
@@ -1042,6 +1152,7 @@ run_arm () {
   local stats=""
   local launching_full=1
   local gate_cmd=(--gate)
+  local route=""
   if [[ -n "${SYSTEM:-}" ]]; then
     echo "[hj12] SYSTEM override ${system} -> ${SYSTEM}"
     system="${SYSTEM}"
@@ -1049,7 +1160,9 @@ run_arm () {
   if [[ -z "${stem}" ]]; then
     stem="${cid%_${DATE}}"
   fi
-  gate_cmd+=(--expect-planner --expect-model gpt-5.6-luna)
+  route="$(hj12_planner_route "${cfg}")" || { echo "${route}"; echo "[hj12] FATAL: no planner route for ${cfg}"; return 2; }
+  hj12_apply_planner_route "${route}" || return 2
+  gate_cmd+=(--expect-planner --expect-model "$(hj12_expect_model "${route}")")
 
   echo "[hj12] ---- arm ${cid} system=${system} ----"
   if arm_is_complete "${cid}"; then

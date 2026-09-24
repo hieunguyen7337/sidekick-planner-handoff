@@ -10,13 +10,13 @@ from pathlib import Path
 from typing import Any
 
 from sidekick.agents.executor import MockExecutor, VLLMExecutor
+from sidekick.agents.packet_remap import apply_packet_task_map
 from sidekick.agents.planner import (
     CORRECT_PROMPT_STYLES,
     CachedPacketPlanner,
     CodexExecConfig,
     CodexExecPlanner,
-    MockPlanner,
-)
+    MockPlanner)
 from sidekick.agents.vllm_planner import VllmPlanner
 from sidekick.agents.verifier import (
     ConstantVerifier,
@@ -184,7 +184,7 @@ def make_planner(
             on_missing=str(planner_cfg.get("on_missing", "fail")),
             live_plan_keys=planner_cfg.get("live_plan_keys") or None,
         )
-    return planner
+    return apply_packet_task_map(planner, planner_cfg)  # WTP control; a no-op without the key
 
 
 def resolve_executor_base_url(exec_cfg: dict[str, Any] | None = None) -> str:

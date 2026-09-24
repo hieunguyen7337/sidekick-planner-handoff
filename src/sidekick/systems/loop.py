@@ -724,7 +724,7 @@ def run_episode(
                         "model": resp.usage.raw.get("resolved_model") or resp.usage.model,
                         "model_reasoning_effort": resp.usage.raw.get("resolved_model_reasoning_effort")
                         or resp.usage.raw.get("model_reasoning_effort"),
-                        "thread_id": resp.thread_id,
+                        "thread_id": resp.thread_id, **_plan_event_fields(resp.usage.raw),
                     },
                     usage=resp.usage,
                 )
@@ -1258,3 +1258,13 @@ def _client_model_id(client: Any, fallback: str) -> str:
     """
     model = getattr(getattr(client, "config", None), "model", None)
     return model or getattr(client, "model", None) or getattr(client, "name", None) or fallback
+
+
+def _plan_event_fields(raw: dict[str, Any]) -> dict[str, Any]:
+    """Plan-event payload fields a planner left on its usage.raw: the source task of the WTP
+    control (src/sidekick/agents/packet_remap.py), and nothing for any other planner, so every
+    other arm's plan event keeps its shape. It lives at the end of the file, and is imported
+    here rather than at the top, so that no line this file's citations name moves."""
+    from sidekick.agents.packet_remap import plan_event_fields
+
+    return plan_event_fields(raw)
