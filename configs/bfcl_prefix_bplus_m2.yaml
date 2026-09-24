@@ -1,0 +1,58 @@
+# BFCL multi_turn_base, Wave E dev design (docs/prereg_bfcl_dev_20260924.md): arm `prefix_bplus_m2`, the
+# planner's first 2 executed actions replayed from BFCL planner_alone_cap81, then the AppWorld-tailored
+# receiver sft_b_plus acts, run out of domain since BFCL has no train split. Depth grid m ∈ {2, 4, 6}
+# (docs/bfcl_env_20260924.md, "Decision").
+# Source: configs/j10_prefix_m9.yaml
+# Differs from source in: env, campaign_id, handoff.source_campaign, handoff.m, planner.packet_source, planner.packet_source_pending
+# tests/unit/test_bfcl_e2_configs.py diffs the parsed YAML of both files against exactly this list.
+#
+# No `split:` key: the split is a command-line argument, and bfcl accepts only dev and test.
+# Submit via scripts/pbs/bfcl_arm.pbs, which refuses any split but dev.
+env: bfcl
+campaign_id: bfcl_prefix_bplus_m2_dev_20260924
+handoff:
+  source_campaign: /scratch/n12194778/sidekick/results/bfcl_planner_alone_cap81_dev_20260924
+  source_system: planner_alone
+  m: 2
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays BFCL planner_alone_cap81: this arm spends zero MARGINAL hosted calls, every arm sees the
+  # identical trajectory per task+seed, and the prefix source and the ceiling are the SAME planner
+  # run, so the non-inferiority comparison is like-for-like (as J10 A1 §4.1).
+  packet_source: /scratch/n12194778/sidekick/results/bfcl_planner_alone_cap81_dev_20260924
+  # verify_configs.py treats it as pending only while the path is absent.
+  packet_source_pending: "produced by BFCL arm planner_alone_cap81 (dev), not yet run"
+  packet_system: planner_alone
+  # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss
+  # must abort, not fall through to a live Codex call.
+  on_missing: fail
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  # Must equal the alias scripts/pbs/bfcl_arm.pbs launches as --lora-modules
+  # sft_b_plus=/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b, the
+  # adapter configs/j10_executor_alone_bplus.yaml is served from (j10_arm.pbs:117-124, A1 r2 §4 F8).
+  # A mismatch means requests silently hit the BASE model.
+  lora_name: sft_b_plus
+  temperature: 0.7
+  max_tokens: 2048
+  # End generation at the close of the first action. Never add a bare "```": it matches the
+  # opening fence.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # The plan is replayed and on_missing is fail, so this cap binds only on executor asks.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

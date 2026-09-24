@@ -6,29 +6,43 @@
 #PBS -j oe
 #PBS -o /scratch/n12194778/sidekick/logs/
 #
-# BFCL multi_turn_base, spike (b) of unit bfcl-env (plan Wave E, E1): ONE dev-split
-# executor_alone arm of zero-shot granite-4.2-8b. Zero hosted calls. Modelled on
-# scripts/pbs/j10_arm.pbs: a vLLM executor server, a 2-entry smoke, the arm, a jq tally.
-# Resubmitting the same arm skips episodes that already have a result.json
-# (src/sidekick/runner.py result_path check); there is no crash purge here.
+# BFCL multi_turn_base, Wave E dev design (docs/prereg_bfcl_dev_20260924.md): ONE dev-split arm,
+# configs/bfcl_<stem>.yaml. Spike (b) of unit bfcl-env ran bfcl_executor_alone_zs through this
+# wrapper; unit BFCL-E2 extended it to every arm of the dev design. Modelled on
+# scripts/pbs/j10_arm.pbs: a vLLM executor server (none for planner_alone), a crash-only purge,
+# a 2-entry smoke with the campaign gate, the arm, a jq tally. Resubmitting the same arm purges
+# crashed episodes of THIS campaign only and skips episodes that already have a result.json
+# (src/sidekick/runner.py result_path check).
 #
-#   qsub -v BFCL_REPO=<checkout>,CFG=configs/bfcl_executor_alone_zs.yaml scripts/pbs/bfcl_arm.pbs
+#   qsub -v BFCL_REPO=<checkout>,CFG=configs/bfcl_prefix_zs_m4.yaml scripts/pbs/bfcl_arm.pbs
+#   Hosted arms also need EXPECTED_CODEX_VERSION=0.153.4. planner_alone serves no model, so it
+#   may be submitted with a CPU select:
+#   qsub -l select=1:ncpus=12:mem=64gb -v CFG=configs/bfcl_planner_alone_cap81.yaml,EXPECTED_CODEX_VERSION=0.153.4 scripts/pbs/bfcl_arm.pbs
 #
 # Job variables (qsub -v):
 #   BFCL_REPO   the checkout whose code runs (default: the plan worktree)
 #   CFG         default configs/bfcl_executor_alone_zs.yaml (relative to BFCL_REPO or absolute)
-#   SPLIT       dev only; anything else is refused (this unit may not touch test)
+#   SYSTEM      runner --system; default derived from the stem, and it must agree
+#   SPLIT       dev only; anything else is refused (no BFCL test prereg is frozen)
 #   TASKS       0 = the whole dev split (50 entries)
 #   SEEDS       default 1,2
 #   CID         default: the config's campaign_id
-#   WORKERS (6), RUN_TIMEOUT (12600 s), SMOKE_TASKS (2)
-# Refusals (exit 2), before a model is loaded: SPLIT other than dev; config env not bfcl;
-#   planner.type other than mock; executor.model other than ibm-granite/granite-4.2-8b; a
-#   non-null executor.lora_name; a `split:` key in the config; CID without a _dev_ marker.
-# Exit codes: 0 arm complete (target non-crashed episodes) | 2 refused | 3 crashes or missing
-#   episodes remain | 1 smoke or infrastructure failure.
+#   EXPECTED_CODEX_VERSION  required, and must be 0.153.4, whenever planner.type is codex
+#   MAX_PLANNER_CALLS  live-call ceiling of a hosted arm; default (calls/episode high end) x target
+#   WORKERS (6), RUN_TIMEOUT (12600 s), SMOKE_TASKS (2), SAFETY (1.2)
+# Refusals (exit 2), before a model is loaded or anything under results/ changes: SPLIT other
+#   than dev; a config stem not in the dev design; config env not bfcl; a `split:` key; a config
+#   campaign_id other than bfcl_<stem>_dev_20260924; CID without a _dev_ marker; SYSTEM disagreeing
+#   with the stem; the receiver, planner, fixed_k, takeover, advice prompt or depth m not the ones
+#   the stem registers; planner.type codex without EXPECTED_CODEX_VERSION=0.153.4 or with another
+#   `codex --version`; a replay source other than bfcl_planner_alone_cap81_dev_20260924, or one not
+#   complete for the requested tasks/seeds; more planless source episodes than the 5 % cap; the
+#   sft_b_plus adapter directory missing; another live job holding the CID.
+# Exit codes: 0 arm complete (target non-crashed episodes, 0 crashed) | 2 refused | 3 crashes or
+#   missing episodes remain -> resubmit | 1 smoke, gate, MAX_PLANNER_CALLS or infrastructure failure.
 #
-# Do NOT add reasoning-parser flags to vLLM (G3).
+# Do NOT add reasoning-parser flags to vLLM (G3). The --lora-modules alias MUST equal
+# executor.lora_name or requests silently hit the base model.
 
 set -uo pipefail
 
@@ -39,14 +53,22 @@ JOBNUM="${JOBTAG%%.*}"; JOBNUM="${JOBNUM//[^0-9A-Za-z]/}"
 PBS_LOGDIR="${REPO}/campaign/workers/logs"
 
 CFG="${CFG:-configs/bfcl_executor_alone_zs.yaml}"
-SYSTEM=executor_alone
+SYSTEM="${SYSTEM:-}"
 SPLIT="${SPLIT:-dev}"
 TASKS="${TASKS:-0}"
 SEEDS="${SEEDS:-1,2}"
 CID="${CID:-}"
+EXPECTED_CODEX_VERSION="${EXPECTED_CODEX_VERSION:-}"
+MAX_PLANNER_CALLS="${MAX_PLANNER_CALLS:-}"
 WORKERS="${WORKERS:-6}"
 RUN_TIMEOUT="${RUN_TIMEOUT:-12600}"
 SMOKE_TASKS="${SMOKE_TASKS:-2}"
+SAFETY="${SAFETY:-1.2}"
+REGISTERED_CODEX_VERSION=0.153.4
+REGISTERED_PLANNER_MODEL=gpt-5.6-luna
+N_DEV=50
+# The one arm that plans; every replay arm replays it (as J10 arms 2 and 4-12 replay arm 3).
+PLANNER_ALONE_CID=bfcl_planner_alone_cap81_dev_20260924
 OUT=/scratch/n12194778/sidekick/results
 LOGDIR=/scratch/n12194778/sidekick/logs
 if [[ "${SELFTEST}" == "1" ]]; then
@@ -61,13 +83,14 @@ if [[ "${SELFTEST}" != "1" ]]; then
 fi
 
 fatal () { echo "[bfcl] FATAL: $*"; exit 2; }
-echo "[bfcl] start=$(date -Iseconds) job=${JOBTAG} host=$(hostname) repo=${REPO} cfg=${CFG} split=${SPLIT} tasks=${TASKS} seeds=${SEEDS} selftest=${SELFTEST}"
+echo "[bfcl] start=$(date -Iseconds) job=${JOBTAG} host=$(hostname) repo=${REPO} cfg=${CFG} system=${SYSTEM:-<derive>} split=${SPLIT} tasks=${TASKS} seeds=${SEEDS} selftest=${SELFTEST}"
 
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export HF_HOME=/scratch/n12194778/hf
 export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
 export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
 export PYTHONPATH="${REPO}/src:${REPO}:${PYTHONPATH:-}"
+# CODEX_HOME is deliberately NOT set: the default ~/.codex holds auth.json (j10_arm.pbs:98).
 CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
 if [[ -x "${CU13}/bin/nvcc" ]]; then
   export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
@@ -79,13 +102,31 @@ export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
 export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
 export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
 ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+if [[ "${SELFTEST}" == "1" && -n "${BFCL_STUB_DIR:-}" ]]; then
+  export PATH="${BFCL_STUB_DIR}:${PATH}"  # a stub codex must win over ~/.local/bin/codex (j10_arm.pbs:110-112)
+fi
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
 PY="${PY:-${SIDEKICK_VENV}/bin/python}"
+SUM="${REPO}/scripts/setup/campaign_summarize.py"
 MODEL_GRANITE=ibm-granite/granite-4.2-8b
+# The sft_b_plus receiver is the one J10 serves (j10_arm.pbs:117-124, A1 r2 §4 F8): alias and
+# directory are fixed here, because a different adapter under the same alias changes the receiver
+# while every log still says sft_b_plus. The directory is overridable in a self-test only.
+ALIAS_SFT_B_PLUS=sft_b_plus
+REGISTERED_ADAPTER_SFT_B_PLUS=/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b
+ADAPTER_SFT_B_PLUS="${REGISTERED_ADAPTER_SFT_B_PLUS}"
+if [[ "${SELFTEST}" == "1" && -n "${BFCL_ADAPTER_SFT_B_PLUS:-}" ]]; then
+  ADAPTER_SFT_B_PLUS="${BFCL_ADAPTER_SFT_B_PLUS}"
+fi
+MAX_LORAS=4
 cd "${REPO}" || exit 1
+echo "[bfcl] repo_commit=${SIDEKICK_START_COMMIT} dirty_files=$(git -C "${REPO}" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
 
 # ---- config -------------------------------------------------------------------------------
 [[ "${CFG}" == /* ]] || CFG="${REPO}/${CFG}"
 [[ -f "${CFG}" ]] || fatal "config not found: ${CFG}"
+CFG_BASE="$(basename "${CFG}")"
+CFG_STEM="${CFG_BASE%.yaml}"; CFG_STEM="${CFG_STEM#bfcl_}"
 echo "[bfcl] config ${CFG} sha256=$(sha256sum "${CFG}" | cut -d' ' -f1)"
 FACTS="$(timeout 60 "${PY}" - "${CFG}" <<'PY'
 import sys
@@ -97,6 +138,7 @@ if not isinstance(data, dict):
     sys.exit("config is not a mapping")
 planner = data.get("planner") if isinstance(data.get("planner"), dict) else {}
 executor = data.get("executor") if isinstance(data.get("executor"), dict) else {}
+handoff = data.get("handoff") if isinstance(data.get("handoff"), dict) else {}
 lora = executor.get("lora_name")
 lora = "" if lora is None or str(lora).strip() in ("", "null", "None") else str(lora).strip()
 
@@ -109,75 +151,367 @@ facts = {
     "CFG_ENV": clean(data.get("env")),
     "CFG_CAMPAIGN_ID": clean(data.get("campaign_id")),
     "PLANNER_TYPE": clean(planner.get("type") or data.get("planner_type") or "mock"),
+    "PLANNER_MODEL": clean(planner.get("model")),
+    "PACKET_SOURCE": clean(planner.get("packet_source")),
+    "PACKET_SYSTEM": clean(planner.get("packet_system") or "planner_alone"),
+    "ON_MISSING": clean(planner.get("on_missing") or "fail"),
+    "CORRECT_PROMPT": clean(planner.get("correct_prompt") or "correction"),
     "EXECUTOR_TYPE": clean(executor.get("type") or data.get("executor_type") or "mock"),
     "EXECUTOR_MODEL": clean(executor.get("model")),
     "LORA_NAME": lora,
+    "HANDOFF_SOURCE": clean(handoff.get("source_campaign")),
+    "HANDOFF_M": clean(handoff.get("m")),
+    "FIXED_K": clean(data.get("fixed_k")),
+    "TAKEOVER": "1" if data.get("takeover") is True else "0",
+    "ADVICE_FROM_ACT": "1" if data.get("advice_from_act") is True else "0",
     "HAS_SPLIT_KEY": "1" if "split" in data else "0",
 }
 for key, value in facts.items():
     print(f"{key}={value}")
 PY
 )" || fatal "could not read ${CFG} (PyYAML / syntax)"
-CFG_ENV=""; CFG_CAMPAIGN_ID=""; PLANNER_TYPE=""; EXECUTOR_TYPE=""; EXECUTOR_MODEL=""; LORA_NAME=""; HAS_SPLIT_KEY=""
+CFG_ENV=""; CFG_CAMPAIGN_ID=""; PLANNER_TYPE=""; PLANNER_MODEL=""; PACKET_SOURCE=""; PACKET_SYSTEM=""
+ON_MISSING=""; CORRECT_PROMPT=""; EXECUTOR_TYPE=""; EXECUTOR_MODEL=""; LORA_NAME=""; HANDOFF_SOURCE=""
+HANDOFF_M=""; FIXED_K=""; TAKEOVER=""; ADVICE_FROM_ACT=""; HAS_SPLIT_KEY=""
 while IFS='=' read -r key value; do
   case "${key}" in
     CFG_ENV) CFG_ENV="${value}";;
     CFG_CAMPAIGN_ID) CFG_CAMPAIGN_ID="${value}";;
     PLANNER_TYPE) PLANNER_TYPE="${value}";;
+    PLANNER_MODEL) PLANNER_MODEL="${value}";;
+    PACKET_SOURCE) PACKET_SOURCE="${value}";;
+    PACKET_SYSTEM) PACKET_SYSTEM="${value}";;
+    ON_MISSING) ON_MISSING="${value}";;
+    CORRECT_PROMPT) CORRECT_PROMPT="${value}";;
     EXECUTOR_TYPE) EXECUTOR_TYPE="${value}";;
     EXECUTOR_MODEL) EXECUTOR_MODEL="${value}";;
     LORA_NAME) LORA_NAME="${value}";;
+    HANDOFF_SOURCE) HANDOFF_SOURCE="${value}";;
+    HANDOFF_M) HANDOFF_M="${value}";;
+    FIXED_K) FIXED_K="${value}";;
+    TAKEOVER) TAKEOVER="${value}";;
+    ADVICE_FROM_ACT) ADVICE_FROM_ACT="${value}";;
     HAS_SPLIT_KEY) HAS_SPLIT_KEY="${value}";;
   esac
 done <<< "${FACTS}"
-echo "[bfcl] config env=${CFG_ENV} campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} executor=${EXECUTOR_TYPE}:${EXECUTOR_MODEL} lora_name=${LORA_NAME:-<none>}"
+echo "[bfcl] config env=${CFG_ENV} campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} planner.model=${PLANNER_MODEL:-<unset>} packet_source=${PACKET_SOURCE:-<none>} executor=${EXECUTOR_TYPE}:${EXECUTOR_MODEL:-<none>} lora_name=${LORA_NAME:-<none>} handoff.source_campaign=${HANDOFF_SOURCE:-<none>} m=${HANDOFF_M:-<none>} fixed_k=${FIXED_K:-<none>} takeover=${TAKEOVER}"
 
 # ---- refusals -----------------------------------------------------------------------------
 [[ "${SPLIT}" == "dev" ]] || fatal "SPLIT=${SPLIT}: this arm runs on the BFCL dev split only"
+
+# The dev design (docs/prereg_bfcl_dev_20260924.md): stem -> runner system, receiver, whether the
+# arm spends hosted calls, and the high end of its hosted calls per episode
+# (docs/second_env_scoping_20260923.md §3: planner_alone 16, a channel arm 4; plan_zs 2, twice the
+# unit brief's 1). The high end sizes the default MAX_PLANNER_CALLS. Channel facts:
+# EXP_K (fixed_k), EXP_TAKEOVER, EXP_PROMPT (planner.correct_prompt); prefix depth EXP_M.
+# plan_zs runs prompt_only, not sft_plan: sft_plan.py:18 would send model=sft_plan to a server
+# that serves only the base model when executor.lora_name is null (configs/bfcl_plan_zs.yaml).
+EXP_K=""; EXP_TAKEOVER=0; EXP_PROMPT=correction; EXP_M=""
+case "${CFG_STEM}" in
+  executor_alone_zs)    REG_SYSTEM=executor_alone; RECEIVER=zs;    HOSTED=0; CPE_HIGH=0;;
+  executor_alone_bplus) REG_SYSTEM=executor_alone; RECEIVER=bplus; HOSTED=0; CPE_HIGH=0;;
+  planner_alone_cap81)  REG_SYSTEM=planner_alone;  RECEIVER=none;  HOSTED=1; CPE_HIGH=16;;
+  plan_zs)              REG_SYSTEM=prompt_only;    RECEIVER=zs;    HOSTED=1; CPE_HIGH=2;;
+  takeover_k5)          REG_SYSTEM=fixed_k; RECEIVER=zs; HOSTED=1; CPE_HIGH=4; EXP_K=5; EXP_TAKEOVER=1;;
+  advise_k5_fullctx)    REG_SYSTEM=fixed_k; RECEIVER=zs; HOSTED=1; CPE_HIGH=4; EXP_K=5;;
+  advise_k5_neutral)    REG_SYSTEM=fixed_k; RECEIVER=zs; HOSTED=1; CPE_HIGH=4; EXP_K=5; EXP_PROMPT=neutral;;
+  prefix_zs_m2|prefix_zs_m4|prefix_zs_m6)
+    REG_SYSTEM=prefix_handoff; RECEIVER=zs; HOSTED=0; CPE_HIGH=0; EXP_M="${CFG_STEM##*_m}";;
+  prefix_bplus_m2|prefix_bplus_m4|prefix_bplus_m6)
+    REG_SYSTEM=prefix_handoff; RECEIVER=bplus; HOSTED=0; CPE_HIGH=0; EXP_M="${CFG_STEM##*_m}";;
+  *) fatal "${CFG_BASE} is not an arm of the BFCL dev design (configs/bfcl_<stem>.yaml, docs/prereg_bfcl_dev_20260924.md)";;
+esac
+if [[ -z "${SYSTEM}" ]]; then
+  SYSTEM="${REG_SYSTEM}"
+elif [[ "${SYSTEM}" != "${REG_SYSTEM}" ]]; then
+  fatal "SYSTEM=${SYSTEM} disagrees with the registered system ${REG_SYSTEM} for ${CFG_STEM}"
+fi
 [[ "${CFG_ENV}" == "bfcl" ]] || fatal "config env is ${CFG_ENV:-<unset>}, not bfcl"
 [[ "${HAS_SPLIT_KEY}" == "0" ]] || fatal "${CFG} carries a split: key; the split is a CLI argument"
-[[ "${PLANNER_TYPE}" == "mock" ]] || fatal "planner.type=${PLANNER_TYPE}: executor_alone must make zero hosted calls"
-[[ "${EXECUTOR_TYPE}" == "vllm" ]] || fatal "executor.type=${EXECUTOR_TYPE}, expected vllm"
-[[ "${EXECUTOR_MODEL}" == "${MODEL_GRANITE}" ]] || fatal "executor.model=${EXECUTOR_MODEL}, expected ${MODEL_GRANITE}"
-[[ -z "${LORA_NAME}" ]] || fatal "executor.lora_name=${LORA_NAME}: this arm is zero-shot (null)"
+[[ "${CFG_CAMPAIGN_ID}" == "bfcl_${CFG_STEM}_dev_20260924" ]] \
+  || fatal "config campaign_id ${CFG_CAMPAIGN_ID:-<unset>} is not bfcl_${CFG_STEM}_dev_20260924"
+[[ "${TASKS}" =~ ^[0-9]+$ && "${TASKS}" -le "${N_DEV}" ]] || fatal "TASKS must be 0..${N_DEV} (0 = all), got ${TASKS}"
+[[ "${SEEDS}" =~ ^[0-9]+(,[0-9]+)*$ ]] || fatal "SEEDS must look like 1,2 -- got ${SEEDS}"
 CID="${CID:-${CFG_CAMPAIGN_ID}}"
 [[ -n "${CID}" ]] || fatal "no campaign id"
+[[ "${CID}" =~ ^[A-Za-z0-9_.-]+$ && "${CID}" != "." && "${CID}" != ".." ]] || fatal "unsafe CID ${CID}"
 [[ "${CID}" == *_dev_* ]] || fatal "CID=${CID} does not say _dev_; a dev run must not look like a test campaign"
 TARGET_TASKS="${TASKS}"
-if [[ "${TASKS}" -eq 0 ]]; then TARGET_TASKS=50; fi
+if [[ "${TASKS}" -eq 0 ]]; then TARGET_TASKS="${N_DEV}"; fi
 N_SEEDS=$(awk -F, '{print NF}' <<< "${SEEDS}")
+SMOKE_SEED="${SEEDS%%,*}"
 TARGET=$(( TARGET_TASKS * N_SEEDS ))
-echo "[bfcl] cid=${CID} target=${TARGET} (${TARGET_TASKS} tasks x ${N_SEEDS} seeds)"
+echo "[bfcl] cid=${CID} system=${SYSTEM} receiver=${RECEIVER} hosted=${HOSTED} target=${TARGET} (${TARGET_TASKS} tasks x ${N_SEEDS} seeds)"
 
-# ---- tally: count and error_type distribution over result.json, via jq --------------------
+# ---- receiver ---------------------------------------------------------------------------------
+case "${RECEIVER}" in
+  none)
+    [[ "${EXECUTOR_TYPE}" == "mock" ]] || fatal "executor.type=${EXECUTOR_TYPE}: planner_alone never constructs an executor, expected mock";;
+  zs|bplus)
+    [[ "${EXECUTOR_TYPE}" == "vllm" ]] || fatal "executor.type=${EXECUTOR_TYPE}, expected vllm"
+    [[ "${EXECUTOR_MODEL}" == "${MODEL_GRANITE}" ]] || fatal "executor.model=${EXECUTOR_MODEL}, expected ${MODEL_GRANITE}";;
+esac
+if [[ "${RECEIVER}" == "zs" ]]; then
+  [[ -z "${LORA_NAME}" ]] || fatal "executor.lora_name=${LORA_NAME}: this arm is zero-shot (null)"
+fi
+LORA_MODULES=()
+# Ported from j10_arm.pbs:757-775 (register_lora), and run in preflight so a missing adapter is
+# refused before a GPU model loads.
+register_lora () {
+  local alias="$1" path="$2"
+  [[ -d "${path}" ]] || fatal "adapter path for alias ${alias} is not a directory: ${path}"
+  [[ -f "${path}/adapter_config.json" ]] || fatal "adapter for alias ${alias} missing adapter_config.json: ${path}"
+  if [[ ! -f "${path}/adapter_model.safetensors" && ! -f "${path}/adapter_model.bin" && ! -f "${path}/adapter_model.pt" ]]; then
+    fatal "adapter for alias ${alias} missing weights file: ${path}"
+  fi
+  LORA_MODULES+=("${alias}=${path}")
+  echo "[bfcl] lora-module ${alias}=${path} adapter_config.sha256=$(sha256sum "${path}/adapter_config.json" | cut -d' ' -f1)"
+}
+if [[ "${RECEIVER}" == "bplus" ]]; then
+  [[ "${LORA_NAME}" == "${ALIAS_SFT_B_PLUS}" ]] \
+    || fatal "executor.lora_name=${LORA_NAME:-<null>} is not the served alias ${ALIAS_SFT_B_PLUS}; requests would silently hit BASE"
+  register_lora "${ALIAS_SFT_B_PLUS}" "${ADAPTER_SFT_B_PLUS}"
+fi
+
+# ---- planner ----------------------------------------------------------------------------------
+# Ported from j10_arm.pbs:285-300.
+if [[ "${SYSTEM}" == "executor_alone" ]]; then
+  [[ "${PLANNER_TYPE}" == "mock" ]] || fatal "planner.type=${PLANNER_TYPE}: executor_alone must make zero hosted calls"
+fi
+if [[ "${HOSTED}" == "1" && "${PLANNER_TYPE}" != "codex" ]]; then
+  fatal "hosted arm ${SYSTEM} has planner.type=${PLANNER_TYPE}; anything but codex silently runs MockPlanner"
+fi
+if [[ "${PLANNER_TYPE}" == "codex" && "${PLANNER_MODEL}" != "${REGISTERED_PLANNER_MODEL}" ]]; then
+  fatal "planner.model is '${PLANNER_MODEL}', registered planner is exactly ${REGISTERED_PLANNER_MODEL}"
+fi
+if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+  [[ -n "${HANDOFF_SOURCE}" ]] || fatal "prefix arm without handoff.source_campaign"
+  [[ "${HANDOFF_M}" == "${EXP_M}" ]] || fatal "handoff.m=${HANDOFF_M:-<unset>}, but ${CFG_STEM} registers m=${EXP_M}"
+  if [[ "${PLANNER_TYPE}" == "codex" ]]; then
+    [[ -n "${PACKET_SOURCE}" && "${ON_MISSING}" == "fail" ]] \
+      || fatal "prefix arm with a codex planner needs packet_source and on_missing: fail, or it could spend live calls"
+  fi
+fi
+# The channel: a takeover arm whose flag was dropped runs the advise path and still scores (the
+# reason for j10_arm.pbs:531-539's smoke guard); here the config itself is checked first.
+if [[ "${SYSTEM}" == "fixed_k" ]]; then
+  [[ "${FIXED_K}" == "${EXP_K}" ]] || fatal "fixed_k=${FIXED_K:-<unset>}, but ${CFG_STEM} registers k=${EXP_K}"
+  [[ "${TAKEOVER}" == "${EXP_TAKEOVER}" ]] || fatal "takeover=${TAKEOVER}, but ${CFG_STEM} registers takeover=${EXP_TAKEOVER}"
+  [[ "${ADVICE_FROM_ACT}" == "0" ]] || fatal "advice_from_act is set; no arm of the BFCL dev design is the show channel"
+  [[ "${CORRECT_PROMPT}" == "${EXP_PROMPT}" ]] || fatal "planner.correct_prompt=${CORRECT_PROMPT}, but ${CFG_STEM} registers ${EXP_PROMPT}"
+fi
+
+# ---- codex version: required for every codex planner (ported from j10_arm.pbs:302-321) ---------
+CODEX_VERSION=""
+if [[ "${PLANNER_TYPE}" == "codex" ]]; then
+  [[ "${EXPECTED_CODEX_VERSION}" == "${REGISTERED_CODEX_VERSION}" ]] \
+    || fatal "planner.type codex needs EXPECTED_CODEX_VERSION=${REGISTERED_CODEX_VERSION} (got '${EXPECTED_CODEX_VERSION:-<unset>}')"
+  if command -v codex >/dev/null 2>&1; then
+    CODEX_VERSION="$(timeout 60 codex --version 2>/dev/null | head -n 1 | tr -d '\r')"
+  fi
+  echo "[bfcl] codex --version: ${CODEX_VERSION:-<unavailable>}"
+  [[ -n "${CODEX_VERSION}" ]] || fatal "EXPECTED_CODEX_VERSION=${EXPECTED_CODEX_VERSION} but codex --version returned nothing"
+  CODEX_TOKEN="${CODEX_VERSION##* }"
+  if [[ "${CODEX_VERSION}" != "${EXPECTED_CODEX_VERSION}" && "${CODEX_TOKEN}" != "${EXPECTED_CODEX_VERSION}" ]]; then
+    fatal "codex --version is '${CODEX_VERSION}', expected '${EXPECTED_CODEX_VERSION}'"
+  fi
+  echo "[bfcl] codex version matches EXPECTED_CODEX_VERSION=${EXPECTED_CODEX_VERSION}"
+fi
+if [[ "${HOSTED}" == "1" && "${SELFTEST}" != "1" && ! -s "${HOME}/.codex/auth.json" ]]; then
+  fatal "~/.codex/auth.json missing or empty -- planner cannot authenticate"
+fi
+
+# ---- replay arms: the planner_alone run they replay must be complete ---------------------------
+# Every replay source is BFCL planner_alone_cap81's dev campaign: the prefix arms re-execute its
+# first m actions (handoff.source_campaign), plan_zs and the channel arms replay its first plan
+# (planner.packet_source). Against a partial source a replay episode crashes on a missing packet or
+# replays a plan the source never scored, so the source must hold >= TARGET non-crashed result.json
+# for the requested seeds, 0 crashed, 0 unreadable. Ported from j10_arm.pbs:373-445.
+REQUIRED_SOURCE="${OUT}/${PLANNER_ALONE_CID}"
+for src in "${HANDOFF_SOURCE}" "${PACKET_SOURCE}"; do
+  [[ -z "${src}" || "${src%/}" == "${REQUIRED_SOURCE}" ]] \
+    || fatal "replay source ${src} is not ${REQUIRED_SOURCE}; every BFCL replay arm replays planner_alone_cap81"
+done
+require_complete_source () {
+  local what="$1" src="$2"
+  local stats src_ok src_crash src_bad src_exists
+  stats="$(timeout 300 "${PY}" - "${src}" "${SEEDS}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+seeds = {s for s in sys.argv[2].split(",") if s}
+ok = crash = bad = 0
+if root.is_dir():
+    for path in root.rglob("result.json"):
+        try:
+            row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            bad += 1
+            continue
+        if not isinstance(row, dict):
+            bad += 1
+        elif row.get("error_type") == "crash":
+            crash += 1
+        elif str(row.get("seed")) in seeds:
+            ok += 1
+print(f"{ok} {crash} {bad} {1 if root.is_dir() else 0}")
+PY
+)" || fatal "could not inspect the ${what} ${src}"
+  read -r src_ok src_crash src_bad src_exists <<< "${stats}"
+  echo "[bfcl] ${what} ${src}: exists=${src_exists} non_crashed=${src_ok} crashed=${src_crash} unreadable=${src_bad} (need >= ${TARGET}, 0 crashed)"
+  if [[ "${src_exists}" != "1" || "${src_ok}" -lt "${TARGET}" || "${src_crash}" -ne 0 || "${src_bad}" -ne 0 ]]; then
+    fatal "${what} campaign is not complete; planner_alone_cap81 must complete before the replay arms start"
+  fi
+}
+if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+  require_complete_source "prefix source" "${HANDOFF_SOURCE}"
+fi
+# A prefix arm's packet_source is its handoff source; judging it twice would only repeat the line.
+if [[ -n "${PACKET_SOURCE}" ]] && ! [[ "${SYSTEM}" == "prefix_handoff" && "${PACKET_SOURCE%/}" == "${HANDOFF_SOURCE%/}" ]]; then
+  require_complete_source "planner.packet_source" "${PACKET_SOURCE}"
+  # Source episodes scored without a crash that wrote no plan: on_missing: call_if_planless plans
+  # them live, one call per key per arm (J10 A1 §4.2). More than 5 % of the target points at the
+  # harness, not the planner, so the arm is refused (j10_arm.pbs:421-445).
+  PLANLESS="$(timeout 300 "${PY}" - "${PACKET_SOURCE}" "${PACKET_SYSTEM}" "${SEEDS}" <<'PY'
+import sys
+
+from sidekick.agents.planner import planless_source_keys
+
+seeds = [s for s in sys.argv[3].split(",") if s]
+print(" ".join(planless_source_keys(sys.argv[1], sys.argv[2], seeds)))
+PY
+)" || fatal "could not list the planner_alone episodes without a plan under ${PACKET_SOURCE}"
+  N_PLANLESS=$(wc -w <<< "${PLANLESS}")
+  PLANLESS_CAP=$(( TARGET * 5 / 100 ))
+  echo "[bfcl] planner_alone episodes scored without a plan: ${N_PLANLESS} (cap ${PLANLESS_CAP}, as J10 A1 §4.2)${PLANLESS:+: ${PLANLESS}}"
+  if (( N_PLANLESS > 0 )) && [[ "${ON_MISSING}" != "call_if_planless" ]]; then
+    fatal "planner.on_missing is '${ON_MISSING}', so the ${N_PLANLESS} planless source episode(s) would crash"
+  fi
+  if (( N_PLANLESS > PLANLESS_CAP )); then
+    fatal "${N_PLANLESS} planner_alone episodes wrote no plan, above the cap of ${PLANLESS_CAP} (5 % of ${TARGET}); diagnose before any replay arm runs"
+  fi
+fi
+
+# Gate flags (j10_arm.pbs:447-452): arms that must not call the planner get --gate alone, which
+# asserts ZERO live planner calls; hosted arms must show gpt-5.6-luna on every planner usage record.
+# No --expect-split: campaign_summarize.split_check compares against AppWorld's dev ids.
+GATE_ARGS=(--gate)
+if [[ "${HOSTED}" == "1" ]]; then
+  GATE_ARGS+=(--expect-planner --expect-model "${REGISTERED_PLANNER_MODEL}")
+fi
+
+# ---- MAX_PLANNER_CALLS: the live-call brake of scripts/pbs/hj12_live.pbs:25-29, per arm -------
+# Default: the arm's calls/episode high end x target. The count starts from the ledger key
+# ledger_totals.planner_calls_total (CostLedger), never the replay-inclusive planner_calls_total
+# (hj12_live.pbs:659-661), and subtracts the cached plan replays: loop.py:465 rewrites every
+# planner response's n_calls to the attempt count, so a replayed plan (provider "cache", n_calls 0
+# from CachedPacketPlanner) reaches the ledger as 1 call per episode although nothing was bought.
+if [[ "${HOSTED}" == "1" ]]; then
+  MAX_PLANNER_CALLS="${MAX_PLANNER_CALLS:-$(( CPE_HIGH * TARGET ))}"
+  [[ "${MAX_PLANNER_CALLS}" =~ ^[0-9]+$ ]] || fatal "MAX_PLANNER_CALLS must be an integer, got ${MAX_PLANNER_CALLS}"
+  echo "[bfcl] MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS} (hosted planner calls of ${CID}; ${CPE_HIGH}/episode high end x ${TARGET}) safety=${SAFETY}"
+fi
+# "<hosted calls> <episodes> <ledger calls>" of one campaign: the ledger key from
+# campaign_summarize.summarise (hj12_live.pbs:662-677) minus the n_calls of planner records whose
+# provider is "cache".
+bfcl_live_calls () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${SUM}" "${OUT}" "${cid}" <<'PY'
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+sum_path, out_root, cid = sys.argv[1], sys.argv[2], sys.argv[3]
+spec = importlib.util.spec_from_file_location("campaign_summarize", sum_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+summary = mod.summarise(Path(out_root), cid)
+ledger = int((summary.get("ledger_totals") or {}).get("planner_calls_total") or 0)
+cached = 0
+root = Path(out_root) / cid
+for path in root.rglob("events.jsonl") if root.is_dir() else []:
+    if not (path.parent / "result.json").is_file():
+        continue  # an attempt without a result is not in the ledger either
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if '"cache"' not in line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(ev, dict):
+            continue
+        usage = ev.get("usage") or {}
+        if ev.get("actor") == "planner" and usage.get("provider") == "cache":
+            cached += int(usage.get("n_calls") or 0)
+print(max(ledger - cached, 0), int(summary.get("n_runs") or 0), ledger)
+PY
+}
+# Refuse to (re)start the arm when what it has spent plus the projection for its missing episodes
+# exceeds the ceiling. The rate comes from `rate_cid`: the smoke on a first submission, the
+# campaign itself on a resume (hj12_live.pbs:791-841 projects from the smoke only). An order-of-
+# magnitude brake, not a budget: the smoke is 2 episodes.
+bfcl_spend_guard () {
+  local rate_cid="$1"
+  local raw live_so_far n_done ledger_so_far rate_live rate_n missing proj
+  raw="$(bfcl_live_calls "${CID}")" || { echo "[bfcl] FATAL: could not read ledger_totals.planner_calls_total of ${CID}"; exit 1; }
+  read -r live_so_far n_done ledger_so_far <<< "${raw}"
+  raw="$(bfcl_live_calls "${rate_cid}")" || { echo "[bfcl] FATAL: could not read ledger_totals.planner_calls_total of ${rate_cid}"; exit 1; }
+  read -r rate_live rate_n _ <<< "${raw}"
+  (( rate_n > 0 )) || { echo "[bfcl] FATAL: ${rate_cid} has no episodes to project live planner calls from"; exit 1; }
+  missing=$(( TARGET - n_done )); (( missing < 0 )) && missing=0
+  proj="$(awk -v l="${rate_live}" -v n="${rate_n}" -v m="${missing}" -v s="${SAFETY}" \
+    'BEGIN { x = l / n * m * s; c = int(x); if (c < x) c++; print c }')"
+  echo "[bfcl] spend ${CID}: live_so_far=${live_so_far} (ledger ${ledger_so_far} minus cached plans) episodes=${n_done} rate_from=${rate_cid} rate=${rate_live}/${rate_n} missing=${missing} projection=${proj} ceiling=${MAX_PLANNER_CALLS}"
+  if (( live_so_far + proj > MAX_PLANNER_CALLS )); then
+    echo "[bfcl] FATAL: live planner calls ${live_so_far} + projected ${proj} exceed MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS}; not launching the run"
+    exit 1
+  fi
+}
+
+# ---- tally: what an operator reads before resubmitting ------------------------------------------
+# The jq tally of the spike wrapper, with j10_arm.pbs:455-529's unreadable / other-seed / orphan
+# counts: an unreadable result.json is counted, not allowed to fail jq -s for the whole campaign.
 tally_campaign () {
-  local cid="$1" target="$2"
+  local cid="$1" target="$2" seeds="$3"
   local root="${OUT}/${cid}"
+  local -a readable=()
+  local f d n n_bad=0 n_crash=0 n_ok=0 n_other=0 n_orphan=0
   echo "[bfcl] ---- tally (${cid}) ----"
   if ! command -v jq >/dev/null 2>&1; then
     echo "[bfcl] WARN: jq not on PATH; no tally"
     return 1
   fi
-  local files
-  files="$(find "${root}" -type f -name result.json 2>/dev/null | sort)"
-  local n=0
-  [[ -n "${files}" ]] && n=$(wc -l <<< "${files}")
+  while IFS= read -r -d '' f; do
+    if jq -e 'type == "object"' "${f}" >/dev/null 2>&1; then readable+=("${f}"); else n_bad=$((n_bad + 1)); fi
+  done < <(find "${root}" -type f -name result.json -print0 2>/dev/null | sort -z)
+  n=$(( ${#readable[@]} + n_bad ))
   if (( n == 0 )); then
     echo "[bfcl] tally cid=${cid} result_files=0 target=${target}"
     return 3
   fi
-  # shellcheck disable=SC2086
-  jq -s -r '
-    (map(.error_type // "none") | group_by(.) | map("\(length)\t\(.[0])") | .[]),
-    "n=\(length) success=\(map(select(.success == true)) | length) tgc_mean=\((map(.tgc // 0) | add) / length) goal_pass_rate_mean=\((map(.goal_pass_rate // 0) | add) / length) crashed=\(map(select(.error_type == "crash")) | length)"
-  ' ${files} | sed 's/^/[bfcl]   /'
-  local n_crash
-  # shellcheck disable=SC2086
-  n_crash=$(jq -s '[.[] | select(.error_type == "crash")] | length' ${files})
-  local n_ok=$(( n - n_crash ))
-  echo "[bfcl] tally cid=${cid} result_files=${n} non_crashed=${n_ok} crashed=${n_crash} target=${target}"
-  if (( n_crash > 0 || n_ok < target )); then
-    echo "[bfcl] INCOMPLETE: ${n_ok}/${target} non-crashed"
+  if (( ${#readable[@]} > 0 )); then
+    jq -s -r '
+      (map(.error_type // "none") | group_by(.) | map("\(length)\t\(.[0])") | .[]),
+      "n=\(length) success=\(map(select(.success == true)) | length) tgc_mean=\((map(.tgc // 0) | add) / length) goal_pass_rate_mean=\((map(.goal_pass_rate // 0) | add) / length) crashed=\(map(select(.error_type == "crash")) | length)"
+    ' "${readable[@]}" | sed 's/^/[bfcl]   /'
+    read -r n_crash n_ok n_other < <(jq -s -r --arg seeds ",${seeds}," '
+      def wanted: . as $r | $seeds | contains("," + ($r.seed | tostring) + ",");
+      [(map(select(.error_type == "crash")) | length),
+       (map(select(.error_type != "crash" and wanted)) | length),
+       (map(select(.error_type != "crash" and (wanted | not))) | length)] | @tsv
+    ' "${readable[@]}")
+  fi
+  (( n_bad > 0 )) && echo "[bfcl]   ${n_bad}	unreadable"
+  while IFS= read -r -d '' d; do
+    [[ -f "${d}/result.json" ]] || n_orphan=$((n_orphan + 1))
+  done < <(find "${root}" -type f \( -name events.jsonl -o -name manifest.json \) -printf '%h\0' 2>/dev/null | sort -zu)
+  echo "[bfcl] tally cid=${cid} result_files=${n} non_crashed=${n_ok} crashed=${n_crash} target=${target} unreadable=${n_bad} other_seed=${n_other} attempts_without_result=${n_orphan}"
+  if (( n_crash > 0 || n_bad > 0 || n_ok < target )); then
+    echo "[bfcl] INCOMPLETE: ${n_ok}/${target} non-crashed, ${n_crash} crashed, ${n_bad} unreadable -- resubmit this arm"
     return 3
   fi
   echo "[bfcl] COMPLETE: ${n_ok}/${target} non-crashed, 0 crashed"
@@ -186,12 +520,29 @@ tally_campaign () {
 
 if [[ "${SELFTEST}" == "1" ]]; then
   case "${BFCL_SELFTEST_STAGE:-preflight}" in
-    tally) tally_campaign "${CID}" "${TARGET}"; exit $?;;
-    *) echo "[bfcl] selftest preflight ok"; exit 0;;
+    tally) tally_campaign "${CID}" "${TARGET}" "${SEEDS}"; exit $?;;
+    spend) bfcl_spend_guard "${BFCL_SPEND_RATE_CID:-${CID}}"; echo "[bfcl] selftest spend guard passed"; exit 0;;
+    *) echo "[bfcl] selftest preflight ok system=${SYSTEM} cid=${CID} receiver=${RECEIVER} target=${TARGET} gate=${GATE_ARGS[*]}"; exit 0;;
   esac
 fi
 
-# ---- vLLM: the base model only (copied from scripts/pbs/j10_arm.pbs) ----------------------
+# ---- one job per campaign id at a time (purge + resume assume nobody else writes) --------------
+# Ported from j10_arm.pbs:715-728.
+LOCKROOT="${LOGDIR}/bfcl_locks"
+LOCK="${LOCKROOT}/${CID}.lock"
+mkdir -p "${LOCKROOT}" "${LOGDIR}" "${OUT}/results"
+[[ "${HOSTED}" == "1" ]] && mkdir -p /scratch/n12194778/sidekick/codex_scratch
+if ! mkdir "${LOCK}" 2>/dev/null; then
+  OWNER="$(cat "${LOCK}/owner" 2>/dev/null || true)"
+  if [[ -n "${OWNER}" && "${OWNER}" != "${JOBTAG}" ]] && qstat "${OWNER}" >/dev/null 2>&1; then
+    fatal "campaign ${CID} is locked by live job ${OWNER} (${LOCK})"
+  fi
+  echo "[bfcl] WARN: taking over stale lock ${LOCK} (owner=${OWNER:-unknown} is not a live job)"
+  rm -rf "${LOCK}"
+  mkdir "${LOCK}" || fatal "could not take lock ${LOCK}"
+fi
+echo "${JOBTAG}" > "${LOCK}/owner"
+
 VLLM_PID=""
 kill_vllm () {
   if [[ -n "${VLLM_PID}" ]]; then
@@ -206,9 +557,16 @@ kill_vllm () {
     VLLM_PID=""
   fi
 }
-trap kill_vllm EXIT
+cleanup () {
+  kill_vllm
+  if [[ "$(cat "${LOCK}/owner" 2>/dev/null)" == "${JOBTAG}" ]]; then
+    rm -rf "${LOCK}"
+  fi
+}
+trap cleanup EXIT
 trap 'echo "[bfcl] caught TERM"; exit 143' TERM
 
+# ---- vLLM: the base model, plus sft_b_plus for a bplus arm (j10_arm.pbs:756-928) ------------------
 bfcl_vllm_fatal () {
   echo "[bfcl] FATAL: $*"
   if [[ -n "${VLOG:-}" && -f "${VLOG}" ]]; then
@@ -225,65 +583,153 @@ bfcl_port_listening () {
   '
 }
 
-jobnum="${JOBNUM//[^0-9]/}"
-[[ -n "${jobnum}" ]] || jobnum="$$"
-VLLM_PORT=$(( 20000 + jobnum % 20000 ))
-if command -v ss >/dev/null 2>&1; then
-  tries=0
-  while bfcl_port_listening "${VLLM_PORT}"; do
-    tries=$((tries + 1))
-    (( tries < 50 )) || bfcl_vllm_fatal "no free vLLM port after 50 tries"
-    VLLM_PORT=$((VLLM_PORT + 1))
-    (( VLLM_PORT < 40000 )) || VLLM_PORT=20000
-  done
-fi
-export VLLM_PORT
-export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"
-MODEL="${EXECUTOR_MODEL}"
-mkdir -p "${LOGDIR}" "${OUT}/results" "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
-VLOG="${LOGDIR}/bfcl_arm.${CID}.${JOBNUM}_vllm.log"
-setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
-  --served-model-name "${MODEL}" \
-  --dtype bfloat16 \
-  --max-model-len 32768 \
-  --host 127.0.0.1 --port "${VLLM_PORT}" \
-  --gpu-memory-utilization 0.85 \
-  > "${VLOG}" 2>&1 &
-VLLM_PID=$!
-echo "[bfcl] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} vlog=${VLOG}"
-t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
-while (( $(date +%s) < deadline )); do
-  kill -0 "${VLLM_PID}" 2>/dev/null || bfcl_vllm_fatal "vllm died before healthy"
-  if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
-    echo "[bfcl] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+# The served-model probe (j10_arm.pbs:823-884): the base model and every LoRA alias must be listed
+# by /v1/models, and the port must be held by the server this job started.
+bfcl_vllm_identity_check () {
+  local body ids_file alias spec have ss_line listen_pid listen_pgid
+  local -a missing=()
+  body=$(curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models") || bfcl_vllm_fatal "/v1/models failed after the port answered"
+  ids_file="$(mktemp)"
+  printf '%s' "${body}" | "${PY}" -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    body = json.loads(raw or "null")
+except json.JSONDecodeError as exc:
+    sys.stderr.write(f"[bfcl] FATAL: /v1/models body is not JSON: {exc}\n")
+    sys.exit(2)
+ids = []
+if isinstance(body, dict):
+    data = body.get("data")
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and item.get("id") is not None:
+                ids.append(str(item["id"]))
+    if body.get("id") is not None:
+        ids.append(str(body["id"]))
+print("\n".join(ids))
+' > "${ids_file}" || bfcl_vllm_fatal "/v1/models body is not JSON"
+  have="$(tr '\n' ' ' < "${ids_file}")"
+  if ! grep -Fxq "${MODEL}" "${ids_file}"; then
+    rm -f "${ids_file}"
+    bfcl_vllm_fatal "vLLM /v1/models missing served base model ${MODEL} (have: ${have})"
   fi
-  sleep 5
-done
-[[ "${healthy}" -eq 1 ]] || bfcl_vllm_fatal "vllm not healthy within 300s"
-curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" | grep -Fq "\"${MODEL}\"" \
-  || bfcl_vllm_fatal "vLLM /v1/models does not list ${MODEL}"
-echo "[bfcl] vllm identity: ${MODEL} listed"
+  echo "[bfcl] vllm identity: base_model=${MODEL} present in /v1/models"
+  for spec in "${LORA_MODULES[@]+"${LORA_MODULES[@]}"}"; do
+    alias="${spec%%=*}"
+    grep -Fxq "${alias}" "${ids_file}" || missing+=("${alias}")
+  done
+  rm -f "${ids_file}"
+  [[ "${#missing[@]}" -eq 0 ]] || bfcl_vllm_fatal "vLLM /v1/models missing LoRA alias(es): ${missing[*]} (have: ${have})"
+  [[ "${#LORA_MODULES[@]}" -eq 0 ]] || echo "[bfcl] vllm identity: LoRA alias(es) ${LORA_MODULES[*]%%=*} present in /v1/models"
+  if command -v ss >/dev/null 2>&1; then
+    ss_line="$(ss -ltnp 2>/dev/null | awk -v p="${VLLM_PORT}" '
+      $1 == "LISTEN" { n = split($4, a, ":"); if (n > 0 && a[n] == p) { print; exit } }
+    ')"
+    if [[ -n "${ss_line}" && "${ss_line}" =~ pid=([0-9]+) ]]; then
+      listen_pid="${BASH_REMATCH[1]}"
+      listen_pgid="$(ps -o pgid= -p "${listen_pid}" 2>/dev/null | tr -d '[:space:]')"
+      [[ "${listen_pgid}" == "${VLLM_PID}" ]] \
+        || bfcl_vllm_fatal "vLLM port ${VLLM_PORT} is held by pid=${listen_pid} pgid=${listen_pgid}, expected pgid=${VLLM_PID}"
+      echo "[bfcl] vllm identity: listen pid=${listen_pid} pgid=${listen_pgid} matches VLLM_PID"
+    else
+      echo "[bfcl] WARN: no pid on the LISTEN line for ${VLLM_PORT}; skipping pgid identity check"
+    fi
+  fi
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]] && grep -Eq 'port .* is used by process' "${VLOG}"; then
+    bfcl_vllm_fatal "vLLM log reports port is used by process"
+  fi
+}
+
+if [[ "${EXECUTOR_TYPE}" == "vllm" ]]; then
+  jobnum="${JOBNUM//[^0-9]/}"
+  [[ -n "${jobnum}" ]] || jobnum="$$"
+  VLLM_PORT=$(( 20000 + jobnum % 20000 ))
+  if command -v ss >/dev/null 2>&1; then
+    tries=0
+    while bfcl_port_listening "${VLLM_PORT}"; do
+      tries=$((tries + 1))
+      (( tries < 50 )) || bfcl_vllm_fatal "no free vLLM port after 50 tries"
+      VLLM_PORT=$((VLLM_PORT + 1))
+      (( VLLM_PORT < 40000 )) || VLLM_PORT=20000
+    done
+  fi
+  export VLLM_PORT
+  export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"
+  MODEL="${EXECUTOR_MODEL}"
+  LORA_SERVE_FLAGS=()
+  if [[ "${#LORA_MODULES[@]}" -gt 0 ]]; then
+    LORA_SERVE_FLAGS=(--enable-lora --max-loras "${MAX_LORAS}" --max-lora-rank 64 --lora-modules "${LORA_MODULES[@]}")
+  fi
+  mkdir -p "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+  VLOG="${LOGDIR}/bfcl_arm.${CID}.${JOBNUM}_vllm.log"
+  setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+    --served-model-name "${MODEL}" \
+    --dtype bfloat16 \
+    --max-model-len 32768 \
+    --host 127.0.0.1 --port "${VLLM_PORT}" \
+    --gpu-memory-utilization 0.85 \
+    ${LORA_SERVE_FLAGS[@]+"${LORA_SERVE_FLAGS[@]}"} \
+    > "${VLOG}" 2>&1 &
+  VLLM_PID=$!
+  echo "[bfcl] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} ${LORA_SERVE_FLAGS[*]} vlog=${VLOG}"
+  t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+  while (( $(date +%s) < deadline )); do
+    kill -0 "${VLLM_PID}" 2>/dev/null || bfcl_vllm_fatal "vllm died before healthy"
+    if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
+      echo "[bfcl] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+    fi
+    sleep 5
+  done
+  [[ "${healthy}" -eq 1 ]] || bfcl_vllm_fatal "vllm not healthy within 300s"
+  bfcl_vllm_identity_check
+else
+  echo "[bfcl] executor.type=${EXECUTOR_TYPE}: no vLLM server (planner drives)"
+fi
+
+# ---- purge crashed episodes of THIS campaign only (j10_arm.pbs:930-938) ---------------------------
+echo "[bfcl] ---- purge crashed episodes (${CID} only; limit/timeout/parse_error are scored and kept) ----"
+# Captured, not piped to head: a closed pipe would SIGPIPE the summary print and fail the rc.
+PURGE_OUT="$(timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-crashed-only 2>&1)"
+PURGE_RC=$?
+printf '%s\n' "${PURGE_OUT}" | grep -E '^\[purge-crashed-only\]|Error|error' | head -n 5
+[[ "${PURGE_RC}" -eq 0 ]] || { echo "[bfcl] FATAL: purge exited ${PURGE_RC}"; printf '%s\n' "${PURGE_OUT}" | tail -n 20; exit 1; }
+N_EXISTING=$(find "${OUT}/${CID}" -type f -name result.json 2>/dev/null | wc -l | tr -d ' ')
+echo "[bfcl] resume: ${CID} has ${N_EXISTING} result.json after purge (target ${TARGET})"
 
 # ---- smoke: first submission only ---------------------------------------------------------
-N_EXISTING=$(find "${OUT}/${CID}" -type f -name result.json 2>/dev/null | wc -l | tr -d ' ')
 if [[ "${N_EXISTING}" -eq 0 ]]; then
   SCID="${CID}_smoke_${JOBNUM}"
-  echo "[bfcl] ---- smoke (${SCID}, ${SMOKE_TASKS} entries, seed 1) ----"
+  echo "[bfcl] ---- smoke (${SCID}, ${SMOKE_TASKS} entries, seed ${SMOKE_SEED}) ----"
   timeout 1800 "${PY}" -m sidekick.runner \
-    --system "${SYSTEM}" --split "${SPLIT}" --tasks "${SMOKE_TASKS}" --seeds 1 \
+    --system "${SYSTEM}" --split "${SPLIT}" --tasks "${SMOKE_TASKS}" --seeds "${SMOKE_SEED}" \
     --env bfcl --workers 2 \
     --config "${CFG}" --campaign-id "${SCID}" --out "${OUT}"
   SMOKE_RC=$?
   [[ "${SMOKE_RC}" -eq 0 ]] || { echo "[bfcl] FATAL: smoke runner exited ${SMOKE_RC}"; exit 1; }
-  tally_campaign "${SCID}" "${SMOKE_TASKS}"
+  # The campaign gate on the smoke (j10_arm.pbs:950-953): zero live calls, or luna on every record.
+  timeout 300 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${SCID}" --config "${CFG}" --repo "${REPO}" "${GATE_ARGS[@]}"
+  GATE_RC=$?
+  [[ "${GATE_RC}" -eq 0 ]] || { echo "[bfcl] FATAL: smoke gate failed (rc=${GATE_RC}); ${SCID} kept for inspection"; exit 1; }
+  tally_campaign "${SCID}" "${SMOKE_TASKS}" "${SMOKE_SEED}"
   SMOKE_TALLY=$?
   [[ "${SMOKE_TALLY}" -eq 0 ]] || { echo "[bfcl] FATAL: smoke incomplete or crashed; ${SCID} kept"; exit 1; }
+  ACTOR=executor
+  [[ "${SYSTEM}" == "planner_alone" ]] && ACTOR=planner
   N_ACT=$(find "${OUT}/${SCID}" -name events.jsonl -exec cat {} + 2>/dev/null \
-    | jq -c 'select(.event_type == "action" and .actor == "executor")' | wc -l | tr -d ' ')
-  echo "[bfcl] smoke executor actions=${N_ACT}"
-  (( N_ACT > 0 )) || { echo "[bfcl] FATAL: smoke produced no executor action; the executor is not being read"; exit 1; }
+    | jq -c --arg actor "${ACTOR}" 'select(.event_type == "action" and .actor == $actor)' | wc -l | tr -d ' ')
+  echo "[bfcl] smoke ${ACTOR} actions=${N_ACT}"
+  if (( N_ACT == 0 )); then
+    # A prefix arm's executor acts only after the handoff; a smoke entry the source finished within
+    # m actions gives it nothing to do, so 0 there is a warning, not a failure.
+    [[ "${SYSTEM}" == "prefix_handoff" ]] \
+      || { echo "[bfcl] FATAL: smoke produced no ${ACTOR} action; the ${ACTOR} is not being read"; exit 1; }
+    echo "[bfcl] WARN: prefix smoke produced no executor action (every smoke entry ended within m)"
+  fi
+  [[ "${HOSTED}" == "1" ]] && bfcl_spend_guard "${SCID}"
 else
   echo "[bfcl] resume: ${CID} has ${N_EXISTING} result.json; smoke skipped"
+  [[ "${HOSTED}" == "1" ]] && bfcl_spend_guard "${CID}"
 fi
 
 # ---- the arm -------------------------------------------------------------------------------
@@ -295,14 +741,27 @@ timeout "${RUN_TIMEOUT}" "${PY}" -m sidekick.runner \
 CAMP_RC=$?
 echo "[bfcl] runner rc=${CAMP_RC}"
 
-tally_campaign "${CID}" "${TARGET}"
+echo "[bfcl] ---- summary + manifest + gate (${CID}) ----"
+timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --config "${CFG}" \
+  --manifest "${OUT}/results/${CID}/manifest.json" --repo "${REPO}" "${GATE_ARGS[@]}"
+SUM_RC=$?
+
+if [[ "${HOSTED}" == "1" ]]; then
+  read -r LIVE_TOTAL _ LEDGER_TOTAL < <(bfcl_live_calls "${CID}" || echo "0 0 0")
+  echo "[bfcl] spend ${CID}: hosted planner calls=${LIVE_TOTAL} (ledger_totals.planner_calls_total=${LEDGER_TOTAL} minus cached plans) ceiling=${MAX_PLANNER_CALLS}"
+  (( LIVE_TOTAL > MAX_PLANNER_CALLS )) && echo "[bfcl] WARN: ${CID} spent ${LIVE_TOTAL} hosted planner calls, above MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS}; a resubmission will be refused"
+fi
+
+tally_campaign "${CID}" "${TARGET}" "${SEEDS}"
 TALLY_RC=$?
 kill_vllm
 JOB_RC=0
 if [[ "${TALLY_RC}" -ne 0 ]]; then
   JOB_RC="${TALLY_RC}"
+elif [[ "${SUM_RC}" -ne 0 ]]; then
+  JOB_RC=1
 elif [[ "${CAMP_RC}" -ne 0 ]]; then
   JOB_RC="${CAMP_RC}"
 fi
-echo "[bfcl] done=$(date -Iseconds) cid=${CID} runner_rc=${CAMP_RC} tally_rc=${TALLY_RC} job_rc=${JOB_RC}"
+echo "[bfcl] done=$(date -Iseconds) cid=${CID} runner_rc=${CAMP_RC} gate_rc=${SUM_RC} tally_rc=${TALLY_RC} job_rc=${JOB_RC}"
 exit "${JOB_RC}"
