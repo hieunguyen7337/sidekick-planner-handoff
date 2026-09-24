@@ -302,6 +302,109 @@ def test_by_block_by_hand() -> None:
 
 
 # --------------------------------------------------------------------------------------
+# BY with the h* handoff split
+# --------------------------------------------------------------------------------------
+
+
+def test_hstar_key_maps_only_handoff_split_members() -> None:
+    assert fill.hstar_key("depth.bplus.m6_to_m11.goal_pass.handoff_only") == (
+        "handoff_only_contrasts", "bplus", "m6_to_m11", "goal_pass", "handoff_only")
+    assert fill.hstar_key("depth.zs.m6_to_m11.tgc.silenced") == (
+        "handoff_only_contrasts", "zs", "m6_to_m11", "tgc", "silenced")
+    assert fill.hstar_key("ni.zs.m11.goal_pass.handoff_only") == ("ni", "zs", "m11", "goal_pass", "handoff_only")
+    for other in ("depth.bplus.m6_to_m11.goal_pass.all", "ni.bplus.m9.tgc.all", "D0.gp", "chord.c81.bplus.m11",
+                  "narr.m9.tailored.exec_minus_narr"):
+        assert fill.hstar_key(other) is None
+
+
+def _entry(id_: str, p: float, sf: float, *, diff: float = 1.0, n: int = 10, thr: float = 0.0,
+           metric: str = "goal_pass", now: bool = True) -> dict:
+    return {"id": id_, "metric": metric, "population": id_.split(".")[-1], "threshold_pp": thr,
+            "computed": {"diff_pp": diff}, "n_pairs": n, "p_two_sided": p, "p_signflip_two_sided": sf,
+            "in_main_text_now": now}
+
+
+def _hstar_fixture() -> tuple[dict, dict]:
+    """Five members in the main text and one appendix-only entry. Flag p (bootstrap / sign-flip):
+    depth all 0.001 / 0.002, depth handoff 0.5 / 0.6, ni all 0.002 / 0.003, ni handoff 0.4 / 0.5,
+    D0 0.02 / 0.03. h* moves the two handoff members to 0.003 / 0.004 and 0.3 / 0.35."""
+    dep, ni = "depth.bplus.m6_to_m11.goal_pass", "ni.zs.m11.goal_pass"
+    entries = [_entry(f"{dep}.all", 0.001, 0.002, diff=8.0, n=171),
+               _entry(f"{dep}.handoff_only", 0.5, 0.6, diff=12.0, n=71),
+               _entry(f"{ni}.all", 0.002, 0.003, diff=1.9, n=171, thr=-7.0),
+               _entry(f"{ni}.handoff_only", 0.4, 0.5, diff=-4.4, n=71, thr=-7.0),
+               _entry("D0.gp", 0.02, 0.03),
+               _entry("did.m11.tgc", 0.0001, 0.0001, metric="tgc", now=False)]
+    by_main = {"entries": entries, "paper_snapshot": {"sha256": "abc"},
+               "bootstrap": {"survivors": [f"{dep}.all", f"{ni}.all"]},
+               "signflip": {"survivors": [f"{dep}.all", f"{ni}.all"]}}
+
+    def c(d, p, sf, n, thr=0.0):
+        return {"diff_pp": d, "ci95_pp_scenario": [d - 5, d + 5], "ci95_pp_task": [d - 6, d + 6], "n_pairs": n,
+                "p_two_sided": p, "p_signflip_two_sided": sf, "threshold_pp": thr}
+    hstar = {"generated_at": "t0",
+             "handoff_only_contrasts": {"bplus": {"m6_to_m11": {"goal_pass": {
+                 "all": c(8.0, 0.001, 0.002, 171), "handoff_only": c(7.7, 0.003, 0.004, 88)}}}},
+             "ni": {"zs": {"m11": {"goal_pass": {
+                 "all": c(1.9, 0.002, 0.003, 171, -7.0), "handoff_only": c(3.8, 0.3, 0.35, 88, -7.0)}}}}}
+    return by_main, hstar
+
+
+def test_hstar_by_swaps_the_split_members_and_keeps_the_rest_by_hand() -> None:
+    """m = 5, c(5) = 137/60, so m * c(5) = 137/12. Swapped bootstrap p ranked: 0.001, 0.002, 0.003, 0.02,
+    0.3 -> 0.001 * 137/12, 0.002 * 137/12 / 2, 0.003 * 137/12 / 3 (all 0.0114167), 0.02 * 137/12 / 4 =
+    0.0570833 and 0.3 * 137/12 / 5 = 0.685; already monotone. The handoff member is gained, D0 fails.
+    Sign-flip ranked 0.002, 0.003, 0.004, 0.03, 0.35 -> the step-up minimum makes ranks 1-3 0.004 * 137/12 / 3
+    = 0.0152222; rank 4 0.0856250, rank 5 0.799167."""
+    by_main, hstar = _hstar_fixture()
+    out = fill.hstar_by(by_main, hstar)
+    dep, ni = "depth.bplus.m6_to_m11.goal_pass", "ni.zs.m11.goal_pass"
+    assert out["m"] == 5 and out["n_swapped"] == 2  # the appendix-only entry is not a member
+    assert [s["id"] for s in out["swapped"]] == [f"{dep}.handoff_only", f"{ni}.handoff_only"]
+    assert out["swapped"][0]["flag"]["p_two_sided"] == 0.5 and out["swapped"][0]["hstar"]["p_two_sided"] == 0.003
+    assert out["swapped"][1]["hstar"]["n_pairs"] == 88
+    mc = 137 / 12
+    boot = {r["id"]: r["p_by"] for r in out["bootstrap"]["rows"]}
+    assert boot[f"{dep}.all"] == pytest.approx(0.001 * mc)
+    assert boot[f"{dep}.handoff_only"] == pytest.approx(0.003 * mc / 3)
+    assert boot["D0.gp"] == pytest.approx(0.02 * mc / 4)
+    assert boot[f"{ni}.handoff_only"] == pytest.approx(0.3 * mc / 5)
+    assert out["bootstrap"]["survivors"] == [f"{dep}.all", f"{dep}.handoff_only", f"{ni}.all"]
+    flip = {r["id"]: r["p_by"] for r in out["signflip"]["rows"]}
+    assert flip[f"{dep}.all"] == pytest.approx(0.004 * mc / 3)
+    assert flip["D0.gp"] == pytest.approx(0.03 * mc / 4)
+    assert out["changes_vs_by_main_text"]["bootstrap"] == {"gained": [f"{dep}.handoff_only"], "lost": []}
+    hm = {h["id"]: h for h in out["handoff_members"]}
+    assert hm[f"{dep}.handoff_only"]["bootstrap_survives_flag"] is False
+    assert hm[f"{dep}.handoff_only"]["bootstrap_survives_hstar"] is True
+    assert hm[f"{ni}.handoff_only"]["bootstrap_survives_hstar"] is False
+    assert hm[f"{ni}.handoff_only"]["n_pairs_flag"] == 71 and hm[f"{ni}.handoff_only"]["n_pairs_hstar"] == 88
+    assert out["p_commensurable"]["all_equal"] is True
+    # A sibling whose all-episode p differs between the reports breaks the swap's premise, and says so.
+    hstar["ni"]["zs"]["m11"]["goal_pass"]["all"]["p_two_sided"] = 0.0021
+    assert fill.hstar_by(by_main, hstar)["p_commensurable"]["all_equal"] is False
+    # A threshold that differs means a different test: refuse.
+    hstar["ni"]["zs"]["m11"]["goal_pass"]["handoff_only"]["threshold_pp"] = 0.0
+    with pytest.raises(ValueError):
+        fill.hstar_by(by_main, hstar)
+
+
+def test_add_hstar_block_keeps_every_other_key() -> None:
+    by_main, hstar = _hstar_fixture()
+    report = {"generated_by": "g", "generated_at": "old", "limits": {"x": 1.5}, "by_main_text": by_main,
+              "contrast_census": {"n_files": 68}, "settings": {"seed": 20260924}}
+    out = fill.add_hstar_block(json.loads(json.dumps(report)), hstar)
+    assert list(out) == ["generated_by", "generated_at", "limits", "by_main_text", "by_main_text_hstar",
+                         "contrast_census", "settings"]
+    assert out["generated_at"] != "old"
+    for k in report:
+        if k != "generated_at":
+            assert json.dumps(out[k]) == json.dumps(report[k])
+    again = fill.add_hstar_block(out, hstar)  # re-running replaces the block in place
+    assert list(again) == list(out) and again["by_main_text_hstar"] == out["by_main_text_hstar"]
+
+
+# --------------------------------------------------------------------------------------
 # kept - dropped
 # --------------------------------------------------------------------------------------
 

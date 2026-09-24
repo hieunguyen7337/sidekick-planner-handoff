@@ -18,6 +18,9 @@ from existing ledger rows or report keys. This module computes the rest, on dev 
                   main_text_specs; which of them the main text prints is read from the paper file at
                   build time (sha256 recorded), because other units move intervals between the main
                   text and the appendices;
+* by_main_text_hstar  the same set with every handoff-split member (handoff-only or silenced, split
+                  by the handoff_occurred flag) swapped for its h* value and p from
+                  j17_hstar_20260924.report.json (review item 5); every other member kept;
 * contrast_census a count of contrast objects across the dev report JSONs (line 376; R4.4).
 
 Reuse, not re-implementation
@@ -45,7 +48,11 @@ Conventions (restated so the JSON is self-contained)
 
 Interface:
   python scripts/analysis/j17_v2_fill.py --out PATH [--n-boot 10000] [--seed 20260924]
-      [--results-root /scratch/n12194778/sidekick/results]
+      [--results-root /scratch/n12194778/sidekick/results] [--paper-file PATH]
+  python scripts/analysis/j17_v2_fill.py --out PATH --update EXISTING_REPORT
+      (keeps every key of EXISTING_REPORT and recomputes only by_main_text_hstar; the paper and the
+      results tree have moved since the report was built, so a full rebuild would not reproduce
+      by_main_text or contrast_census unless --paper-file names the snapshot the report records)
 """
 
 from __future__ import annotations
@@ -735,6 +742,134 @@ def by_block(entries: list[dict[str, Any]], p_field: str, alpha: float = ALPHA) 
 
 
 # --------------------------------------------------------------------------------------
+# The same BY set with the handoff split read by h* (paper review item 5, R4.3)
+# --------------------------------------------------------------------------------------
+
+HSTAR_REPORT = "j17_hstar_20260924.report.json"
+HANDOFF_PARTS = ("handoff_only", "silenced")  # the cells the handoff indicator splits
+HSTAR_BY_DEFINITION = (
+    "by_main_text's set, member for member (the same membership, read from the paper snapshot whose sha256 "
+    "by_main_text.paper_snapshot records), with every handoff-split member -- population handoff_only or "
+    "silenced, split by the prefix arm's handoff_occurred flag (HO-04..07, HO-NI-01..03) -- swapped for the "
+    "same contrast split by h* ('the executor took control', HSTAR-01): its value, intervals and both p "
+    "taken from campaign/results/j17_hstar_20260924.report.json. Every other member keeps its by_main_text p. "
+    "BY as by_main_text (cluster_inference.by_fdr, alpha 0.05), over the bootstrap p and over the sign-flip p."
+)
+
+
+def hstar_key(entry_id: str) -> Optional[tuple[str, ...]]:
+    """The j17_hstar path of a handoff-split member's h* counterpart, or None for any other member.
+
+    depth.<rx>.m6_to_m11.<metric>.<part> -> handoff_only_contrasts.<rx>.m6_to_m11.<metric>.<part>
+    ni.<rx>.m<m>.<metric>.handoff_only   -> ni.<rx>.m<m>.<metric>.handoff_only"""
+    parts = entry_id.split(".")
+    if len(parts) != 5 or parts[-1] not in HANDOFF_PARTS:
+        return None
+    kind, rx, span, metric, part = parts
+    if kind == "depth":
+        return ("handoff_only_contrasts", rx, span, metric, part)
+    if kind == "ni":
+        return ("ni", rx, span, metric, part)
+    return None
+
+
+def _all_episode_key(path: tuple[str, ...]) -> tuple[str, ...]:
+    return path[:-1] + ("all",)
+
+
+def hstar_by(by_main: dict[str, Any], hstar: dict[str, Any], alpha: float = ALPHA) -> dict[str, Any]:
+    """BY over by_main_text's members with the handoff split read by h* (see HSTAR_BY_DEFINITION).
+
+    The swap is only meaningful if the two reports' p are the same statistic on the same draws, so each
+    swapped member's all-episode sibling is checked: its point and both p in j17_hstar must equal the
+    all-episode member's in by_main_text (the indicator never moves an all-episode value, HSTAR-16)."""
+    entries = {e["id"]: e for e in by_main["entries"]}
+    members: list[dict[str, Any]] = []
+    swapped: list[dict[str, Any]] = []
+    checks: list[dict[str, Any]] = []
+    for e in by_main["entries"]:
+        if not e.get("in_main_text_now"):
+            continue
+        member = {"id": e["id"], "metric": e["metric"], "population": e["population"],
+                  "threshold_pp": e["threshold_pp"], "indicator": None, "diff_pp": e["computed"]["diff_pp"],
+                  "n_pairs": e["n_pairs"], "p_two_sided": e["p_two_sided"],
+                  "p_signflip_two_sided": e["p_signflip_two_sided"]}
+        path = hstar_key(e["id"])
+        if path is not None:
+            h = _dig(hstar, path)
+            if float(h["threshold_pp"]) != float(e["threshold_pp"]):
+                raise ValueError(f"{e['id']}: threshold {h['threshold_pp']} in j17_hstar, {e['threshold_pp']} here")
+            member.update(indicator="h_star", diff_pp=h["diff_pp"], n_pairs=h["n_pairs"],
+                          p_two_sided=h["p_two_sided"], p_signflip_two_sided=h["p_signflip_two_sided"])
+            swapped.append({
+                "id": e["id"], "hstar_key": ".".join(path),
+                "flag": {"diff_pp": e["computed"]["diff_pp"], "n_pairs": e["n_pairs"],
+                         "p_two_sided": e["p_two_sided"], "p_signflip_two_sided": e["p_signflip_two_sided"]},
+                "hstar": {k: h.get(k) for k in ("diff_pp", "ci95_pp_scenario", "ci95_pp_task", "n_pairs",
+                                                 "p_two_sided", "p_signflip_two_sided")},
+            })
+            sib_id = ".".join(e["id"].split(".")[:-1] + ["all"])
+            sib, h_all = entries.get(sib_id), _dig(hstar, _all_episode_key(path))
+            checks.append({
+                "id": sib_id, "hstar_key": ".".join(_all_episode_key(path)),
+                "equal": bool(sib is not None and all(
+                    round(float(a), 6) == round(float(b), 6) for a, b in (
+                        (sib["computed"]["diff_pp"], h_all["diff_pp"]),
+                        (sib["p_two_sided"], h_all["p_two_sided"]),
+                        (sib["p_signflip_two_sided"], h_all["p_signflip_two_sided"]))))})
+        else:
+            member["indicator"] = "flag" if e["population"] in HANDOFF_PARTS else None
+        members.append(member)
+    boot, flip = by_block(members, "p_two_sided", alpha), by_block(members, "p_signflip_two_sided", alpha)
+    gp = [m for m in members if m["metric"] == "goal_pass"]
+    before = {"bootstrap": set(by_main["bootstrap"]["survivors"]), "signflip": set(by_main["signflip"]["survivors"])}
+    after = {"bootstrap": set(boot["survivors"]), "signflip": set(flip["survivors"])}
+    by_row = {name: {r["id"]: r for r in blk["rows"]} for name, blk in (("bootstrap", boot), ("signflip", flip))}
+    handoff_members = [{
+        "id": s["id"], "diff_pp_flag": s["flag"]["diff_pp"], "diff_pp_hstar": s["hstar"]["diff_pp"],
+        "n_pairs_flag": s["flag"]["n_pairs"], "n_pairs_hstar": s["hstar"]["n_pairs"],
+        **{f"{name}_{what}": val for name in ("bootstrap", "signflip") for what, val in (
+            ("p_by_hstar", by_row[name][s["id"]]["p_by"]),
+            ("survives_flag", s["id"] in before[name]),
+            ("survives_hstar", s["id"] in after[name]))},
+    } for s in swapped]
+    return {
+        "definition": HSTAR_BY_DEFINITION,
+        "decision_bearing": False,
+        "hstar_report": {"path": f"campaign/results/{HSTAR_REPORT}", "generated_at": hstar.get("generated_at")},
+        "paper_snapshot": by_main["paper_snapshot"],
+        "m": len(members),
+        "n_swapped": len(swapped),
+        "swapped": swapped,
+        "p_commensurable": {"rule": "each swapped member's all-episode sibling has the same point, bootstrap p and "
+                                    "sign-flip p in both reports",
+                            "all_equal": all(c["equal"] for c in checks), "checks": checks},
+        "bootstrap": boot,
+        "signflip": flip,
+        "goal_pass_only": {"bootstrap": by_block(gp, "p_two_sided", alpha),
+                           "signflip": by_block(gp, "p_signflip_two_sided", alpha)},
+        "handoff_members": handoff_members,
+        "changes_vs_by_main_text": {name: {"gained": sorted(after[name] - before[name]),
+                                           "lost": sorted(before[name] - after[name])}
+                                    for name in ("bootstrap", "signflip")},
+    }
+
+
+def add_hstar_block(report: dict[str, Any], hstar: dict[str, Any]) -> dict[str, Any]:
+    """`report` with by_main_text_hstar placed after by_main_text (replacing an earlier one) and
+    generated_at refreshed; every other key is carried over as it is."""
+    block = j16.round_floats(hstar_by(report["by_main_text"], hstar))
+    out: dict[str, Any] = {}
+    for k, v in report.items():
+        if k == "by_main_text_hstar":
+            continue
+        out[k] = datetime.now().astimezone().isoformat(timespec="seconds") if k == "generated_at" else v
+        if k == "by_main_text":
+            out["by_main_text_hstar"] = block
+    return out
+
+
+# --------------------------------------------------------------------------------------
 # ROB-17 / ROB-21(a): kept - dropped with the resample unit as a parameter
 # --------------------------------------------------------------------------------------
 
@@ -923,7 +1058,10 @@ def _read_report(name: str) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def build_report(results_root: Path | str, n_boot: int = N_BOOT, seed: int = SEED) -> dict[str, Any]:
+def build_report(results_root: Path | str, n_boot: int = N_BOOT, seed: int = SEED,
+                 paper_file: Optional[Path | str] = None) -> dict[str, Any]:
+    """`paper_file` (default: the paper in this checkout) is the file whose bytes decide which candidates
+    the main text prints; pass an earlier snapshot of the paper to rebuild the set that snapshot decided."""
     results_root = Path(results_root)
     refuse_path(results_root)
     rows: dict[str, dict[Key, dict[str, Any]]] = {}
@@ -968,7 +1106,7 @@ def build_report(results_root: Path | str, n_boot: int = N_BOOT, seed: int = SEE
                  "as_printed_at_reproduction_seed": e["as_printed_at_reproduction_seed"], "printed": e["printed"]}
                 for e in entries if not e["reproduces_all_printed"]]
     reseeded = [e["id"] for e in entries if e["reproduction_seed"] != seed]
-    paper_bytes = (REPO / PAPER).read_bytes()
+    paper_bytes = Path(paper_file or REPO / PAPER).read_bytes()
     main_lines = main_text_lines(paper_bytes.decode("utf-8"))
     for e in entries:
         e["main_text_lines_now"] = locate_in_main_text(e, main_lines)
@@ -1044,7 +1182,8 @@ def build_report(results_root: Path | str, n_boot: int = N_BOOT, seed: int = SEE
                    "n_channel_tasks": len(tasks)},
         "settings": {"n_boot": int(n_boot), "seed": int(seed), "alpha": ALPHA, "results_root": str(results_root)},
     }
-    return j16.round_floats(report)
+    print("[fill] main-text set with the h* handoff split ...", flush=True)
+    return add_hstar_block(j16.round_floats(report), _read_report(HSTAR_REPORT))
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -1053,6 +1192,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--n-boot", type=int, default=N_BOOT)
     p.add_argument("--seed", type=int, default=SEED)
     p.add_argument("--results-root", type=Path, default=RESULTS_DIR)
+    p.add_argument("--paper-file", type=Path, default=None,
+                   help="the paper file whose bytes decide the main-text set (default: the paper in this checkout)")
+    p.add_argument("--update", type=Path, default=None,
+                   help="an existing report: keep every key of it as it is and (re)compute only "
+                        "by_main_text_hstar from its by_main_text and the j17_hstar report; no arm is loaded")
     return p.parse_args(argv)
 
 
@@ -1063,7 +1207,11 @@ def main(argv: list[str] | None = None) -> int:
         refuse_path(args.results_root)
         if str(Path(args.out).resolve()).startswith(str(Path(args.results_root).resolve())):
             raise RefusedPath(f"refusing to write under {args.results_root}")
-        report = build_report(args.results_root, args.n_boot, args.seed)
+        if args.update is not None:
+            refuse_path(args.update)
+            report = add_hstar_block(json.loads(args.update.read_text(encoding="utf-8")), _read_report(HSTAR_REPORT))
+        else:
+            report = build_report(args.results_root, args.n_boot, args.seed, args.paper_file)
     except RefusedPath as exc:
         print(f"[fill] {exc}", file=sys.stderr)
         return 2

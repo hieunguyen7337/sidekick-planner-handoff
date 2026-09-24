@@ -1,6 +1,6 @@
 {
   "generated_by": "scripts/analysis/j17_v2_fill.py",
-  "generated_at": "2026-09-24T20:32:37+10:00",
+  "generated_at": "2026-09-24T22:28:44+10:00",
   "purpose": "Dev numbers for the [[NEEDS LEDGER]] markers of paper/preprint_dev_v2_20260924.md that no report holds: step-limit counts, D1's companions, the task-clustered kept-minus-dropped companions, BY over the main text's paired-contrast intervals (R4.3), and a contrast census (R4.4). Exploratory; nothing here decides a registered verdict.",
   "paper": "paper/preprint_dev_v2_20260924.md",
   "conventions": {
@@ -9254,6 +9254,2315 @@
         "in_main_text_now": false
       }
     ]
+  },
+  "by_main_text_hstar": {
+    "definition": "by_main_text's set, member for member (the same membership, read from the paper snapshot whose sha256 by_main_text.paper_snapshot records), with every handoff-split member -- population handoff_only or silenced, split by the prefix arm's handoff_occurred flag (HO-04..07, HO-NI-01..03) -- swapped for the same contrast split by h* ('the executor took control', HSTAR-01): its value, intervals and both p taken from campaign/results/j17_hstar_20260924.report.json. Every other member keeps its by_main_text p. BY as by_main_text (cluster_inference.by_fdr, alpha 0.05), over the bootstrap p and over the sign-flip p.",
+    "decision_bearing": false,
+    "hstar_report": {
+      "path": "campaign/results/j17_hstar_20260924.report.json",
+      "generated_at": "2026-09-24T21:51:20+10:00"
+    },
+    "paper_snapshot": {
+      "path": "paper/preprint_dev_v2_20260924.md",
+      "sha256": "6089ca93c467202141aa85f285f667dd640e1dcd252ef2510af10ed9ee73eaa7",
+      "n_main_text_lines": 303,
+      "main_text_end": "first line matching ^## Appendix"
+    },
+    "m": 60,
+    "n_swapped": 16,
+    "swapped": [
+      {
+        "id": "depth.bplus.m6_to_m11.goal_pass.handoff_only",
+        "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only",
+        "flag": {
+          "diff_pp": 12.028169,
+          "n_pairs": 71,
+          "p_two_sided": 0.001,
+          "p_signflip_two_sided": 0.003616
+        },
+        "hstar": {
+          "diff_pp": 7.661364,
+          "ci95_pp_scenario": [
+            1.185393,
+            14.062069
+          ],
+          "ci95_pp_task": [
+            0.804762,
+            14.691954
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.0228,
+          "p_signflip_two_sided": 0.033508
+        }
+      },
+      {
+        "id": "depth.bplus.m6_to_m11.goal_pass.silenced",
+        "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.silenced",
+        "flag": {
+          "diff_pp": 5.809,
+          "n_pairs": 100,
+          "p_two_sided": 0.0146,
+          "p_signflip_two_sided": 0.032471
+        },
+        "hstar": {
+          "diff_pp": 9.16506,
+          "ci95_pp_scenario": [
+            5.118681,
+            13.855422
+          ],
+          "ci95_pp_task": [
+            4.901266,
+            13.834066
+          ],
+          "n_pairs": 83,
+          "p_two_sided": 0.0,
+          "p_signflip_two_sided": 0.000977
+        }
+      },
+      {
+        "id": "depth.bplus.m6_to_m11.tgc.handoff_only",
+        "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.tgc.handoff_only",
+        "flag": {
+          "diff_pp": 15.492958,
+          "n_pairs": 71,
+          "p_two_sided": 0.0182,
+          "p_signflip_two_sided": 0.057129
+        },
+        "hstar": {
+          "diff_pp": 10.227273,
+          "ci95_pp_scenario": [
+            0.0,
+            23.529412
+          ],
+          "ci95_pp_task": [
+            0.0,
+            21.126761
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.0652,
+          "p_signflip_two_sided": 0.144531
+        }
+      },
+      {
+        "id": "depth.bplus.m6_to_m11.tgc.silenced",
+        "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.tgc.silenced",
+        "flag": {
+          "diff_pp": 16.0,
+          "n_pairs": 100,
+          "p_two_sided": 0.0002,
+          "p_signflip_two_sided": 0.004395
+        },
+        "hstar": {
+          "diff_pp": 21.686747,
+          "ci95_pp_scenario": [
+            12.5,
+            31.25
+          ],
+          "ci95_pp_task": [
+            12.5,
+            31.428571
+          ],
+          "n_pairs": 83,
+          "p_two_sided": 0.0,
+          "p_signflip_two_sided": 0.000977
+        }
+      },
+      {
+        "id": "depth.zs.m6_to_m11.goal_pass.handoff_only",
+        "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only",
+        "flag": {
+          "diff_pp": 13.932394,
+          "n_pairs": 71,
+          "p_two_sided": 0.0036,
+          "p_signflip_two_sided": 0.014404
+        },
+        "hstar": {
+          "diff_pp": 7.805682,
+          "ci95_pp_scenario": [
+            0.794937,
+            13.95
+          ],
+          "ci95_pp_task": [
+            -0.02381,
+            15.568367
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.0308,
+          "p_signflip_two_sided": 0.064453
+        }
+      },
+      {
+        "id": "depth.zs.m6_to_m11.goal_pass.silenced",
+        "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.silenced",
+        "flag": {
+          "diff_pp": 3.273,
+          "n_pairs": 100,
+          "p_two_sided": 0.1884,
+          "p_signflip_two_sided": 0.203339
+        },
+        "hstar": {
+          "diff_pp": 7.585542,
+          "ci95_pp_scenario": [
+            3.281818,
+            12.444156
+          ],
+          "ci95_pp_task": [
+            2.923171,
+            12.885333
+          ],
+          "n_pairs": 83,
+          "p_two_sided": 0.0,
+          "p_signflip_two_sided": 0.003174
+        }
+      },
+      {
+        "id": "depth.zs.m6_to_m11.tgc.handoff_only",
+        "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.tgc.handoff_only",
+        "flag": {
+          "diff_pp": 15.492958,
+          "n_pairs": 71,
+          "p_two_sided": 0.0108,
+          "p_signflip_two_sided": 0.038086
+        },
+        "hstar": {
+          "diff_pp": 9.090909,
+          "ci95_pp_scenario": [
+            0.0,
+            17.647059
+          ],
+          "ci95_pp_task": [
+            -1.25,
+            20.0
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.052,
+          "p_signflip_two_sided": 0.117188
+        }
+      },
+      {
+        "id": "depth.zs.m6_to_m11.tgc.silenced",
+        "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.tgc.silenced",
+        "flag": {
+          "diff_pp": 9.0,
+          "n_pairs": 100,
+          "p_two_sided": 0.0324,
+          "p_signflip_two_sided": 0.0625
+        },
+        "hstar": {
+          "diff_pp": 14.457831,
+          "ci95_pp_scenario": [
+            6.593407,
+            22.666667
+          ],
+          "ci95_pp_task": [
+            5.681818,
+            24.0
+          ],
+          "n_pairs": 83,
+          "p_two_sided": 0.0002,
+          "p_signflip_two_sided": 0.005371
+        }
+      },
+      {
+        "id": "ni.bplus.m9.goal_pass.handoff_only",
+        "hstar_key": "ni.bplus.m9.goal_pass.handoff_only",
+        "flag": {
+          "diff_pp": -4.205128,
+          "n_pairs": 117,
+          "p_two_sided": 0.258,
+          "p_signflip_two_sided": 0.284027
+        },
+        "hstar": {
+          "diff_pp": 0.214844,
+          "ci95_pp_scenario": [
+            -5.279104,
+            6.313636
+          ],
+          "ci95_pp_task": [
+            -5.762281,
+            6.293496
+          ],
+          "n_pairs": 128,
+          "p_two_sided": 0.009,
+          "p_signflip_two_sided": 0.021942
+        }
+      },
+      {
+        "id": "ni.bplus.m9.tgc.handoff_only",
+        "hstar_key": "ni.bplus.m9.tgc.handoff_only",
+        "flag": {
+          "diff_pp": -12.820513,
+          "n_pairs": 117,
+          "p_two_sided": 0.1714,
+          "p_signflip_two_sided": 0.201607
+        },
+        "hstar": {
+          "diff_pp": -8.59375,
+          "ci95_pp_scenario": [
+            -16.0,
+            -0.757576
+          ],
+          "ci95_pp_task": [
+            -17.142857,
+            -0.714286
+          ],
+          "n_pairs": 128,
+          "p_two_sided": 0.6772,
+          "p_signflip_two_sided": 0.698402
+        }
+      },
+      {
+        "id": "ni.bplus.m11.goal_pass.handoff_only",
+        "hstar_key": "ni.bplus.m11.goal_pass.handoff_only",
+        "flag": {
+          "diff_pp": -0.940845,
+          "n_pairs": 71,
+          "p_two_sided": 0.166,
+          "p_signflip_two_sided": 0.234257
+        },
+        "hstar": {
+          "diff_pp": 8.570455,
+          "ci95_pp_scenario": [
+            -1.632927,
+            18.24557
+          ],
+          "ci95_pp_task": [
+            0.668421,
+            16.295556
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.0026,
+          "p_signflip_two_sided": 0.01318
+        }
+      },
+      {
+        "id": "ni.bplus.m11.tgc.handoff_only",
+        "hstar_key": "ni.bplus.m11.tgc.handoff_only",
+        "flag": {
+          "diff_pp": -8.450704,
+          "n_pairs": 71,
+          "p_two_sided": 0.8074,
+          "p_signflip_two_sided": 0.828487
+        },
+        "hstar": {
+          "diff_pp": 1.136364,
+          "ci95_pp_scenario": [
+            -11.842105,
+            13.684211
+          ],
+          "ci95_pp_task": [
+            -8.974359,
+            11.578947
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.2156,
+          "p_signflip_two_sided": 0.279858
+        }
+      },
+      {
+        "id": "ni.zs.m9.goal_pass.handoff_only",
+        "hstar_key": "ni.zs.m9.goal_pass.handoff_only",
+        "flag": {
+          "diff_pp": -0.305983,
+          "n_pairs": 117,
+          "p_two_sided": 0.0076,
+          "p_signflip_two_sided": 0.024712
+        },
+        "hstar": {
+          "diff_pp": 0.665625,
+          "ci95_pp_scenario": [
+            -4.137288,
+            6.927068
+          ],
+          "ci95_pp_task": [
+            -4.703175,
+            6.332331
+          ],
+          "n_pairs": 128,
+          "p_two_sided": 0.0002,
+          "p_signflip_two_sided": 0.004456
+        }
+      },
+      {
+        "id": "ni.zs.m9.tgc.handoff_only",
+        "hstar_key": "ni.zs.m9.tgc.handoff_only",
+        "flag": {
+          "diff_pp": -8.547009,
+          "n_pairs": 117,
+          "p_two_sided": 0.6764,
+          "p_signflip_two_sided": 0.68499
+        },
+        "hstar": {
+          "diff_pp": -7.03125,
+          "ci95_pp_scenario": [
+            -13.28125,
+            -0.75188
+          ],
+          "ci95_pp_task": [
+            -14.285714,
+            0.714286
+          ],
+          "n_pairs": 128,
+          "p_two_sided": 0.9942,
+          "p_signflip_two_sided": 0.991383
+        }
+      },
+      {
+        "id": "ni.zs.m11.goal_pass.handoff_only",
+        "hstar_key": "ni.zs.m11.goal_pass.handoff_only",
+        "flag": {
+          "diff_pp": -4.359155,
+          "n_pairs": 71,
+          "p_two_sided": 0.5096,
+          "p_signflip_two_sided": 0.534897
+        },
+        "hstar": {
+          "diff_pp": 3.772727,
+          "ci95_pp_scenario": [
+            -4.778313,
+            10.978723
+          ],
+          "ci95_pp_task": [
+            -3.33375,
+            10.854945
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.0132,
+          "p_signflip_two_sided": 0.034882
+        }
+      },
+      {
+        "id": "ni.zs.m11.tgc.handoff_only",
+        "hstar_key": "ni.zs.m11.tgc.handoff_only",
+        "flag": {
+          "diff_pp": -15.492958,
+          "n_pairs": 71,
+          "p_two_sided": 0.0886,
+          "p_signflip_two_sided": 0.115772
+        },
+        "hstar": {
+          "diff_pp": -5.681818,
+          "ci95_pp_scenario": [
+            -14.117647,
+            2.631579
+          ],
+          "ci95_pp_task": [
+            -15.277778,
+            3.75
+          ],
+          "n_pairs": 88,
+          "p_two_sided": 0.782,
+          "p_signflip_two_sided": 0.782787
+        }
+      }
+    ],
+    "p_commensurable": {
+      "rule": "each swapped member's all-episode sibling has the same point, bootstrap p and sign-flip p in both reports",
+      "all_equal": true,
+      "checks": [
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.all",
+          "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.all",
+          "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.all",
+          "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.tgc.all",
+          "equal": true
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.all",
+          "hstar_key": "handoff_only_contrasts.bplus.m6_to_m11.tgc.all",
+          "equal": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.all",
+          "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.all",
+          "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.all",
+          "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.tgc.all",
+          "equal": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.all",
+          "hstar_key": "handoff_only_contrasts.zs.m6_to_m11.tgc.all",
+          "equal": true
+        },
+        {
+          "id": "ni.bplus.m9.goal_pass.all",
+          "hstar_key": "ni.bplus.m9.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "ni.bplus.m9.tgc.all",
+          "hstar_key": "ni.bplus.m9.tgc.all",
+          "equal": true
+        },
+        {
+          "id": "ni.bplus.m11.goal_pass.all",
+          "hstar_key": "ni.bplus.m11.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "ni.bplus.m11.tgc.all",
+          "hstar_key": "ni.bplus.m11.tgc.all",
+          "equal": true
+        },
+        {
+          "id": "ni.zs.m9.goal_pass.all",
+          "hstar_key": "ni.zs.m9.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "ni.zs.m9.tgc.all",
+          "hstar_key": "ni.zs.m9.tgc.all",
+          "equal": true
+        },
+        {
+          "id": "ni.zs.m11.goal_pass.all",
+          "hstar_key": "ni.zs.m11.goal_pass.all",
+          "equal": true
+        },
+        {
+          "id": "ni.zs.m11.tgc.all",
+          "hstar_key": "ni.zs.m11.tgc.all",
+          "equal": true
+        }
+      ]
+    },
+    "bootstrap": {
+      "method": "Benjamini-Yekutieli, cluster_inference.by_fdr",
+      "p_field": "p_two_sided",
+      "alpha": 0.05,
+      "decision_bearing": false,
+      "m": 60,
+      "not_in_family": [],
+      "n_survive": 17,
+      "survivors": [
+        "H2.vs_prefix_m11.gp",
+        "depth.bplus.m6_to_m11.goal_pass.all",
+        "depth.bplus.m6_to_m11.goal_pass.silenced",
+        "depth.bplus.m6_to_m11.tgc.all",
+        "depth.bplus.m6_to_m11.tgc.silenced",
+        "depth.zs.m6_to_m11.goal_pass.all",
+        "depth.zs.m6_to_m11.goal_pass.silenced",
+        "depth.zs.m6_to_m11.tgc.all",
+        "depth.zs.m6_to_m11.tgc.silenced",
+        "chord.c81.bplus.m11",
+        "ni.bplus.m9.goal_pass.all",
+        "ni.bplus.m11.goal_pass.all",
+        "ni.bplus.m11.goal_pass.handoff_only",
+        "ni.zs.m9.goal_pass.all",
+        "ni.zs.m9.goal_pass.handoff_only",
+        "ni.zs.m11.goal_pass.all",
+        "narr.m11.untailored.narr_minus_exec"
+      ],
+      "rows": [
+        {
+          "id": "CEIL07.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0106,
+          "p_by": 0.129409,
+          "survives": false
+        },
+        {
+          "id": "C1_114.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0116,
+          "p_by": 0.135716,
+          "survives": false
+        },
+        {
+          "id": "C1_114.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.0182,
+          "p_by": 0.182515,
+          "survives": false
+        },
+        {
+          "id": "C1_114.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.3238,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D0.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0202,
+          "p_by": 0.195586,
+          "survives": false
+        },
+        {
+          "id": "D0.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.1164,
+          "p_by": 0.883357,
+          "survives": false
+        },
+        {
+          "id": "D0.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.4374,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D1.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.1992,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D1.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.2422,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D1.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 1.0,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D2.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.3604,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D2.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.8108,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D2.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.5302,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D3.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.055,
+          "p_by": 0.467987,
+          "survives": false
+        },
+        {
+          "id": "D3.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.1432,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D3.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.823,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D4.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.4266,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D4.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.9878,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D4.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.8102,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D0.limit_either.contribution",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0056,
+          "p_by": 0.08276,
+          "survives": false
+        },
+        {
+          "id": "D0.neither.mean",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.128,
+          "p_by": 0.945826,
+          "survives": false
+        },
+        {
+          "id": "D0.limit_as_zero",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0048,
+          "p_by": 0.074878,
+          "survives": false
+        },
+        {
+          "id": "N.limit_as_zero",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0074,
+          "p_by": 0.098946,
+          "survives": false
+        },
+        {
+          "id": "H2.vs_prefix_m11.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0006,
+          "p_by": 0.012034,
+          "survives": true
+        },
+        {
+          "id": "H2.vs_prefix_m11.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.0134,
+          "p_by": 0.144716,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0002,
+          "p_by": 0.00432,
+          "survives": true
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0228,
+          "p_by": 0.213402,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.silenced",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.0652,
+          "p_by": 0.53846,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.silenced",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0308,
+          "p_by": 0.278981,
+          "survives": false
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.silenced",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.052,
+          "p_by": 0.456287,
+          "survives": false
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.silenced",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.0002,
+          "p_by": 0.00432,
+          "survives": true
+        },
+        {
+          "id": "chord.UF07.prefix_m9",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.075,
+          "p_by": 0.584984,
+          "survives": false
+        },
+        {
+          "id": "chord.c81.bplus.m9",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.1882,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "chord.c81.bplus.m11",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.001,
+          "p_by": 0.018719,
+          "survives": true
+        },
+        {
+          "id": "ni.bplus.m9.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.0012,
+          "p_by": 0.021059,
+          "survives": true
+        },
+        {
+          "id": "ni.bplus.m9.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.009,
+          "p_by": 0.11487,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m9.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.9138,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m9.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.6772,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "ni.bplus.m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.0026,
+          "p_by": 0.042945,
+          "survives": true
+        },
+        {
+          "id": "ni.bplus.m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.018,
+          "p_by": 0.182515,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.2156,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m9.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "ni.zs.m9.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.0002,
+          "p_by": 0.00432,
+          "survives": true
+        },
+        {
+          "id": "ni.zs.m9.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.5502,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m9.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.9942,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "ni.zs.m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.0132,
+          "p_by": 0.144716,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.0694,
+          "p_by": 0.556771,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.782,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "narr.m9.tailored.exec_minus_narr",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.4446,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "narr.m9.untailored.exec_minus_narr",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.5582,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "narr.m11.untailored.narr_minus_exec",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0,
+          "p_by": 0.0,
+          "survives": true
+        },
+        {
+          "id": "did.m11.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.0074,
+          "p_by": 0.098946,
+          "survives": false
+        }
+      ]
+    },
+    "signflip": {
+      "method": "Benjamini-Yekutieli, cluster_inference.by_fdr",
+      "p_field": "p_signflip_two_sided",
+      "alpha": 0.05,
+      "decision_bearing": false,
+      "m": 60,
+      "not_in_family": [],
+      "n_survive": 7,
+      "survivors": [
+        "depth.bplus.m6_to_m11.goal_pass.silenced",
+        "depth.bplus.m6_to_m11.tgc.silenced",
+        "depth.zs.m6_to_m11.tgc.all",
+        "ni.bplus.m11.goal_pass.all",
+        "ni.zs.m9.goal_pass.all",
+        "ni.zs.m11.goal_pass.all",
+        "narr.m11.untailored.narr_minus_exec"
+      ],
+      "rows": [
+        {
+          "id": "CEIL07.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.030029,
+          "p_by": 0.366605,
+          "survives": false
+        },
+        {
+          "id": "C1_114.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.046875,
+          "p_by": 0.470076,
+          "survives": false
+        },
+        {
+          "id": "C1_114.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.078125,
+          "p_by": 0.685528,
+          "survives": false
+        },
+        {
+          "id": "C1_114.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.5,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D0.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.062988,
+          "p_by": 0.603263,
+          "survives": false
+        },
+        {
+          "id": "D0.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.205078,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D0.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.625,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D1.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.283127,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D1.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.301758,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D1.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 1.0,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D2.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.382233,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D2.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.875488,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D2.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 0.6875,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D3.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.108887,
+          "p_by": 0.926504,
+          "survives": false
+        },
+        {
+          "id": "D3.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.230469,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D3.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 1.0,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D4.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.481445,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D4.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 1.0,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D4.sgc",
+          "metric": "sgc",
+          "threshold_pp": 0.0,
+          "p": 1.0,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D0.limit_either.contribution",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.039062,
+          "p_by": 0.406234,
+          "survives": false
+        },
+        {
+          "id": "D0.neither.mean",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.214844,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "D0.limit_as_zero",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.022949,
+          "p_by": 0.329917,
+          "survives": false
+        },
+        {
+          "id": "N.limit_as_zero",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.027832,
+          "p_by": 0.35912,
+          "survives": false
+        },
+        {
+          "id": "H2.vs_prefix_m11.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.002399,
+          "p_by": 0.061238,
+          "survives": false
+        },
+        {
+          "id": "H2.vs_prefix_m11.tgc",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.035599,
+          "p_by": 0.384459,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.001434,
+          "p_by": 0.050332,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.033508,
+          "p_by": 0.384459,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.goal_pass.silenced",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.000977,
+          "p_by": 0.044084,
+          "survives": true
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.001709,
+          "p_by": 0.053126,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.144531,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "depth.bplus.m6_to_m11.tgc.silenced",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.000977,
+          "p_by": 0.044084,
+          "survives": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.001892,
+          "p_by": 0.053126,
+          "survives": false
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.064453,
+          "p_by": 0.603263,
+          "survives": false
+        },
+        {
+          "id": "depth.zs.m6_to_m11.goal_pass.silenced",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.003174,
+          "p_by": 0.07427,
+          "survives": false
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.001099,
+          "p_by": 0.044084,
+          "survives": true
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.117188,
+          "p_by": 0.940157,
+          "survives": false
+        },
+        {
+          "id": "depth.zs.m6_to_m11.tgc.silenced",
+          "metric": "tgc",
+          "threshold_pp": 0.0,
+          "p": 0.005371,
+          "p_by": 0.099751,
+          "survives": false
+        },
+        {
+          "id": "chord.UF07.prefix_m9",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.115631,
+          "p_by": 0.940157,
+          "survives": false
+        },
+        {
+          "id": "chord.c81.bplus.m9",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.204803,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "chord.c81.bplus.m11",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.005684,
+          "p_by": 0.099751,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m9.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.004536,
+          "p_by": 0.090977,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m9.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.021942,
+          "p_by": 0.329917,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m9.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.852306,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m9.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.698402,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.000263,
+          "p_by": 0.034257,
+          "survives": true
+        },
+        {
+          "id": "ni.bplus.m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.01318,
+          "p_by": 0.217697,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.028137,
+          "p_by": 0.35912,
+          "survives": false
+        },
+        {
+          "id": "ni.bplus.m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.279858,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m9.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.000183,
+          "p_by": 0.034257,
+          "survives": true
+        },
+        {
+          "id": "ni.zs.m9.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.004456,
+          "p_by": 0.090977,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m9.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.479362,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m9.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.991383,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m11.goal_pass.all",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.000465,
+          "p_by": 0.034257,
+          "survives": true
+        },
+        {
+          "id": "ni.zs.m11.goal_pass.handoff_only",
+          "metric": "goal_pass",
+          "threshold_pp": -7.0,
+          "p": 0.034882,
+          "p_by": 0.384459,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m11.tgc.all",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.074421,
+          "p_by": 0.674092,
+          "survives": false
+        },
+        {
+          "id": "ni.zs.m11.tgc.handoff_only",
+          "metric": "tgc",
+          "threshold_pp": -7.0,
+          "p": 0.782787,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "narr.m9.tailored.exec_minus_narr",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.481445,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "narr.m9.untailored.exec_minus_narr",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.57486,
+          "p_by": 1.0,
+          "survives": false
+        },
+        {
+          "id": "narr.m11.untailored.narr_minus_exec",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.000488,
+          "p_by": 0.034257,
+          "survives": true
+        },
+        {
+          "id": "did.m11.gp",
+          "metric": "goal_pass",
+          "threshold_pp": 0.0,
+          "p": 0.023499,
+          "p_by": 0.329917,
+          "survives": false
+        }
+      ]
+    },
+    "goal_pass_only": {
+      "bootstrap": {
+        "method": "Benjamini-Yekutieli, cluster_inference.by_fdr",
+        "p_field": "p_two_sided",
+        "alpha": 0.05,
+        "decision_bearing": false,
+        "m": 33,
+        "not_in_family": [],
+        "n_survive": 14,
+        "survivors": [
+          "D0.limit_as_zero",
+          "H2.vs_prefix_m11.gp",
+          "depth.bplus.m6_to_m11.goal_pass.all",
+          "depth.bplus.m6_to_m11.goal_pass.silenced",
+          "depth.zs.m6_to_m11.goal_pass.all",
+          "depth.zs.m6_to_m11.goal_pass.silenced",
+          "chord.c81.bplus.m11",
+          "ni.bplus.m9.goal_pass.all",
+          "ni.bplus.m11.goal_pass.all",
+          "ni.bplus.m11.goal_pass.handoff_only",
+          "ni.zs.m9.goal_pass.all",
+          "ni.zs.m9.goal_pass.handoff_only",
+          "ni.zs.m11.goal_pass.all",
+          "narr.m11.untailored.narr_minus_exec"
+        ],
+        "rows": [
+          {
+            "id": "CEIL07.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0106,
+            "p_by": 0.075277,
+            "survives": false
+          },
+          {
+            "id": "C1_114.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0116,
+            "p_by": 0.07826,
+            "survives": false
+          },
+          {
+            "id": "D0.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0202,
+            "p_by": 0.123891,
+            "survives": false
+          },
+          {
+            "id": "D1.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.1992,
+            "p_by": 0.926832,
+            "survives": false
+          },
+          {
+            "id": "D2.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.3604,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "D3.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.055,
+            "p_by": 0.296847,
+            "survives": false
+          },
+          {
+            "id": "D4.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.4266,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "D0.limit_either.contribution",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0056,
+            "p_by": 0.050374,
+            "survives": false
+          },
+          {
+            "id": "D0.neither.mean",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.128,
+            "p_by": 0.63967,
+            "survives": false
+          },
+          {
+            "id": "D0.limit_as_zero",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0048,
+            "p_by": 0.046262,
+            "survives": true
+          },
+          {
+            "id": "N.limit_as_zero",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0074,
+            "p_by": 0.058734,
+            "survives": false
+          },
+          {
+            "id": "H2.vs_prefix_m11.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0006,
+            "p_by": 0.008096,
+            "survives": true
+          },
+          {
+            "id": "depth.bplus.m6_to_m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0002,
+            "p_by": 0.002998,
+            "survives": true
+          },
+          {
+            "id": "depth.bplus.m6_to_m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0228,
+            "p_by": 0.133757,
+            "survives": false
+          },
+          {
+            "id": "depth.bplus.m6_to_m11.goal_pass.silenced",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0,
+            "p_by": 0.0,
+            "survives": true
+          },
+          {
+            "id": "depth.zs.m6_to_m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0,
+            "p_by": 0.0,
+            "survives": true
+          },
+          {
+            "id": "depth.zs.m6_to_m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0308,
+            "p_by": 0.173161,
+            "survives": false
+          },
+          {
+            "id": "depth.zs.m6_to_m11.goal_pass.silenced",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0,
+            "p_by": 0.0,
+            "survives": true
+          },
+          {
+            "id": "chord.UF07.prefix_m9",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.075,
+            "p_by": 0.389222,
+            "survives": false
+          },
+          {
+            "id": "chord.c81.bplus.m9",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.1882,
+            "p_by": 0.906925,
+            "survives": false
+          },
+          {
+            "id": "chord.c81.bplus.m11",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.001,
+            "p_by": 0.012266,
+            "survives": true
+          },
+          {
+            "id": "ni.bplus.m9.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.0012,
+            "p_by": 0.013493,
+            "survives": true
+          },
+          {
+            "id": "ni.bplus.m9.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.009,
+            "p_by": 0.067465,
+            "survives": false
+          },
+          {
+            "id": "ni.bplus.m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.0,
+            "p_by": 0.0,
+            "survives": true
+          },
+          {
+            "id": "ni.bplus.m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.0026,
+            "p_by": 0.026986,
+            "survives": true
+          },
+          {
+            "id": "ni.zs.m9.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.0,
+            "p_by": 0.0,
+            "survives": true
+          },
+          {
+            "id": "ni.zs.m9.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.0002,
+            "p_by": 0.002998,
+            "survives": true
+          },
+          {
+            "id": "ni.zs.m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.0,
+            "p_by": 0.0,
+            "survives": true
+          },
+          {
+            "id": "ni.zs.m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.0132,
+            "p_by": 0.084813,
+            "survives": false
+          },
+          {
+            "id": "narr.m9.tailored.exec_minus_narr",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.4446,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "narr.m9.untailored.exec_minus_narr",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.5582,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "narr.m11.untailored.narr_minus_exec",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0,
+            "p_by": 0.0,
+            "survives": true
+          },
+          {
+            "id": "did.m11.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.0074,
+            "p_by": 0.058734,
+            "survives": false
+          }
+        ]
+      },
+      "signflip": {
+        "method": "Benjamini-Yekutieli, cluster_inference.by_fdr",
+        "p_field": "p_signflip_two_sided",
+        "alpha": 0.05,
+        "decision_bearing": false,
+        "m": 33,
+        "not_in_family": [],
+        "n_survive": 9,
+        "survivors": [
+          "H2.vs_prefix_m11.gp",
+          "depth.bplus.m6_to_m11.goal_pass.all",
+          "depth.bplus.m6_to_m11.goal_pass.silenced",
+          "depth.zs.m6_to_m11.goal_pass.all",
+          "depth.zs.m6_to_m11.goal_pass.silenced",
+          "ni.bplus.m11.goal_pass.all",
+          "ni.zs.m9.goal_pass.all",
+          "ni.zs.m11.goal_pass.all",
+          "narr.m11.untailored.narr_minus_exec"
+        ],
+        "rows": [
+          {
+            "id": "CEIL07.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.030029,
+            "p_by": 0.225101,
+            "survives": false
+          },
+          {
+            "id": "C1_114.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.046875,
+            "p_by": 0.287494,
+            "survives": false
+          },
+          {
+            "id": "D0.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.062988,
+            "p_by": 0.362361,
+            "survives": false
+          },
+          {
+            "id": "D1.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.283127,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "D2.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.382233,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "D3.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.108887,
+            "p_by": 0.587686,
+            "survives": false
+          },
+          {
+            "id": "D4.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.481445,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "D0.limit_either.contribution",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.039062,
+            "p_by": 0.250983,
+            "survives": false
+          },
+          {
+            "id": "D0.neither.mean",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.214844,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "D0.limit_as_zero",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.022949,
+            "p_by": 0.198171,
+            "survives": false
+          },
+          {
+            "id": "N.limit_as_zero",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.027832,
+            "p_by": 0.220905,
+            "survives": false
+          },
+          {
+            "id": "H2.vs_prefix_m11.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.002399,
+            "p_by": 0.040462,
+            "survives": true
+          },
+          {
+            "id": "depth.bplus.m6_to_m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.001434,
+            "p_by": 0.032248,
+            "survives": true
+          },
+          {
+            "id": "depth.bplus.m6_to_m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.033508,
+            "p_by": 0.235332,
+            "survives": false
+          },
+          {
+            "id": "depth.bplus.m6_to_m11.goal_pass.silenced",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.000977,
+            "p_by": 0.026365,
+            "survives": true
+          },
+          {
+            "id": "depth.zs.m6_to_m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.001892,
+            "p_by": 0.03647,
+            "survives": true
+          },
+          {
+            "id": "depth.zs.m6_to_m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.064453,
+            "p_by": 0.362361,
+            "survives": false
+          },
+          {
+            "id": "depth.zs.m6_to_m11.goal_pass.silenced",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.003174,
+            "p_by": 0.047585,
+            "survives": true
+          },
+          {
+            "id": "chord.UF07.prefix_m9",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.115631,
+            "p_by": 0.600082,
+            "survives": false
+          },
+          {
+            "id": "chord.c81.bplus.m9",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.204803,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "chord.c81.bplus.m11",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.005684,
+            "p_by": 0.063912,
+            "survives": false
+          },
+          {
+            "id": "ni.bplus.m9.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.004536,
+            "p_by": 0.05564,
+            "survives": false
+          },
+          {
+            "id": "ni.bplus.m9.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.021942,
+            "p_by": 0.198171,
+            "survives": false
+          },
+          {
+            "id": "ni.bplus.m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.000263,
+            "p_by": 0.016462,
+            "survives": true
+          },
+          {
+            "id": "ni.bplus.m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.01318,
+            "p_by": 0.136799,
+            "survives": false
+          },
+          {
+            "id": "ni.zs.m9.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.000183,
+            "p_by": 0.016462,
+            "survives": true
+          },
+          {
+            "id": "ni.zs.m9.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.004456,
+            "p_by": 0.05564,
+            "survives": false
+          },
+          {
+            "id": "ni.zs.m11.goal_pass.all",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.000465,
+            "p_by": 0.016462,
+            "survives": true
+          },
+          {
+            "id": "ni.zs.m11.goal_pass.handoff_only",
+            "metric": "goal_pass",
+            "threshold_pp": -7.0,
+            "p": 0.034882,
+            "p_by": 0.235332,
+            "survives": false
+          },
+          {
+            "id": "narr.m9.tailored.exec_minus_narr",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.481445,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "narr.m9.untailored.exec_minus_narr",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.57486,
+            "p_by": 1.0,
+            "survives": false
+          },
+          {
+            "id": "narr.m11.untailored.narr_minus_exec",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.000488,
+            "p_by": 0.016462,
+            "survives": true
+          },
+          {
+            "id": "did.m11.gp",
+            "metric": "goal_pass",
+            "threshold_pp": 0.0,
+            "p": 0.023499,
+            "p_by": 0.198171,
+            "survives": false
+          }
+        ]
+      }
+    },
+    "handoff_members": [
+      {
+        "id": "depth.bplus.m6_to_m11.goal_pass.handoff_only",
+        "diff_pp_flag": 12.028169,
+        "diff_pp_hstar": 7.661364,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 0.213402,
+        "bootstrap_survives_flag": true,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 0.384459,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "depth.bplus.m6_to_m11.goal_pass.silenced",
+        "diff_pp_flag": 5.809,
+        "diff_pp_hstar": 9.16506,
+        "n_pairs_flag": 100,
+        "n_pairs_hstar": 83,
+        "bootstrap_p_by_hstar": 0.0,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": true,
+        "signflip_p_by_hstar": 0.044084,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": true
+      },
+      {
+        "id": "depth.bplus.m6_to_m11.tgc.handoff_only",
+        "diff_pp_flag": 15.492958,
+        "diff_pp_hstar": 10.227273,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 0.53846,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 1.0,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "depth.bplus.m6_to_m11.tgc.silenced",
+        "diff_pp_flag": 16.0,
+        "diff_pp_hstar": 21.686747,
+        "n_pairs_flag": 100,
+        "n_pairs_hstar": 83,
+        "bootstrap_p_by_hstar": 0.0,
+        "bootstrap_survives_flag": true,
+        "bootstrap_survives_hstar": true,
+        "signflip_p_by_hstar": 0.044084,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": true
+      },
+      {
+        "id": "depth.zs.m6_to_m11.goal_pass.handoff_only",
+        "diff_pp_flag": 13.932394,
+        "diff_pp_hstar": 7.805682,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 0.278981,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 0.603263,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "depth.zs.m6_to_m11.goal_pass.silenced",
+        "diff_pp_flag": 3.273,
+        "diff_pp_hstar": 7.585542,
+        "n_pairs_flag": 100,
+        "n_pairs_hstar": 83,
+        "bootstrap_p_by_hstar": 0.0,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": true,
+        "signflip_p_by_hstar": 0.07427,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "depth.zs.m6_to_m11.tgc.handoff_only",
+        "diff_pp_flag": 15.492958,
+        "diff_pp_hstar": 9.090909,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 0.456287,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 0.940157,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "depth.zs.m6_to_m11.tgc.silenced",
+        "diff_pp_flag": 9.0,
+        "diff_pp_hstar": 14.457831,
+        "n_pairs_flag": 100,
+        "n_pairs_hstar": 83,
+        "bootstrap_p_by_hstar": 0.00432,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": true,
+        "signflip_p_by_hstar": 0.099751,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.bplus.m9.goal_pass.handoff_only",
+        "diff_pp_flag": -4.205128,
+        "diff_pp_hstar": 0.214844,
+        "n_pairs_flag": 117,
+        "n_pairs_hstar": 128,
+        "bootstrap_p_by_hstar": 0.11487,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 0.329917,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.bplus.m9.tgc.handoff_only",
+        "diff_pp_flag": -12.820513,
+        "diff_pp_hstar": -8.59375,
+        "n_pairs_flag": 117,
+        "n_pairs_hstar": 128,
+        "bootstrap_p_by_hstar": 1.0,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 1.0,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.bplus.m11.goal_pass.handoff_only",
+        "diff_pp_flag": -0.940845,
+        "diff_pp_hstar": 8.570455,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 0.042945,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": true,
+        "signflip_p_by_hstar": 0.217697,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.bplus.m11.tgc.handoff_only",
+        "diff_pp_flag": -8.450704,
+        "diff_pp_hstar": 1.136364,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 1.0,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 1.0,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.zs.m9.goal_pass.handoff_only",
+        "diff_pp_flag": -0.305983,
+        "diff_pp_hstar": 0.665625,
+        "n_pairs_flag": 117,
+        "n_pairs_hstar": 128,
+        "bootstrap_p_by_hstar": 0.00432,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": true,
+        "signflip_p_by_hstar": 0.090977,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.zs.m9.tgc.handoff_only",
+        "diff_pp_flag": -8.547009,
+        "diff_pp_hstar": -7.03125,
+        "n_pairs_flag": 117,
+        "n_pairs_hstar": 128,
+        "bootstrap_p_by_hstar": 1.0,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 1.0,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.zs.m11.goal_pass.handoff_only",
+        "diff_pp_flag": -4.359155,
+        "diff_pp_hstar": 3.772727,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 0.144716,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 0.384459,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      },
+      {
+        "id": "ni.zs.m11.tgc.handoff_only",
+        "diff_pp_flag": -15.492958,
+        "diff_pp_hstar": -5.681818,
+        "n_pairs_flag": 71,
+        "n_pairs_hstar": 88,
+        "bootstrap_p_by_hstar": 1.0,
+        "bootstrap_survives_flag": false,
+        "bootstrap_survives_hstar": false,
+        "signflip_p_by_hstar": 1.0,
+        "signflip_survives_flag": false,
+        "signflip_survives_hstar": false
+      }
+    ],
+    "changes_vs_by_main_text": {
+      "bootstrap": {
+        "gained": [
+          "depth.bplus.m6_to_m11.goal_pass.silenced",
+          "depth.zs.m6_to_m11.goal_pass.silenced",
+          "depth.zs.m6_to_m11.tgc.silenced",
+          "ni.bplus.m11.goal_pass.handoff_only",
+          "ni.zs.m9.goal_pass.handoff_only"
+        ],
+        "lost": [
+          "depth.bplus.m6_to_m11.goal_pass.handoff_only"
+        ]
+      },
+      "signflip": {
+        "gained": [
+          "depth.bplus.m6_to_m11.goal_pass.silenced",
+          "depth.bplus.m6_to_m11.tgc.silenced",
+          "depth.zs.m6_to_m11.tgc.all"
+        ],
+        "lost": []
+      }
+    }
   },
   "contrast_census": {
     "rule": "Files: every campaign/results/**/*.report.json except those named j10_*, j11_*, j12_* (the dev-only guard refuses those names) and this module's own j17_v2_fill_* report. A contrast object is a JSON object holding a paired-difference point (one of diff_pp, diff, point_pp, diff_pp_scenario, residual_mean_pp, delta_pp) and a key containing 'ci95', either at its own level or in its 'scenario' / 'task' sub-block, or a 'point' with a 'ci95' key under a parent key matching /minus|_to_|delta|contribution|gain|did|diff|residual/. Only the outermost such object counts. n_objects counts (file, path) pairs; n_distinct collapses objects whose (point, first interval), rounded to 4 dp, coincide, across files and populations. A lower bound on contrasts run: shares, ratios and tests printed without an interval are not counted, and every per-seed or per-population copy of one contrast is (n_objects) or is not (n_distinct) counted.",
