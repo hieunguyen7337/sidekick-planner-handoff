@@ -173,7 +173,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_SFT_PLAN_PACKET_SYSTEM,
         help="System subdirectory under packet-source (default: planner_alone).",
     )
-    return p.parse_args(argv)
+    return _add_attribution_flag(p).parse_args(argv)
 
 
 def load_price_card(prices_path: Path) -> dict[str, Any]:
@@ -362,9 +362,9 @@ def price_arm_episodes(
             ps = packet_source or DEFAULT_SFT_PLAN_PACKET_SOURCE
             sft_events = ps / packet_system / str(seed) / str(task_id) / "events.jsonl"
             if sft_events.is_file():
-                sft_usages = extract_events_usages(sft_events)
-                if sft_usages:
-                    usage_records.append(sft_usages[-1])
+                sft_plan_usage = replayed_plan_usage(sft_events)  # the replayed plan, not the last usage (COSTFIX)
+                if sft_plan_usage:
+                    usage_records.append(sft_plan_usage)
 
         # Check prefix handoff replayed prefix usage
         eff_m = row.get("effective_m")
@@ -600,7 +600,7 @@ def compute_noninferiority_across_axes(
 def generate_markdown_report(report: dict[str, Any]) -> str:
     """Generate summary Markdown report."""
     lines: list[str] = []
-    lines.append("# Cost Axes Analysis Report (Brief X40 Unit A)")
+    lines.append("# Cost Axes Analysis Report (Brief X40 Unit A)" + _attribution_title(report))
     lines.append("")
     lines.append(f"- **Prices Card**: `{report['prices_source']}`")
     lines.append(f"- **Cluster**: `{report['cluster']}`")
@@ -659,7 +659,7 @@ def main(argv: list[str] | None = None) -> int:
             packet_source=args.packet_source,
             packet_system=args.packet_system,
         )
-        summary = price_arm_episodes(
+        summary = (price_arm_episodes_attributed if args.attribute_cached_plans else price_arm_episodes)(
             arm,
             price_card,
             root=root,
@@ -702,7 +702,7 @@ def main(argv: list[str] | None = None) -> int:
         "ordering_flips": flips,
         "non_inferiority": ni_results,
         "ni_unchanged_across_axes": ni_results.get("ni_unchanged_across_axes"),
-    }
+    } | _attribution_block(args, arm_summaries)
 
     # Write output JSON
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -717,6 +717,234 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Wrote markdown to {args.out_md}")
 
     return 0
+
+
+# The __main__ guard is the last statement of the file: the cached-plan attribution below is appended
+# after main() so that no line cited elsewhere moves (unit ATTRIB, 2026-09-25).
+
+
+# ---- Full attribution of replayed plans (unit ATTRIB, 2026-09-25; opt-in, off by default) ------------
+# Convention: an episode is charged for all the planner output it consumes, bought live or replayed.
+# sft_plan (:361-367 for USD, j8_noncached_cost.attach_sft_plan_source_plan_tokens for tokens) and the
+# prefix arms (:369-376; loop.py:151,647 for calls) are already charged their source on all three axes.
+# A channel arm's replayed plan -- a planner event with usage.provider "cache"
+# (src/sidekick/agents/planner.py:930-941) -- is charged its call (loop.py:383,465) but priced at 0
+# tokens and $0 (price_usage_record). --attribute-cached-plans prices each such event from the source
+# plan event it replays. Without the flag every path above runs exactly as before.
+ATTRIBUTION_CONVENTION = (
+    "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD "
+    "of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/"
+    "<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left "
+    "as priced; hosted calls are unchanged (a replayed plan is already counted as one call)"
+)
+_PRICE_ARM_EPISODES_AS_PUBLISHED = price_arm_episodes
+
+
+def cached_plan_usages(events_path: Path) -> list[dict[str, Any]]:
+    """Planner usages tagged provider "cache" (replayed plans) in the episode's last attempt."""
+    return [u for u in extract_events_usages(events_path) if u.get("provider") == "cache"]
+
+
+def replayed_plan_usage(events_path: Path | str) -> Optional[dict[str, Any]]:
+    """Usage of the plan event a CachedPacketPlanner replays from events_path, or None.
+
+    The planner's own reader picks the event (src/sidekick/agents/planner.py:736-766: the last `plan`
+    event carrying a packet after the last run_start), so the priced event is the replayed one by
+    construction -- not the source's last planner usage, which for a planner_alone source is an action.
+    """
+    from sidekick.agents.planner import _last_attempt_plan_event  # noqa: E402 (pydantic; lazy)
+
+    path = Path(events_path)
+    if not path.is_file():
+        return None
+    try:
+        payload, usage = _last_attempt_plan_event(path)
+    except (OSError, UnicodeDecodeError):
+        return None
+    if payload is None or not isinstance(usage, dict) or not usage:
+        return None
+    return usage
+
+
+def cached_plan_source_path(
+    cached_usage: dict[str, Any],
+    packet_source: Path | str | None,
+    packet_system: str,
+    task_id: str,
+    seed: int,
+) -> Optional[Path]:
+    """The events file a replayed plan came from: usage.raw.cached_from (planner.py:926), else the
+    packet_source layout the sft_plan branch of price_arm_episodes reads (:362-363)."""
+    raw = cached_usage.get("raw")
+    cached_from = raw.get("cached_from") if isinstance(raw, dict) else None
+    if cached_from:
+        return Path(cached_from)
+    if packet_source is None:
+        return None
+    return Path(packet_source) / packet_system / str(seed) / str(task_id) / "events.jsonl"
+
+
+def episode_cached_plan_attribution(
+    events_path: Path | str,
+    models_prices: dict[str, dict[str, float]],
+    *,
+    packet_source: Path | str | None = None,
+    packet_system: str = DEFAULT_SFT_PLAN_PACKET_SYSTEM,
+    task_id: str | None = None,
+    seed: int | None = None,
+) -> dict[str, Any]:
+    """One episode's replayed plans, priced at their source: counts, calls charged, tokens and USD.
+
+    `cache_calls` is what the loop charged for them (usage.n_calls, overwritten to the attempt count at
+    loop.py:465; 1 when absent, as the CACHECALLS live-only view reads it).
+    """
+    out: dict[str, Any] = {
+        "n_cached_plan_events": 0,
+        "cache_calls": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "noncached_tokens": 0.0,
+        "usd": 0.0,
+    }
+    diagnostics = {"n_usage_without_cache_split": 0}
+    root = Path(packet_source).resolve() if packet_source is not None else None
+    for cached in cached_plan_usages(Path(events_path)):
+        out["n_cached_plan_events"] += 1
+        n_calls = cached.get("n_calls")
+        out["cache_calls"] += int(n_calls) if n_calls is not None else 1
+        source = cached_plan_source_path(cached, packet_source, packet_system, str(task_id), seed or 0)
+        if source is not None and root is not None and not source.resolve().is_relative_to(root):
+            out["n_cached_from_outside_packet_source"] += 1
+        usage = replayed_plan_usage(source) if source is not None else None
+        if usage is None:
+            out["n_source_missing"] += 1
+            continue
+        out["noncached_tokens"] += usage_noncached_tokens(usage) or 0.0
+        out["usd"] += price_usage_record(usage, models_prices, diagnostics)
+    out["n_usage_without_cache_split"] = diagnostics["n_usage_without_cache_split"]
+    return out
+
+
+def price_arm_episodes_attributed(
+    arm: dict[str, Any],
+    price_card: dict[str, Any],
+    root: Path | None,
+    packet_source: Path | None,
+    packet_system: str,
+) -> dict[str, Any]:
+    """price_arm_episodes with every replayed plan priced from the source plan event it replays.
+
+    Tokens and USD only: the hosted-calls axis already counts a replayed plan as one call. sft_plan rows
+    are left as priced (their source plan is charged at :361-367 and in summarise_arm). Applied only when
+    every replayed plan maps onto a source plan event; a partial map is left unapplied and returned as an
+    understatement, as j8_noncached_cost.attach_sft_plan_source_plan_tokens does.
+    """
+    summary = _PRICE_ARM_EPISODES_AS_PUBLISHED(arm, price_card, root, packet_source, packet_system)
+    cleaned = arm["cleaned"]
+    arm_dir = Path(root) if root else None
+    info: dict[str, Any] = {
+        "applied": False,
+        "route": None,
+        "convention": ATTRIBUTION_CONVENTION,
+        "n_episodes": len(cleaned),
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": None,
+        "usd_added_per_episode": None,
+        "missing_examples": [],
+    }
+    added: dict[tuple[str, int], dict[str, Any]] = {}
+    for key, row in sorted(cleaned.items()):
+        task_id, seed = key
+        if _nc.is_sft_plan_row(row, arm["label"]):
+            info["n_sft_plan_rows_left_as_priced"] += 1
+            continue
+        if arm_dir is None:
+            continue
+        att = episode_cached_plan_attribution(
+            arm_dir / str(seed) / str(task_id) / "events.jsonl",
+            price_card["models"],
+            packet_source=packet_source,
+            packet_system=packet_system,
+            task_id=str(task_id),
+            seed=int(seed),
+        )
+        if att["n_cached_plan_events"] == 0:
+            continue
+        info["n_episodes_with_cached_plan"] += 1
+        for name in ("n_cached_plan_events", "n_source_missing", "n_cached_from_outside_packet_source",
+                     "n_usage_without_cache_split"):
+            info[name] += att[name]
+        if att["n_source_missing"] and len(info["missing_examples"]) < 5:
+            info["missing_examples"].append(f"{task_id}/{seed}")
+        added[key] = att
+    if info["n_source_missing"]:
+        info["route"] = "understatement"
+        summary["cached_plan_attribution"] = info
+        return summary
+    if not added:
+        info["route"] = "sft_plan_already_charged" if info["n_sft_plan_rows_left_as_priced"] else "no_replayed_plan"
+        info["noncached_tokens_added_per_episode"] = info["usd_added_per_episode"] = 0.0
+        summary["cached_plan_attribution"] = info
+        return summary
+    for key, att in added.items():
+        row = cleaned[key]
+        for axis, extra in (("noncached_tokens_per_episode", att["noncached_tokens"]), ("usd_per_episode", att["usd"])):
+            if row.get(axis) is not None:
+                row[axis] = float(row[axis]) + extra
+    info["applied"] = True
+    info["route"] = "source_plan_event"
+    if cleaned:
+        info["noncached_tokens_added_per_episode"] = round(
+            sum(a["noncached_tokens"] for a in added.values()) / len(cleaned), 6)
+        info["usd_added_per_episode"] = round(sum(a["usd"] for a in added.values()) / len(cleaned), 6)
+    # Re-summarise the two re-priced axes exactly as price_arm_episodes does (:448-449, :457-458, :469-478).
+    for axis in ("noncached_tokens_per_episode", "usd_per_episode"):
+        vals = [r[axis] for r in cleaned.values() if r.get(axis) is not None]
+        summary[axis] = round(statistics.fmean(vals), 6) if vals else None
+    summary["episodes"] = [
+        {
+            "task_id": str(key[0]),
+            "seed": int(key[1]),
+            "noncached_tokens_per_episode": row.get("noncached_tokens_per_episode"),
+            "hosted_calls_per_episode": row.get("hosted_calls_per_episode"),
+            "usd_per_episode": row.get("usd_per_episode"),
+        }
+        for key, row in sorted(cleaned.items())
+    ]
+    summary["cached_plan_attribution"] = info
+    return summary
+
+
+def _add_attribution_flag(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    p.add_argument(
+        "--attribute-cached-plans",
+        action="store_true",
+        help="Price every replayed (provider 'cache') plan from its source plan event (tokens and USD). "
+        "Off by default: the published reports are the default.",
+    )
+    return p
+
+
+def _attribution_block(args: argparse.Namespace, arm_summaries: list[dict[str, Any]]) -> dict[str, Any]:
+    """The report's cached_plan_attribution key; empty, so the report is unchanged, without the flag."""
+    if not getattr(args, "attribute_cached_plans", False):
+        return {}
+    return {
+        "cached_plan_attribution": {
+            "convention": ATTRIBUTION_CONVENTION,
+            "per_arm": {a["label"]: a.get("cached_plan_attribution") for a in arm_summaries},
+        }
+    }
+
+
+def _attribution_title(report: dict[str, Any]) -> str:
+    return " -- replayed plans fully attributed" if "cached_plan_attribution" in report else ""
 
 
 if __name__ == "__main__":

@@ -979,3 +979,99 @@ Amendment 1 §B names, does not record whether the executor took control.
   `j10_planner_alone_cap81_20260924_smoke_25841223`. No prefix arm, J11 arm or J12 arm has a `test_normal` episode.
 
 *Amendment 3 ends.*
+
+## Amendment 4 — how a replayed plan packet is counted, and two fixes to the floor's cost (2026-09-25, appended before any `test_normal` episode of arms 2 or 4–12 exists; one reporting companion, one tightening of P2's calls clause that can only make P2 harder to support, and two implementation fixes to cost code; no arm, prediction direction, decision threshold, Holm family, margin, seed, order, budget or abort rule above any end marker changes)
+
+### §A What was found (dev only, 2026-09-25)
+- A plan-replaying arm gets its first plan from `CachedPacketPlanner`, whose usage record has `provider="cache"`,
+  zero tokens and `n_calls=0` (pinned checkout a8b63f0: `src/sidekick/agents/planner.py:932,939`).
+- The loop's planner-call wrapper counts every attempt, this one included (a8b63f0: `src/sidekick/systems/loop.py:366`
+  increments `n_planner_calls`; `:448` overwrites the record's `n_calls` with the attempt count).
+- So each such episode's `n_planner_calls` counts the replayed plan as one call, while its tokens and dollars leave it
+  out (a cache record is priced at $0).
+- **On dev.** 5,012 of 15,828 non-smoke dev episodes carry exactly one such event: the step-0 plan, 0 tokens. They
+  sit in 46 of 120 campaign directories (`campaign/results/cache_calls_audit_20260925.report.json`,
+  `scan_totals`). Prefix-replay and `planner_alone` campaigns carry none.
+- **A1 is inconsistent here.**
+  - §4 says arms 2 and 8–12's "live hosted calls are only reviews, advice, takeovers or shown actions", and §3's
+    table lists arm 2 at 0.
+  - The same table's channel-arm values (19.02, 2.46, 2.32) and P2's dev reference (19.02 hosted calls per episode)
+    include the replayed plan.
+  - P2's text charges the prefix arm "the planner calls required to produce its prefix — the replayed plan and
+    actions".
+- **The convention adopted** (ledger CALLS-01..05, ATTRIB-01..08): an episode is charged for all the planner output
+  it consumes, bought live or replayed. Under it the published call counts are correct, and the channel arms'
+  tokens and dollars are under-attributed by one replayed plan per episode.
+
+### §B Two conventions, both reported
+For every arm, the cost table (§7 item 3) and the P2 report print:
+- **calls:** `calls_attributed`, every planner event counted, the replayed plan included (this is how every dev
+  value in A1 was computed); and `calls_live`, the same count minus the calls of `provider == "cache"` events.
+- **tokens and USD:** as published (a replayed plan at 0 tokens and $0), and attributed (each replayed plan priced
+  from the source plan event it replays).
+
+For arm 3 and arms 4–7 the two conventions are identical by construction. Arm 3 replays nothing. A prefix arm's
+replayed prefix is not a `cache` event, and P2 registers that it is charged. Arm 2 is already charged its source
+plan event on every axis (§F), so nothing is added to it.
+
+### §C P2 is judged under both conventions
+- **Calls clause.** "Strictly more hosted calls per episode" is **supported only if it holds under both
+  conventions**. On dev it holds under both: 19.02 vs 11.25 as published, and 18.02 vs 11.25 without the replayed
+  plan (CALLS-02). This can turn a supported P2 into "not supported"; it cannot do the reverse.
+- **Tokens clause.** It is also read under both conventions, and supported only if it holds under both. Attribution
+  can only raise `advise_k1_fullctx`'s tokens while `prefix_m11`'s are the same under both, so the binding reading
+  is the one registered (as published). On dev: 3.19× as published and 3.24× attributed, against the 2× threshold
+  (ROB-19; ATTRIB-04).
+
+### §D What does not change
+- **The §9 budget (≤ 15,627).** It was computed from counts that include the replayed plan. So it overstates the live
+  spend of arms 8–12 by at most one call per episode, 5 × 336 = 1,680 calls in all. It stays as registered, as an
+  upper bound.
+- **Everything else.** The abort rule, the order, the arms, P1 and P3–P7, CF1–CF3, the Holm family and every
+  threshold are unchanged. So are J11, which makes zero hosted calls, and J12, whose only hosted calls are live
+  answers to executor asks (J12 §2).
+
+### §E Code for §B–§C
+`scripts/analysis/j10_report.py:4038-4256` (`a1_am4_*`), appended at the end of the file after
+`a1_hstar_companions` with no existing line moved, and called from `build_report_a1`'s return line (`:3829`). It is
+returned under the key `a1_am4_calls`:
+- per arm: `calls_attributed_mean`, `calls_live_mean`, `n_cached_plan_events`, `tokens_as_published_mean`,
+  `tokens_attributed_mean`, `usd_as_published_mean`, `usd_attributed_mean`;
+- `p2_calls_clause` and `p2_tokens_clause`, each with `attributed`, `live` and `holds_both`.
+
+An error in this block is recorded under `a1_am4_calls.status` and never stops the registered analysis. Attributed
+pricing reuses `scripts/analysis/j12_cost_axes.py:726-` (`--attribute-cached-plans`, off by default).
+Tests: `tests/unit/test_j10_report.py` `test_am4_calls_live_and_attributed_by_hand`,
+`test_am4_sft_plan_is_not_charged_twice_and_both_conventions_can_hold`, `test_am4_failure_is_recorded_and_never_fatal`;
+`tests/unit/test_j12_cost_axes.py` `test_price_arm_episodes_attributed_by_hand`,
+`test_attribution_leaves_sft_plan_rows_and_partial_maps_as_priced`,
+`test_attribution_is_opt_in_and_the_default_report_is_unchanged`.
+
+### §F Two implementation fixes to the floor's (arm 2's) cost
+Neither changes a registered definition. Both make the code compute arm 2's cost as A1 already specifies it: the
+P2 cost report, run with `--packet-source` pointed at arm 3's campaign (A1:348-349), whose mean non-cached tokens
+for arm 2 are Amendment 1 §B3's c̄_floor in the chord's f (A1:743-745).
+1. **USD priced on the wrong event.** `j12_cost_axes.py` priced arm 2's replayed plan with the source episode's
+   last planner usage. For a `planner_alone` source that is an action, never the plan (0 of 114 dev sources end on
+   the plan event). It now prices the plan event the planner replays (`replayed_plan_usage`, reusing
+   `sidekick.agents.planner._last_attempt_plan_event`). On dev the floor's USD per episode moves from $0.003015 to
+   $0.003921 (COSTFIX-01). Its tokens were already read from the plan event and do not change, so no quantity a
+   registered prediction or Amendment 1 §B3's chord reads (all token-based) moves. Test:
+   `test_sft_plan_is_charged_its_source_plan_event_not_the_source_last_usage`.
+2. **A planless key zeroed the floor's tokens.** `scripts/analysis/j8_noncached_cost.py`,
+   `attach_sft_plan_source_plan_tokens`, left every arm-2 row without its replayed-plan tokens if any single key's
+   source had no plan event. §4.2's planless key is exactly that case, and for it arm 2 plans live, so the plan is
+   already in the episode's own usage. One planless key on test would have set c̄_floor to about zero and moved
+   every chord's f. Such a key (by `planless_source_keys`' definition) is now mapped with zero
+   extra tokens and counted (`n_planless_live`). Every other mapping failure keeps the conservative all-or-nothing
+   route. On dev there is no planless key and no value changes: the regenerated cost report is byte-identical to
+   the committed one (PBS 25850965). Code: `scripts/analysis/j8_noncached_cost.py:76-172` and
+   `_source_is_planless` (:174-192). Tests: `tests/unit/test_j8_noncached_cost.py`
+   (`test_all_keys_planned_is_unchanged`, `test_planless_key_with_a_live_plan_maps_at_zero_and_keeps_the_others`,
+   `test_planless_key_without_a_live_plan_is_a_miss`, `test_missing_source_file_is_an_understatement_as_before`,
+   `test_non_planless_source_without_plan_usage_is_an_understatement`).
+
+- Checked at commit: the only non-`_dryrun` `j10_*` campaigns are arm 3's, `j10_planner_alone_cap81_20260924`, and
+  its smoke. No episode of arms 2 or 4–12 exists on `test_normal`.
+
+*Amendment 4 ends.*

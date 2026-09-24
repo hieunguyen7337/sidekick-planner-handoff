@@ -1,0 +1,3588 @@
+{
+  "unit": "CACHECALLS",
+  "generated_at": "2026-09-24T14:36:14+00:00",
+  "generated_by": "/home/n12194778/.claude/jobs/91578989/tmp/cachecalls/build_report.py (PBS); inputs /home/n12194778/.claude/jobs/91578989/tmp/cachecalls/out/*.json and /home/n12194778/.claude/jobs/91578989/tmp/cachecalls/scan_summary.json",
+  "plan_head": "4111c9f",
+  "mechanism": {
+    "planner": "src/sidekick/agents/planner.py:932,939 CachedPacketPlanner returns Usage(provider='cache', n_calls=0, tokens 0)",
+    "loop_usage_overwrite": "src/sidekick/systems/loop.py:465 usage.model_copy(update={'n_calls': attempts}) -> ledger per_actor.planner.n_calls +1 (ledger.py:32,41)",
+    "loop_counter": "src/sidekick/systems/loop.py:383 n_planner_calls += 1 per attempt, independent of Usage -> RunResult.n_planner_calls (:1249)",
+    "prefix_counter": "src/sidekick/systems/loop.py:151 (max(1, n_calls or 1)) over the SOURCE prefix events at :647-649; the arm's ledger is not charged",
+    "runtime_usd": "src/sidekick/cost/prices.py:41 cache -> $0"
+  },
+  "live_only_definition": "calls minus sum(usage.n_calls) over actor=planner events with usage.provider == 'cache' in the last attempt of the episode's own events.jsonl",
+  "method": "each script's own main() run twice in PBS: as published (base) and with a result.json view that applies the live-only definition (livecalls_shim.py; builtins.open/io.open). Base must reproduce the published keys first.",
+  "reproduction_base_equals_published": {
+    "hj13_cost_axes_fixed_20260923.arms == base(prefix 20260923).arms": true,
+    "hj13_cost_axes_ni_20260923.arms == base(prefix 20260923).arms": true,
+    "hj13_cost_axes_ni_20260923.non_inferiority == base(prefix 20260923)": true,
+    "variant check, expected false: hj13_cost_axes_ni_20260923.non_inferiority == base with pre-guard prefix 20260922": false,
+    "hj13_cost_axes_ni_20260923.{ordering_by_axis,ordering_flips,ni_unchanged_across_axes} == base": true,
+    "hj13_advice_at_price_cost_20260923.arms == base": true,
+    "j16_robustness_20260923.F_f.pairs == base": true,
+    "j16_robustness_20260923.F_g.cost_contrasts == base": true,
+    "j17_depth_fixes_20260924.ganz == base": true,
+    "j17_depth_fixes_20260924.cost_share == base": true,
+    "b2_decomposition_20260923.exploratory.cost_per_episode == base": true,
+    "live j16 F_f self-check against live j12 (status)": "computed",
+    "live j16 F_g quality contrasts == base (quality untouched by the shim)": true,
+    "live j17 cost_share == base (prefix and ceiling carry no cache event)": true,
+    "live j17 ni/handoff_only/chord == base": true
+  },
+  "scan_totals": {
+    "n_campaign_system_dirs_scanned": 138,
+    "n_non_smoke": 120,
+    "n_non_smoke_with_cache_events": 46,
+    "n_non_smoke_episodes_with_cached_plan_event": 5012,
+    "n_non_smoke_episodes": 15828,
+    "cache_event_types_seen": [
+      "plan"
+    ],
+    "every_cached_episode_has_exactly_one_cache_event": true,
+    "n_cache_events_with_nonzero_input_tokens": 0,
+    "n_prefix_dirs_with_cache_events": 0,
+    "n_planner_alone_dirs_with_cache_events": 0,
+    "n_dirs_where_ledger_ne_live_plus_cache_plus_mock": 0,
+    "by_arm_type_non_smoke": {
+      "channel: fixed_k (advise / takeover / show / neutral)": {
+        "n_campaigns": 23,
+        "n_campaigns_with_cache": 21,
+        "n_episodes": 5336,
+        "n_episodes_with_cached_plan_event": 2163
+      },
+      "executor alone": {
+        "n_campaigns": 8,
+        "n_campaigns_with_cache": 0,
+        "n_episodes": 784,
+        "n_episodes_with_cached_plan_event": 0
+      },
+      "planner alone (source)": {
+        "n_campaigns": 7,
+        "n_campaigns_with_cache": 0,
+        "n_episodes": 702,
+        "n_episodes_with_cached_plan_event": 0
+      },
+      "prefix replay": {
+        "n_campaigns": 56,
+        "n_campaigns_with_cache": 0,
+        "n_episodes": 6042,
+        "n_episodes_with_cached_plan_event": 0
+      },
+      "plan replay: sft_plan": {
+        "n_campaigns": 11,
+        "n_campaigns_with_cache": 11,
+        "n_episodes": 1254,
+        "n_episodes_with_cached_plan_event": 1253
+      },
+      "plan replay: prompt_only": {
+        "n_campaigns": 7,
+        "n_campaigns_with_cache": 6,
+        "n_episodes": 798,
+        "n_episodes_with_cached_plan_event": 684
+      },
+      "channel: oracle_escalation": {
+        "n_campaigns": 2,
+        "n_campaigns_with_cache": 2,
+        "n_episodes": 228,
+        "n_episodes_with_cached_plan_event": 228
+      },
+      "channel: router_seq": {
+        "n_campaigns": 3,
+        "n_campaigns_with_cache": 3,
+        "n_episodes": 342,
+        "n_episodes_with_cached_plan_event": 342
+      },
+      "channel: sidekick self-gate": {
+        "n_campaigns": 3,
+        "n_campaigns_with_cache": 3,
+        "n_episodes": 342,
+        "n_episodes_with_cached_plan_event": 342
+      }
+    },
+    "excluded": "j10_*, j11_*, j12_* campaigns and every campaign whose name contains 'train'; nothing on test_normal / test_challenge"
+  },
+  "cache_events_by_campaign": {
+    "b1_advise_fixed_k_10_fullctx_s3_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 57,
+      "n_cache_events": 57,
+      "cache_event_types": {
+        "plan": 57
+      },
+      "calls_charged_to_cache_events": 57,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj13_planner_alone_cap81_seed3_20260924": 57
+      },
+      "mean_n_planner_calls": 2.631579,
+      "mean_ledger_planner_calls_total": 2.631579,
+      "mean_live_only_calls": 1.631579,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "b1_takeover_fixed_k_10_s3_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 57,
+      "n_cache_events": 57,
+      "cache_event_types": {
+        "plan": 57
+      },
+      "calls_charged_to_cache_events": 57,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj13_planner_alone_cap81_seed3_20260924": 57
+      },
+      "mean_n_planner_calls": 2.368421,
+      "mean_ledger_planner_calls_total": 2.368421,
+      "mean_live_only_calls": 1.368421,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "b2_advise_neutral_fixed_k_10_fullctx_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 2.236842,
+      "mean_ledger_planner_calls_total": 2.236842,
+      "mean_live_only_calls": 1.236842,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 57,
+      "n_cache_events": 57,
+      "cache_event_types": {
+        "plan": 57
+      },
+      "calls_charged_to_cache_events": 57,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj13_planner_alone_cap81_seed3_20260924": 57
+      },
+      "mean_n_planner_calls": 2.403509,
+      "mean_ledger_planner_calls_total": 2.403509,
+      "mean_live_only_calls": 1.403509,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "b2_show_fixed_k_10_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 2.307018,
+      "mean_ledger_planner_calls_total": 2.307018,
+      "mean_live_only_calls": 1.307018,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "b2_show_fixed_k_10_s3_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 57,
+      "n_cache_events": 57,
+      "cache_event_types": {
+        "plan": 57
+      },
+      "calls_charged_to_cache_events": 57,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj13_planner_alone_cap81_seed3_20260924": 57
+      },
+      "mean_n_planner_calls": 2.385965,
+      "mean_ledger_planner_calls_total": 2.385965,
+      "mean_live_only_calls": 1.385965,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "bfcl_executor_alone_zs_dev_20260924/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 100,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "bfcl_executor_alone_zs_dev_20260924_smoke_25838016/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": true,
+      "n_episodes_with_result": 2,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "dev_noop_complete_20260924/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "dev_planner_alone_cap81_high_20260924/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 13.649123,
+      "mean_ledger_planner_calls_total": 13.649123,
+      "mean_live_only_calls": 13.649123,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_advise_fixed_k_10_fullctx_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 2.464912,
+      "mean_ledger_planner_calls_total": 2.464912,
+      "mean_live_only_calls": 1.464912,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m10_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 10.552632,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 10.552632,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m10_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 10.552632,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 10.552632,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m11_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.254386,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.254386,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m11_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.254386,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.254386,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m2_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 3.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 3.0,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 3.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 3.0,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m4_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 5.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 5.0,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m4_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 5.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 5.0,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m6_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m6_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m6_20260923rep/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m7_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 7.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 7.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m7_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 7.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 7.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m8_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 8.938596,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 8.938596,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m8_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 8.938596,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 8.938596,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m9_20260922/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.77193,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.77193,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m9_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.77193,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.77193,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_prefix_m9_20260923rep/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.77193,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.77193,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj12_takeover_fixed_k_10_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 2.315789,
+      "mean_ledger_planner_calls_total": 2.315789,
+      "mean_live_only_calls": 1.315789,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_advise_fixed_k_1_fullctx_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 19.017544,
+      "mean_ledger_planner_calls_total": 19.017544,
+      "mean_live_only_calls": 18.017544,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_planner_alone_cap81_20260923/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 17.350877,
+      "mean_ledger_planner_calls_total": 17.350877,
+      "mean_live_only_calls": 17.350877,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_planner_alone_cap81_seed3_20260924/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 17.263158,
+      "mean_ledger_planner_calls_total": 17.263158,
+      "mean_live_only_calls": 17.263158,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_prefix_hf_m11_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.526316,
+      "mean_ledger_planner_calls_total": 0.27193,
+      "mean_live_only_calls": 11.526316,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_prefix_hf_m6_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 7.070175,
+      "mean_ledger_planner_calls_total": 0.087719,
+      "mean_live_only_calls": 7.070175,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_prefix_hf_m9_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.798246,
+      "mean_ledger_planner_calls_total": 0.026316,
+      "mean_live_only_calls": 9.798246,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_prefix_zs_m11_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.254386,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.254386,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_prefix_zs_m6_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj13_prefix_zs_m9_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.77193,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.77193,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj14_prefix_m11_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.254386,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.254386,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj14_prefix_m6_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj14_prefix_m9_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.824561,
+      "mean_ledger_planner_calls_total": 0.052632,
+      "mean_live_only_calls": 9.824561,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj14_sft_plan_20260924/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj15_executor_alone_zsq_20260923/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj15_prefix_zsq_m11_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.263158,
+      "mean_ledger_planner_calls_total": 0.008772,
+      "mean_live_only_calls": 11.263158,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj15_prefix_zsq_m6_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.982456,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.982456,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj15_prefix_zsq_m9_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.77193,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.77193,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj15_prompt_only_zsq_20260923/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_m11_bplus_20260923/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_m11_zs_20260923/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_m6_bplus_20260923/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_m6_zs_20260923/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_m9_bplus_20260923/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_m9_zs_20260923/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_obs_m9_bplus_20260923/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj16_narrated_obs_m9_zs_20260923/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj17_prefix_c81_bplus_m11_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.45614,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.45614,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj17_prefix_c81_bplus_m6_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 7.008772,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 7.008772,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj17_prefix_c81_bplus_m9_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.947368,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.947368,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj17_prefix_c81_zs_m11_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.45614,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.45614,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj17_prefix_c81_zs_m6_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 7.008772,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 7.008772,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj17_prefix_c81_zs_m9_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.947368,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.947368,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj18_prefix_c81s3_bplus_m11_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.122807,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.122807,
+      "n_prefix_episodes": 57,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj18_prefix_c81s3_bplus_m6_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 7.017544,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 7.017544,
+      "n_prefix_episodes": 57,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj18_prefix_c81s3_bplus_m9_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.842105,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.842105,
+      "n_prefix_episodes": 57,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj18_prefix_c81s3_zs_m11_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.122807,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.122807,
+      "n_prefix_episodes": 57,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj18_prefix_c81s3_zs_m6_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 7.017544,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 7.017544,
+      "n_prefix_episodes": 57,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj18_prefix_c81s3_zs_m9_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 57,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.842105,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.842105,
+      "n_prefix_episodes": 57,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj19_prefix_m11_qwen_notk_20260924/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.27193,
+      "mean_ledger_planner_calls_total": 0.017544,
+      "mean_live_only_calls": 11.27193,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj19_sft_plan_qwen_notk_20260924/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1a_exec3b_20260915/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 0,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": null,
+      "mean_ledger_planner_calls_total": null,
+      "mean_live_only_calls": null,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1a_exec3b_20260915_smoke/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1a_exec8b_20260915/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1a_exec8b_20260915_smoke/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1b_planner_20260915/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 14.429825,
+      "mean_ledger_planner_calls_total": 14.429825,
+      "mean_live_only_calls": 14.429825,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1c_fixed_k_20260916/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 8.210526,
+      "mean_ledger_planner_calls_total": 8.192982,
+      "mean_live_only_calls": 8.210526,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1c_fixed_k_20260916_smoke/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.0,
+      "mean_ledger_planner_calls_total": 9.0,
+      "mean_live_only_calls": 9.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1c_prompt_only_20260916/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 1.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1c_prompt_only_20260916_smoke/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 1.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1r_exec8b_20260916/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj1r_prompt_only_20260916/prompt_only": {
+      "arm_type": "plan replay: prompt_only",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.008772,
+      "mean_ledger_planner_calls_total": 1.008772,
+      "mean_live_only_calls": 0.008772,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj3_sft_b_exec_20260917/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj3_sft_plan_20260917/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj4b_fixed_k_dev_20260917/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 4.350877,
+      "mean_ledger_planner_calls_total": 4.350877,
+      "mean_live_only_calls": 3.350877,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj6_branches_dev_20260917/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 3056,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 4.449935,
+      "mean_ledger_planner_calls_total": 1.584424,
+      "mean_live_only_calls": 4.449935,
+      "n_prefix_episodes": 3056,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_executor_alone_bplus_20260919/executor_alone": {
+      "arm_type": "executor alone",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 0.0,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_10_20260919livesmoke_smoke/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_10_20260920/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 2.780702,
+      "mean_ledger_planner_calls_total": 2.754386,
+      "mean_live_only_calls": 1.780702,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_10_20260921iaware/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 2.421053,
+      "mean_ledger_planner_calls_total": 2.421053,
+      "mean_live_only_calls": 1.421053,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_3_20260919livesmoke_smoke/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 2.333333,
+      "mean_ledger_planner_calls_total": 2.333333,
+      "mean_live_only_calls": 1.333333,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_3_20260920/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 6.885965,
+      "mean_ledger_planner_calls_total": 6.736842,
+      "mean_live_only_calls": 5.885965,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_3_20260921iaware/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 6.824561,
+      "mean_ledger_planner_calls_total": 6.824561,
+      "mean_live_only_calls": 5.824561,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_5_20260919livesmoke_smoke/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_fixed_k_5_20260920/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 5.052632,
+      "mean_ledger_planner_calls_total": 4.964912,
+      "mean_live_only_calls": 4.052632,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_oracle_escalation_20260919livesmoke_smoke/oracle_escalation": {
+      "arm_type": "channel: oracle_escalation",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_oracle_escalation_20260920/oracle_escalation": {
+      "arm_type": "channel: oracle_escalation",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.298246,
+      "mean_ledger_planner_calls_total": 1.298246,
+      "mean_live_only_calls": 0.298246,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_oracle_escalation_20260921iaware/oracle_escalation": {
+      "arm_type": "channel: oracle_escalation",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.280702,
+      "mean_ledger_planner_calls_total": 1.280702,
+      "mean_live_only_calls": 0.280702,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_router_seq_tau03_20260919livesmoke_smoke/router_seq": {
+      "arm_type": "channel: router_seq",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 2.0,
+      "mean_ledger_planner_calls_total": 2.0,
+      "mean_live_only_calls": 1.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_router_seq_tau03_20260920/router_seq": {
+      "arm_type": "channel: router_seq",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 15.570175,
+      "mean_ledger_planner_calls_total": 15.385965,
+      "mean_live_only_calls": 14.570175,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_router_seq_tau05_20260919livesmoke_smoke/router_seq": {
+      "arm_type": "channel: router_seq",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_router_seq_tau05_20260920/router_seq": {
+      "arm_type": "channel: router_seq",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.105263,
+      "mean_ledger_planner_calls_total": 1.105263,
+      "mean_live_only_calls": 0.105263,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_router_seq_tau07_20260919livesmoke_smoke/router_seq": {
+      "arm_type": "channel: router_seq",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_router_seq_tau07_20260920/router_seq": {
+      "arm_type": "channel: router_seq",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sft_plan_bplus_20260919/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sft_plan_bplus_20260921iaware/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sidekick_tau03_20260919livesmoke_smoke/sidekick": {
+      "arm_type": "channel: sidekick self-gate",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sidekick_tau03_20260920/sidekick": {
+      "arm_type": "channel: sidekick self-gate",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sidekick_tau05_20260919livesmoke_smoke/sidekick": {
+      "arm_type": "channel: sidekick self-gate",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sidekick_tau05_20260920/sidekick": {
+      "arm_type": "channel: sidekick self-gate",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sidekick_tau07_20260919livesmoke_smoke/sidekick": {
+      "arm_type": "channel: sidekick self-gate",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 3,
+      "n_cache_events": 3,
+      "cache_event_types": {
+        "plan": 3
+      },
+      "calls_charged_to_cache_events": 3,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 3
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "hj8_sidekick_tau07_20260920/sidekick": {
+      "arm_type": "channel: sidekick self-gate",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "hj1b_planner_20260915": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_hj12_advise_fixed_k_10_fullctx_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp1_planner_alone_cap81_qwen8b_v2_20260923": 114
+      },
+      "mean_n_planner_calls": 2.429825,
+      "mean_ledger_planner_calls_total": 2.429825,
+      "mean_live_only_calls": 1.429825,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_hj12_takeover_fixed_k_10_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp1_planner_alone_cap81_qwen8b_v2_20260923": 114
+      },
+      "mean_n_planner_calls": 2.736842,
+      "mean_ledger_planner_calls_total": 2.736842,
+      "mean_live_only_calls": 1.736842,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_hj13_advise_fixed_k_1_fullctx_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp1_planner_alone_cap81_qwen8b_v2_20260923": 114
+      },
+      "mean_n_planner_calls": 25.692982,
+      "mean_ledger_planner_calls_total": 25.692982,
+      "mean_live_only_calls": 24.692982,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_hj8_sft_plan_bplus_20260923/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 114,
+      "n_cache_events": 114,
+      "cache_event_types": {
+        "plan": 114
+      },
+      "calls_charged_to_cache_events": 114,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp1_planner_alone_cap81_qwen8b_v2_20260923": 114
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_planner_alone_cap81_qwen8b_20260923/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": false,
+      "n_episodes_with_result": 75,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 0.853333,
+      "mean_live_only_calls": 1.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_planner_alone_cap81_qwen8b_20260923_smoke/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 1.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_planner_alone_cap81_qwen8b_v2_20260923/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 34.026316,
+      "mean_ledger_planner_calls_total": 34.026316,
+      "mean_live_only_calls": 34.026316,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_planner_alone_cap81_qwen8b_v2_20260923_smoke/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 30.0,
+      "mean_ledger_planner_calls_total": 30.0,
+      "mean_live_only_calls": 30.0,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_prefix_bplus_m11_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 14.649123,
+      "mean_ledger_planner_calls_total": 0.666667,
+      "mean_live_only_calls": 14.649123,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_prefix_bplus_m6_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.166667,
+      "mean_ledger_planner_calls_total": 1.096491,
+      "mean_live_only_calls": 11.166667,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_prefix_bplus_m9_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 13.403509,
+      "mean_ledger_planner_calls_total": 0.763158,
+      "mean_live_only_calls": 13.403509,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_prefix_zs_m11_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 14.017544,
+      "mean_ledger_planner_calls_total": 0.035088,
+      "mean_live_only_calls": 14.017544,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_prefix_zs_m6_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 10.096491,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 10.096491,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_prefix_zs_m6_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 10.070175,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 10.070175,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp1_prefix_zs_m9_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 12.666667,
+      "mean_ledger_planner_calls_total": 0.026316,
+      "mean_live_only_calls": 12.666667,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_hj12_advise_fixed_k_10_fullctx_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 113,
+      "n_cache_events": 113,
+      "cache_event_types": {
+        "plan": 113
+      },
+      "calls_charged_to_cache_events": 113,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp2_planner_alone_cap81_qwen38_27b_20260923": 113
+      },
+      "mean_n_planner_calls": 2.482456,
+      "mean_ledger_planner_calls_total": 2.482456,
+      "mean_live_only_calls": 1.491228,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_hj12_takeover_fixed_k_10_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 113,
+      "n_cache_events": 113,
+      "cache_event_types": {
+        "plan": 113
+      },
+      "calls_charged_to_cache_events": 113,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp2_planner_alone_cap81_qwen38_27b_20260923": 113
+      },
+      "mean_n_planner_calls": 2.307018,
+      "mean_ledger_planner_calls_total": 2.307018,
+      "mean_live_only_calls": 1.315789,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_hj13_advise_fixed_k_1_fullctx_20260923/fixed_k": {
+      "arm_type": "channel: fixed_k (advise / takeover / show / neutral)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 113,
+      "n_cache_events": 113,
+      "cache_event_types": {
+        "plan": 113
+      },
+      "calls_charged_to_cache_events": 113,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp2_planner_alone_cap81_qwen38_27b_20260923": 113
+      },
+      "mean_n_planner_calls": 21.833333,
+      "mean_ledger_planner_calls_total": 21.833333,
+      "mean_live_only_calls": 20.842105,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_hj8_sft_plan_bplus_20260923/sft_plan": {
+      "arm_type": "plan replay: sft_plan",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 113,
+      "n_cache_events": 113,
+      "cache_event_types": {
+        "plan": 113
+      },
+      "calls_charged_to_cache_events": 113,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {
+        "lp2_planner_alone_cap81_qwen38_27b_20260923": 113
+      },
+      "mean_n_planner_calls": 1.0,
+      "mean_ledger_planner_calls_total": 1.0,
+      "mean_live_only_calls": 0.008772,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_planner_alone_cap81_qwen38_27b_20260923/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 27.54386,
+      "mean_ledger_planner_calls_total": 27.54386,
+      "mean_live_only_calls": 27.54386,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_planner_alone_cap81_qwen38_27b_20260923_smoke/planner_alone": {
+      "arm_type": "planner alone (source)",
+      "smoke": true,
+      "n_episodes_with_result": 3,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 31.333333,
+      "mean_ledger_planner_calls_total": 31.333333,
+      "mean_live_only_calls": 31.333333,
+      "n_prefix_episodes": 0,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_prefix_bplus_m11_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.394737,
+      "mean_ledger_planner_calls_total": 0.017544,
+      "mean_live_only_calls": 11.394737,
+      "n_prefix_episodes": 112,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_prefix_bplus_m6_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.824561,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.824561,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_prefix_bplus_m9_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.684211,
+      "mean_ledger_planner_calls_total": 0.008772,
+      "mean_live_only_calls": 9.684211,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_prefix_zs_m11_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 11.377193,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 11.377193,
+      "n_prefix_episodes": 112,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_prefix_zs_m6_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 6.824561,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 6.824561,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    },
+    "lp2_prefix_zs_m9_v2_20260923/prefix_handoff": {
+      "arm_type": "prefix replay",
+      "smoke": false,
+      "n_episodes_with_result": 114,
+      "n_episodes_with_cached_plan_event": 0,
+      "n_cache_events": 0,
+      "cache_event_types": {},
+      "calls_charged_to_cache_events": 0,
+      "n_cache_events_with_nonzero_input_tokens": 0,
+      "cached_from_campaigns": {},
+      "mean_n_planner_calls": 9.675439,
+      "mean_ledger_planner_calls_total": 0.0,
+      "mean_live_only_calls": 9.675439,
+      "n_prefix_episodes": 114,
+      "n_ledger_ne_live_plus_cache_plus_mock": 0
+    }
+  },
+  "figures": [
+    {
+      "id": "COST-01",
+      "paper": "not printed in v2 (Table B1 prints the two advise rows)",
+      "script": "scripts/analysis/j12_cost_axes.py",
+      "function": "price_arm_episodes (hosted axis at :341-346)",
+      "count_source": "RunResult.n_planner_calls (replay-inclusive; row planner_calls_replay_inclusive, j8_frontier.attach_ledger_fields)",
+      "includes_cache_events": true,
+      "old": {
+        "arm_calls": {
+          "executor_alone": 0.0,
+          "plan_only": 1.0,
+          "advise_k10_starved": 2.421053,
+          "advise_k3_starved": 6.824561,
+          "advise_k10_fullctx": 2.464912,
+          "takeover_k10": 2.315789,
+          "prefix_m6": 6.982456,
+          "prefix_m9": 9.77193,
+          "prefix_m11": 11.254386,
+          "ceiling_cap25": 14.429825,
+          "ceiling_cap81": 17.350877
+        }
+      },
+      "live_only": {
+        "arm_calls": {
+          "executor_alone": 0.0,
+          "plan_only": 0.0,
+          "advise_k10_starved": 1.421053,
+          "advise_k3_starved": 5.824561,
+          "advise_k10_fullctx": 1.464912,
+          "takeover_k10": 1.315789,
+          "prefix_m6": 6.982456,
+          "prefix_m9": 9.77193,
+          "prefix_m11": 11.254386,
+          "ceiling_cap25": 14.429825,
+          "ceiling_cap81": 17.350877
+        }
+      },
+      "arms_changed": [
+        "plan_only",
+        "takeover_k10",
+        "advise_k10_starved",
+        "advise_k10_fullctx",
+        "advise_k3_starved"
+      ],
+      "takeover_cheaper_than_advise_k10_fullctx_on_calls": {
+        "old": true,
+        "live_only": true
+      },
+      "verdict_change": false,
+      "note": "Every cached arm drops by exactly 1.0 call per episode; plan_only drops to 0.0, level with executor_alone, while its USD and tokens stay attributed."
+    },
+    {
+      "id": "COST-02",
+      "script": "scripts/analysis/j12_cost_axes.py",
+      "function": "main ordering_by_axis / ordering_flips",
+      "count_source": "as COST-01",
+      "includes_cache_events": true,
+      "old": {
+        "ordering_hosted_calls": [
+          "executor_alone",
+          "plan_only",
+          "takeover_k10",
+          "advise_k10_starved",
+          "advise_k10_fullctx",
+          "advise_k3_starved",
+          "prefix_m6",
+          "prefix_m9",
+          "prefix_m11",
+          "ceiling_cap25",
+          "ceiling_cap81"
+        ],
+        "n_ordering_flips": 2,
+        "flip_pairs": [
+          [
+            "advise_k10_starved",
+            "takeover_k10"
+          ],
+          [
+            "advise_k10_starved",
+            "takeover_k10"
+          ]
+        ],
+        "ties_on_calls_axis": []
+      },
+      "live_only": {
+        "ordering_hosted_calls": [
+          "executor_alone",
+          "plan_only",
+          "takeover_k10",
+          "advise_k10_starved",
+          "advise_k10_fullctx",
+          "advise_k3_starved",
+          "prefix_m6",
+          "prefix_m9",
+          "prefix_m11",
+          "ceiling_cap25",
+          "ceiling_cap81"
+        ],
+        "n_ordering_flips": 2,
+        "flip_pairs": [
+          [
+            "advise_k10_starved",
+            "takeover_k10"
+          ],
+          [
+            "advise_k10_starved",
+            "takeover_k10"
+          ]
+        ],
+        "ties_on_calls_axis": [
+          [
+            "executor_alone",
+            "plan_only"
+          ]
+        ]
+      },
+      "verdict_change": "wording only: the frontier chain's first link executor_alone < plan_only becomes a tie (0 = 0) on the calls axis; the two flips (advise_k10_starved vs takeover_k10) are unchanged"
+    },
+    {
+      "id": "COST-03",
+      "script": "scripts/analysis/j12_cost_axes.py",
+      "function": "main non_inferiority (axes.hosted_calls_per_episode)",
+      "count_source": "as COST-01",
+      "includes_cache_events": true,
+      "old": {
+        "ni_unchanged_across_axes": true,
+        "calls_axis": {
+          "executor_alone": {
+            "diff": -17.3509,
+            "ci95": [
+              -20.6667,
+              -14.4298
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "plan_only": {
+            "diff": -16.3509,
+            "ci95": [
+              -19.6667,
+              -13.4298
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "advise_k10_starved": {
+            "diff": -14.9298,
+            "ci95": [
+              -18.1842,
+              -12.0175
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "advise_k3_starved": {
+            "diff": -10.5263,
+            "ci95": [
+              -14.114,
+              -7.3596
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "advise_k10_fullctx": {
+            "diff": -14.886,
+            "ci95": [
+              -18.0614,
+              -12.0702
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "takeover_k10": {
+            "diff": -15.0351,
+            "ci95": [
+              -18.2193,
+              -12.2018
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "prefix_m6": {
+            "diff": -10.3684,
+            "ci95": [
+              -13.6842,
+              -7.4561
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "prefix_m9": {
+            "diff": -7.5789,
+            "ci95": [
+              -10.8246,
+              -4.7193
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "prefix_m11": {
+            "diff": -6.0965,
+            "ci95": [
+              -9.2456,
+              -3.3421
+            ],
+            "cost_reduced": true,
+            "holds": true
+          },
+          "ceiling_cap25": {
+            "diff": -2.9211,
+            "ci95": [
+              -5.2193,
+              -0.9035
+            ],
+            "cost_reduced": true,
+            "holds": true
+          }
+        }
+      },
+      "live_only": {
+        "ni_unchanged_across_axes": true,
+        "calls_axis": {
+          "executor_alone": {
+            "diff": -17.3509,
+            "ci95": [
+              -20.6667,
+              -14.4298
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "plan_only": {
+            "diff": -17.3509,
+            "ci95": [
+              -20.6667,
+              -14.4298
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "advise_k10_starved": {
+            "diff": -15.9298,
+            "ci95": [
+              -19.1842,
+              -13.0175
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "advise_k3_starved": {
+            "diff": -11.5263,
+            "ci95": [
+              -15.114,
+              -8.3596
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "advise_k10_fullctx": {
+            "diff": -15.886,
+            "ci95": [
+              -19.0614,
+              -13.0702
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "takeover_k10": {
+            "diff": -16.0351,
+            "ci95": [
+              -19.2193,
+              -13.2018
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "prefix_m6": {
+            "diff": -10.3684,
+            "ci95": [
+              -13.6842,
+              -7.4561
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "prefix_m9": {
+            "diff": -7.5789,
+            "ci95": [
+              -10.8246,
+              -4.7193
+            ],
+            "cost_reduced": true,
+            "holds": false
+          },
+          "prefix_m11": {
+            "diff": -6.0965,
+            "ci95": [
+              -9.2456,
+              -3.3421
+            ],
+            "cost_reduced": true,
+            "holds": true
+          },
+          "ceiling_cap25": {
+            "diff": -2.9211,
+            "ci95": [
+              -5.2193,
+              -0.9035
+            ],
+            "cost_reduced": true,
+            "holds": true
+          }
+        }
+      },
+      "holds_changed_for": [],
+      "verdict_change": false,
+      "note": "cached arms' calls differences and intervals shift by exactly -1.0; prefix_m11 (-6.10 calls) is untouched"
+    },
+    {
+      "id": "CHAN-PRICE-02",
+      "paper": "preprint_dev_v2:150, :341 (Table B1), :340",
+      "script": "scripts/analysis/j12_cost_axes.py",
+      "function": "price_arm_episodes (report hj13_advice_at_price_cost_20260923)",
+      "count_source": "RunResult.n_planner_calls",
+      "includes_cache_events": true,
+      "old": {
+        "arm_calls": {
+          "advise_k1_fullctx": 19.017544,
+          "advise_k10_fullctx": 2.464912,
+          "prefix_m9": 9.77193,
+          "prefix_m11": 11.254386
+        },
+        "advise_k1_over_prefix_m11_calls": 1.68979
+      },
+      "live_only": {
+        "arm_calls": {
+          "advise_k1_fullctx": 18.017544,
+          "advise_k10_fullctx": 1.464912,
+          "prefix_m9": 9.77193,
+          "prefix_m11": 11.254386
+        },
+        "advise_k1_over_prefix_m11_calls": 1.600935
+      },
+      "verdict_change": false,
+      "note": "P4 is judged on non-cached tokens only (unchanged); 'strictly more hosted calls' still holds"
+    },
+    {
+      "id": "ROB-18",
+      "paper": "preprint_dev_v2:552",
+      "script": "scripts/analysis/j16_robustness.py",
+      "function": "section_ff -> load_cost_rows (j12.price_arm_episodes) -> cost_contrast",
+      "count_source": "as COST-01",
+      "includes_cache_events": true,
+      "old": {
+        "mean_left": 2.315789,
+        "mean_right": 2.464912,
+        "diff": -0.149123,
+        "diff_ci95_scenario": [
+          -0.368421,
+          0.070175
+        ],
+        "diff_ci95_task": [
+          -0.377193,
+          0.070175
+        ],
+        "ratio": 0.939502,
+        "ratio_ci95_scenario": [
+          0.864686,
+          1.032
+        ],
+        "ratio_ci95_task": [
+          0.858086,
+          1.031621
+        ]
+      },
+      "live_only": {
+        "mean_left": 1.315789,
+        "mean_right": 1.464912,
+        "diff": -0.149123,
+        "diff_ci95_scenario": [
+          -0.368421,
+          0.070175
+        ],
+        "diff_ci95_task": [
+          -0.377193,
+          0.070175
+        ],
+        "ratio": 0.898204,
+        "ratio_ci95_scenario": [
+          0.784211,
+          1.058394
+        ],
+        "ratio_ci95_task": [
+          0.771845,
+          1.056738
+        ]
+      },
+      "old_resolves": {
+        "diff_excludes_0_scenario": false,
+        "diff_excludes_0_task": false,
+        "ratio_excludes_1_scenario": false,
+        "ratio_excludes_1_task": false
+      },
+      "live_only_resolves": {
+        "diff_excludes_0_scenario": false,
+        "diff_excludes_0_task": false,
+        "ratio_excludes_1_scenario": false,
+        "ratio_excludes_1_task": false
+      },
+      "verdict_change": false,
+      "note": "difference and its intervals are identical (both arms carry one cached plan in every episode); only the ratio moves"
+    },
+    {
+      "id": "ROB-19",
+      "paper": "preprint_dev_v2:345",
+      "script": "scripts/analysis/j16_robustness.py",
+      "function": "section_ff -> cost_contrast",
+      "count_source": "as COST-01",
+      "includes_cache_events": true,
+      "old": {
+        "mean_left": 19.017544,
+        "mean_right": 11.254386,
+        "diff": 7.763158,
+        "diff_ci95_scenario": [
+          5.807018,
+          10.008772
+        ],
+        "diff_ci95_task": [
+          6.04386,
+          9.552632
+        ],
+        "ratio": 1.68979,
+        "ratio_ci95_scenario": [
+          1.511574,
+          1.890924
+        ],
+        "ratio_ci95_task": [
+          1.535942,
+          1.853563
+        ]
+      },
+      "live_only": {
+        "mean_left": 18.017544,
+        "mean_right": 11.254386,
+        "diff": 6.763158,
+        "diff_ci95_scenario": [
+          4.807018,
+          9.008772
+        ],
+        "diff_ci95_task": [
+          5.04386,
+          8.552632
+        ],
+        "ratio": 1.600935,
+        "ratio_ci95_scenario": [
+          1.423963,
+          1.801123
+        ],
+        "ratio_ci95_task": [
+          1.447552,
+          1.763942
+        ]
+      },
+      "old_resolves": {
+        "diff_excludes_0_scenario": true,
+        "diff_excludes_0_task": true,
+        "ratio_excludes_1_scenario": true,
+        "ratio_excludes_1_task": true
+      },
+      "live_only_resolves": {
+        "diff_excludes_0_scenario": true,
+        "diff_excludes_0_task": true,
+        "ratio_excludes_1_scenario": true,
+        "ratio_excludes_1_task": true
+      },
+      "verdict_change": false,
+      "note": "prefix_m11 - ceiling_cap25 / cap81 call figures are unchanged (no cache events in either)",
+      "unchanged_pairs_equal": true
+    },
+    {
+      "id": "ROB-27 (ROB-20 companion: advise_k3_starved vs t_pre_m6 calls ratio)",
+      "script": "scripts/analysis/j16_robustness.py",
+      "function": "section_fg -> cost_contrast",
+      "count_source": "as COST-01",
+      "includes_cache_events": true,
+      "old": {
+        "mean_left": 6.824561,
+        "mean_right": 6.982456,
+        "diff": -0.157895,
+        "diff_ci95_scenario": [
+          -0.885965,
+          0.578947
+        ],
+        "diff_ci95_task": [
+          -0.77193,
+          0.473684
+        ],
+        "ratio": 0.977387,
+        "ratio_ci95_scenario": [
+          0.872956,
+          1.082811
+        ],
+        "ratio_ci95_task": [
+          0.889308,
+          1.067839
+        ]
+      },
+      "live_only": {
+        "mean_left": 5.824561,
+        "mean_right": 6.982456,
+        "diff": -1.157895,
+        "diff_ci95_scenario": [
+          -1.885965,
+          -0.421053
+        ],
+        "diff_ci95_task": [
+          -1.77193,
+          -0.526316
+        ],
+        "ratio": 0.834171,
+        "ratio_ci95_scenario": [
+          0.72956,
+          0.939774
+        ],
+        "ratio_ci95_task": [
+          0.745912,
+          0.924718
+        ]
+      },
+      "old_resolves": {
+        "diff_excludes_0_scenario": false,
+        "diff_excludes_0_task": false,
+        "ratio_excludes_1_scenario": false,
+        "ratio_excludes_1_task": false
+      },
+      "live_only_resolves": {
+        "diff_excludes_0_scenario": true,
+        "diff_excludes_0_task": true,
+        "ratio_excludes_1_scenario": true,
+        "ratio_excludes_1_task": true
+      },
+      "verdict_change": true,
+      "note": "the only interval whose verdict moves. It is a convention artefact: advise_k3 loses its replayed plan while prefix_m6 keeps the attributed source plan (prefix arms are counted from the source prefix, not from cache events)"
+    },
+    {
+      "id": "GANZ-03",
+      "paper": "preprint_dev_v2:199, :554",
+      "script": "scripts/analysis/j17_depth_fixes.py",
+      "function": "ganz_metrics (savings_retained_hosted_calls, :573) over load_cost_rows (j12.price_arm_episodes)",
+      "count_source": "as COST-01 (floor = hj8_sft_plan_bplus_20260921iaware, a cached-plan arm)",
+      "includes_cache_events": true,
+      "old": {
+        "bplus.m6": {
+          "floor_calls": 1.0,
+          "arm_calls": 7.008772,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.632511,
+          "ci95_scenario": [
+            0.553233,
+            0.69542
+          ],
+          "ci95_task": [
+            0.58011,
+            0.67597
+          ],
+          "floor_usd": 0.003015
+        },
+        "bplus.m9": {
+          "floor_calls": 1.0,
+          "arm_calls": 9.947368,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.45279,
+          "ci95_scenario": [
+            0.339856,
+            0.544157
+          ],
+          "ci95_task": [
+            0.378026,
+            0.514054
+          ],
+          "floor_usd": 0.003015
+        },
+        "bplus.m11": {
+          "floor_calls": 1.0,
+          "arm_calls": 11.45614,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.360515,
+          "ci95_scenario": [
+            0.233121,
+            0.46558
+          ],
+          "ci95_task": [
+            0.274896,
+            0.433862
+          ],
+          "floor_usd": 0.003015
+        },
+        "zs.m6": {
+          "floor_calls": 1.0,
+          "arm_calls": 7.008772,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.632511,
+          "ci95_scenario": [
+            0.553233,
+            0.69542
+          ],
+          "ci95_task": [
+            0.58011,
+            0.67597
+          ],
+          "floor_usd": 0.003015
+        },
+        "zs.m9": {
+          "floor_calls": 1.0,
+          "arm_calls": 9.947368,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.45279,
+          "ci95_scenario": [
+            0.339856,
+            0.544157
+          ],
+          "ci95_task": [
+            0.378026,
+            0.514054
+          ],
+          "floor_usd": 0.003015
+        },
+        "zs.m11": {
+          "floor_calls": 1.0,
+          "arm_calls": 11.45614,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.360515,
+          "ci95_scenario": [
+            0.233121,
+            0.46558
+          ],
+          "ci95_task": [
+            0.274896,
+            0.433862
+          ],
+          "floor_usd": 0.003015
+        }
+      },
+      "live_only": {
+        "bplus.m6": {
+          "floor_calls": 0.0,
+          "arm_calls": 7.008772,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.596057,
+          "ci95_scenario": [
+            0.514894,
+            0.661877
+          ],
+          "ci95_task": [
+            0.542169,
+            0.641484
+          ],
+          "floor_usd": 0.003015
+        },
+        "bplus.m9": {
+          "floor_calls": 0.0,
+          "arm_calls": 9.947368,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.426694,
+          "ci95_scenario": [
+            0.316364,
+            0.517805
+          ],
+          "ci95_task": [
+            0.353177,
+            0.487716
+          ],
+          "floor_usd": 0.003015
+        },
+        "bplus.m11": {
+          "floor_calls": 0.0,
+          "arm_calls": 11.45614,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.339737,
+          "ci95_scenario": [
+            0.216853,
+            0.442956
+          ],
+          "ci95_task": [
+            0.25711,
+            0.411656
+          ],
+          "floor_usd": 0.003015
+        },
+        "zs.m6": {
+          "floor_calls": 0.0,
+          "arm_calls": 7.008772,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.596057,
+          "ci95_scenario": [
+            0.514894,
+            0.661877
+          ],
+          "ci95_task": [
+            0.542169,
+            0.641484
+          ],
+          "floor_usd": 0.003015
+        },
+        "zs.m9": {
+          "floor_calls": 0.0,
+          "arm_calls": 9.947368,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.426694,
+          "ci95_scenario": [
+            0.316364,
+            0.517805
+          ],
+          "ci95_task": [
+            0.353177,
+            0.487716
+          ],
+          "floor_usd": 0.003015
+        },
+        "zs.m11": {
+          "floor_calls": 0.0,
+          "arm_calls": 11.45614,
+          "ceiling_calls": 17.350877,
+          "calls_retained": 0.339737,
+          "ci95_scenario": [
+            0.216853,
+            0.442956
+          ],
+          "ci95_task": [
+            0.25711,
+            0.411656
+          ],
+          "floor_usd": 0.003015
+        }
+      },
+      "every_interval_excludes_zero": {
+        "old": true,
+        "live_only": true
+      },
+      "falls_with_depth": {
+        "old": true,
+        "live_only": true
+      },
+      "verdict_change": false,
+      "note": "only the floor moves (1.0 -> 0.0 calls); its USD floor stays at the attributed source plan price"
+    },
+    {
+      "id": "COST-04",
+      "paper": "preprint_dev_v2:199, :554",
+      "script": "scripts/analysis/j17_depth_fixes.py",
+      "function": "cost_share",
+      "count_source": "as COST-01",
+      "includes_cache_events": "counted, but none exist in prefix or planner_alone campaigns",
+      "unchanged": true,
+      "verdict_change": false
+    },
+    {
+      "id": "DEC-05",
+      "paper": "not printed (paper :552 quotes DEC-05 tokens and dollars only)",
+      "script": "scripts/analysis/b2_decomposition.py",
+      "function": "arm cost block (:632-647, n_planner_calls)",
+      "count_source": "RunResult.n_planner_calls",
+      "includes_cache_events": true,
+      "old": {
+        "T": 2.333333,
+        "A": 2.520468,
+        "S": 2.333333,
+        "N": 2.292398
+      },
+      "live_only": {
+        "T": 1.333333,
+        "A": 1.520468,
+        "S": 1.333333,
+        "N": 1.292398
+      },
+      "fewest_calls_arm": {
+        "old": "N",
+        "live_only": "N"
+      },
+      "verdict_change": false,
+      "note": "the row already discloses the convention; every arm drops by exactly 1.0"
+    },
+    {
+      "id": "A1 P2 dev reference (j10_report.py:1640-1645; prereg_j10_amendment_20260924.md:344)",
+      "script": "scripts/analysis/j10_report.py",
+      "function": "a1_evaluate_cost_prediction (:2757-2776) on a j12 --cost-report",
+      "count_source": "hosted_calls_per_episode of the j12 cost report",
+      "includes_cache_events": true,
+      "old": {
+        "left": 19.017544,
+        "right": 11.254386,
+        "calls_strictly_more": true
+      },
+      "live_only": {
+        "left": 18.017544,
+        "right": 11.254386,
+        "calls_strictly_more": true
+      },
+      "verdict_change": false
+    },
+    {
+      "id": "F8 (scripts/analysis/figures.py generate_f8_advice_cost_quality caption; not used by preprint_dev_v2)",
+      "script": "scripts/analysis/figures.py",
+      "function": "generate_f8_advice_cost_quality (:1325-1440, calls_ratio at :1420)",
+      "count_source": "arms.*.hosted_calls_per_episode of hj13_advice_at_price_cost_20260923",
+      "includes_cache_events": true,
+      "old": {
+        "calls_ratio": 1.68979
+      },
+      "live_only": {
+        "calls_ratio": 1.600935
+      },
+      "verdict_change": false
+    }
+  ],
+  "paper_preprint_dev_v2_calls_statements": [
+    {
+      "line": 150,
+      "ledger": "CHAN-PRICE-02",
+      "old": 19.017544,
+      "live_only": 18.017544,
+      "changes": true
+    },
+    {
+      "line": 199,
+      "ledger": "GANZ-03 (m11 calls retained)",
+      "old": 0.360515,
+      "live_only": 0.339737,
+      "changes": true
+    },
+    {
+      "line": 199,
+      "ledger": "COST-04",
+      "changes": false
+    },
+    {
+      "line": 340,
+      "ledger": "Table B1 advise_fixed_k_10_fullctx",
+      "old": 2.464912,
+      "live_only": 1.464912,
+      "changes": true
+    },
+    {
+      "line": 341,
+      "ledger": "Table B1 advise_fixed_k_1_fullctx",
+      "old": 19.017544,
+      "live_only": 18.017544,
+      "changes": true
+    },
+    {
+      "line": 342,
+      "ledger": "Table B1 prefix_m9",
+      "changes": false
+    },
+    {
+      "line": 343,
+      "ledger": "Table B1 prefix_m11",
+      "changes": false
+    },
+    {
+      "line": 345,
+      "ledger": "ROB-19 ratio (scenario)",
+      "old": [
+        1.68979,
+        [
+          1.511574,
+          1.890924
+        ]
+      ],
+      "live_only": [
+        1.600935,
+        [
+          1.423963,
+          1.801123
+        ]
+      ],
+      "changes": true
+    },
+    {
+      "line": 527,
+      "ledger": "CEIL-07, CEILHI-02",
+      "changes": false
+    },
+    {
+      "line": 552,
+      "ledger": "ROB-18 calls difference",
+      "old": [
+        -0.149123,
+        [
+          -0.368421,
+          0.070175
+        ]
+      ],
+      "live_only": [
+        -0.149123,
+        [
+          -0.368421,
+          0.070175
+        ]
+      ],
+      "changes": false
+    },
+    {
+      "line": 552,
+      "ledger": "ROB-19 prefix_m11 vs cap-25 calls",
+      "changes": false
+    },
+    {
+      "line": 554,
+      "ledger": "GANZ-03 calls retained m6/m9/m11 and m11 intervals",
+      "old": [
+        0.632511,
+        0.45279,
+        0.360515,
+        [
+          0.233121,
+          0.46558
+        ],
+        [
+          0.274896,
+          0.433862
+        ]
+      ],
+      "live_only": [
+        0.596057,
+        0.426694,
+        0.339737,
+        [
+          0.216853,
+          0.442956
+        ],
+        [
+          0.25711,
+          0.411656
+        ]
+      ],
+      "changes": true
+    },
+    {
+      "line": 554,
+      "ledger": "COST-04 calls fractions",
+      "changes": false
+    }
+  ],
+  "unaffected_figures": {
+    "CEILHI-02, CEIL-07, CEIL-06": "planner_alone campaigns carry 0 cache events (scan: dev_planner_alone_cap81_high_20260924, hj13_planner_alone_cap81_20260923, hj13_planner_alone_cap81_seed3_20260924, hj1b_planner_20260915)",
+    "TAILOR-03, TAILOR-04, CHAN-ZS-04, QWEN-05, PROV-02, HF-01, POOL-03, KILL-04": "prefix_handoff campaigns carry 0 cache events; their planner_calls_live / planner_calls_total are live asks only",
+    "NOOP-01": "executor-only arm, 0 cache events",
+    "QWEN-03": "wording only: its n_planner_calls sum of 114 counts 114 cached-plan deliveries (hj15_prompt_only_zsq_20260923: 114 of 114 episodes carry a cached plan event), not hosted calls",
+    "J9 F1 (prereg_j9_freeze_20260920.md:56) and k_matched (:125)": "sft_plan / sidekick and fixed_k_{3,5,10} on dev each carry exactly one cached plan per episode, so paired call differences are invariant and the nearest-calls k is still 10"
+  },
+  "registered_definitions": [
+    {
+      "doc": "docs/prereg_h2_advice_at_price_20260923.md:39",
+      "quote": "plan itself costs nothing and only the reviews spend hosted calls",
+      "meaning": "replayed plan is not a hosted call",
+      "code_agrees": false
+    },
+    {
+      "doc": "docs/prereg_j10_amendment_20260924.md:172-173",
+      "quote": "Their live hosted calls are only / reviews, advice, takeovers or shown actions",
+      "meaning": "arms 2 and 8-12: replayed plan is not a live hosted call",
+      "code_agrees": false
+    },
+    {
+      "doc": "docs/prereg_j10_amendment_20260924.md:129,133,139-145",
+      "quote": "Live hosted calls/ep (dev)",
+      "meaning": "table prints sft_plan 0 (live-only) but advise_k1 19.02 / advise_k10 2.46 / takeover 2.32 (replay-inclusive) under the same heading",
+      "code_agrees": "internally inconsistent"
+    },
+    {
+      "doc": "docs/prereg_j10_amendment_20260924.md:347",
+      "quote": "the planner calls required to produce its prefix",
+      "meaning": "prefix arms are attributed the source plan and actions",
+      "code_agrees": true
+    },
+    {
+      "doc": "docs/prereg_j12_depth_test_20260924.md:60",
+      "quote": "hosted calls are live answers to executor asks",
+      "meaning": "replay arms: live asks only",
+      "code_agrees": "j12_report.py:369 counts provider == 'codex' interventions only: agrees"
+    },
+    {
+      "doc": "docs/prereg_j11_lp2_test_20260924.md:150",
+      "quote": "**Zero hosted calls.**",
+      "meaning": "local planner",
+      "code_agrees": true
+    },
+    {
+      "doc": "docs/prereg_j9_freeze_20260920.md:41",
+      "quote": "consisting solely of the initial cached plan",
+      "meaning": "counts the cached plan as a planner call",
+      "code_agrees": true
+    },
+    {
+      "doc": "docs/prereg_hj13_shape_20260923.md:174",
+      "quote": "(c) hosted calls per episode",
+      "meaning": "F2 axis; cache not defined",
+      "code_agrees": "undefined"
+    }
+  ],
+  "usd_consistency": {
+    "channel_arms (fixed_k takeover/advise/show/neutral, oracle_escalation, router_seq, sidekick)": {
+      "calls_include_replayed_plan": true,
+      "usd_includes_replayed_plan": false,
+      "tokens_include_replayed_plan": false,
+      "evidence": "src/sidekick/cost/prices.py:41 prices provider cache at $0; j12_cost_axes.price_usage_record (:196-) prices the 0-token cache record at $0 and adds no source plan (the sft_plan branch :361-367 is keyed on system sft_plan)"
+    },
+    "sft_plan / plan_only (and GANZ floor)": {
+      "calls_include_replayed_plan": true,
+      "usd_includes_replayed_plan": true,
+      "tokens_include_replayed_plan": true,
+      "evidence": "j12_cost_axes.py:361-367 appends the source plan event's usage; j8_noncached_cost.attach_sft_plan_source_plan_tokens"
+    },
+    "prefix arms": {
+      "calls_include_replayed_plan": true,
+      "usd_includes_replayed_plan": true,
+      "tokens_include_replayed_plan": true,
+      "evidence": "loop.py:151 + :647-649 count the source prefix; j12_cost_axes.py:371-376 prices the source prefix usages"
+    },
+    "inconsistent_published_figures": [
+      "COST-01 frontier rows for takeover_k10 / advise_k10_* / advise_k3_starved: calls include the replayed plan, USD and tokens do not",
+      "paper Table B1 (preprint_dev_v2:340-341): 2.46 and 19.02 calls include the plan; 49,819 and 1,414,410 tokens do not",
+      "ROB-19 / paper :345 and CHAN-PRICE-02: advise_k1 over prefix_m11 is 1.69x on calls (plan in both) but 3.19x tokens / 2.12x USD (plan in prefix only)",
+      "DEC-05: calls include the plan, USD and tokens do not"
+    ],
+    "consistent_published_figures": [
+      "GANZ-03 (floor 1.0 calls and $0.003015 both attribute the source plan)",
+      "COST-04",
+      "ROB-18 differences (the plan cancels)"
+    ],
+    "live_only_side_effect": "under live-only counting plan_only / the GANZ floor becomes the inconsistent row: 0 calls beside an attributed $0.003015 and 23,906 tokens",
+    "values": {
+      "p2_ratios_published": {
+        "hosted_calls_per_episode": 1.68979,
+        "noncached_tokens_per_episode": 3.190197,
+        "usd_per_episode": 2.123643
+      }
+    }
+  },
+  "fix_proposal": {
+    "smallest_fix": "analysis side, scripts/analysis/j12_cost_axes.py price_arm_episodes (:341-346): subtract, per episode, sum(usage.n_calls) over the arm's OWN last-attempt planner usages with provider == 'cache' (already read at :358 via extract_events_usages) from the hosted-calls value, and keep the replay-inclusive count under a separate key. Same one-line change in b2_decomposition.py:632. j16 F-f/F-g, j17_depth_fixes, j17_planning_lit, figures.py F8 and j10_report P2 inherit it through the j12 rows/report. Prefix attribution is untouched because the source prefix never appears as a cache event. Decide separately whether sft_plan keeps attributed USD/tokens (then attribute its call too, via the :361 branch) or goes live-only on all axes.",
+    "loop_side_alternative": "loop.py:465 (keep n_calls 0 for provider cache), :383 (do not count a cached response in n_planner_calls) and :151 (count cache events as 0 in counters_from_events). Larger, and it changes runtime: the cached plan currently consumes one unit of max_planner_calls (:369), so arms 8-12 would run under a different effective cap. Not before J10's replay arms have run.",
+    "frozen_reports_touched": {
+      "J10": "P2's calls half: j10_report.py:1625/:2775 reads hosted_calls_per_episode from the j12 --cost-report; the fix lowers advise_k1_fullctx by 1.0/ep and leaves prefix_m11. The dev reference at j10_report.py:1643 (19.017544) and A1's arm table (:129-145) and cost table (:518) go stale. j10_report.py itself needs no edit. Arm 8/5 test data do not exist, so this is a PRE-DATA amendment, but it must be registered because it changes the input of a registered predicate (A1 P2, :341).",
+      "J11": "none: zero hosted calls; j11_report.py:298 counts forced-False interventions only",
+      "J12": "none: j12_report.py:369 counts provider == 'codex' interventions only; J12 arms are prefix replays with no cache event"
+    }
+  }
+}

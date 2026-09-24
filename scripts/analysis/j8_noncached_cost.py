@@ -83,6 +83,13 @@ def attach_sft_plan_source_plan_tokens(
 
     Applied only when every sft_plan row maps onto one source episode. A partial
     map is left at zero and returned as an understatement rather than mixed in.
+
+    A planless key (J10 A1 §4.2: the source was scored without a crash but its
+    last attempt wrote no plan, src/sidekick/agents/planner.py planless_source_keys)
+    is not a miss: arm 2 planned it live (on_missing="call_if_planless"), so that
+    plan is already in the row's own planner_tokens_noncached_live and the row is
+    charged 0.0 replayed tokens. Only when that live usage is 0 or absent is it a
+    miss. n_mapped (plan events) + n_planless_live + n_missing == n_sft_plan_rows.
     """
     for row in cleaned.values():
         row.setdefault("sft_plan_replayed_plan_tokens", None)
@@ -93,6 +100,8 @@ def attach_sft_plan_source_plan_tokens(
         "n_sft_plan_rows": len(sft_keys),
         "n_mapped": 0,
         "n_missing": 0,
+        "n_planless_live": 0,
+        "planless_keys": [],
         "mean_noncached_plan_tokens": None,
         "packet_source": str(packet_source) if packet_source is not None else None,
         "packet_system": packet_system,
@@ -101,6 +110,7 @@ def attach_sft_plan_source_plan_tokens(
     if not sft_keys:
         return info
     mapped: list[tuple[tuple[str, int], float]] = []
+    planless: list[tuple[str, int]] = []
     missing: list[str] = []
     source_root = Path(packet_source) if packet_source is not None else None
     for key in sft_keys:
@@ -116,11 +126,23 @@ def attach_sft_plan_source_plan_tokens(
             continue
         tokens = last_plan_event_noncached_tokens(events_path)
         if tokens is None:
+            if _source_is_planless(events_path):
+                live = cleaned[key].get("planner_tokens_noncached_live")
+                if live is None or float(live) <= 0.0:
+                    missing.append(
+                        f"{task_id}/{seed}: planless source but no live plan in the episode "
+                        f"(planner_tokens_noncached_live={live!r}) at {events_path}"
+                    )
+                    continue
+                planless.append(key)
+                continue
             missing.append(f"{task_id}/{seed}: no plan-event usage at {events_path}")
             continue
         mapped.append((key, float(tokens)))
     info["n_mapped"] = len(mapped)
     info["n_missing"] = len(missing)
+    info["n_planless_live"] = len(planless)
+    info["planless_keys"] = [f"{seed}/{task_id}" for task_id, seed in planless]
     mapped_mean = (
         round(statistics.fmean(t for _k, t in mapped), 6) if mapped else None
     )
@@ -142,9 +164,32 @@ def attach_sft_plan_source_plan_tokens(
         return info
     for key, tokens in mapped:
         cleaned[key]["sft_plan_replayed_plan_tokens"] = tokens
+    for key in planless:
+        cleaned[key]["sft_plan_replayed_plan_tokens"] = 0.0
     info["applied"] = True
     info["route"] = "source_plan_event"
     return info
+
+
+def _source_is_planless(events_path: Path) -> bool:
+    """planner.py's planless definition for one source episode (J10 A1 §4.2).
+
+    result.json beside events.jsonl scored without a crash AND no plan event with
+    a packet after the last run_start. Reuses the planner's own readers.
+    """
+    # Lazy, as j12_cost_axes.replayed_plan_usage: planner.py pulls in pydantic.
+    from sidekick.agents.planner import (  # noqa: E402
+        _last_attempt_plan_event,
+        _scored_without_crash,
+    )
+
+    if not _scored_without_crash(events_path.parent / "result.json"):
+        return False
+    try:
+        payload, _usage = _last_attempt_plan_event(events_path)
+    except (OSError, UnicodeDecodeError):
+        return False
+    return payload is None
 
 
 def noncached_episode_cost(row: dict[str, Any]) -> Optional[float]:

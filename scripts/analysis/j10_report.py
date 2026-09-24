@@ -3826,7 +3826,7 @@ def build_report_a1(
             "limit / timeout / parse_error / api_error are scored outcomes."
         ),
     }
-    return a1_hstar_companions(report, arms, arm_dirs, n_boot=n_boot, seed=bootstrap_seed), (0 if all_decided and not reasons else 1)
+    return a1_am4_calls(a1_hstar_companions(report, arms, arm_dirs, n_boot=n_boot, seed=bootstrap_seed), arms, arm_dirs, cost_report), (0 if all_decided and not reasons else 1)
 
 
 def build_parser_a1() -> argparse.ArgumentParser:
@@ -4029,6 +4029,231 @@ def _a1_add_hstar(
                  "amendment1.multiplicity_sensitivity_hstar"],
         "unchanged": "every flag-based key (h_flag) keeps its name and value",
     }
+
+
+# The __main__ guard is the last statement of the file: the Amendment 4 companion below is appended
+# after main() so that no line this file's citations name moves (unit ATTRIB, 2026-09-25).
+
+
+# ---- Amendment 4 companion: planner calls live and attributed (unit ATTRIB, 2026-09-25) -------------
+# A replayed plan (usage.provider "cache", src/sidekick/agents/planner.py:930-941) is charged one planner
+# call (src/sidekick/systems/loop.py:383,465) and, in the j12 cost report, 0 tokens and $0. The prefix
+# arms are charged their replayed prefix on every axis (A1:347-349). Amendment 4 reads P2's calls and
+# tokens clauses under both conventions. The code sits at the end of the file and is called from build_report_a1's
+# return line, as the h* companions are; no existing key or value changes, and an error here is recorded
+# under a1_am4_calls and never stops the registered analysis.
+A1_AM4_ARMS = (
+    "sft_plan",  # arm 2
+    "planner_alone_cap81",  # arm 3
+    "prefix_m9", "prefix_m11", "prefix_zs_m9", "prefix_zs_m11",  # arms 4-7
+    "advise_k1_fullctx", "advise_k10_fullctx", "takeover_k10", "show_k10", "advise_k10_neutral",  # arms 8-12
+)
+A1_AM4_P2 = ("advise_k1_fullctx", "prefix_m11")
+A1_AM4_NOTE = "Amendment 4: P2's calls clause is supported only if it holds under both conventions"
+A1_AM4_TOKENS_NOTE = ("Amendment 4: P2's tokens clause (at least min_ratio x prefix_m11's non-cached planner "
+                      "tokens) is supported only if it holds under both conventions")
+A1_AM4_DEFINITIONS = {
+    "calls_attributed": "result.json n_planner_calls: the count as published (a replayed plan is one call)",
+    "calls_live": ("calls_attributed minus usage.n_calls of the episode's own planner events with "
+                   "usage.provider == 'cache', events after the last run_start"),
+    "prefix_arm": "charged its replayed prefix under both conventions (A1:347-349)",
+    "tokens_as_published": ("--cost-report arms.<arm>.noncached_tokens_per_episode (j12_cost_axes; a replayed "
+                            "plan at 0 tokens); the 'live' convention of p2_tokens_clause"),
+    "tokens_attributed": ("mean over the cost report's per-episode rows of noncached_tokens_per_episode plus "
+                          "each replayed plan's source plan-event tokens (j12_cost_axes.episode_cached_plan_attribution)"),
+    "usd_as_published": "--cost-report arms.<arm>.usd_per_episode (j12_cost_axes; a replayed plan at $0)",
+    "usd_attributed": ("mean over the cost report's per-episode rows of usd_per_episode plus each replayed "
+                       "plan priced from its source plan event (j12_cost_axes.episode_cached_plan_attribution)"),
+    "sft_plan": "arm 2's rows already carry its source plan event in the cost report and get nothing added",
+    "episodes": "calls over A1's scored episodes (crashes excluded); tokens and USD over the cost report's rows",
+}
+J12_COST_AXES_PATH = Path(__file__).resolve().parent / "j12_cost_axes.py"
+_J12_MODULE: Any = None
+
+
+def _load_j12() -> Any:
+    """Lazy import of j12_cost_axes, for its replayed-plan reader and pricing (reused, not reimplemented)."""
+    global _J12_MODULE
+    if _J12_MODULE is None:
+        spec = importlib.util.spec_from_file_location("j12_cost_axes", J12_COST_AXES_PATH)
+        if spec is None or spec.loader is None:
+            raise ImportError(str(J12_COST_AXES_PATH))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _J12_MODULE = module
+    return _J12_MODULE
+
+
+def a1_am4_episode_files(root: Path) -> dict[tuple[str, int], dict[str, Any]]:
+    """(task_id, seed) -> n_planner_calls, system and events path for every result.json under an arm.
+
+    The first result.json per key wins, as in load_arm_tree and a1_handoff_flags.
+    """
+    files: dict[tuple[str, int], dict[str, Any]] = {}
+    if not root.exists():
+        return files
+    for path in sorted(root.rglob("result.json")):
+        row, _err = _read_result(path)
+        if row is None or row.get("task_id") is None or row.get("seed") is None:
+            continue
+        key = (str(row["task_id"]), int(row["seed"]))
+        if key not in files:
+            files[key] = {"n_planner_calls": optional_int(row, "n_planner_calls"), "system": row.get("system"),
+                          "events": path.parent / "events.jsonl"}
+    return files
+
+
+def _a1_am4_price_card(j12: Any, cost_report: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """The cost report's own price card (prices_source), else j12's default."""
+    source = (cost_report or {}).get("prices_source")
+    path = Path(source) if source else j12.DEFAULT_PRICES_PATH
+    if not path.is_absolute():
+        path = j12.REPO_ROOT / path
+    return j12.load_price_card(path if path.is_file() else j12.DEFAULT_PRICES_PATH)
+
+
+def a1_am4_arm(
+    label: str,
+    arm: dict[str, Any],
+    root: Path,
+    cost_arm: Optional[dict[str, Any]],
+    j12: Any,
+    models_prices: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    """One arm's per_arm block of a1_am4_calls, and the reasons any value in it is null."""
+    files = a1_am4_episode_files(Path(root))
+    cache: dict[tuple[str, int], dict[str, Any]] = {}
+    notes: list[str] = []
+
+    def attribution(key: tuple[str, int]) -> Optional[dict[str, Any]]:
+        if key not in cache and key in files:
+            cache[key] = j12.episode_cached_plan_attribution(files[key]["events"], models_prices,
+                                                             task_id=key[0], seed=key[1])
+        return cache.get(key)
+
+    calls_attributed: list[float] = []
+    calls_live: list[float] = []
+    n_cached = 0
+    for key in sorted(arm["episodes"]):
+        att = attribution(key)
+        calls = files.get(key, {}).get("n_planner_calls")
+        if att is None or calls is None:
+            notes.append(f"{key[0]}/{key[1]}: no n_planner_calls")
+            continue
+        n_cached += att["n_cached_plan_events"]
+        calls_attributed.append(float(calls))
+        calls_live.append(float(calls - att["cache_calls"]))
+    rows = (cost_arm or {}).get("episodes")
+    attributed: dict[str, Optional[float]] = {"tokens": None, "usd": None}
+    if cost_arm is None:
+        notes.append("no cost-report row for this arm")
+    elif not isinstance(rows, list) or not rows:
+        notes.append("cost report has no per-episode rows (arms.<arm>.episodes from j12_cost_axes)")
+    else:
+        for name, field, extra_key in (("tokens", "noncached_tokens_per_episode", "noncached_tokens"),
+                                       ("usd", "usd_per_episode", "usd")):
+            values: list[float] = []
+            for r in rows:
+                if r.get(field) is None:
+                    continue
+                key = (str(r["task_id"]), int(r["seed"]))
+                extra = 0.0
+                if not j12._nc.is_sft_plan_row({"system": files.get(key, {}).get("system")}, label):
+                    att = attribution(key)
+                    if att is None or att["n_source_missing"]:
+                        notes.append(f"{key[0]}/{key[1]}: replayed plan without a readable source plan event")
+                        values = []
+                        break
+                    extra = att[extra_key]
+                values.append(float(r[field]) + extra)
+            attributed[name] = round(statistics.fmean(values), 6) if values else None
+    block = {
+        "n_episodes": len(arm["episodes"]),
+        "calls_attributed_mean": round(statistics.fmean(calls_attributed), 6) if calls_attributed else None,
+        "calls_live_mean": round(statistics.fmean(calls_live), 6) if calls_live else None,
+        "n_cached_plan_events": n_cached,
+        "tokens_attributed_mean": attributed["tokens"],
+        "tokens_as_published_mean": (cost_arm or {}).get("noncached_tokens_per_episode"),
+        "usd_attributed_mean": attributed["usd"],
+        "usd_as_published_mean": (cost_arm or {}).get("usd_per_episode"),
+    }
+    return block, list(dict.fromkeys(notes))
+
+
+def a1_am4_p2_calls_clause(per_arm: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """P2's calls clause (advise_k1 strictly more hosted calls than prefix_m11) under both conventions."""
+    left, right = A1_AM4_P2
+    x = (per_arm.get(left) or {}).get("calls_attributed_mean")
+    x_live = (per_arm.get(left) or {}).get("calls_live_mean")
+    y = (per_arm.get(right) or {}).get("calls_attributed_mean")
+    if x is None or x_live is None or y is None:
+        return {"attributed": None, "live": None, "holds_both": None, "note": A1_AM4_NOTE,
+                "status": f"not_computed: {left} or {right} absent or without calls"}
+    return {
+        "attributed": {"advise_k1": x, "prefix_m11": y, "holds": x > y},
+        "live": {"advise_k1": x_live, "prefix_m11": y, "holds": x_live > y},
+        "holds_both": bool(x > y and x_live > y),
+        "note": A1_AM4_NOTE,
+    }
+
+
+def a1_am4_p2_tokens_clause(per_arm: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """P2's tokens clause (advise_k1 at least min_ratio x prefix_m11's non-cached planner tokens, A1:343)
+    under both conventions: attributed, and live (as published: a replayed plan at 0 tokens). The prefix
+    arm is charged its replayed prefix in both."""
+    left, right = A1_AM4_P2
+    min_ratio = float(next((p["min_ratio"] for p in A1_PREDICTIONS if p["id"] == "P2"), 2.0))
+    x = (per_arm.get(left) or {}).get("tokens_attributed_mean")
+    x_live = (per_arm.get(left) or {}).get("tokens_as_published_mean")
+    y = (per_arm.get(right) or {}).get("tokens_attributed_mean")
+    if x is None or x_live is None or not y:
+        return {"attributed": None, "live": None, "holds_both": None, "min_ratio": min_ratio,
+                "note": A1_AM4_TOKENS_NOTE,
+                "status": f"not_computed: {left} or {right} absent or without per-episode token rows"}
+    r_attr, r_live = x / y, x_live / y
+    return {
+        "attributed": {"advise_k1": x, "prefix_m11": y, "ratio": round(r_attr, 6), "holds": r_attr >= min_ratio},
+        "live": {"advise_k1": x_live, "prefix_m11": y, "ratio": round(r_live, 6), "holds": r_live >= min_ratio},
+        "holds_both": bool(r_attr >= min_ratio and r_live >= min_ratio),
+        "min_ratio": min_ratio,
+        "note": A1_AM4_TOKENS_NOTE,
+    }
+
+
+def a1_am4_calls(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    cost_report: Optional[dict[str, Any]],
+) -> dict[str, Any]:
+    """Add the top-level a1_am4_calls block to an A1 report in place and return it. Information for
+    Amendment 4's reading of P2: an error here is recorded, never fatal, and no other key changes."""
+    if report.get("refused"):
+        return report
+    try:
+        j12 = _load_j12()
+        models = _a1_am4_price_card(j12, cost_report)["models"]
+        cost_arms = _cost_arms(cost_report)
+        per_arm: dict[str, dict[str, Any]] = {}
+        notes: dict[str, list[str]] = {}
+        for label in A1_AM4_ARMS:
+            if label not in arms or label not in arm_dirs:
+                continue
+            per_arm[label], arm_notes = a1_am4_arm(label, arms[label], Path(arm_dirs[label]),
+                                                   cost_arms.get(label), j12, models)
+            if arm_notes:
+                notes[label] = arm_notes[:5] + ([f"... {len(arm_notes) - 5} more"] if len(arm_notes) > 5 else [])
+        report["a1_am4_calls"] = {
+            "status": "ok",
+            "definitions": A1_AM4_DEFINITIONS,
+            "per_arm": per_arm,
+            "p2_calls_clause": a1_am4_p2_calls_clause(per_arm),
+            "p2_tokens_clause": a1_am4_p2_tokens_clause(per_arm),
+            "notes": notes,
+        }
+    except Exception as exc:  # information only: never fatal
+        report["a1_am4_calls"] = {"status": "error", "error": f"{type(exc).__name__}: {exc}"}
+    return report
 
 
 if __name__ == "__main__":

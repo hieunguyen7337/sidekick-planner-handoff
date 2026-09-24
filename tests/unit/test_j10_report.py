@@ -1637,3 +1637,145 @@ def test_am1_by_fdr_family_counts_each_contrast_once(tmp_path: Path):
     # No prefix arm wrote report events, so B1 has no handoff-only p and sits outside the family.
     assert ms["not_in_family"] == ["B1a", "B1b"] and ms["m"] == 15
 
+
+# ---- Amendment 4 companion: a1_am4_calls (unit ATTRIB, 2026-09-25) ----------------------------------
+# Arm 3's plan event: 1,000 input of which 500 cached, 100 output, 50 reasoning. At
+# configs/cost/prices_2026-09.yaml: 500 x 0.20e-6 + 500 x 0.02e-6 + 150 x 1.20e-6 = $0.000290.
+AM4_PLAN_USAGE = {"model": "gpt-5.6-luna", "provider": "codex", "input_tokens": 1000, "cached_input_tokens": 500,
+                  "output_tokens": 100, "reasoning_output_tokens": 50, "n_calls": 1}
+AM4_KEY = ("sc0_1", 1)
+
+
+def _am4_set(arm_root: Path, values: dict, field: str) -> None:
+    for (task_id, seed), value in values.items():
+        path = arm_root / "sys" / str(seed) / task_id / "result.json"
+        row = json.loads(path.read_text(encoding="utf-8"))
+        row[field] = value
+        path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+
+def _am4_events(arm_root: Path, key: tuple, events: list) -> None:
+    (arm_root / "sys" / str(key[1]) / key[0] / "events.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+
+
+def _am4_matrix(tmp_path: Path, prefix_calls: int = 2) -> dict[str, Path]:
+    """advise_k1 makes 2 live calls per episode and, on AM4_KEY only, also replays arm 3's plan, so that
+    episode is charged 3. prefix_m11 is charged `prefix_calls` for its replayed prefix everywhere and
+    carries no cache event (its AM4_KEY episode records the handoff). arm 2 (sft_plan) replays the plan
+    on AM4_KEY, which is its one charged call."""
+    dirs = write_a1_matrix(tmp_path)
+    source = tmp_path / "arm3" / "planner_alone" / "1" / "sc0_1" / "events.jsonl"
+    source.parent.mkdir(parents=True)
+    source.write_text("".join(json.dumps(e) + "\n" for e in [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "plan", "actor": "planner", "step": 0, "payload": {"packet": {"goal": "g"}},
+         "usage": AM4_PLAN_USAGE},
+        # A later planner action with 90,000 fresh input: never the event a replay is priced from.
+        {"event_type": "action", "actor": "planner", "step": 1, "payload": {"kind": "CODE"},
+         "usage": dict(AM4_PLAN_USAGE, input_tokens=90_000, cached_input_tokens=0)},
+    ]), encoding="utf-8")
+    cached = {"model": "gpt-5.6-luna", "provider": "cache", "input_tokens": 0, "cached_input_tokens": 0,
+              "output_tokens": 0, "reasoning_output_tokens": 0, "n_calls": 1, "raw": {"cached_from": str(source)}}
+    live = dict(AM4_PLAN_USAGE, input_tokens=10, cached_input_tokens=0)
+    replay = [{"event_type": "run_start", "actor": "system", "payload": {}},
+              {"event_type": "plan", "actor": "planner", "step": 0, "payload": {"packet": {"goal": "g"}},
+               "usage": cached}]
+    _am4_set(dirs["advise_k1_fullctx"], {k: 3 if k == AM4_KEY else 2 for k in GRID}, "n_planner_calls")
+    _am4_events(dirs["advise_k1_fullctx"], AM4_KEY, replay + [
+        {"event_type": "intervention", "actor": "planner", "step": s, "payload": {}, "usage": live} for s in (1, 2)])
+    _am4_set(dirs["prefix_m11"], {k: prefix_calls for k in GRID}, "n_planner_calls")
+    _am4_events(dirs["prefix_m11"], AM4_KEY, [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "report", "actor": "system", "step": 11, "payload": {"handoff_occurred": True, "effective_m": 11}}])
+    _am4_set(dirs["sft_plan"], {k: "sft_plan" for k in GRID}, "system")
+    _am4_events(dirs["sft_plan"], AM4_KEY, replay)
+    return dirs
+
+
+def _am4_cost(usd: dict, tokens: dict | None = None) -> dict:
+    """A1_COST_REPORT plus usd_per_episode (and, if given, noncached tokens) with per-episode rows, one
+    constant per arm; the rows carry the arm's tokens so that the per-episode mean equals the arm mean."""
+    cost = json.loads(json.dumps(A1_COST_REPORT))
+    for label, value in usd.items():
+        arm = cost["arms"].setdefault(label, {"n_episodes": 24})
+        arm["usd_per_episode"] = value
+        if tokens and label in tokens:
+            arm["noncached_tokens_per_episode"] = tokens[label]
+        tok = arm.get("noncached_tokens_per_episode")
+        arm["episodes"] = [{"task_id": t, "seed": s, "usd_per_episode": value, "noncached_tokens_per_episode": tok}
+                           for t, s in GRID]
+    return cost
+
+
+def test_am4_calls_live_and_attributed_by_hand(tmp_path: Path, monkeypatch):
+    dirs = _am4_matrix(tmp_path)
+    cost = _am4_cost({"advise_k1_fullctx": 0.001, "prefix_m11": 0.002})
+    report, _ = a1_report(dirs, cost_report=cost)
+    am4 = report["a1_am4_calls"]
+    assert am4["status"] == "ok" and list(am4["per_arm"]) == list(j10.A1_AM4_ARMS)  # arms 2, 3, 4-7, 8-12
+    # advise_k1: 23 episodes charged 2 and AM4_KEY charged 3 -> 49 / 24 = 2.041667 attributed; live drops
+    # the one replayed call -> 48 / 24 = 2.0. USD: (24 x 0.001 + 0.000290) / 24 = 0.00101208 -> 0.001012.
+    # Tokens: the plan event is 1,000 + 100 + 50 = 1,150 non-cached tokens, so
+    # (24 x 1,414,410 + 1,150) / 24 = 1,414,457.916667.
+    assert am4["per_arm"]["advise_k1_fullctx"] == {
+        "n_episodes": 24, "calls_attributed_mean": 2.041667, "calls_live_mean": 2.0, "n_cached_plan_events": 1,
+        "tokens_attributed_mean": 1414457.916667, "tokens_as_published_mean": 1414410.0,
+        "usd_attributed_mean": 0.001012, "usd_as_published_mean": 0.001}
+    # The prefix arm is charged its replayed prefix under both conventions (A1:347-349).
+    assert am4["per_arm"]["prefix_m11"] == {
+        "n_episodes": 24, "calls_attributed_mean": 2.0, "calls_live_mean": 2.0, "n_cached_plan_events": 0,
+        "tokens_attributed_mean": 443361.0, "tokens_as_published_mean": 443361.0,
+        "usd_attributed_mean": 0.002, "usd_as_published_mean": 0.002}
+    p2 = am4["p2_calls_clause"]
+    assert p2["attributed"] == {"advise_k1": 2.041667, "prefix_m11": 2.0, "holds": True}
+    assert p2["live"] == {"advise_k1": 2.0, "prefix_m11": 2.0, "holds": False}
+    assert p2["holds_both"] is False and p2["note"] == j10.A1_AM4_NOTE
+    tk = am4["p2_tokens_clause"]
+    assert tk["attributed"] == {"advise_k1": 1414457.916667, "prefix_m11": 443361.0,
+                                "ratio": round(1414457.916667 / 443361.0, 6), "holds": True}  # 3.190304
+    assert tk["live"] == {"advise_k1": 1414410.0, "prefix_m11": 443361.0,
+                          "ratio": round(1414410.0 / 443361.0, 6), "holds": True}  # 3.190196
+    assert (tk["holds_both"], tk["min_ratio"], tk["note"]) == (True, 2.0, j10.A1_AM4_TOKENS_NOTE)
+    # No other key or value moves: the same report without the companion.
+    monkeypatch.setattr(j10, "a1_am4_calls", lambda rep, *_a, **_k: rep)
+    base, _ = a1_report(dirs, cost_report=cost)
+    rest = {k: v for k, v in report.items() if k != "a1_am4_calls"}
+    assert json.dumps(rest, sort_keys=True, default=str) == json.dumps(base, sort_keys=True, default=str)
+
+
+def test_am4_sft_plan_is_not_charged_twice_and_both_conventions_can_hold(tmp_path: Path):
+    dirs = _am4_matrix(tmp_path, prefix_calls=1)
+    cost = _am4_cost({"advise_k1_fullctx": 0.001, "prefix_m11": 0.002, "sft_plan": 0.003},
+                     tokens={"advise_k1_fullctx": 1990.0, "prefix_m11": 1000.0, "sft_plan": 500.0})
+    am4 = a1_report(dirs, cost_report=cost)[0]["a1_am4_calls"]
+    sft = am4["per_arm"]["sft_plan"]
+    # Every arm-2 episode is charged 1; on AM4_KEY that call is the replayed plan: live 23 / 24 = 0.958333.
+    assert (sft["calls_attributed_mean"], sft["calls_live_mean"], sft["n_cached_plan_events"]) == (1.0, 0.958333, 1)
+    # j12 already charges sft_plan its source plan (j12_cost_axes.py:361-367), so nothing is added.
+    assert sft["usd_attributed_mean"] == sft["usd_as_published_mean"] == 0.003
+    assert sft["tokens_attributed_mean"] == sft["tokens_as_published_mean"] == 500.0
+    p2 = am4["p2_calls_clause"]
+    assert (p2["attributed"]["holds"], p2["live"]["holds"], p2["holds_both"]) == (True, True, True)
+    # Tokens: as published 1,990 / 1,000 = 1.99 < 2 fails; attributed (24 x 1,990 + 1,150) / 24 = 2,037.916667,
+    # 2.037917 >= 2 holds -- so the clause fails Amendment 4's both-conventions reading.
+    tk = am4["p2_tokens_clause"]
+    assert tk["attributed"] == {"advise_k1": 2037.916667, "prefix_m11": 1000.0, "ratio": 2.037917, "holds": True}
+    assert tk["live"] == {"advise_k1": 1990.0, "prefix_m11": 1000.0, "ratio": 1.99, "holds": False}
+    assert tk["holds_both"] is False
+    # Without a cost report the calls are still read; USD is null and the note says why.
+    bare = a1_report(dirs)[0]["a1_am4_calls"]
+    assert bare["per_arm"]["advise_k1_fullctx"]["calls_live_mean"] == 2.0
+    assert bare["per_arm"]["advise_k1_fullctx"]["usd_attributed_mean"] is None
+    assert bare["notes"]["advise_k1_fullctx"] == ["no cost-report row for this arm"]
+
+
+def test_am4_failure_is_recorded_and_never_fatal(tmp_path: Path, monkeypatch):
+    def boom():
+        raise ImportError("j12_cost_axes unavailable")
+
+    monkeypatch.setattr(j10, "_load_j12", boom)
+    report, _ = a1_report(write_a1_matrix(tmp_path), cost_report=A1_COST_REPORT)
+    assert report["a1_am4_calls"] == {"status": "error", "error": "ImportError: j12_cost_axes unavailable"}
+    assert report["verdicts"]["P2"] == "supported"
+

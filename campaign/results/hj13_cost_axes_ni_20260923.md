@@ -10,7 +10,7 @@
 | Arm | Non-cached Tokens | Provider USD ($) | Hosted Calls | Local GPU USD (Assump.) |
 | --- | ---: | ---: | ---: | ---: |
 | `executor_alone` | 0.0 | $0.0000 | 0.00 | null |
-| `plan_only` | 23905.6 | $0.0030 | 1.00 | null |
+| `plan_only` | 23905.6 | $0.0039 | 1.00 | null |
 | `advise_k10_starved` | 43823.4 | $0.0044 | 2.42 | null |
 | `advise_k3_starved` | 204499.8 | $0.0122 | 6.82 | null |
 | `advise_k10_fullctx` | 49819.4 | $0.0055 | 2.46 | null |

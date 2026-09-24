@@ -325,3 +325,182 @@ def test_ordering_flips_are_empty_when_axes_agree() -> None:
     assert is_stable is True
     assert flips == []
 
+
+# ---- Full attribution of replayed plans (unit ATTRIB, 2026-09-25) ------------------------------------
+PRICES = {"gpt-5.6-luna": {"input": 0.20, "cached_input": 0.02, "output": 1.20}}
+PRICE_CARD = {"models": PRICES, "usd_per_gpu_hour": 2.50}
+# The source plan event: 1,000 input of which 500 cached, 100 output, 50 reasoning.
+#   non-cached tokens (usage_noncached_tokens) = 1,000 + 100 + 50 = 1,150
+#   USD = 500 x 0.20e-6 + 500 x 0.02e-6 + 150 x 1.20e-6 = 0.000100 + 0.000010 + 0.000180 = 0.000290
+SOURCE_PLAN_USAGE = {"model": "gpt-5.6-luna", "provider": "codex", "input_tokens": 1000,
+                     "cached_input_tokens": 500, "output_tokens": 100, "reasoning_output_tokens": 50, "n_calls": 1}
+
+
+def _write_events(path: Path, events: list[dict[str, Any]]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+    return path
+
+
+def _source_episode(campaign: Path, task_id: str = "t1", seed: int = 1) -> Path:
+    """A planner_alone source: a dead attempt, then the plan event and a later action whose usage
+    (90,000 fresh input) must never be the one priced."""
+    stale = dict(SOURCE_PLAN_USAGE, input_tokens=7, cached_input_tokens=0)
+    return _write_events(campaign / "planner_alone" / str(seed) / task_id / "events.jsonl", [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "plan", "actor": "planner", "payload": {"packet": {"goal": "old"}}, "usage": stale},
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "plan", "actor": "planner", "payload": {"packet": {"goal": "g"}}, "usage": SOURCE_PLAN_USAGE},
+        {"event_type": "action", "actor": "planner", "payload": {"kind": "CODE"},
+         "usage": dict(SOURCE_PLAN_USAGE, input_tokens=90_000, cached_input_tokens=0)},
+    ])
+
+
+def _cached_plan_event(cached_from: Path | None) -> dict[str, Any]:
+    usage = {"model": "gpt-5.6-luna", "provider": "cache", "input_tokens": 0, "cached_input_tokens": 0,
+             "output_tokens": 0, "reasoning_output_tokens": 0, "n_calls": 1}
+    if cached_from is not None:
+        usage["raw"] = {"cached_from": str(cached_from)}
+    return {"event_type": "plan", "actor": "planner", "step": 0, "payload": {"packet": {"goal": "g"}}, "usage": usage}
+
+
+def test_replayed_plan_is_priced_from_its_source_plan_event(tmp_path: Path) -> None:
+    source = _source_episode(tmp_path / "src")
+    episode = _write_events(tmp_path / "arm" / "1" / "t1" / "events.jsonl", [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        _cached_plan_event(source),
+        {"event_type": "intervention", "actor": "planner", "payload": {}, "usage": dict(SOURCE_PLAN_USAGE)},
+    ])
+    assert [u["provider"] for u in j12.cached_plan_usages(episode)] == ["cache"]
+    assert j12.replayed_plan_usage(source) == SOURCE_PLAN_USAGE  # the last attempt's plan, not the action
+    att = j12.episode_cached_plan_attribution(episode, PRICES, packet_source=tmp_path / "src")
+    assert (att["n_cached_plan_events"], att["cache_calls"], att["n_source_missing"]) == (1, 1, 0)
+    assert att["n_cached_from_outside_packet_source"] == 0
+    assert att["noncached_tokens"] == 1150.0
+    assert abs(att["usd"] - 0.000290) < 1e-12
+    # cached_from outside the configured packet_source is counted, still priced from cached_from.
+    elsewhere = j12.episode_cached_plan_attribution(episode, PRICES, packet_source=tmp_path / "other")
+    assert elsewhere["n_cached_from_outside_packet_source"] == 1 and elsewhere["noncached_tokens"] == 1150.0
+
+
+def test_cached_plan_without_cached_from_reads_the_packet_source_layout(tmp_path: Path) -> None:
+    _source_episode(tmp_path / "src", task_id="t9", seed=2)
+    episode = _write_events(tmp_path / "arm" / "2" / "t9" / "events.jsonl", [_cached_plan_event(None)])
+    att = j12.episode_cached_plan_attribution(episode, PRICES, packet_source=tmp_path / "src",
+                                              packet_system="planner_alone", task_id="t9", seed=2)
+    assert (att["n_source_missing"], att["noncached_tokens"]) == (0, 1150.0)
+    missing = j12.episode_cached_plan_attribution(episode, PRICES, packet_source=None, task_id="t9", seed=2)
+    assert (missing["n_cached_plan_events"], missing["n_source_missing"], missing["usd"]) == (1, 1, 0.0)
+
+
+def _attribution_arm(tmp_path: Path, source: Path) -> tuple[dict[str, Any], Path]:
+    """Two channel episodes. t1 replays the source plan and makes one live review:
+    300 input (100 cached), 50 output, 50 reasoning -> 200 x 0.20e-6 + 100 x 0.02e-6 + 100 x 1.20e-6
+    = 0.000162, and the ledger's live non-cached tokens are 400. t2 planned live: 100 fresh input
+    -> 0.000020, ledger 100 tokens."""
+    root = tmp_path / "arm"
+    review = {"model": "gpt-5.6-luna", "provider": "codex", "input_tokens": 300, "cached_input_tokens": 100,
+              "output_tokens": 50, "reasoning_output_tokens": 50, "n_calls": 1}
+    live_plan = {"model": "gpt-5.6-luna", "provider": "codex", "input_tokens": 100, "cached_input_tokens": 0,
+                 "output_tokens": 0, "reasoning_output_tokens": 0, "n_calls": 1}
+    _write_events(root / "1" / "t1" / "events.jsonl", [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        _cached_plan_event(source),
+        {"event_type": "intervention", "actor": "planner", "payload": {}, "usage": review},
+    ])
+    _write_events(root / "1" / "t2" / "events.jsonl", [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "plan", "actor": "planner", "payload": {"packet": {}}, "usage": live_plan},
+    ])
+    row = {"system": "fixed_k", "replayed_planner_tokens": None, "sft_plan_replayed_plan_tokens": None}
+    arm = {"label": "takeover_k10", "cleaned": {
+        ("t1", 1): dict(row, n_planner_calls=2, planner_tokens_noncached_live=400.0),
+        ("t2", 1): dict(row, n_planner_calls=1, planner_tokens_noncached_live=100.0),
+    }}
+    return arm, root
+
+
+def test_price_arm_episodes_attributed_by_hand(tmp_path: Path) -> None:
+    source = _source_episode(tmp_path / "src")
+    arm, root = _attribution_arm(tmp_path, source)
+    copy = {"label": arm["label"], "cleaned": {k: dict(v) for k, v in arm["cleaned"].items()}}
+    default = j12.price_arm_episodes(copy, PRICE_CARD, root=root, packet_source=tmp_path / "src",
+                                     packet_system="planner_alone")
+    # As published: the replayed plan is one call but 0 tokens and $0.
+    # tokens (400 + 100) / 2 = 250; USD (0.000162 + 0.000020) / 2 = 0.000091; calls (2 + 1) / 2 = 1.5.
+    assert (default["noncached_tokens_per_episode"], default["usd_per_episode"],
+            default["hosted_calls_per_episode"]) == (250.0, 0.000091, 1.5)
+    assert "cached_plan_attribution" not in default
+    att = j12.price_arm_episodes_attributed(arm, PRICE_CARD, root=root, packet_source=tmp_path / "src",
+                                            packet_system="planner_alone")
+    # Attributed: t1 gains the source plan's 1,150 tokens and $0.000290.
+    # tokens (1,550 + 100) / 2 = 825; USD (0.000452 + 0.000020) / 2 = 0.000236; calls unchanged.
+    assert (att["noncached_tokens_per_episode"], att["usd_per_episode"], att["hosted_calls_per_episode"]) == (
+        825.0, 0.000236, 1.5)
+    assert att["episodes"][0]["noncached_tokens_per_episode"] == 1550.0
+    assert abs(att["episodes"][0]["usd_per_episode"] - 0.000452) < 1e-12
+    assert att["episodes"][1] == default["episodes"][1]
+    info = att["cached_plan_attribution"]
+    assert (info["applied"], info["route"], info["n_episodes_with_cached_plan"], info["n_cached_plan_events"]) == (
+        True, "source_plan_event", 1, 1)
+    assert (info["noncached_tokens_added_per_episode"], info["usd_added_per_episode"]) == (575.0, 0.000145)
+
+
+def test_attribution_leaves_sft_plan_rows_and_partial_maps_as_priced(tmp_path: Path) -> None:
+    source = _source_episode(tmp_path / "src")
+    arm, root = _attribution_arm(tmp_path, source)
+    arm["cleaned"][("t1", 1)]["system"] = "sft_plan"  # already charged its source by :361-367
+    baseline = j12.price_arm_episodes({"label": arm["label"], "cleaned": {k: dict(v) for k, v in arm["cleaned"].items()}},
+                                      PRICE_CARD, root=root, packet_source=tmp_path / "src", packet_system="planner_alone")
+    sft = j12.price_arm_episodes_attributed(arm, PRICE_CARD, root=root, packet_source=tmp_path / "src",
+                                            packet_system="planner_alone")
+    assert sft["episodes"] == baseline["episodes"]
+    assert sft["cached_plan_attribution"]["n_sft_plan_rows_left_as_priced"] == 1
+    assert (sft["cached_plan_attribution"]["applied"], sft["cached_plan_attribution"]["route"]) == (
+        False, "sft_plan_already_charged")
+    # A replayed plan whose source cannot be read: nothing is applied, and the arm says so.
+    arm2, root2 = _attribution_arm(tmp_path / "b", tmp_path / "nowhere" / "events.jsonl")
+    partial = j12.price_arm_episodes_attributed(arm2, PRICE_CARD, root=root2, packet_source=None,
+                                                packet_system="planner_alone")
+    assert (partial["noncached_tokens_per_episode"], partial["usd_per_episode"]) == (250.0, 0.000091)
+    info = partial["cached_plan_attribution"]
+    assert (info["applied"], info["route"], info["n_source_missing"], info["missing_examples"]) == (
+        False, "understatement", 1, ["t1/1"])
+
+
+def test_sft_plan_is_charged_its_source_plan_event_not_the_source_last_usage(tmp_path: Path) -> None:
+    """COSTFIX: the sft_plan branch (:361-367) prices the replayed plan event on USD, and the floor's tokens
+    (j8_noncached_cost, summarise_arm) come from the same event, although the source's last planner usage
+    is a later action (90,000 fresh input + 150 output = $0.018180, which the old [-1] priced)."""
+    _source_episode(tmp_path / "src")
+    root = tmp_path / "arm"
+    _write_events(root / "1" / "t1" / "events.jsonl", [
+        {"event_type": "run_start", "actor": "system", "payload": {}}, _cached_plan_event(tmp_path / "src")])
+    arm = {"label": "plan_only", "cleaned": {("t1", 1): {
+        "system": "sft_plan", "n_planner_calls": 1, "planner_tokens_noncached_live": 0.0,
+        "replayed_planner_tokens": None, "sft_plan_replayed_plan_tokens": None}}}
+    info = j12.attach_sft_plan_source_plan_tokens(arm["cleaned"], "plan_only", tmp_path / "src", "planner_alone")
+    assert info["applied"] is True and arm["cleaned"][("t1", 1)]["sft_plan_replayed_plan_tokens"] == 1150.0
+    summary = j12.price_arm_episodes(arm, PRICE_CARD, root=root, packet_source=tmp_path / "src",
+                                     packet_system="planner_alone")
+    # tokens 0 live + 1,150 replayed plan; USD $0 for the cache record + $0.000290 for the plan event.
+    assert summary["noncached_tokens_per_episode"] == 1150.0
+    assert summary["usd_per_episode"] == 0.00029
+    action = dict(SOURCE_PLAN_USAGE, input_tokens=90_000, cached_input_tokens=0)
+    assert abs(j12.price_usage_record(action, PRICES, {"n_usage_without_cache_split": 0}) - 0.018180) < 1e-12
+    # The attributed path leaves the row as the default branch priced it.
+    att = j12.price_arm_episodes_attributed(arm, PRICE_CARD, root=root, packet_source=tmp_path / "src",
+                                            packet_system="planner_alone")
+    assert (att["noncached_tokens_per_episode"], att["usd_per_episode"]) == (1150.0, 0.00029)
+
+
+def test_attribution_is_opt_in_and_the_default_report_is_unchanged() -> None:
+    args = j12.parse_args(["--arm", "a=/nonexistent", "--out", "/tmp/x.json"])
+    assert args.attribute_cached_plans is False
+    assert j12._attribution_block(args, [{"label": "a"}]) == {}
+    assert j12._attribution_title({"arms": {}}) == ""
+    on = j12.parse_args(["--arm", "a=/nonexistent", "--out", "/tmp/x.json", "--attribute-cached-plans"])
+    block = j12._attribution_block(on, [{"label": "a", "cached_plan_attribution": {"applied": True}}])
+    assert block["cached_plan_attribution"]["per_arm"] == {"a": {"applied": True}}
+    assert j12._attribution_title(block).endswith("replayed plans fully attributed")
+

@@ -1,6 +1,6 @@
 {
   "generated_by": "scripts/analysis/j17_depth_fixes.py",
-  "generated_at": "2026-09-24T18:11:29+10:00",
+  "generated_at": "2026-09-25T01:42:55+10:00",
   "purpose": "Adversarial review F1 fixes R1.1-R1.4 and R7.2 on dev: handoff-only and silenced numbers, their decomposition, NI at -7 pp, the registered chord, Ganz metrics and cost shares, on the pooled cap-81 prefix family (seeds 1-3) against the planner alone at cap 81.",
   "sources": {
     "review": "docs/review_paperA_adversarial_20260923.md \u00a7F1",
@@ -2501,15 +2501,15 @@
             "n_resamples_undefined_task": 0
           },
           "usd": {
-            "point": 0.705794,
+            "point": 0.720237,
             "ci95_scenario": [
-              0.585535,
-              0.793614
+              0.60688,
+              0.801879
             ],
             "n_resamples_undefined_scenario": 0,
             "ci95_task": [
-              0.631325,
-              0.76373
+              0.649372,
+              0.77479
             ],
             "n_resamples_undefined_task": 0
           }
@@ -2527,7 +2527,7 @@
           },
           "usd": {
             "arm": 0.016311,
-            "floor": 0.003015,
+            "floor": 0.003921,
             "ceiling": 0.048208
           }
         },
@@ -2577,15 +2577,15 @@
             "n_resamples_undefined_task": 0
           },
           "usd": {
-            "point": 0.554462,
+            "point": 0.565808,
             "ci95_scenario": [
-              0.382327,
-              0.682195
+              0.396071,
+              0.6892
             ],
             "n_resamples_undefined_scenario": 0,
             "ci95_task": [
-              0.446,
-              0.63902
+              0.459213,
+              0.648675
             ],
             "n_resamples_undefined_task": 0
           }
@@ -2603,7 +2603,7 @@
           },
           "usd": {
             "arm": 0.02315,
-            "floor": 0.003015,
+            "floor": 0.003921,
             "ceiling": 0.048208
           }
         },
@@ -2653,15 +2653,15 @@
             "n_resamples_undefined_task": 0
           },
           "usd": {
-            "point": 0.468405,
+            "point": 0.47799,
             "ci95_scenario": [
-              0.270652,
-              0.616782
+              0.279525,
+              0.62341
             ],
             "n_resamples_undefined_scenario": 0,
             "ci95_task": [
-              0.340691,
-              0.570145
+              0.350623,
+              0.577713
             ],
             "n_resamples_undefined_task": 0
           }
@@ -2679,7 +2679,7 @@
           },
           "usd": {
             "arm": 0.027039,
-            "floor": 0.003015,
+            "floor": 0.003921,
             "ceiling": 0.048208
           }
         },
@@ -2731,15 +2731,15 @@
             "n_resamples_undefined_task": 0
           },
           "usd": {
-            "point": 0.705794,
+            "point": 0.720237,
             "ci95_scenario": [
-              0.585535,
-              0.793614
+              0.60688,
+              0.801879
             ],
             "n_resamples_undefined_scenario": 0,
             "ci95_task": [
-              0.631325,
-              0.76373
+              0.649372,
+              0.77479
             ],
             "n_resamples_undefined_task": 0
           }
@@ -2757,7 +2757,7 @@
           },
           "usd": {
             "arm": 0.016311,
-            "floor": 0.003015,
+            "floor": 0.003921,
             "ceiling": 0.048208
           }
         },
@@ -2807,15 +2807,15 @@
             "n_resamples_undefined_task": 0
           },
           "usd": {
-            "point": 0.554462,
+            "point": 0.565808,
             "ci95_scenario": [
-              0.382327,
-              0.682195
+              0.396071,
+              0.6892
             ],
             "n_resamples_undefined_scenario": 0,
             "ci95_task": [
-              0.446,
-              0.63902
+              0.459213,
+              0.648675
             ],
             "n_resamples_undefined_task": 0
           }
@@ -2833,7 +2833,7 @@
           },
           "usd": {
             "arm": 0.02315,
-            "floor": 0.003015,
+            "floor": 0.003921,
             "ceiling": 0.048208
           }
         },
@@ -2883,15 +2883,15 @@
             "n_resamples_undefined_task": 0
           },
           "usd": {
-            "point": 0.468405,
+            "point": 0.47799,
             "ci95_scenario": [
-              0.270652,
-              0.616782
+              0.279525,
+              0.62341
             ],
             "n_resamples_undefined_scenario": 0,
             "ci95_task": [
-              0.340691,
-              0.570145
+              0.350623,
+              0.577713
             ],
             "n_resamples_undefined_task": 0
           }
@@ -2909,7 +2909,7 @@
           },
           "usd": {
             "arm": 0.027039,
-            "floor": 0.003015,
+            "floor": 0.003921,
             "ceiling": 0.048208
           }
         },
@@ -3265,7 +3265,7 @@
           "n_cost_rows": 114,
           "means": {
             "noncached_tokens_per_episode": 23905.587719,
-            "usd_per_episode": 0.003015,
+            "usd_per_episode": 0.003921,
             "hosted_calls_per_episode": 1.0
           },
           "pricing_diagnostics": {

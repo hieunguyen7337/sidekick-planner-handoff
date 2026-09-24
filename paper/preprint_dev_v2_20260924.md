@@ -77,7 +77,7 @@ Table 1: Registration outcomes. "Seen?" is whether the data the item is judged o
 | Depths m ∈ {7, 8, 10, 11} | Yes: chosen after the first grid | Exploratory by construction (QUAL-06); every m = 11 result is post hoc |
 | hj13 S1–S3, segmented threshold test | Yes: written after the curve was seen | S1 and S2 hold and S3 fails in 8/8 configurations; no threshold is claimed (F1-RESULT-01) |
 | hj13 replicate floor | Rise yes; replicates no | Withdrawal condition does not fire (NOISE-03). It would under NOISE-01's substitute floor |
-| H2 P1–P4: advice at every step | No | P1–P3 hold; P4 fails (1,414,410 tokens per episode against 300k–700k), so §5's reporting rule applies (CHAN-PRICE-01, CHAN-PRICE-02) |
+| H2 P1–P4: advice at every step | No | P1–P3 hold; P4 fails (1,438,316 tokens per episode against 300k–700k), so §5's reporting rule applies (CHAN-PRICE-01, CHAN-PRICE-02) |
 | B2 decomposition D1–D4 | C1 gap yes; B2 arms no | Unresolved: no decision rule fires (DEC-01) |
 | J10: A1 + Amendment 1 | Dev yes; `test_normal` no | Under way (arm 3 being refilled); nothing read |
 | J11: LP-2 planner, L1–L5 | Provisional LP-2 dev read yes; `test_normal` no | Under way (arm C); nothing read |
@@ -147,9 +147,9 @@ The two copy rates differ in definition: advice counts its text or any fenced Py
 
 ### 3.5 Advice at every step: higher-frequency correction advice (registered H2)
 
-The registered H2 arm, `advise_fixed_k_1_fullctx`, requests correction-prompt advice at every step with full context. Its prediction P4 put its cost at 300k to 700k non-cached planner tokens per episode; it spent 1,414,410 and made 19.02 hosted calls per episode (CHAN-PRICE-02). The registration's rule for a failed P4 reads: *"report the arm as a higher-frequency advice result only, and state explicitly that advice remains unpriced at the action channel's budget."* We follow it: **advice remains unpriced at the action channel's budget**.
+The registered H2 arm, `advise_fixed_k_1_fullctx`, requests correction-prompt advice at every step with full context. Its prediction P4 put its cost at 300k to 700k non-cached planner tokens per episode; it spent 1,438,316 and made 19.02 hosted calls per episode (CHAN-PRICE-02, ATTRIB-04). The registration's rule for a failed P4 reads: *"report the arm as a higher-frequency advice result only, and state explicitly that advice remains unpriced at the action channel's budget."* We follow it: **advice remains unpriced at the action channel's budget**.
 
-As such it scores 0.6630 `goal_pass` (TGC 0.4474; CHAN-PRICE-01), with 12 of 114 episodes at the step limit (0.1053; LIM-01), 14.68 pp below the m = 11 prefix (scenario [−22.09, −7.04], task [−21.56, −7.79]; CHAN-PRICE-01) at 3.19× its non-cached tokens ([2.47, 4.06]; ROB-19). P1 and P3 hold: the arm is not distinguishable from the one-plan floor and does no better than advice every ten steps, so ten times the review frequency does not buy quality (Appendix B, with P4's failure as a declared deviation). J10 P1 tests the contrast on held-out data under the same constraint (Amendment 1 §E).
+As such it scores 0.6630 `goal_pass` (TGC 0.4474; CHAN-PRICE-01), with 12 of 114 episodes at the step limit (0.1053; LIM-01), 14.68 pp below the m = 11 prefix (scenario [−22.09, −7.04], task [−21.56, −7.79]; CHAN-PRICE-01) at 3.24× its non-cached tokens ([2.52, 4.11]; ROB-19, ATTRIB-04). P1 and P3 hold: the arm is not distinguishable from the one-plan floor and does no better than advice every ten steps, so ten times the review frequency does not buy quality (Appendix B, with P4's failure as a declared deviation). J10 P1 tests the contrast on held-out data under the same constraint (Amendment 1 §E).
 
 ### 3.6 Pending dev arms and controls
 
@@ -196,7 +196,7 @@ The dev frontier's claim C2 asked whether the prefix arms lie above the straight
 
 ### 4.5 Ganz-comparable metrics and the cost share
 
-Quality recovery, QRec = (arm − floor) / (reference − floor), with the one-plan floor (0.7181) and the cap-81 planner alone (0.7637) as anchors over 114 triples, is not resolved at any depth on either receiver (GANZ-01, GANZ-02), because the anchors are close. Savings retained fall with depth and every interval excludes zero: at m = 11, 0.3605 of the hosted-call saving and 0.4684 of the dollar saving are retained against the cap-81 planner (GANZ-03; intervals, all depths and the cap-25 ratios in Appendix D.9). Only the cost half of Ganz et al.'s trade-off is resolved: a deep prefix buys its gain by spending most of the planner's budget, 0.6550 of its hosted calls against the pooled cap-81 planner alone (COST-04).
+Quality recovery, QRec = (arm − floor) / (reference − floor), with the one-plan floor (0.7181) and the cap-81 planner alone (0.7637) as anchors over 114 triples, is not resolved at any depth on either receiver (GANZ-01, GANZ-02), because the anchors are close. Savings retained fall with depth and every interval excludes zero: at m = 11, 0.3605 of the hosted-call saving and 0.4780 of the dollar saving are retained against the cap-81 planner (GANZ-03; intervals, all depths and the cap-25 ratios in Appendix D.9). Only the cost half of Ganz et al.'s trade-off is resolved: a deep prefix buys its gain by spending most of the planner's budget, 0.6550 of its hosted calls against the pooled cap-81 planner alone (COST-04).
 
 ### 4.6 Non-inferiority to the planner acting alone
 
@@ -331,14 +331,14 @@ No published campaign is proven to contain a second roll of a scored failure (PR
 
 **What was registered.** P4 predicted that advice at every step would spend 300k to 700k non-cached planner tokens per episode, and §5 of the H2 registration says that if P4 fails, the arm is reported "as a higher-frequency advice result only", stating "that advice remains unpriced at the action channel's budget". The main text (§3.5) follows that rule.
 
-**The argument we set aside.** An earlier draft argued that the rule was written for the opposite case: an arm that lands below 300k was never priced at the action channel's budget, so a win over it could be a budget win, while this arm spent 1,414,410 tokens, far above the prefix arms, and so the hazard the rule guards against was excluded *a fortiori*. On that argument the draft reported P2 as a test of advice at matched budget. We record the argument as a deviation discussion and do not rely on it, for two reasons. The registration's text does not distinguish the directions of failure. And the argument is weak on substance: P3 shows that more correction advice does not do better, so moving from k = 10 to k = 1 changes the dose of an error-presuming prompt; it does not match the budget.
+**The argument we set aside.** An earlier draft argued that the rule was written for the opposite case: an arm that lands below 300k was never priced at the action channel's budget, so a win over it could be a budget win, while this arm spent 1,438,316 tokens, far above the prefix arms, and so the hazard the rule guards against was excluded *a fortiori*. On that argument the draft reported P2 as a test of advice at matched budget. We record the argument as a deviation discussion and do not rely on it, for two reasons. The registration's text does not distinguish the directions of failure. And the argument is weak on substance: P3 shows that more correction advice does not do better, so moving from k = 10 to k = 1 changes the dose of an error-presuming prompt; it does not match the budget.
 
-Table B1: Advice at every step beside the arms it was compared with (114 pairs; CHAN-PRICE-01, CHAN-PRICE-02, COST-01).
+Table B1: Advice at every step beside the arms it was compared with (114 pairs; CHAN-PRICE-01, CHAN-PRICE-02, COST-01; each advice arm's replayed plan is charged its source plan's tokens, ATTRIB-01, ATTRIB-04).
 
 | Arm | `goal_pass` | Non-cached planner tokens / episode | Hosted calls / episode | Step-limit episodes |
 |---|---|---|---|---|
-| `advise_fixed_k_10_fullctx` | 0.7339 | 49,819 | 2.46 | 13 of 114 (ADV-FC-01) |
-| `advise_fixed_k_1_fullctx` | 0.6630 | 1,414,410 | 19.02 | 12 of 114 (0.1053; LIM-01) |
+| `advise_fixed_k_10_fullctx` | 0.7339 | 73,725 | 2.46 | 13 of 114 (ADV-FC-01) |
+| `advise_fixed_k_1_fullctx` | 0.6630 | 1,438,316 | 19.02 | 12 of 114 (0.1053; LIM-01) |
 | `prefix_m9` | 0.7852 | 357,448 | 9.77 | 10 of 114 (LIM-08) |
 | `prefix_m11` | 0.8098 | 443,361 | 11.25 | 9 of 114 (LIM-08) |
 
@@ -531,16 +531,16 @@ AppWorld [@appworld_trivedi_2024], τ-bench [@tau_bench_yao_2025] and BFCL [@bfc
 ### D.9 Cost frontier (COST-01..03, ROB-18, DEC-05, LAT-01)
 
 ```
-Table D7: Cost and quality, AppWorld dev split, n = 114 (COST-01; TGC from the same arms).
+Table D7: Cost and quality, AppWorld dev split, n = 114 (COST-01; TGC from the same arms; channel arms charged their replayed plan, ATTRIB-01; plan_only priced on the plan it replays, COSTFIX-01).
 ---------------------------------------------------------------------------------------------
 Arm                                Goal Pass    TGC     Non-Cached Tokens   USD / Ep.   Calls / Ep.
 ---------------------------------------------------------------------------------------------
 executor_alone (granite 8B)          0.5289    0.1316                   0   $0.000000          0.00
-plan_only (sft_plan iaware)          0.7181    0.3947              23,906   $0.003015          1.00
-advise_fixed_k_10 (8-line ctx)       0.6964    0.4123              43,823   $0.004386          2.42
-advise_fixed_k_10_fullctx            0.7339    0.4386              49,819   $0.005494          2.46
-takeover_fixed_k_10                  0.8007    0.5175              41,464   $0.004820          2.32
-advise_fixed_k_3 (8-line ctx)        0.7012    0.4561             204,500   $0.012203          6.82
+plan_only (sft_plan iaware)          0.7181    0.3947              23,906   $0.003921          1.00
+advise_fixed_k_10 (8-line ctx)       0.6964    0.4123              67,729   $0.008308          2.42
+advise_fixed_k_10_fullctx            0.7339    0.4386              73,725   $0.009416          2.46
+takeover_fixed_k_10                  0.8007    0.5175              65,369   $0.008742          2.32
+advise_fixed_k_3 (8-line ctx)        0.7012    0.4561             228,405   $0.016125          6.82
 prefix_m6                            0.7237    0.4298             221,043   $0.016268          6.98
 prefix_m9                            0.7852    0.5614             357,448   $0.022740          9.77
 prefix_m11                           0.8098    0.6053             443,361   $0.026475         11.25
@@ -549,9 +549,9 @@ planner alone, cap 81                0.7637    0.5702           1,160,215   $0.0
 ---------------------------------------------------------------------------------------------
 ```
 
-On the matched-trigger pair, takeover is cheaper than correction-prompt advice as point estimates on all three axes, but paired intervals resolve only the dollar difference, and only on the scenario clustering: −8,356 non-cached tokens [−17,744, +617], −$0.000674 [−0.001361, −0.000024] (task [−0.001539, +0.000161]) and −0.149 hosted calls [−0.368, +0.070] (ROB-18). At 171 pairs takeover is still the cheapest of the four channel arms in non-cached tokens (41.8k against 53.2k for correction-prompt advice) and dollars ($0.00478 against $0.00578), point estimates only (DEC-05). Median wall clock per episode is 41.161 s for takeover, 40.307 s for correction-prompt advice, 45.61 s for neutral advice, 42.301 s for show and 230.402 s for advice at every step; no per-call planner timing was recorded and node load was not controlled, so these are descriptive (LAT-01). Against the cap-25 planner alone, the m = 11 prefix costs 0.746× its dollars ([0.661, 0.831]) and 0.648× its non-cached tokens ([0.550, 0.756]) (ROB-19), and makes 0.78× its hosted calls, 3.18 fewer per episode ([−4.54, −1.94]; ROB-19, ROB-27).
+On the matched-trigger pair, takeover is cheaper than correction-prompt advice as point estimates on all three axes, but paired intervals resolve only the dollar difference, and only on the scenario clustering: −8,356 non-cached tokens [−17,744, +617], −$0.000674 [−0.001361, −0.000024] (task [−0.001539, +0.000161]) and −0.149 hosted calls [−0.368, +0.070] (ROB-18). At 171 pairs takeover is still the cheapest of the four channel arms in non-cached tokens (65.4k against 76.9k for correction-prompt advice) and dollars ($0.00880 against $0.00980), point estimates only (DEC-05, ATTRIB-07). The replayed plan is the same source plan in both arms of every matched pair, so it cancels in the ROB-18 differences above (ATTRIB-05). Median wall clock per episode is 41.161 s for takeover, 40.307 s for correction-prompt advice, 45.61 s for neutral advice, 42.301 s for show and 230.402 s for advice at every step; no per-call planner timing was recorded and node load was not controlled, so these are descriptive (LAT-01). Against the cap-25 planner alone, the m = 11 prefix costs 0.746× its dollars ([0.661, 0.831]) and 0.648× its non-cached tokens ([0.550, 0.756]) (ROB-19), and makes 0.78× its hosted calls, 3.18 fewer per episode ([−4.54, −1.94]; ROB-19, ROB-27).
 
-Ganz-comparable metrics at every depth (§4.5): tailored QRec is 0.6491, 0.9607 and 2.0420 at m = 6, 9, 11 (GANZ-01), with scenario interval [−14.29, +17.77] and task interval [−8.59, +14.74] at m = 11 (GANZ-01, GANZ-02); hosted-call savings retained against the cap-81 planner are 0.6325, 0.4528 and 0.3605, and dollar savings retained 0.7058, 0.5545 and 0.4684 (GANZ-03; the cap-25 comparison is in the paragraph above), at m = 11 with intervals [0.23, 0.47] and [0.27, 0.43] (calls) and [0.27, 0.62] and [0.34, 0.57] (dollars), scenario then task. Against the pooled cap-81 planner alone (171 pairs) the m = 11 arms use 0.6550 of its hosted calls (scenario [0.56, 0.76], task [0.59, 0.73]; COST-04). Against the pooled cap-81 planner alone the m = 11 arms retain 0.4292 of its dollar cost as saving ([0.26, 0.57]; [0.32, 0.52]); at m = 6 the call share and dollar saving are 0.4048 and 0.6508 (COST-04).
+Ganz-comparable metrics at every depth (§4.5): tailored QRec is 0.6491, 0.9607 and 2.0420 at m = 6, 9, 11 (GANZ-01), with scenario interval [−14.29, +17.77] and task interval [−8.59, +14.74] at m = 11 (GANZ-01, GANZ-02); hosted-call savings retained against the cap-81 planner are 0.6325, 0.4528 and 0.3605, and dollar savings retained 0.7202, 0.5658 and 0.4780 (GANZ-03, COSTFIX-01; the cap-25 comparison is in the paragraph above), at m = 11 with intervals [0.23, 0.47] and [0.27, 0.43] (calls) and [0.28, 0.62] and [0.35, 0.58] (dollars), scenario then task. Against the pooled cap-81 planner alone (171 pairs) the m = 11 arms use 0.6550 of its hosted calls (scenario [0.56, 0.76], task [0.59, 0.73]; COST-04). Against the pooled cap-81 planner alone the m = 11 arms retain 0.4292 of its dollar cost as saving ([0.26, 0.57]; [0.32, 0.52]); at m = 6 the call share and dollar saving are 0.4048 and 0.6508 (COST-04).
 
 ### D.10 Step-limit counts, the step-limit split, and the termination census (LIM-01, LIM-03..08, TERM-01..04)
 

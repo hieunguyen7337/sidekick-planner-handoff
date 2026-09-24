@@ -1,0 +1,3971 @@
+{
+  "unit": "ATTRIB",
+  "generated_at": "2026-09-25T01:44:08+10:00",
+  "generated_by": "/home/n12194778/.claude/jobs/91578989/tmp/attrib/build_report.py (PBS); inputs /home/n12194778/.claude/jobs/91578989/tmp/attrib/out2/*.json (fixed sft_plan branch), /home/n12194778/.claude/jobs/91578989/tmp/attrib/out/*.json (pre-fix identity run), the committed reports as of HEAD (/home/n12194778/.claude/jobs/91578989/tmp/attrib/pre)",
+  "plan_head": "4111c9f",
+  "convention": "Claude's decision (brief 20260925_cost_attribution): attribution. An episode is charged for all the planner output it consumes, bought live or replayed. Calls as published already follow it; this report charges each channel arm's replayed plan its source plan event's non-cached tokens and USD.",
+  "code": {
+    "j12_cost_axes": "--attribute-cached-plans (off by default) -> price_arm_episodes_attributed; helpers cached_plan_usages, replayed_plan_usage (src/sidekick/agents/planner.py:_last_attempt_plan_event), cached_plan_source_path, episode_cached_plan_attribution. Appended after main(); no existing line moved.",
+    "downstream": "j16 / j17 via run_attrib.py (j16._load_module hands out j12 with price_arm_episodes -> price_arm_episodes_attributed); b2 arm_cost on a row view (run_attrib.py)."
+  },
+  "byte_identity": {
+    "method": "j12_cost_axes.py run WITHOUT --attribute-cached-plans on the published inputs (default), and the HEAD (4111c9f) copy of j12_cost_axes.py + j10_report.py on the same inputs (head). default == head is compared byte for byte on the whole JSON and Markdown. The committed reports predate the per-episode rows (arms.<arm>.episodes, added to price_arm_episodes after they were written), so default == committed is compared byte for byte after deleting arms.*.episodes and re-serialising exactly as main() does (json.dumps(indent=2) + newline). The j12 reports carry no generated_at; j16/j17 do, and are compared section by section.",
+    "j12": {
+      "ni": {
+        "committed": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+        "default_json_bytes_equal_head": true,
+        "default_md_bytes_equal_head": true,
+        "sha256_16": {
+          "default_json": "7d9127eb671b85f8",
+          "head_json": "7d9127eb671b85f8"
+        },
+        "default_minus_episodes_bytes_equal_committed": true,
+        "committed_has_episode_rows": false,
+        "default_md_bytes_equal_committed_md": true
+      },
+      "fixed": {
+        "committed": "campaign/results/hj13_cost_axes_fixed_20260923.report.json",
+        "default_json_bytes_equal_head": true,
+        "default_md_bytes_equal_head": true,
+        "sha256_16": {
+          "default_json": "78bfc7c31dffd621",
+          "head_json": "78bfc7c31dffd621"
+        },
+        "default_minus_episodes_bytes_equal_committed": true,
+        "committed_has_episode_rows": false,
+        "default_md_bytes_equal_committed_md": true
+      },
+      "aap": {
+        "committed": "campaign/results/hj13_advice_at_price_cost_20260923.report.json",
+        "default_json_bytes_equal_head": true,
+        "default_md_bytes_equal_head": true,
+        "sha256_16": {
+          "default_json": "9ab7a67cf7f71709",
+          "head_json": "9ab7a67cf7f71709"
+        },
+        "default_minus_episodes_bytes_equal_committed": true,
+        "committed_has_episode_rows": false
+      }
+    },
+    "downstream": {
+      "j16 F_f (ROB-18/19/27) default == published": {
+        "pairs": true,
+        "arm_cost_means": true,
+        "reproduction": true
+      },
+      "j16 F_g cost + quality contrasts (ROB-20/27) default == published": {
+        "cost_contrasts_advise_k3_minus_prefix_m6": true,
+        "quality_contrasts_advise_k3_minus_prefix_m6": true
+      },
+      "j17 ganz / cost_share (GANZ-03, COST-04) default == published": {
+        "ganz": true,
+        "cost_share": true
+      },
+      "b2 exploratory.cost_per_episode (DEC-05) default == published": true
+    },
+    "all_true": true
+  },
+  "attribution_diagnostics": {
+    "per_arm_j12_ni": {
+      "executor_alone": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      },
+      "plan_only": {
+        "applied": false,
+        "route": "sft_plan_already_charged",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 114,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      },
+      "advise_k10_starved": {
+        "applied": true,
+        "route": "source_plan_event",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 114,
+        "n_cached_plan_events": 114,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 23905.587719,
+        "usd_added_per_episode": 0.003921,
+        "missing_examples": []
+      },
+      "advise_k3_starved": {
+        "applied": true,
+        "route": "source_plan_event",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 114,
+        "n_cached_plan_events": 114,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 23905.587719,
+        "usd_added_per_episode": 0.003921,
+        "missing_examples": []
+      },
+      "advise_k10_fullctx": {
+        "applied": true,
+        "route": "source_plan_event",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 114,
+        "n_cached_plan_events": 114,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 23905.587719,
+        "usd_added_per_episode": 0.003921,
+        "missing_examples": []
+      },
+      "takeover_k10": {
+        "applied": true,
+        "route": "source_plan_event",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 114,
+        "n_cached_plan_events": 114,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 23905.587719,
+        "usd_added_per_episode": 0.003921,
+        "missing_examples": []
+      },
+      "prefix_m6": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      },
+      "prefix_m9": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      },
+      "prefix_m11": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      },
+      "ceiling_cap25": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      },
+      "ceiling_cap81": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      }
+    },
+    "per_arm_j12_aap": {
+      "advise_k1_fullctx": {
+        "applied": true,
+        "route": "source_plan_event",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 114,
+        "n_cached_plan_events": 114,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 23905.587719,
+        "usd_added_per_episode": 0.003921,
+        "missing_examples": []
+      },
+      "advise_k10_fullctx": {
+        "applied": true,
+        "route": "source_plan_event",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 114,
+        "n_cached_plan_events": 114,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 23905.587719,
+        "usd_added_per_episode": 0.003921,
+        "missing_examples": []
+      },
+      "prefix_m9": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      },
+      "prefix_m11": {
+        "applied": false,
+        "route": "no_replayed_plan",
+        "convention": "attributed: a replayed (usage.provider 'cache') plan event is charged the non-cached tokens and USD of the source plan event it replays (usage.raw.cached_from, else <packet_source>/<packet_system>/<seed>/<task_id>/events.jsonl); sft_plan and prefix rows already carry their source and are left as priced; hosted calls are unchanged (a replayed plan is already counted as one call)",
+        "n_episodes": 114,
+        "n_episodes_with_cached_plan": 0,
+        "n_cached_plan_events": 0,
+        "n_source_missing": 0,
+        "n_cached_from_outside_packet_source": 0,
+        "n_usage_without_cache_split": 0,
+        "n_sft_plan_rows_left_as_priced": 0,
+        "noncached_tokens_added_per_episode": 0.0,
+        "usd_added_per_episode": 0.0,
+        "missing_examples": []
+      }
+    },
+    "source_and_layout": {
+      "advise_k10_starved": {
+        "n_episodes": 114,
+        "n_cached_plan_events": 114,
+        "cached_from": {
+          "hj1b_planner_20260915/planner_alone": 114
+        },
+        "n_cached_from_equals_hj1b_layout": 114,
+        "n_source_missing": 0,
+        "tokens_added_mean": 23905.587719,
+        "usd_added_mean": 0.003921
+      },
+      "advise_k3_starved": {
+        "n_episodes": 114,
+        "n_cached_plan_events": 114,
+        "cached_from": {
+          "hj1b_planner_20260915/planner_alone": 114
+        },
+        "n_cached_from_equals_hj1b_layout": 114,
+        "n_source_missing": 0,
+        "tokens_added_mean": 23905.587719,
+        "usd_added_mean": 0.003921
+      },
+      "advise_k10_fullctx": {
+        "n_episodes": 114,
+        "n_cached_plan_events": 114,
+        "cached_from": {
+          "hj1b_planner_20260915/planner_alone": 114
+        },
+        "n_cached_from_equals_hj1b_layout": 114,
+        "n_source_missing": 0,
+        "tokens_added_mean": 23905.587719,
+        "usd_added_mean": 0.003921
+      },
+      "takeover_k10": {
+        "n_episodes": 114,
+        "n_cached_plan_events": 114,
+        "cached_from": {
+          "hj1b_planner_20260915/planner_alone": 114
+        },
+        "n_cached_from_equals_hj1b_layout": 114,
+        "n_source_missing": 0,
+        "tokens_added_mean": 23905.587719,
+        "usd_added_mean": 0.003921
+      },
+      "advise_k1_fullctx": {
+        "n_episodes": 114,
+        "n_cached_plan_events": 114,
+        "cached_from": {
+          "hj1b_planner_20260915/planner_alone": 114
+        },
+        "n_cached_from_equals_hj1b_layout": 114,
+        "n_source_missing": 0,
+        "tokens_added_mean": 23905.587719,
+        "usd_added_mean": 0.003921
+      }
+    }
+  },
+  "sft_plan_usd_branch_finding": {
+    "arm": "hj8_sft_plan_bplus_20260921iaware/sft_plan (COST-01 plan_only; GANZ-03 floor)",
+    "n_episodes": 114,
+    "n_missing": 0,
+    "n_last_usage_is_the_plan_event": 0,
+    "usd_mean_as_priced_last_usage": 0.003015,
+    "usd_mean_if_priced_on_plan_event": 0.003921,
+    "tokens_mean_plan_event": 23905.587719,
+    "n_planner_usages_median": 13.0
+  },
+  "costfix": {
+    "defect": "j12_cost_axes.py:365-367 priced extract_events_usages(source)[-1], the source episode's LAST planner usage (for a planner_alone source its final action), as sft_plan's replayed plan; the floor's tokens were already the plan event (j8_noncached_cost.last_plan_event_noncached_tokens)",
+    "fix": "j12_cost_axes.py:365-367 now price replayed_plan_usage(source) -- sidekick.agents.planner._last_attempt_plan_event, the event CachedPacketPlanner replays",
+    "regeneration": {
+      "method": "COSTFIX regeneration (PBS only). The sft_plan branch of j12_cost_axes.price_arm_episodes now prices the\nreplayed plan event instead of the source's last planner usage, so every report that prices an sft_plan arm\nthrough it changes. This script:\n\n  * compares each committed report as of git HEAD (pre/, `git show HEAD:<path>`) with the fixed-code default\n    output (out2/def_*), and with a HEAD-code regeneration (out2/head_*) where one exists;\n  * writes the regenerated report into campaign/results (the script's own output; j17 is spliced section by\n    section only if a HEAD-code regeneration does not reproduce the committed file);\n  * writes out2/changed_keys.json: per report, every key whose value changes (old -> new), keys added and\n    removed (per-episode rows summarised), and Markdown line changes.\nReports that read no sft_plan arm through the branch (j16 F_f/F_g, b2) are checked and left untouched.",
+      "reports": {
+        "campaign/results/hj13_cost_axes_fixed_20260923.report.json": {
+          "report": "campaign/results/hj13_cost_axes_fixed_20260923.report.json",
+          "command": "j12_cost_axes.py default (see jobs.sh, def_fixed)",
+          "head_code_regeneration_equals_committed_minus_episode_rows": true,
+          "diff": {
+            "n_changed": 1,
+            "changed": [
+              {
+                "key": "arms.plan_only.usd_per_episode",
+                "old": 0.003015,
+                "new": 0.003921
+              }
+            ],
+            "added_per_episode_rows": {
+              "n_leaf_keys": 6270,
+              "arms": [
+                "advise_k10_fullctx",
+                "advise_k10_starved",
+                "advise_k3_starved",
+                "ceiling_cap25",
+                "ceiling_cap81",
+                "executor_alone",
+                "plan_only",
+                "prefix_m11",
+                "prefix_m6",
+                "prefix_m9",
+                "takeover_k10"
+              ],
+              "why": "arms.<arm>.episodes: per-episode rows the current price_arm_episodes writes (j12_cost_axes.py:469-478); the committed file predates them"
+            },
+            "added_other": [],
+            "removed": []
+          },
+          "written": "campaign/results/hj13_cost_axes_fixed_20260923.report.json",
+          "md_changes": [
+            "-| `plan_only` | 23905.6 | $0.0030 | 1.00 | null |",
+            "+| `plan_only` | 23905.6 | $0.0039 | 1.00 | null |"
+          ],
+          "written_md": "campaign/results/hj13_cost_axes_fixed_20260923.md"
+        },
+        "campaign/results/hj13_cost_axes_ni_20260923.report.json": {
+          "report": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+          "command": "j12_cost_axes.py default (see jobs.sh, def_ni)",
+          "head_code_regeneration_equals_committed_minus_episode_rows": true,
+          "diff": {
+            "n_changed": 3,
+            "changed": [
+              {
+                "key": "arms.plan_only.usd_per_episode",
+                "old": 0.003015,
+                "new": 0.003921
+              },
+              {
+                "key": "non_inferiority.comparisons.plan_only.axes.usd_per_episode.diff",
+                "old": -0.0452,
+                "new": -0.0443
+              },
+              {
+                "key": "non_inferiority.comparisons.plan_only.axes.usd_per_episode.ci95",
+                "old": [
+                  -0.0626,
+                  -0.0327
+                ],
+                "new": [
+                  -0.062,
+                  -0.0316
+                ]
+              }
+            ],
+            "added_per_episode_rows": {
+              "n_leaf_keys": 6270,
+              "arms": [
+                "advise_k10_fullctx",
+                "advise_k10_starved",
+                "advise_k3_starved",
+                "ceiling_cap25",
+                "ceiling_cap81",
+                "executor_alone",
+                "plan_only",
+                "prefix_m11",
+                "prefix_m6",
+                "prefix_m9",
+                "takeover_k10"
+              ],
+              "why": "arms.<arm>.episodes: per-episode rows the current price_arm_episodes writes (j12_cost_axes.py:469-478); the committed file predates them"
+            },
+            "added_other": [],
+            "removed": []
+          },
+          "written": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+          "md_changes": [
+            "-| `plan_only` | 23905.6 | $0.0030 | 1.00 | null |",
+            "+| `plan_only` | 23905.6 | $0.0039 | 1.00 | null |"
+          ],
+          "written_md": "campaign/results/hj13_cost_axes_ni_20260923.md"
+        },
+        "campaign/results/hj13_advice_at_price_cost_20260923.report.json": {
+          "report": "campaign/results/hj13_advice_at_price_cost_20260923.report.json",
+          "command": "j12_cost_axes.py default (see jobs.sh, def_aap)",
+          "head_code_regeneration_equals_committed_minus_episode_rows": true,
+          "diff": {
+            "n_changed": 0,
+            "changed": [],
+            "added_per_episode_rows": {
+              "n_leaf_keys": 2280,
+              "arms": [
+                "advise_k10_fullctx",
+                "advise_k1_fullctx",
+                "prefix_m11",
+                "prefix_m9"
+              ],
+              "why": "arms.<arm>.episodes: per-episode rows the current price_arm_episodes writes (j12_cost_axes.py:469-478); the committed file predates them"
+            },
+            "added_other": [],
+            "removed": []
+          },
+          "written": "campaign/results/hj13_advice_at_price_cost_20260923.report.json"
+        },
+        "campaign/results/j17_depth_fixes_20260924.report.json": {
+          "report": "campaign/results/j17_depth_fixes_20260924.report.json",
+          "command": "j17_depth_fixes.py --out <path> (defaults)",
+          "head_code_regeneration_vs_committed": {
+            "n_changed": 0,
+            "added": [],
+            "removed": [],
+            "changed": []
+          },
+          "fix_induced_sections": [
+            "ganz",
+            "inputs"
+          ],
+          "mode": "whole file: the fixed-code output (the HEAD-code regeneration reproduces the committed file except generated_at)",
+          "diff": {
+            "n_changed": 25,
+            "changed": [
+              {
+                "key": "ganz.bplus.m6.savings_retained.usd.point",
+                "old": 0.705794,
+                "new": 0.720237
+              },
+              {
+                "key": "ganz.bplus.m6.savings_retained.usd.ci95_scenario",
+                "old": [
+                  0.585535,
+                  0.793614
+                ],
+                "new": [
+                  0.60688,
+                  0.801879
+                ]
+              },
+              {
+                "key": "ganz.bplus.m6.savings_retained.usd.ci95_task",
+                "old": [
+                  0.631325,
+                  0.76373
+                ],
+                "new": [
+                  0.649372,
+                  0.77479
+                ]
+              },
+              {
+                "key": "ganz.bplus.m6.means.usd.floor",
+                "old": 0.003015,
+                "new": 0.003921
+              },
+              {
+                "key": "ganz.bplus.m9.savings_retained.usd.point",
+                "old": 0.554462,
+                "new": 0.565808
+              },
+              {
+                "key": "ganz.bplus.m9.savings_retained.usd.ci95_scenario",
+                "old": [
+                  0.382327,
+                  0.682195
+                ],
+                "new": [
+                  0.396071,
+                  0.6892
+                ]
+              },
+              {
+                "key": "ganz.bplus.m9.savings_retained.usd.ci95_task",
+                "old": [
+                  0.446,
+                  0.63902
+                ],
+                "new": [
+                  0.459213,
+                  0.648675
+                ]
+              },
+              {
+                "key": "ganz.bplus.m9.means.usd.floor",
+                "old": 0.003015,
+                "new": 0.003921
+              },
+              {
+                "key": "ganz.bplus.m11.savings_retained.usd.point",
+                "old": 0.468405,
+                "new": 0.47799
+              },
+              {
+                "key": "ganz.bplus.m11.savings_retained.usd.ci95_scenario",
+                "old": [
+                  0.270652,
+                  0.616782
+                ],
+                "new": [
+                  0.279525,
+                  0.62341
+                ]
+              },
+              {
+                "key": "ganz.bplus.m11.savings_retained.usd.ci95_task",
+                "old": [
+                  0.340691,
+                  0.570145
+                ],
+                "new": [
+                  0.350623,
+                  0.577713
+                ]
+              },
+              {
+                "key": "ganz.bplus.m11.means.usd.floor",
+                "old": 0.003015,
+                "new": 0.003921
+              },
+              {
+                "key": "ganz.zs.m6.savings_retained.usd.point",
+                "old": 0.705794,
+                "new": 0.720237
+              },
+              {
+                "key": "ganz.zs.m6.savings_retained.usd.ci95_scenario",
+                "old": [
+                  0.585535,
+                  0.793614
+                ],
+                "new": [
+                  0.60688,
+                  0.801879
+                ]
+              },
+              {
+                "key": "ganz.zs.m6.savings_retained.usd.ci95_task",
+                "old": [
+                  0.631325,
+                  0.76373
+                ],
+                "new": [
+                  0.649372,
+                  0.77479
+                ]
+              },
+              {
+                "key": "ganz.zs.m6.means.usd.floor",
+                "old": 0.003015,
+                "new": 0.003921
+              },
+              {
+                "key": "ganz.zs.m9.savings_retained.usd.point",
+                "old": 0.554462,
+                "new": 0.565808
+              },
+              {
+                "key": "ganz.zs.m9.savings_retained.usd.ci95_scenario",
+                "old": [
+                  0.382327,
+                  0.682195
+                ],
+                "new": [
+                  0.396071,
+                  0.6892
+                ]
+              },
+              {
+                "key": "ganz.zs.m9.savings_retained.usd.ci95_task",
+                "old": [
+                  0.446,
+                  0.63902
+                ],
+                "new": [
+                  0.459213,
+                  0.648675
+                ]
+              },
+              {
+                "key": "ganz.zs.m9.means.usd.floor",
+                "old": 0.003015,
+                "new": 0.003921
+              },
+              {
+                "key": "ganz.zs.m11.savings_retained.usd.point",
+                "old": 0.468405,
+                "new": 0.47799
+              },
+              {
+                "key": "ganz.zs.m11.savings_retained.usd.ci95_scenario",
+                "old": [
+                  0.270652,
+                  0.616782
+                ],
+                "new": [
+                  0.279525,
+                  0.62341
+                ]
+              },
+              {
+                "key": "ganz.zs.m11.savings_retained.usd.ci95_task",
+                "old": [
+                  0.340691,
+                  0.570145
+                ],
+                "new": [
+                  0.350623,
+                  0.577713
+                ]
+              },
+              {
+                "key": "ganz.zs.m11.means.usd.floor",
+                "old": 0.003015,
+                "new": 0.003921
+              },
+              {
+                "key": "inputs.campaign_dirs./scratch/n12194778/sidekick/results/hj8_sft_plan_bplus_20260921iaware/sft_plan.cost_rows.means.usd_per_episode",
+                "old": 0.003015,
+                "new": 0.003921
+              }
+            ],
+            "added_per_episode_rows": null,
+            "added_other": [],
+            "removed": []
+          },
+          "written": "campaign/results/j17_depth_fixes_20260924.report.json"
+        },
+        "campaign/results/j16_robustness_20260923.report.json": {
+          "written": null,
+          "why": "F_f / F_g price no sft_plan arm (FF_ARMS, j16_robustness.py:1667-1668); fixed-code sections equal the committed ones",
+          "F_f_cost_differences_equal": true,
+          "F_g_cost_contrasts_equal": true
+        },
+        "campaign/results/b2_decomposition_20260923.report.json": {
+          "written": null,
+          "why": "b2 does not use j12_cost_axes: USD is totals.usd_total and tokens the ledger (b2_decomposition.py:625-653)",
+          "cost_per_episode_equal": true
+        }
+      }
+    }
+  },
+  "j10_a1_floor": {
+    "question": "Does A1's arm 2 (sft_plan, the floor) reach the j12 sft_plan branch in the P2 cost report and the B3 chord f?",
+    "usd": "yes: j10_report's registered j12 run (A1 prereg :349, main_a1 --cost-report) prices arm 2 through price_arm_episodes, whose sft_plan branch is j12_cost_axes.py:361-367 -- the COSTFIX covers its USD. No registered A1 prediction reads USD.",
+    "tokens": "P2 (j10_report.py:1619-1625, 2757) and the chord (A1_AM1_CHORD, j10_report.py:3001-3006, 3263) read noncached_tokens_per_episode. For sft_plan that is j8_noncached_cost.attach_sft_plan_source_plan_tokens (called from j8_frontier.summarise_arm), which already reads the plan event (last_plan_event_noncached_tokens): not the defective branch.",
+    "residual_risk": "attach_sft_plan_source_plan_tokens is all-or-nothing: if any arm-2 key has no plan event in the arm-3 source, every arm-2 row keeps 0 replayed-plan tokens (route 'understatement'), c_floor is understated and f overstated. A fix belongs in j8_noncached_cost (charge the mapped rows, count the planless ones), not j10_report; described, not made."
+  },
+  "j16_attributed_reproduction": {
+    "attributed j16 F_f reproduction (against the attributed j12 report)": {
+      "n_checked": 30,
+      "n_matched": 30,
+      "all_match": true
+    },
+    "attributed j16 F_g reproduction (unified-frontier k3 cost read from the attributed j12 report)": {
+      "n_checked": 12,
+      "n_matched": 12,
+      "all_match": true
+    },
+    "attributed j16 F_f status": "computed",
+    "attributed j16 F_g status": "computed",
+    "F_g quality contrasts attributed == published": true
+  },
+  "figures": [
+    {
+      "id": "COST-01",
+      "report": "campaign/results/hj13_cost_axes_fixed_20260923.report.json",
+      "script": "scripts/analysis/j12_cost_axes.py main (price_arm_episodes / price_arm_episodes_attributed)",
+      "per_arm": {
+        "executor_alone": {
+          "published": {
+            "noncached_tokens_per_episode": 0.0,
+            "usd_per_episode": 0.0,
+            "hosted_calls_per_episode": 0.0
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 0.0,
+            "usd_per_episode": 0.0,
+            "hosted_calls_per_episode": 0.0
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 0.0,
+            "usd_per_episode": 0.0,
+            "hosted_calls_per_episode": 0.0
+          }
+        },
+        "plan_only": {
+          "published": {
+            "noncached_tokens_per_episode": 23905.587719,
+            "usd_per_episode": 0.003015,
+            "hosted_calls_per_episode": 1.0
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 23905.587719,
+            "usd_per_episode": 0.003921,
+            "hosted_calls_per_episode": 1.0
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 23905.587719,
+            "usd_per_episode": 0.003921,
+            "hosted_calls_per_episode": 1.0
+          }
+        },
+        "advise_k10_starved": {
+          "published": {
+            "noncached_tokens_per_episode": 43823.385965,
+            "usd_per_episode": 0.004386,
+            "hosted_calls_per_episode": 2.421053
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 43823.385965,
+            "usd_per_episode": 0.004386,
+            "hosted_calls_per_episode": 2.421053
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 67728.973684,
+            "usd_per_episode": 0.008308,
+            "hosted_calls_per_episode": 2.421053
+          }
+        },
+        "advise_k3_starved": {
+          "published": {
+            "noncached_tokens_per_episode": 204499.763158,
+            "usd_per_episode": 0.012203,
+            "hosted_calls_per_episode": 6.824561
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 204499.763158,
+            "usd_per_episode": 0.012203,
+            "hosted_calls_per_episode": 6.824561
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 228405.350877,
+            "usd_per_episode": 0.016125,
+            "hosted_calls_per_episode": 6.824561
+          }
+        },
+        "advise_k10_fullctx": {
+          "published": {
+            "noncached_tokens_per_episode": 49819.359649,
+            "usd_per_episode": 0.005494,
+            "hosted_calls_per_episode": 2.464912
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 49819.359649,
+            "usd_per_episode": 0.005494,
+            "hosted_calls_per_episode": 2.464912
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 73724.947368,
+            "usd_per_episode": 0.009416,
+            "hosted_calls_per_episode": 2.464912
+          }
+        },
+        "takeover_k10": {
+          "published": {
+            "noncached_tokens_per_episode": 41463.675439,
+            "usd_per_episode": 0.00482,
+            "hosted_calls_per_episode": 2.315789
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 41463.675439,
+            "usd_per_episode": 0.00482,
+            "hosted_calls_per_episode": 2.315789
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 65369.263158,
+            "usd_per_episode": 0.008742,
+            "hosted_calls_per_episode": 2.315789
+          }
+        },
+        "prefix_m6": {
+          "published": {
+            "noncached_tokens_per_episode": 221043.061404,
+            "usd_per_episode": 0.016268,
+            "hosted_calls_per_episode": 6.982456
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 221043.061404,
+            "usd_per_episode": 0.016268,
+            "hosted_calls_per_episode": 6.982456
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 221043.061404,
+            "usd_per_episode": 0.016268,
+            "hosted_calls_per_episode": 6.982456
+          }
+        },
+        "prefix_m9": {
+          "published": {
+            "noncached_tokens_per_episode": 357448.359649,
+            "usd_per_episode": 0.02274,
+            "hosted_calls_per_episode": 9.77193
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 357448.359649,
+            "usd_per_episode": 0.02274,
+            "hosted_calls_per_episode": 9.77193
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 357448.359649,
+            "usd_per_episode": 0.02274,
+            "hosted_calls_per_episode": 9.77193
+          }
+        },
+        "prefix_m11": {
+          "published": {
+            "noncached_tokens_per_episode": 443361.412281,
+            "usd_per_episode": 0.026475,
+            "hosted_calls_per_episode": 11.254386
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 443361.412281,
+            "usd_per_episode": 0.026475,
+            "hosted_calls_per_episode": 11.254386
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 443361.412281,
+            "usd_per_episode": 0.026475,
+            "hosted_calls_per_episode": 11.254386
+          }
+        },
+        "ceiling_cap25": {
+          "published": {
+            "noncached_tokens_per_episode": 684453.263158,
+            "usd_per_episode": 0.035479,
+            "hosted_calls_per_episode": 14.429825
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 684453.263158,
+            "usd_per_episode": 0.035479,
+            "hosted_calls_per_episode": 14.429825
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 684453.263158,
+            "usd_per_episode": 0.035479,
+            "hosted_calls_per_episode": 14.429825
+          }
+        },
+        "ceiling_cap81": {
+          "published": {
+            "noncached_tokens_per_episode": 1160215.149123,
+            "usd_per_episode": 0.048208,
+            "hosted_calls_per_episode": 17.350877
+          },
+          "fixed_default": {
+            "noncached_tokens_per_episode": 1160215.149123,
+            "usd_per_episode": 0.048208,
+            "hosted_calls_per_episode": 17.350877
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 1160215.149123,
+            "usd_per_episode": 0.048208,
+            "hosted_calls_per_episode": 17.350877
+          }
+        }
+      },
+      "columns": "published = committed at HEAD; fixed_default = regenerated with the COSTFIX sft_plan branch (only plan_only's USD moves); attributed = fixed branch + --attribute-cached-plans",
+      "takeover_cheaper_than_advise_k10_fullctx": {
+        "published": {
+          "noncached_tokens_per_episode": true,
+          "usd_per_episode": true,
+          "hosted_calls_per_episode": true,
+          "all_three": true
+        },
+        "attributed": {
+          "noncached_tokens_per_episode": true,
+          "usd_per_episode": true,
+          "hosted_calls_per_episode": true,
+          "all_three": true
+        }
+      },
+      "takeover_over_advise_k10_fullctx_ratio": {
+        "published": {
+          "noncached_tokens_per_episode": 0.83228,
+          "usd_per_episode": 0.877321,
+          "hosted_calls_per_episode": 0.939502
+        },
+        "attributed": {
+          "noncached_tokens_per_episode": 0.886664,
+          "usd_per_episode": 0.92842,
+          "hosted_calls_per_episode": 0.939502
+        }
+      },
+      "changed_arms": [
+        "advise_k10_fullctx",
+        "advise_k10_starved",
+        "advise_k3_starved",
+        "plan_only",
+        "takeover_k10"
+      ],
+      "changed_arms_by_costfix": [
+        "plan_only"
+      ],
+      "changed_arms_by_attribution": [
+        "advise_k10_fullctx",
+        "advise_k10_starved",
+        "advise_k3_starved",
+        "takeover_k10"
+      ],
+      "verdict_change": false
+    },
+    {
+      "id": "COST-02",
+      "report": "campaign/results/hj13_cost_axes_fixed_20260923.report.json",
+      "published": {
+        "ordering_is_stable_across_axes": false,
+        "n_flips": 2,
+        "flips": [
+          [
+            [
+              "advise_k10_starved",
+              "takeover_k10"
+            ],
+            "noncached_tokens_per_episode",
+            "usd_per_episode"
+          ],
+          [
+            [
+              "advise_k10_starved",
+              "takeover_k10"
+            ],
+            "usd_per_episode",
+            "hosted_calls_per_episode"
+          ]
+        ],
+        "ordering_by_axis": {
+          "noncached_tokens_per_episode": [
+            "executor_alone",
+            "plan_only",
+            "takeover_k10",
+            "advise_k10_starved",
+            "advise_k10_fullctx",
+            "advise_k3_starved",
+            "prefix_m6",
+            "prefix_m9",
+            "prefix_m11",
+            "ceiling_cap25",
+            "ceiling_cap81"
+          ],
+          "usd_per_episode": [
+            "executor_alone",
+            "plan_only",
+            "advise_k10_starved",
+            "takeover_k10",
+            "advise_k10_fullctx",
+            "advise_k3_starved",
+            "prefix_m6",
+            "prefix_m9",
+            "prefix_m11",
+            "ceiling_cap25",
+            "ceiling_cap81"
+          ],
+          "hosted_calls_per_episode": [
+            "executor_alone",
+            "plan_only",
+            "takeover_k10",
+            "advise_k10_starved",
+            "advise_k10_fullctx",
+            "advise_k3_starved",
+            "prefix_m6",
+            "prefix_m9",
+            "prefix_m11",
+            "ceiling_cap25",
+            "ceiling_cap81"
+          ]
+        },
+        "frontier_chain": {
+          "noncached_tokens_per_episode": {
+            "holds": true,
+            "broken_links": []
+          },
+          "usd_per_episode": {
+            "holds": true,
+            "broken_links": []
+          },
+          "hosted_calls_per_episode": {
+            "holds": true,
+            "broken_links": []
+          }
+        }
+      },
+      "attributed": {
+        "ordering_is_stable_across_axes": false,
+        "n_flips": 4,
+        "flips": [
+          [
+            [
+              "advise_k10_starved",
+              "takeover_k10"
+            ],
+            "noncached_tokens_per_episode",
+            "usd_per_episode"
+          ],
+          [
+            [
+              "advise_k10_starved",
+              "takeover_k10"
+            ],
+            "usd_per_episode",
+            "hosted_calls_per_episode"
+          ],
+          [
+            [
+              "advise_k3_starved",
+              "prefix_m6"
+            ],
+            "noncached_tokens_per_episode",
+            "hosted_calls_per_episode"
+          ],
+          [
+            [
+              "advise_k3_starved",
+              "prefix_m6"
+            ],
+            "noncached_tokens_per_episode",
+            "usd_per_episode"
+          ]
+        ],
+        "ordering_by_axis": {
+          "noncached_tokens_per_episode": [
+            "executor_alone",
+            "plan_only",
+            "takeover_k10",
+            "advise_k10_starved",
+            "advise_k10_fullctx",
+            "prefix_m6",
+            "advise_k3_starved",
+            "prefix_m9",
+            "prefix_m11",
+            "ceiling_cap25",
+            "ceiling_cap81"
+          ],
+          "usd_per_episode": [
+            "executor_alone",
+            "plan_only",
+            "advise_k10_starved",
+            "takeover_k10",
+            "advise_k10_fullctx",
+            "advise_k3_starved",
+            "prefix_m6",
+            "prefix_m9",
+            "prefix_m11",
+            "ceiling_cap25",
+            "ceiling_cap81"
+          ],
+          "hosted_calls_per_episode": [
+            "executor_alone",
+            "plan_only",
+            "takeover_k10",
+            "advise_k10_starved",
+            "advise_k10_fullctx",
+            "advise_k3_starved",
+            "prefix_m6",
+            "prefix_m9",
+            "prefix_m11",
+            "ceiling_cap25",
+            "ceiling_cap81"
+          ]
+        },
+        "frontier_chain": {
+          "noncached_tokens_per_episode": {
+            "holds": false,
+            "broken_links": [
+              [
+                [
+                  "advise_k3_starved"
+                ],
+                [
+                  "prefix_m6"
+                ]
+              ]
+            ]
+          },
+          "usd_per_episode": {
+            "holds": true,
+            "broken_links": []
+          },
+          "hosted_calls_per_episode": {
+            "holds": true,
+            "broken_links": []
+          }
+        }
+      },
+      "new_flips": [
+        [
+          [
+            "advise_k3_starved",
+            "prefix_m6"
+          ],
+          "noncached_tokens_per_episode",
+          "hosted_calls_per_episode"
+        ],
+        [
+          [
+            "advise_k3_starved",
+            "prefix_m6"
+          ],
+          "noncached_tokens_per_episode",
+          "usd_per_episode"
+        ]
+      ],
+      "ordering_change": true
+    },
+    {
+      "id": "COST-03",
+      "report": "campaign/results/hj13_cost_axes_ni_20260923.report.json",
+      "published": {
+        "ni_unchanged_across_axes": true,
+        "holds": {
+          "executor_alone": [
+            false,
+            false,
+            false
+          ],
+          "plan_only": [
+            false,
+            false,
+            false
+          ],
+          "advise_k10_starved": [
+            false,
+            false,
+            false
+          ],
+          "advise_k3_starved": [
+            false,
+            false,
+            false
+          ],
+          "advise_k10_fullctx": [
+            false,
+            false,
+            false
+          ],
+          "takeover_k10": [
+            false,
+            false,
+            false
+          ],
+          "prefix_m6": [
+            false,
+            false,
+            false
+          ],
+          "prefix_m9": [
+            false,
+            false,
+            false
+          ],
+          "prefix_m11": [
+            true,
+            true,
+            true
+          ],
+          "ceiling_cap25": [
+            true,
+            true,
+            true
+          ]
+        }
+      },
+      "attributed": {
+        "ni_unchanged_across_axes": true,
+        "holds": {
+          "executor_alone": [
+            false,
+            false,
+            false
+          ],
+          "plan_only": [
+            false,
+            false,
+            false
+          ],
+          "advise_k10_starved": [
+            false,
+            false,
+            false
+          ],
+          "advise_k3_starved": [
+            false,
+            false,
+            false
+          ],
+          "advise_k10_fullctx": [
+            false,
+            false,
+            false
+          ],
+          "takeover_k10": [
+            false,
+            false,
+            false
+          ],
+          "prefix_m6": [
+            false,
+            false,
+            false
+          ],
+          "prefix_m9": [
+            false,
+            false,
+            false
+          ],
+          "prefix_m11": [
+            true,
+            true,
+            true
+          ],
+          "ceiling_cap25": [
+            true,
+            true,
+            true
+          ]
+        }
+      },
+      "channel_arm_cost_axes": {
+        "advise_k10_starved": {
+          "published": {
+            "noncached_tokens_per_episode": {
+              "diff": -1116391.7632,
+              "ci95": [
+                -1715321.0088,
+                -687576.0439
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.0438,
+              "ci95": [
+                -0.0615,
+                -0.0313
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": {
+              "diff": -1092486.1754,
+              "ci95": [
+                -1691456.4474,
+                -663744.4211
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.0399,
+              "ci95": [
+                -0.0575,
+                -0.0274
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          }
+        },
+        "advise_k3_starved": {
+          "published": {
+            "noncached_tokens_per_episode": {
+              "diff": -955715.386,
+              "ci95": [
+                -1564758.2368,
+                -517880.5088
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.036,
+              "ci95": [
+                -0.0542,
+                -0.0228
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": {
+              "diff": -931809.7982,
+              "ci95": [
+                -1540832.5614,
+                -493998.2895
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.0321,
+              "ci95": [
+                -0.0503,
+                -0.0189
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          }
+        },
+        "advise_k10_fullctx": {
+          "published": {
+            "noncached_tokens_per_episode": {
+              "diff": -1110395.7895,
+              "ci95": [
+                -1704627.9474,
+                -683289.3947
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.0427,
+              "ci95": [
+                -0.0597,
+                -0.0304
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": {
+              "diff": -1086490.2018,
+              "ci95": [
+                -1680595.5789,
+                -659374.7368
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.0388,
+              "ci95": [
+                -0.0558,
+                -0.0265
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          }
+        },
+        "takeover_k10": {
+          "published": {
+            "noncached_tokens_per_episode": {
+              "diff": -1118751.4737,
+              "ci95": [
+                -1713640.0,
+                -689275.5175
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.0434,
+              "ci95": [
+                -0.0606,
+                -0.0309
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": {
+              "diff": -1094845.886,
+              "ci95": [
+                -1689634.6228,
+                -665414.2193
+              ],
+              "cost_reduced": true,
+              "holds": false
+            },
+            "usd_per_episode": {
+              "diff": -0.0395,
+              "ci95": [
+                -0.0566,
+                -0.027
+              ],
+              "cost_reduced": true,
+              "holds": false
+            }
+          }
+        }
+      },
+      "holds_changed": [],
+      "cost_reduced_changed": [],
+      "verdict_change": false
+    },
+    {
+      "id": "CHAN-PRICE-01 / CHAN-PRICE-02 (H2 P4) / A1 P2 dev reference (A1:343-345)",
+      "report": "campaign/results/hj13_advice_at_price_cost_20260923.report.json",
+      "published": {
+        "advise_k1_fullctx": {
+          "noncached_tokens_per_episode": 1414410.035088,
+          "usd_per_episode": 0.056224,
+          "hosted_calls_per_episode": 19.017544
+        },
+        "tokens_ratio_vs_prefix_m11": 3.190197,
+        "tokens_ratio_vs_prefix_m9": 3.956963,
+        "tokens_ratio_vs_advise_k10_fullctx": 28.390771,
+        "tokens_over_P4_top_700k": 2.020586,
+        "calls_ratio_vs_prefix_m11": 1.68979,
+        "usd_ratio_vs_prefix_m11": 2.123664,
+        "P4_in_300k_700k": false,
+        "P4_side": "above",
+        "A1_P2_at_least_2x_tokens": true,
+        "A1_P2_strictly_more_calls": true,
+        "advise_k10_fullctx": {
+          "noncached_tokens_per_episode": 49819.359649,
+          "usd_per_episode": 0.005494,
+          "hosted_calls_per_episode": 2.464912
+        },
+        "prefix_m11": {
+          "noncached_tokens_per_episode": 443361.412281,
+          "usd_per_episode": 0.026475,
+          "hosted_calls_per_episode": 11.254386
+        }
+      },
+      "attributed": {
+        "advise_k1_fullctx": {
+          "noncached_tokens_per_episode": 1438315.622807,
+          "usd_per_episode": 0.060146,
+          "hosted_calls_per_episode": 19.017544
+        },
+        "tokens_ratio_vs_prefix_m11": 3.244115,
+        "tokens_ratio_vs_prefix_m9": 4.023842,
+        "tokens_ratio_vs_advise_k10_fullctx": 19.509212,
+        "tokens_over_P4_top_700k": 2.054737,
+        "calls_ratio_vs_prefix_m11": 1.68979,
+        "usd_ratio_vs_prefix_m11": 2.271804,
+        "P4_in_300k_700k": false,
+        "P4_side": "above",
+        "A1_P2_at_least_2x_tokens": true,
+        "A1_P2_strictly_more_calls": true,
+        "advise_k10_fullctx": {
+          "noncached_tokens_per_episode": 73724.947368,
+          "usd_per_episode": 0.009416,
+          "hosted_calls_per_episode": 2.464912
+        },
+        "prefix_m11": {
+          "noncached_tokens_per_episode": 443361.412281,
+          "usd_per_episode": 0.026475,
+          "hosted_calls_per_episode": 11.254386
+        }
+      },
+      "verdict_change": {
+        "P4_in_300k_700k": false,
+        "P4_side": false,
+        "A1_P2_at_least_2x_tokens": false,
+        "A1_P2_strictly_more_calls": false
+      }
+    },
+    {
+      "id": "ROB-18 (+ ROB-27 task companions)",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_f_cost_differences.pairs[\"C1: takeover_k10 - advise_k10_fullctx\"]",
+      "script": "scripts/analysis/j16_robustness.py section_ff -> load_cost_rows -> j12.price_arm_episodes(_attributed) -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 41463.675439,
+            "mean_right": 49819.359649,
+            "diff": -8355.684211,
+            "ratio": 0.83228,
+            "scenario": {
+              "diff_ci95": [
+                -17743.614035,
+                617.026316
+              ],
+              "ratio_ci95": [
+                0.709704,
+                1.015656
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -18890.561404,
+                1596.210526
+              ],
+              "ratio_ci95": [
+                0.67521,
+                1.038
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 65369.263158,
+            "mean_right": 73724.947368,
+            "diff": -8355.684211,
+            "ratio": 0.886664,
+            "scenario": {
+              "diff_ci95": [
+                -17743.614035,
+                617.026316
+              ],
+              "ratio_ci95": [
+                0.792468,
+                1.009781
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -18890.561404,
+                1596.210526
+              ],
+              "ratio_ci95": [
+                0.770721,
+                1.023849
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.00482,
+            "mean_right": 0.005494,
+            "diff": -0.000674,
+            "ratio": 0.877294,
+            "scenario": {
+              "diff_ci95": [
+                -0.001361,
+                -2.4e-05
+              ],
+              "ratio_ci95": [
+                0.78489,
+                0.994574
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.001539,
+                0.000161
+              ],
+              "ratio_ci95": [
+                0.748154,
+                1.033632
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.008742,
+            "mean_right": 0.009416,
+            "diff": -0.000674,
+            "ratio": 0.928397,
+            "scenario": {
+              "diff_ci95": [
+                -0.001361,
+                -2.4e-05
+              ],
+              "ratio_ci95": [
+                0.868499,
+                0.997148
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.001539,
+                0.000161
+              ],
+              "ratio_ci95": [
+                0.846643,
+                1.018565
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 2.315789,
+            "mean_right": 2.464912,
+            "diff": -0.149123,
+            "ratio": 0.939502,
+            "scenario": {
+              "diff_ci95": [
+                -0.368421,
+                0.070175
+              ],
+              "ratio_ci95": [
+                0.864686,
+                1.032
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.377193,
+                0.070175
+              ],
+              "ratio_ci95": [
+                0.858086,
+                1.031621
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 2.315789,
+            "mean_right": 2.464912,
+            "diff": -0.149123,
+            "ratio": 0.939502,
+            "scenario": {
+              "diff_ci95": [
+                -0.368421,
+                0.070175
+              ],
+              "ratio_ci95": [
+                0.864686,
+                1.032
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.377193,
+                0.070175
+              ],
+              "ratio_ci95": [
+                0.858086,
+                1.031621
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": false
+        }
+      },
+      "unchanged": false
+    },
+    {
+      "id": "ROB-19 (+ ROB-27)",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_f_cost_differences.pairs[\"H2 (P2): advise_k1_fullctx - prefix_m11\"]",
+      "script": "scripts/analysis/j16_robustness.py section_ff -> load_cost_rows -> j12.price_arm_episodes(_attributed) -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 1414410.035088,
+            "mean_right": 443361.412281,
+            "diff": 971048.622807,
+            "ratio": 3.190197,
+            "scenario": {
+              "diff_ci95": [
+                638280.947368,
+                1379614.973684
+              ],
+              "ratio_ci95": [
+                2.46932,
+                4.057391
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                657408.885965,
+                1338106.263158
+              ],
+              "ratio_ci95": [
+                2.485119,
+                4.013378
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 1438315.622807,
+            "mean_right": 443361.412281,
+            "diff": 994954.210526,
+            "ratio": 3.244115,
+            "scenario": {
+              "diff_ci95": [
+                662172.973684,
+                1403568.236842
+              ],
+              "ratio_ci95": [
+                2.524088,
+                4.11152
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                681374.631579,
+                1362009.429825
+              ],
+              "ratio_ci95": [
+                2.538514,
+                4.066842
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.056224,
+            "mean_right": 0.026475,
+            "diff": 0.029749,
+            "ratio": 2.123643,
+            "scenario": {
+              "diff_ci95": [
+                0.019569,
+                0.04257
+              ],
+              "ratio_ci95": [
+                1.749315,
+                2.57076
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                0.020183,
+                0.041042
+              ],
+              "ratio_ci95": [
+                1.764883,
+                2.535372
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.060146,
+            "mean_right": 0.026475,
+            "diff": 0.03367,
+            "ratio": 2.27176,
+            "scenario": {
+              "diff_ci95": [
+                0.023406,
+                0.046516
+              ],
+              "ratio_ci95": [
+                1.896393,
+                2.719824
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                0.024117,
+                0.044951
+              ],
+              "ratio_ci95": [
+                1.912343,
+                2.683884
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 19.017544,
+            "mean_right": 11.254386,
+            "diff": 7.763158,
+            "ratio": 1.68979,
+            "scenario": {
+              "diff_ci95": [
+                5.807018,
+                10.008772
+              ],
+              "ratio_ci95": [
+                1.511574,
+                1.890924
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                6.04386,
+                9.552632
+              ],
+              "ratio_ci95": [
+                1.535942,
+                1.853563
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 19.017544,
+            "mean_right": 11.254386,
+            "diff": 7.763158,
+            "ratio": 1.68979,
+            "scenario": {
+              "diff_ci95": [
+                5.807018,
+                10.008772
+              ],
+              "ratio_ci95": [
+                1.511574,
+                1.890924
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                6.04386,
+                9.552632
+              ],
+              "ratio_ci95": [
+                1.535942,
+                1.853563
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        }
+      },
+      "unchanged": false
+    },
+    {
+      "id": "F_f H2: advise_k1_fullctx - prefix_m9 (not in a ledger row; for completeness)",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_f_cost_differences.pairs[\"H2: advise_k1_fullctx - prefix_m9\"]",
+      "script": "scripts/analysis/j16_robustness.py section_ff -> load_cost_rows -> j12.price_arm_episodes(_attributed) -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 1414410.035088,
+            "mean_right": 357448.359649,
+            "diff": 1056961.675439,
+            "ratio": 3.956963,
+            "scenario": {
+              "diff_ci95": [
+                720734.850877,
+                1471348.614035
+              ],
+              "ratio_ci95": [
+                3.050706,
+                5.061109
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                742083.552632,
+                1425540.27193
+              ],
+              "ratio_ci95": [
+                3.088592,
+                4.980469
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 1438315.622807,
+            "mean_right": 357448.359649,
+            "diff": 1080867.263158,
+            "ratio": 4.023842,
+            "scenario": {
+              "diff_ci95": [
+                744519.008772,
+                1495243.72807
+              ],
+              "ratio_ci95": [
+                3.118547,
+                5.126993
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                765976.614035,
+                1449446.280702
+              ],
+              "ratio_ci95": [
+                3.155762,
+                5.046768
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.056224,
+            "mean_right": 0.02274,
+            "diff": 0.033484,
+            "ratio": 2.47245,
+            "scenario": {
+              "diff_ci95": [
+                0.023061,
+                0.046524
+              ],
+              "ratio_ci95": [
+                2.029548,
+                3.018934
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                0.023849,
+                0.044824
+              ],
+              "ratio_ci95": [
+                2.048841,
+                2.958742
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.060146,
+            "mean_right": 0.02274,
+            "diff": 0.037405,
+            "ratio": 2.644895,
+            "scenario": {
+              "diff_ci95": [
+                0.026918,
+                0.050483
+              ],
+              "ratio_ci95": [
+                2.201021,
+                3.192024
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                0.027775,
+                0.048752
+              ],
+              "ratio_ci95": [
+                2.221028,
+                3.131966
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 19.017544,
+            "mean_right": 9.77193,
+            "diff": 9.245614,
+            "ratio": 1.94614,
+            "scenario": {
+              "diff_ci95": [
+                7.289474,
+                11.526316
+              ],
+              "ratio_ci95": [
+                1.747064,
+                2.175943
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                7.54386,
+                11.04386
+              ],
+              "ratio_ci95": [
+                1.771661,
+                2.129349
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 19.017544,
+            "mean_right": 9.77193,
+            "diff": 9.245614,
+            "ratio": 1.94614,
+            "scenario": {
+              "diff_ci95": [
+                7.289474,
+                11.526316
+              ],
+              "ratio_ci95": [
+                1.747064,
+                2.175943
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                7.54386,
+                11.04386
+              ],
+              "ratio_ci95": [
+                1.771661,
+                2.129349
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        }
+      },
+      "unchanged": false
+    },
+    {
+      "id": "ROB-19 prefix_m11 - ceiling_cap25 (no channel arm; unchanged check)",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_f_cost_differences.pairs[\"prefix_m11 - ceiling_cap25\"]",
+      "script": "scripts/analysis/j16_robustness.py section_ff -> load_cost_rows -> j12.price_arm_episodes(_attributed) -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 443361.412281,
+            "mean_right": 684453.263158,
+            "diff": -241091.850877,
+            "ratio": 0.64776,
+            "scenario": {
+              "diff_ci95": [
+                -364446.421053,
+                -141902.254386
+              ],
+              "ratio_ci95": [
+                0.550091,
+                0.756382
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -319662.72807,
+                -170146.754386
+              ],
+              "ratio_ci95": [
+                0.581542,
+                0.722208
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 443361.412281,
+            "mean_right": 684453.263158,
+            "diff": -241091.850877,
+            "ratio": 0.64776,
+            "scenario": {
+              "diff_ci95": [
+                -364446.421053,
+                -141902.254386
+              ],
+              "ratio_ci95": [
+                0.550091,
+                0.756382
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -319662.72807,
+                -170146.754386
+              ],
+              "ratio_ci95": [
+                0.581542,
+                0.722208
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.026475,
+            "mean_right": 0.035479,
+            "diff": -0.009003,
+            "ratio": 0.746233,
+            "scenario": {
+              "diff_ci95": [
+                -0.013422,
+                -0.005418
+              ],
+              "ratio_ci95": [
+                0.661275,
+                0.831095
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.011814,
+                -0.006447
+              ],
+              "ratio_ci95": [
+                0.690323,
+                0.805646
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.026475,
+            "mean_right": 0.035479,
+            "diff": -0.009003,
+            "ratio": 0.746233,
+            "scenario": {
+              "diff_ci95": [
+                -0.013422,
+                -0.005418
+              ],
+              "ratio_ci95": [
+                0.661275,
+                0.831095
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.011814,
+                -0.006447
+              ],
+              "ratio_ci95": [
+                0.690323,
+                0.805646
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 11.254386,
+            "mean_right": 14.429825,
+            "diff": -3.175439,
+            "ratio": 0.779939,
+            "scenario": {
+              "diff_ci95": [
+                -4.54386,
+                -1.938596
+              ],
+              "ratio_ci95": [
+                0.717033,
+                0.849448
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -4.078947,
+                -2.289474
+              ],
+              "ratio_ci95": [
+                0.73571,
+                0.829172
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 11.254386,
+            "mean_right": 14.429825,
+            "diff": -3.175439,
+            "ratio": 0.779939,
+            "scenario": {
+              "diff_ci95": [
+                -4.54386,
+                -1.938596
+              ],
+              "ratio_ci95": [
+                0.717033,
+                0.849448
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -4.078947,
+                -2.289474
+              ],
+              "ratio_ci95": [
+                0.73571,
+                0.829172
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        }
+      },
+      "unchanged": true
+    },
+    {
+      "id": "ROB-19 prefix_m11 - ceiling_cap81 (no channel arm; unchanged check)",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_f_cost_differences.pairs[\"prefix_m11 - ceiling_cap81\"]",
+      "script": "scripts/analysis/j16_robustness.py section_ff -> load_cost_rows -> j12.price_arm_episodes(_attributed) -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 443361.412281,
+            "mean_right": 1160215.149123,
+            "diff": -716853.736842,
+            "ratio": 0.382137,
+            "scenario": {
+              "diff_ci95": [
+                -1314074.061404,
+                -290352.552632
+              ],
+              "ratio_ci95": [
+                0.255369,
+                0.600448
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -1067861.263158,
+                -417814.95614
+              ],
+              "ratio_ci95": [
+                0.295332,
+                0.513672
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 443361.412281,
+            "mean_right": 1160215.149123,
+            "diff": -716853.736842,
+            "ratio": 0.382137,
+            "scenario": {
+              "diff_ci95": [
+                -1314074.061404,
+                -290352.552632
+              ],
+              "ratio_ci95": [
+                0.255369,
+                0.600448
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -1067861.263158,
+                -417814.95614
+              ],
+              "ratio_ci95": [
+                0.295332,
+                0.513672
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.026475,
+            "mean_right": 0.048208,
+            "diff": -0.021732,
+            "ratio": 0.549195,
+            "scenario": {
+              "diff_ci95": [
+                -0.039078,
+                -0.009341
+              ],
+              "ratio_ci95": [
+                0.406594,
+                0.737136
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.031921,
+                -0.013137
+              ],
+              "ratio_ci95": [
+                0.455143,
+                0.667706
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.026475,
+            "mean_right": 0.048208,
+            "diff": -0.021732,
+            "ratio": 0.549195,
+            "scenario": {
+              "diff_ci95": [
+                -0.039078,
+                -0.009341
+              ],
+              "ratio_ci95": [
+                0.406594,
+                0.737136
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.031921,
+                -0.013137
+              ],
+              "ratio_ci95": [
+                0.455143,
+                0.667706
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 11.254386,
+            "mean_right": 17.350877,
+            "diff": -6.096491,
+            "ratio": 0.648635,
+            "scenario": {
+              "diff_ci95": [
+                -9.333333,
+                -3.359649
+              ],
+              "ratio_ci95": [
+                0.548496,
+                0.76891
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -8.192982,
+                -4.122807
+              ],
+              "ratio_ci95": [
+                0.579535,
+                0.731377
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 11.254386,
+            "mean_right": 17.350877,
+            "diff": -6.096491,
+            "ratio": 0.648635,
+            "scenario": {
+              "diff_ci95": [
+                -9.333333,
+                -3.359649
+              ],
+              "ratio_ci95": [
+                0.548496,
+                0.76891
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -8.192982,
+                -4.122807
+              ],
+              "ratio_ci95": [
+                0.579535,
+                0.731377
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "resolution_change": false,
+          "direction_change": false
+        }
+      },
+      "unchanged": true
+    },
+    {
+      "id": "ROB-20 (+ ROB-27) advise_k3_starved - t_pre_m6",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_g_near_matched_advice.cost_contrasts_advise_k3_minus_prefix_m6.t_pre_m6",
+      "script": "scripts/analysis/j16_robustness.py section_fg -> load_cost_rows -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 204499.763158,
+            "mean_right": 221043.061404,
+            "diff": -16543.298246,
+            "ratio": 0.925158,
+            "scenario": {
+              "diff_ci95": [
+                -50765.45614,
+                20243.842105
+              ],
+              "ratio_ci95": [
+                0.77104,
+                1.091642
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -45132.184211,
+                13624.184211
+              ],
+              "ratio_ci95": [
+                0.796151,
+                1.062058
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 228405.350877,
+            "mean_right": 221043.061404,
+            "diff": 7362.289474,
+            "ratio": 1.033307,
+            "scenario": {
+              "diff_ci95": [
+                -26815.245614,
+                44169.254386
+              ],
+              "ratio_ci95": [
+                0.879391,
+                1.199586
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -21218.763158,
+                37569.078947
+              ],
+              "ratio_ci95": [
+                0.904312,
+                1.170063
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": true,
+          "ratio_crosses_1": true
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.012203,
+            "mean_right": 0.016268,
+            "diff": -0.004065,
+            "ratio": 0.750151,
+            "scenario": {
+              "diff_ci95": [
+                -0.005777,
+                -0.002266
+              ],
+              "ratio_ci95": [
+                0.652216,
+                0.856905
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.0054,
+                -0.002621
+              ],
+              "ratio_ci95": [
+                0.672236,
+                0.836923
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.016125,
+            "mean_right": 0.016268,
+            "diff": -0.000143,
+            "ratio": 0.991204,
+            "scenario": {
+              "diff_ci95": [
+                -0.001795,
+                0.001572
+              ],
+              "ratio_ci95": [
+                0.892686,
+                1.099206
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.001457,
+                0.001279
+              ],
+              "ratio_ci95": [
+                0.911349,
+                1.079782
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": true,
+          "direction_change": false,
+          "ratio_crosses_1": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 6.824561,
+            "mean_right": 6.982456,
+            "diff": -0.157895,
+            "ratio": 0.977387,
+            "scenario": {
+              "diff_ci95": [
+                -0.885965,
+                0.578947
+              ],
+              "ratio_ci95": [
+                0.872956,
+                1.082811
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.77193,
+                0.473684
+              ],
+              "ratio_ci95": [
+                0.889308,
+                1.067839
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 6.824561,
+            "mean_right": 6.982456,
+            "diff": -0.157895,
+            "ratio": 0.977387,
+            "scenario": {
+              "diff_ci95": [
+                -0.885965,
+                0.578947
+              ],
+              "ratio_ci95": [
+                0.872956,
+                1.082811
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.77193,
+                0.473684
+              ],
+              "ratio_ci95": [
+                0.889308,
+                1.067839
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": false,
+          "ratio_crosses_1": false
+        }
+      }
+    },
+    {
+      "id": "ROB-20 (+ ROB-27) advise_k3_starved - t_m6",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_g_near_matched_advice.cost_contrasts_advise_k3_minus_prefix_m6.t_m6",
+      "script": "scripts/analysis/j16_robustness.py section_fg -> load_cost_rows -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 204499.763158,
+            "mean_right": 221043.061404,
+            "diff": -16543.298246,
+            "ratio": 0.925158,
+            "scenario": {
+              "diff_ci95": [
+                -50765.45614,
+                20243.842105
+              ],
+              "ratio_ci95": [
+                0.77104,
+                1.091642
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -45132.184211,
+                13624.184211
+              ],
+              "ratio_ci95": [
+                0.796151,
+                1.062058
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 228405.350877,
+            "mean_right": 221043.061404,
+            "diff": 7362.289474,
+            "ratio": 1.033307,
+            "scenario": {
+              "diff_ci95": [
+                -26815.245614,
+                44169.254386
+              ],
+              "ratio_ci95": [
+                0.879391,
+                1.199586
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -21218.763158,
+                37569.078947
+              ],
+              "ratio_ci95": [
+                0.904312,
+                1.170063
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": true,
+          "ratio_crosses_1": true
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.012203,
+            "mean_right": 0.016268,
+            "diff": -0.004065,
+            "ratio": 0.750151,
+            "scenario": {
+              "diff_ci95": [
+                -0.005777,
+                -0.002266
+              ],
+              "ratio_ci95": [
+                0.652216,
+                0.856905
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.0054,
+                -0.002621
+              ],
+              "ratio_ci95": [
+                0.672236,
+                0.836923
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.016125,
+            "mean_right": 0.016268,
+            "diff": -0.000143,
+            "ratio": 0.991204,
+            "scenario": {
+              "diff_ci95": [
+                -0.001795,
+                0.001572
+              ],
+              "ratio_ci95": [
+                0.892686,
+                1.099206
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.001457,
+                0.001279
+              ],
+              "ratio_ci95": [
+                0.911349,
+                1.079782
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": true,
+          "direction_change": false,
+          "ratio_crosses_1": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 6.824561,
+            "mean_right": 6.982456,
+            "diff": -0.157895,
+            "ratio": 0.977387,
+            "scenario": {
+              "diff_ci95": [
+                -0.885965,
+                0.578947
+              ],
+              "ratio_ci95": [
+                0.872956,
+                1.082811
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.77193,
+                0.473684
+              ],
+              "ratio_ci95": [
+                0.889308,
+                1.067839
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 6.824561,
+            "mean_right": 6.982456,
+            "diff": -0.157895,
+            "ratio": 0.977387,
+            "scenario": {
+              "diff_ci95": [
+                -0.885965,
+                0.578947
+              ],
+              "ratio_ci95": [
+                0.872956,
+                1.082811
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.77193,
+                0.473684
+              ],
+              "ratio_ci95": [
+                0.889308,
+                1.067839
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": false,
+          "ratio_crosses_1": false
+        }
+      }
+    },
+    {
+      "id": "ROB-20 (+ ROB-27) advise_k3_starved - t_m6_rep",
+      "report": "campaign/results/j16_robustness_20260923.report.json",
+      "key": "F_g_near_matched_advice.cost_contrasts_advise_k3_minus_prefix_m6.t_m6_rep",
+      "script": "scripts/analysis/j16_robustness.py section_fg -> load_cost_rows -> cost_contrast",
+      "axes": {
+        "noncached_tokens_per_episode": {
+          "published": {
+            "mean_left": 204499.763158,
+            "mean_right": 221043.061404,
+            "diff": -16543.298246,
+            "ratio": 0.925158,
+            "scenario": {
+              "diff_ci95": [
+                -50765.45614,
+                20243.842105
+              ],
+              "ratio_ci95": [
+                0.77104,
+                1.091642
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -45132.184211,
+                13624.184211
+              ],
+              "ratio_ci95": [
+                0.796151,
+                1.062058
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 228405.350877,
+            "mean_right": 221043.061404,
+            "diff": 7362.289474,
+            "ratio": 1.033307,
+            "scenario": {
+              "diff_ci95": [
+                -26815.245614,
+                44169.254386
+              ],
+              "ratio_ci95": [
+                0.879391,
+                1.199586
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -21218.763158,
+                37569.078947
+              ],
+              "ratio_ci95": [
+                0.904312,
+                1.170063
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": true,
+          "ratio_crosses_1": true
+        },
+        "usd_per_episode": {
+          "published": {
+            "mean_left": 0.012203,
+            "mean_right": 0.016268,
+            "diff": -0.004065,
+            "ratio": 0.750151,
+            "scenario": {
+              "diff_ci95": [
+                -0.005777,
+                -0.002266
+              ],
+              "ratio_ci95": [
+                0.652216,
+                0.856905
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.0054,
+                -0.002621
+              ],
+              "ratio_ci95": [
+                0.672236,
+                0.836923
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 0.016125,
+            "mean_right": 0.016268,
+            "diff": -0.000143,
+            "ratio": 0.991204,
+            "scenario": {
+              "diff_ci95": [
+                -0.001795,
+                0.001572
+              ],
+              "ratio_ci95": [
+                0.892686,
+                1.099206
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.001457,
+                0.001279
+              ],
+              "ratio_ci95": [
+                0.911349,
+                1.079782
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": true,
+            "task_diff_excludes_0": true,
+            "scenario_ratio_excludes_1": true,
+            "task_ratio_excludes_1": true
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": true,
+          "direction_change": false,
+          "ratio_crosses_1": false
+        },
+        "hosted_calls_per_episode": {
+          "published": {
+            "mean_left": 6.824561,
+            "mean_right": 6.982456,
+            "diff": -0.157895,
+            "ratio": 0.977387,
+            "scenario": {
+              "diff_ci95": [
+                -0.885965,
+                0.578947
+              ],
+              "ratio_ci95": [
+                0.872956,
+                1.082811
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.77193,
+                0.473684
+              ],
+              "ratio_ci95": [
+                0.889308,
+                1.067839
+              ]
+            }
+          },
+          "attributed": {
+            "mean_left": 6.824561,
+            "mean_right": 6.982456,
+            "diff": -0.157895,
+            "ratio": 0.977387,
+            "scenario": {
+              "diff_ci95": [
+                -0.885965,
+                0.578947
+              ],
+              "ratio_ci95": [
+                0.872956,
+                1.082811
+              ]
+            },
+            "task": {
+              "diff_ci95": [
+                -0.77193,
+                0.473684
+              ],
+              "ratio_ci95": [
+                0.889308,
+                1.067839
+              ]
+            }
+          },
+          "published_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "attributed_resolves": {
+            "scenario_diff_excludes_0": false,
+            "task_diff_excludes_0": false,
+            "scenario_ratio_excludes_1": false,
+            "task_ratio_excludes_1": false
+          },
+          "resolution_change": false,
+          "direction_change": false,
+          "ratio_crosses_1": false
+        }
+      }
+    },
+    {
+      "id": "DEC-05",
+      "report": "campaign/results/b2_decomposition_20260923.report.json",
+      "key": "exploratory.cost_per_episode",
+      "script": "scripts/analysis/b2_decomposition.py arm_cost, called on a view whose planner tokens and totals.usd_total include each replayed plan's source plan (j12.episode_cached_plan_attribution)",
+      "per_arm": {
+        "T": {
+          "published": {
+            "noncached_tokens_per_episode": 41807.497076,
+            "usd_per_episode": 0.004777,
+            "hosted_calls_per_episode": 2.333333
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 65447.619883,
+            "usd_per_episode": 0.008802,
+            "hosted_calls_per_episode": 2.333333
+          }
+        },
+        "A": {
+          "published": {
+            "noncached_tokens_per_episode": 53214.461988,
+            "usd_per_episode": 0.005778,
+            "hosted_calls_per_episode": 2.520468
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 76854.584795,
+            "usd_per_episode": 0.009804,
+            "hosted_calls_per_episode": 2.520468
+          }
+        },
+        "S": {
+          "published": {
+            "noncached_tokens_per_episode": 42978.596491,
+            "usd_per_episode": 0.00515,
+            "hosted_calls_per_episode": 2.333333
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 66618.719298,
+            "usd_per_episode": 0.009175,
+            "hosted_calls_per_episode": 2.333333
+          }
+        },
+        "N": {
+          "published": {
+            "noncached_tokens_per_episode": 44957.795322,
+            "usd_per_episode": 0.005836,
+            "hosted_calls_per_episode": 2.292398
+          },
+          "attributed": {
+            "noncached_tokens_per_episode": 68597.918129,
+            "usd_per_episode": 0.009862,
+            "hosted_calls_per_episode": 2.292398
+          }
+        }
+      },
+      "published_order": {
+        "noncached_tokens_per_episode": [
+          "T",
+          "S",
+          "N",
+          "A"
+        ],
+        "usd_per_episode": [
+          "T",
+          "S",
+          "A",
+          "N"
+        ],
+        "hosted_calls_per_episode": [
+          "N",
+          "S",
+          "T",
+          "A"
+        ]
+      },
+      "attributed_order": {
+        "noncached_tokens_per_episode": [
+          "T",
+          "S",
+          "N",
+          "A"
+        ],
+        "usd_per_episode": [
+          "T",
+          "S",
+          "A",
+          "N"
+        ],
+        "hosted_calls_per_episode": [
+          "N",
+          "S",
+          "T",
+          "A"
+        ]
+      },
+      "attribution_stats": {
+        "b2_calls": 4,
+        "b2_episodes": 684,
+        "b2_events_missing": 0,
+        "b2_cached_plan_events": 684,
+        "b2_source_missing": 0,
+        "b2_by_arm": {
+          "b1_takeover_fixed_k_10_s3_20260923+hj12_takeover_fixed_k_10_20260923": {
+            "n": 171,
+            "cached": 171,
+            "tokens_added": 4042461.0,
+            "usd_added": 0.6883433599999996,
+            "campaigns": {
+              "hj12_takeover_fixed_k_10_20260923": 114,
+              "b1_takeover_fixed_k_10_s3_20260923": 57
+            }
+          },
+          "b1_advise_fixed_k_10_fullctx_s3_20260923+hj12_advise_fixed_k_10_fullctx_20260923": {
+            "n": 171,
+            "cached": 171,
+            "tokens_added": 4042461.0,
+            "usd_added": 0.6883433599999996,
+            "campaigns": {
+              "hj12_advise_fixed_k_10_fullctx_20260923": 114,
+              "b1_advise_fixed_k_10_fullctx_s3_20260923": 57
+            }
+          },
+          "b2_show_fixed_k_10_20260923+b2_show_fixed_k_10_s3_20260923": {
+            "n": 171,
+            "cached": 171,
+            "tokens_added": 4042461.0,
+            "usd_added": 0.6883433599999996,
+            "campaigns": {
+              "b2_show_fixed_k_10_20260923": 114,
+              "b2_show_fixed_k_10_s3_20260923": 57
+            }
+          },
+          "b2_advise_neutral_fixed_k_10_fullctx_20260923+b2_advise_neutral_fixed_k_10_fullctx_s3_20260923": {
+            "n": 171,
+            "cached": 171,
+            "tokens_added": 4042461.0,
+            "usd_added": 0.6883433599999996,
+            "campaigns": {
+              "b2_advise_neutral_fixed_k_10_fullctx_20260923": 114,
+              "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923": 57
+            }
+          }
+        }
+      },
+      "note": "b2 prices USD from the runtime ledger (totals.usd_total), not j12's price card; the added source-plan USD is j12's price.",
+      "ordering_change": false,
+      "rest_of_b2_report_unchanged": true
+    },
+    {
+      "id": "QUAL-03",
+      "report": "campaign/results/hj12_unified_frontier_20260922.report.json (arms.advise_fixed_k_3.cost_per_episode 204499.763158 = COST-01 advise_k3_starved)",
+      "published": {
+        "advise_k3_starved_tokens": 204499.763158,
+        "prefix_m6_tokens": 221043.061404,
+        "advise_k3_share_of_cap25": 0.298778,
+        "prefix_m6_share_of_cap25": 0.322948,
+        "advise_k3_cheaper_than_prefix_m6_tokens": true
+      },
+      "attributed": {
+        "advise_k3_starved_tokens": 228405.350877,
+        "prefix_m6_tokens": 221043.061404,
+        "advise_k3_share_of_cap25": 0.333705,
+        "prefix_m6_share_of_cap25": 0.322948,
+        "advise_k3_cheaper_than_prefix_m6_tokens": false
+      },
+      "ordering_change": true,
+      "note": "recomputed from the j12 cost-axes run (same campaigns, same noncached cost key), not by re-running the unified-frontier script; share denominator = ceiling_cap25 tokens [INFERRED from 204.5k / 684,453 = 29.9%]"
+    },
+    {
+      "id": "GANZ-03 (dollars) / COST-04",
+      "report": "campaign/results/j17_depth_fixes_20260924.report.json",
+      "key": "ganz.<receiver>.<m>.savings_retained.usd (point, ci95_scenario, ci95_task); means.usd.floor",
+      "published": {
+        "bplus": {
+          "m6": {
+            "point": 0.705794,
+            "ci95_scenario": [
+              0.585535,
+              0.793614
+            ],
+            "ci95_task": [
+              0.631325,
+              0.76373
+            ],
+            "usd_means": {
+              "arm": 0.016311,
+              "floor": 0.003015,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m9": {
+            "point": 0.554462,
+            "ci95_scenario": [
+              0.382327,
+              0.682195
+            ],
+            "ci95_task": [
+              0.446,
+              0.63902
+            ],
+            "usd_means": {
+              "arm": 0.02315,
+              "floor": 0.003015,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m11": {
+            "point": 0.468405,
+            "ci95_scenario": [
+              0.270652,
+              0.616782
+            ],
+            "ci95_task": [
+              0.340691,
+              0.570145
+            ],
+            "usd_means": {
+              "arm": 0.027039,
+              "floor": 0.003015,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "falls_with_depth": true,
+          "every_interval_excludes_zero": true
+        },
+        "zs": {
+          "m6": {
+            "point": 0.705794,
+            "ci95_scenario": [
+              0.585535,
+              0.793614
+            ],
+            "ci95_task": [
+              0.631325,
+              0.76373
+            ],
+            "usd_means": {
+              "arm": 0.016311,
+              "floor": 0.003015,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m9": {
+            "point": 0.554462,
+            "ci95_scenario": [
+              0.382327,
+              0.682195
+            ],
+            "ci95_task": [
+              0.446,
+              0.63902
+            ],
+            "usd_means": {
+              "arm": 0.02315,
+              "floor": 0.003015,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m11": {
+            "point": 0.468405,
+            "ci95_scenario": [
+              0.270652,
+              0.616782
+            ],
+            "ci95_task": [
+              0.340691,
+              0.570145
+            ],
+            "usd_means": {
+              "arm": 0.027039,
+              "floor": 0.003015,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "falls_with_depth": true,
+          "every_interval_excludes_zero": true
+        }
+      },
+      "fixed_floor": {
+        "bplus": {
+          "m6": {
+            "point": 0.720237,
+            "ci95_scenario": [
+              0.60688,
+              0.801879
+            ],
+            "ci95_task": [
+              0.649372,
+              0.77479
+            ],
+            "usd_means": {
+              "arm": 0.016311,
+              "floor": 0.003921,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m9": {
+            "point": 0.565808,
+            "ci95_scenario": [
+              0.396071,
+              0.6892
+            ],
+            "ci95_task": [
+              0.459213,
+              0.648675
+            ],
+            "usd_means": {
+              "arm": 0.02315,
+              "floor": 0.003921,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m11": {
+            "point": 0.47799,
+            "ci95_scenario": [
+              0.279525,
+              0.62341
+            ],
+            "ci95_task": [
+              0.350623,
+              0.577713
+            ],
+            "usd_means": {
+              "arm": 0.027039,
+              "floor": 0.003921,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "falls_with_depth": true,
+          "every_interval_excludes_zero": true
+        },
+        "zs": {
+          "m6": {
+            "point": 0.720237,
+            "ci95_scenario": [
+              0.60688,
+              0.801879
+            ],
+            "ci95_task": [
+              0.649372,
+              0.77479
+            ],
+            "usd_means": {
+              "arm": 0.016311,
+              "floor": 0.003921,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m9": {
+            "point": 0.565808,
+            "ci95_scenario": [
+              0.396071,
+              0.6892
+            ],
+            "ci95_task": [
+              0.459213,
+              0.648675
+            ],
+            "usd_means": {
+              "arm": 0.02315,
+              "floor": 0.003921,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "m11": {
+            "point": 0.47799,
+            "ci95_scenario": [
+              0.279525,
+              0.62341
+            ],
+            "ci95_task": [
+              0.350623,
+              0.577713
+            ],
+            "usd_means": {
+              "arm": 0.027039,
+              "floor": 0.003921,
+              "ceiling": 0.048208
+            },
+            "n_triples": 114
+          },
+          "falls_with_depth": true,
+          "every_interval_excludes_zero": true
+        }
+      },
+      "verdict_change": {
+        "bplus": {
+          "falls_with_depth": false,
+          "every_interval_excludes_zero": false
+        },
+        "zs": {
+          "falls_with_depth": false,
+          "every_interval_excludes_zero": false
+        }
+      },
+      "hosted_calls_unchanged": true,
+      "cost_share_unchanged (COST-04)": true,
+      "unchanged_under_attribution": true,
+      "reason": "GANZ-03's USD savings retained = (c_ceil - c_arm) / (c_ceil - c_floor) (j17_depth_fixes.py:574); the floor is sft_plan, priced by the COSTFIX branch. COST-04's cost share has no floor. No channel arm: attribution changes nothing here."
+    },
+    {
+      "id": "COST-01 plan_only USD (COSTFIX)",
+      "report": "campaign/results/hj13_cost_axes_fixed_20260923.report.json",
+      "key": "arms.plan_only.usd_per_episode",
+      "published": 0.003015,
+      "fixed": 0.003921,
+      "tokens_unchanged": true,
+      "ordering_by_axis_unchanged": true,
+      "ni_plan_only_usd": {
+        "published": {
+          "diff": -0.0452,
+          "ci95": [
+            -0.0626,
+            -0.0327
+          ],
+          "cost_reduced": true,
+          "holds": false
+        },
+        "fixed": {
+          "diff": -0.0443,
+          "ci95": [
+            -0.062,
+            -0.0316
+          ],
+          "cost_reduced": true,
+          "holds": false
+        }
+      }
+    }
+  ],
+  "printed_statements": [
+    {
+      "where": [
+        "paper/preprint_dev_v2_20260924.md:80",
+        ":150",
+        ":334",
+        "CHAN-PRICE-02"
+      ],
+      "printed": "1,414,410 non-cached tokens per episode (advise_k1_fullctx)",
+      "attributed": 1438315.622807,
+      "change": "value only; P4 [300k, 700k] still fails on the high side"
+    },
+    {
+      "where": [
+        "CHAN-PRICE-02"
+      ],
+      "printed": "about 2.0x the top of the predicted range",
+      "attributed": 2.054737,
+      "change": "value only"
+    },
+    {
+      "where": [
+        "CHAN-PRICE-01 ('3.2x the action channel's token budget')",
+        "CHAN-PRICE-02 ('3.2x prefix_m11')",
+        "paper :152 / A1 prereg :343 ('3.19x [2.47, 4.06]', ROB-19)"
+      ],
+      "printed": "3.19x [2.47, 4.06] scenario (task [2.49, 4.01])",
+      "attributed": {
+        "ratio": 3.244115,
+        "scenario": [
+          2.524088,
+          4.11152
+        ],
+        "task": [
+          2.538514,
+          4.066842
+        ]
+      },
+      "change": "value only; A1 P2's >= 2x holds either way"
+    },
+    {
+      "where": [
+        "CHAN-PRICE-02"
+      ],
+      "printed": "28.4x advise_fixed_k_10_fullctx's 49,819 tokens",
+      "attributed": {
+        "ratio": 19.509212,
+        "advise_k10_fullctx_tokens": 73724.947368
+      },
+      "change": "value only (the multiplier falls by about a third)"
+    },
+    {
+      "where": [
+        "ROB-19",
+        "paper :345 (calls only)"
+      ],
+      "printed": "2.12x the USD [1.75, 2.57] (task [1.76, 2.54])",
+      "attributed": {
+        "ratio": 2.27176,
+        "scenario": [
+          1.896393,
+          2.719824
+        ],
+        "task": [
+          1.912343,
+          2.683884
+        ]
+      },
+      "change": "value only; the 1.69x calls figure is unchanged"
+    },
+    {
+      "where": [
+        "paper :340-341 Table B1"
+      ],
+      "printed": "advise_k10_fullctx 49,819; advise_k1_fullctx 1,414,410 tokens/episode",
+      "attributed": {
+        "advise_k10_fullctx": 73724.947368,
+        "advise_k1_fullctx": 1438315.622807
+      },
+      "change": "values only; calls columns (2.46, 19.02) unchanged"
+    },
+    {
+      "where": [
+        "paper :540-543 (appendix frontier table)",
+        "COST-01 frontier"
+      ],
+      "printed": "advise_fixed_k_10 43,823 / $0.004386; fullctx 49,819 / $0.005494; takeover 41,464 / $0.004820; advise_fixed_k_3 204,500 / $0.012203",
+      "attributed": {
+        "advise_k10_starved": {
+          "tokens": 67728.973684,
+          "usd": 0.008308
+        },
+        "advise_k3_starved": {
+          "tokens": 228405.350877,
+          "usd": 0.016125
+        },
+        "advise_k10_fullctx": {
+          "tokens": 73724.947368,
+          "usd": 0.009416
+        },
+        "takeover_k10": {
+          "tokens": 65369.263158,
+          "usd": 0.008742
+        }
+      },
+      "change": "values; advise_fixed_k_3 now above prefix_m6 on tokens (COST-02, QUAL-03)"
+    },
+    {
+      "where": [
+        "paper :552",
+        "ROB-18"
+      ],
+      "printed": "-8,356 tokens [-17,744, +617], -$0.000674 [-0.001361, -0.000024] (task [-0.001539, +0.000161]), -0.149 calls",
+      "attributed": {
+        "tokens_diff": -8355.684211,
+        "tokens_ci": [
+          -17743.614035,
+          617.026316
+        ],
+        "usd_diff": -0.000674,
+        "usd_ci": [
+          -0.001361,
+          -2.4e-05
+        ],
+        "usd_task_ci": [
+          -0.001539,
+          0.000161
+        ]
+      },
+      "change": "none: the replayed plan is the same source plan in both arms of every pair, so it cancels"
+    },
+    {
+      "where": [
+        "paper :552",
+        "DEC-05"
+      ],
+      "printed": "takeover 41.8k vs 53.2k correction-prompt advice; $0.00478 vs $0.00578",
+      "attributed": {
+        "T_tokens": 65447.619883,
+        "A_tokens": 76854.584795,
+        "T_usd": 0.008802,
+        "A_usd": 0.009804
+      },
+      "change": "values only; takeover still cheapest on tokens and USD"
+    },
+    {
+      "where": [
+        "ROB-20",
+        "ROB-27",
+        "paper :345 (quality only)"
+      ],
+      "printed": "token ratio 0.925x [0.771, 1.092]; USD ratio 0.750x [0.652, 0.857] (task [0.672, 0.837])",
+      "attributed": {
+        "tokens": [
+          1.033307,
+          [
+            0.879391,
+            1.199586
+          ],
+          [
+            0.904312,
+            1.170063
+          ]
+        ],
+        "usd": [
+          0.991204,
+          [
+            0.892686,
+            1.099206
+          ],
+          [
+            0.911349,
+            1.079782
+          ]
+        ]
+      },
+      "change": "VERDICT: the USD ratio interval no longer excludes 1 on either clustering, so 'quality-null at a lower USD cost' does not hold; the token point ratio crosses 1"
+    },
+    {
+      "where": [
+        "QUAL-03"
+      ],
+      "printed": "advise_fixed_k_3 at 204.5k tokens (30%) vs prefix_m6 about 221k (32%)",
+      "attributed": {
+        "advise_k3_starved_tokens": 228405.350877,
+        "prefix_m6_tokens": 221043.061404,
+        "advise_k3_share_of_cap25": 0.333705,
+        "prefix_m6_share_of_cap25": 0.322948,
+        "advise_k3_cheaper_than_prefix_m6_tokens": false
+      },
+      "change": "ORDERING: advise_fixed_k_3 now costs more tokens than prefix_m6"
+    },
+    {
+      "where": [
+        "paper :539 (appendix frontier table, plan_only USD)",
+        "COST-01"
+      ],
+      "printed": "$0.003015",
+      "fixed": 0.003921,
+      "change": "COSTFIX: the floor's USD was its source's last planner action, not the replayed plan; tokens 23,906 unchanged"
+    },
+    {
+      "where": [
+        "paper :554",
+        "GANZ-03"
+      ],
+      "printed": "dollar savings retained 0.7058 / 0.5545 / 0.4684 (m=6/9/11); m=11 dollar intervals [0.27, 0.62] and [0.34, 0.57]",
+      "fixed": {
+        "bplus": {
+          "m6": [
+            0.720237,
+            [
+              0.60688,
+              0.801879
+            ],
+            [
+              0.649372,
+              0.77479
+            ]
+          ],
+          "m9": [
+            0.565808,
+            [
+              0.396071,
+              0.6892
+            ],
+            [
+              0.459213,
+              0.648675
+            ]
+          ],
+          "m11": [
+            0.47799,
+            [
+              0.279525,
+              0.62341
+            ],
+            [
+              0.350623,
+              0.577713
+            ]
+          ]
+        },
+        "zs": {
+          "m6": [
+            0.720237,
+            [
+              0.60688,
+              0.801879
+            ],
+            [
+              0.649372,
+              0.77479
+            ]
+          ],
+          "m9": [
+            0.565808,
+            [
+              0.396071,
+              0.6892
+            ],
+            [
+              0.459213,
+              0.648675
+            ]
+          ],
+          "m11": [
+            0.47799,
+            [
+              0.279525,
+              0.62341
+            ],
+            [
+              0.350623,
+              0.577713
+            ]
+          ]
+        }
+      },
+      "change": "COSTFIX: the floor is sft_plan; a dearer floor narrows c_ceil - c_floor, so every dollar savings retained rises"
+    }
+  ]
+}
