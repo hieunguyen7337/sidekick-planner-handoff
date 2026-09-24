@@ -1,0 +1,305 @@
+{
+  "generated_by": "scripts/analysis/j12_power.py",
+  "split": "dev",
+  "prereg": "docs/prereg_j12_depth_test_20260924.md",
+  "purpose": "power of J12's D1-D4 (one Holm family of m = 4) at the test design, from the dev depth family",
+  "design": {
+    "n_scenarios": 56,
+    "tasks_per_scenario": "as on dev (3)",
+    "seeds_per_task": 2,
+    "dev_seeds_available": [
+      1,
+      2,
+      3
+    ]
+  },
+  "analysis": {
+    "interval": "scenario-cluster percentile, 95%",
+    "p": "bootstrap, 'greater' at 0",
+    "multiplicity": "Holm across D1-D4",
+    "alpha": 0.05,
+    "supported": "Holm-adjusted p <= alpha and CI lower bound > 0",
+    "handoff_only": "\u03a3 d\u00b7h / \u03a3 h, h from the m11 arm"
+  },
+  "n_sims": 1000,
+  "n_boot_per_sim": 2000,
+  "seed": 20260924,
+  "seed_half_effect": 20260925,
+  "specs": {
+    "D1": {
+      "left": "bplus_m11",
+      "right": "bplus_m6",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "J12",
+      "handoff_only": false
+    },
+    "D2": {
+      "left": "zs_m11",
+      "right": "zs_m6",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "J12",
+      "handoff_only": false
+    },
+    "D3": {
+      "left": "bplus_m11",
+      "right": "bplus_m6",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "J12",
+      "handoff_only": true
+    },
+    "D4": {
+      "left": "zs_m11",
+      "right": "zs_m6",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "J12",
+      "handoff_only": true
+    }
+  },
+  "dev": {
+    "D1": {
+      "n_pairs": 171,
+      "diff_pp": 8.39,
+      "ci95_pp_scenario": [
+        4.2,
+        12.63
+      ],
+      "ci95_pp_task": [
+        4.09,
+        12.96
+      ],
+      "n_handoff": 71,
+      "n_scenarios": 19
+    },
+    "D2": {
+      "n_pairs": 171,
+      "diff_pp": 7.7,
+      "ci95_pp_scenario": [
+        3.69,
+        12.06
+      ],
+      "ci95_pp_task": [
+        3.14,
+        12.3
+      ],
+      "n_handoff": 71,
+      "n_scenarios": 19
+    },
+    "D3": {
+      "n_pairs": 171,
+      "n_handoff": 71,
+      "diff_pp": 12.03,
+      "ci95_pp_scenario": [
+        5.51,
+        18.53
+      ],
+      "note": "ratio estimator \u03a3d\u00b7h/\u03a3h, numpy scenario bootstrap (10k, seed 20260924)",
+      "n_scenarios": 19
+    },
+    "D4": {
+      "n_pairs": 171,
+      "n_handoff": 71,
+      "diff_pp": 13.93,
+      "ci95_pp_scenario": [
+        5.09,
+        21.07
+      ],
+      "note": "ratio estimator \u03a3d\u00b7h/\u03a3h, numpy scenario bootstrap (10k, seed 20260924)",
+      "n_scenarios": 19
+    }
+  },
+  "dev_check_against_j17": {
+    "status": "ok",
+    "path": "campaign/results/j17_depth_fixes_20260924.report.json",
+    "rows": {
+      "D1": {
+        "key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.all",
+        "j17_diff_pp": 8.39,
+        "j17_n_pairs": 171,
+        "seen_diff_pp": 8.39,
+        "matches": true
+      },
+      "D2": {
+        "key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.all",
+        "j17_diff_pp": 7.7,
+        "j17_n_pairs": 171,
+        "seen_diff_pp": 7.7,
+        "matches": true
+      },
+      "D3": {
+        "key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only",
+        "j17_diff_pp": 12.03,
+        "j17_n_pairs": 71,
+        "seen_diff_pp": 12.03,
+        "matches": true
+      },
+      "D4": {
+        "key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only",
+        "j17_diff_pp": 13.93,
+        "j17_n_pairs": 71,
+        "seen_diff_pp": 13.93,
+        "matches": true
+      }
+    },
+    "all_match": true
+  },
+  "power_table": {
+    "at_dev_effect": {
+      "D1": 1.0,
+      "D2": 0.999,
+      "D3": 0.998,
+      "D4": 0.987,
+      "all_four_supported": 0.985,
+      "D1_and_D2_supported": 0.999
+    },
+    "at_half_effect": {
+      "D1": 0.672,
+      "D2": 0.601,
+      "D3": 0.604,
+      "D4": 0.515,
+      "all_four_supported": 0.328,
+      "D1_and_D2_supported": 0.463
+    },
+    "value": "rate of Holm-supported per D; the family; D1 and D2 jointly"
+  },
+  "power_at_dev_effect": {
+    "per_contrast": {
+      "D1": {
+        "excludes_on_predicted_side": 1.0,
+        "lower_above": 1.0,
+        "upper_below": 0.0,
+        "holm_supported": 1.0
+      },
+      "D2": {
+        "excludes_on_predicted_side": 0.999,
+        "lower_above": 0.999,
+        "upper_below": 0.0,
+        "holm_supported": 0.999
+      },
+      "D3": {
+        "excludes_on_predicted_side": 0.998,
+        "lower_above": 0.998,
+        "upper_below": 0.0,
+        "holm_supported": 0.998
+      },
+      "D4": {
+        "excludes_on_predicted_side": 0.987,
+        "lower_above": 0.987,
+        "upper_below": 0.0,
+        "holm_supported": 0.987
+      }
+    },
+    "families_all_supported": {
+      "J12": 0.985
+    },
+    "joint_supported": {
+      "D1 and D2": 0.999
+    }
+  },
+  "power_at_half_effect": {
+    "per_contrast": {
+      "D1": {
+        "excludes_on_predicted_side": 0.799,
+        "lower_above": 0.799,
+        "upper_below": 0.0,
+        "holm_supported": 0.672
+      },
+      "D2": {
+        "excludes_on_predicted_side": 0.724,
+        "lower_above": 0.724,
+        "upper_below": 0.0,
+        "holm_supported": 0.601
+      },
+      "D3": {
+        "excludes_on_predicted_side": 0.709,
+        "lower_above": 0.709,
+        "upper_below": 0.0,
+        "holm_supported": 0.604
+      },
+      "D4": {
+        "excludes_on_predicted_side": 0.604,
+        "lower_above": 0.604,
+        "upper_below": 0.0,
+        "holm_supported": 0.515
+      }
+    },
+    "families_all_supported": {
+      "J12": 0.328
+    },
+    "joint_supported": {
+      "D1 and D2": 0.463
+    }
+  },
+  "half_effect_shift_pp": {
+    "D1": 4.196,
+    "D2": 3.849,
+    "D3": 6.014,
+    "D4": 6.966
+  },
+  "inputs": {
+    "bplus_m11": {
+      "campaign_dirs": [
+        "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m11_20260923/prefix_handoff",
+        "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m11_20260924/prefix_handoff"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_episodes": 171,
+      "n_crash_excluded": 0,
+      "n_scored": 171
+    },
+    "bplus_m6": {
+      "campaign_dirs": [
+        "/scratch/n12194778/sidekick/results/hj17_prefix_c81_bplus_m6_20260923/prefix_handoff",
+        "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_bplus_m6_20260924/prefix_handoff"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_episodes": 171,
+      "n_crash_excluded": 0,
+      "n_scored": 171
+    },
+    "zs_m11": {
+      "campaign_dirs": [
+        "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m11_20260923/prefix_handoff",
+        "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m11_20260924/prefix_handoff"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_episodes": 171,
+      "n_crash_excluded": 0,
+      "n_scored": 171
+    },
+    "zs_m6": {
+      "campaign_dirs": [
+        "/scratch/n12194778/sidekick/results/hj17_prefix_c81_zs_m6_20260923/prefix_handoff",
+        "/scratch/n12194778/sidekick/results/hj18_prefix_c81s3_zs_m6_20260924/prefix_handoff"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_episodes": 171,
+      "n_crash_excluded": 0,
+      "n_scored": 171
+    }
+  },
+  "caveats": [
+    "Resampling dev scenarios treats the dev effect as the truth; the half-effect rows are the guard against that optimism.",
+    "B per simulated read is 2,000, below the registered 10,000; interval endpoints carry Monte Carlo error of a few tenths of a pp.",
+    "Dev pairs pool seeds 1-3 (hj17 seeds 1-2 + hj18 seed 3); the test design draws two of them per task."
+  ]
+}

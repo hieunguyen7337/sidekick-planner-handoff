@@ -1,0 +1,916 @@
+#!/bin/bash
+#PBS -N j11-arm
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=2:gpu_id=H100:mem=96gb
+#PBS -l walltime=10:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#
+# J11 -- ONE registered arm of docs/prereg_j11_lp2_test_20260924.md: the LP-2 planner
+# (Qwen/Qwen3.8-27B-FP8, "P27") on AppWorld test_normal, served locally beside the granite executor.
+# Zero hosted calls. Resumable: submit the same line again; it purges crashed episodes of THIS
+# campaign only, skips completed episodes (src/sidekick/runner.py:408-413) and fills the rest. That
+# is resumption, not a re-read: no readable result.json is ever overwritten.
+#
+# The test_normal gates are scripts/pbs/j10_arm.pbs's (:237-275, adapted: J11's prereg and token);
+# the servers, placement, served-model probe, smoke, crash-only refill and tally are
+# scripts/pbs/lp_live.pbs's, which ran the same arms on dev. Copied, not sourced: both are job
+# scripts with side effects at top level.
+#
+# Submit from the checkout the run is pinned to (REPO; J11_REPO=<path> overrides the default).
+#   Dry run on dev -- the only mode exercised before the freeze. Forces SPLIT=dev, TASKS=3 and
+#   CID+_dryrun; replay arms replay C's _dryrun campaign, so C goes first. C asks for ONE card (it
+#   serves only the planner); every replay arm keeps the two of the #PBS line above:
+#     qsub -l select=1:ncpus=12:ngpus=1:gpu_id=H100:mem=96gb -v CFG=configs/j11_planner_alone_cap81_qwen38_27b.yaml,DRYRUN=1 scripts/pbs/j11_arm.pbs
+#     qsub -v CFG=configs/j11_takeover_fixed_k_10.yaml,DRYRUN=1 scripts/pbs/j11_arm.pbs
+#   The registered read (only once the J11 prereg is committed FROZEN). C first; then T, A, A1 and the
+#   four prefix arms, one arm per job, in any order, once C has 336 non-crashed episodes and 0 crashed:
+#     qsub -l select=1:ncpus=12:ngpus=1:gpu_id=H100:mem=96gb -l walltime=10:00:00 -v CFG=configs/j11_planner_alone_cap81_qwen38_27b.yaml,SPLIT=test_normal,J11_CONFIRM=J11_FROZEN scripts/pbs/j11_arm.pbs
+#     qsub -l select=1:ncpus=12:ngpus=2:gpu_id=H100:mem=96gb -l walltime=10:00:00 -v CFG=configs/j11_takeover_fixed_k_10.yaml,SPLIT=test_normal,J11_CONFIRM=J11_FROZEN scripts/pbs/j11_arm.pbs
+#   (the other replay arms: CFG=configs/j11_advise_fixed_k_10_fullctx.yaml, j11_advise_fixed_k_1_fullctx.yaml,
+#    j11_prefix_bplus_m6.yaml, j11_prefix_bplus_m11.yaml, j11_prefix_zs_m6.yaml, j11_prefix_zs_m11.yaml)
+#
+# Job variables (qsub -v):
+#   CFG          configs/j11_*.yaml (required; relative to the repo or absolute)
+#   SYSTEM       runner --system; derived from the config stem, and it must agree if given
+#   SPLIT        dev (default) | test_normal. test_challenge is always refused.
+#   TASKS        default: the whole split (dev 57, test_normal 168; test_normal refuses others); 3 under DRYRUN
+#   SEEDS        default 1,2 (test_normal refuses anything else)
+#   CID          default: the config's campaign_id (+ _dryrun when DRYRUN=1)
+#   DRYRUN       1 -> SPLIT=dev, TASKS=3, CID+_dryrun, replay sources rewritten to C's _dryrun campaign
+#   J11_CONFIRM  must equal J11_FROZEN for SPLIT=test_normal
+#   J11_REPO     the run checkout (default: the plan worktree)
+#   WORKERS (6), RUN_TIMEOUT (30600 s), SMOKE_TIMEOUT (3600 s), ADAPTER_SFT_B_PLUS, ALIAS_SFT_B_PLUS,
+#   PLANNER_HF_HOME, PLANNER_GPU_UTIL / EXECUTOR_GPU_UTIL (0.85 each), SKIP_VERIFY_CONFIGS=1
+#
+# Refusals (exit 2), all before a GPU model is loaded or anything under results/ changes:
+#   (a) SPLIT=test_challenge, any split but dev/test_normal; SPLIT=test_normal unless the one
+#       `**Status**` line of the J11 prereg starts FROZEN and says no DRAFT, the prereg is committed
+#       and unmodified, src/ scripts/ configs/ are clean, J11_CONFIRM=J11_FROZEN, CID is the config's
+#       campaign_id, TASKS=168, SEEDS=1,2 and ADAPTER_SFT_B_PLUS is the registered sft_b_plus directory
+#       (the one j10_arm.pbs pins, J10 A1 r2 §4 F8)
+#   (b) planner.type not vllm, planner.model not exactly Qwen/Qwen3.8-27B-FP8, planner.live_plan_keys
+#       set (LP Amendment 4's key is a dev key), a C config with an executor or a replay source, a replay
+#       arm whose source is not C's campaign, a receiver other than granite +/- sft_b_plus
+#   (c) replay arms (T, A, A1, prefix): C incomplete (per seed < TASKS non-crashed, or any crashed or
+#       unreadable); more than 5 % of C's episodes planless (16 of 336) -- no replay arm starts (prereg
+#       §6 abort rule); T / A / A1 with a planless key but on_missing other than call_if_planless.
+#       Prefix arms run every key: a planless key replays an empty prefix (LP Amendment 4); they
+#       only count and log them.
+#   plus: a `split:` key in the config (A1 §10.2), dev episodes aimed at a registered test campaign
+#   id, a dev run replaying the registered test C, another live job holding the CID, and a replay arm
+#   with fewer than 2 GPUs visible (checked after the toolchain, before any server).
+# Gates (campaign_summarize --gate): C, T, A and A1 --expect-planner --expect-model P27, so every
+#   planner usage record must name the served model; prefix arms --allow-live-planner --expect-model
+#   P27 (lp_live.pbs:441-462): executor asks are answered by the served planner, as on dev.
+# Exit codes: 0 arm complete (target non-crashed episodes, 0 crashes) | 2 refused |
+#   3 crashes or missing episodes remain -> resubmit | other: smoke/gate/infra, including 1 when the
+#   smoke of a takeover / advise arm shows the wrong channel.
+#
+# ⚠ gpu_id=H100 is pinned on the select line. The replay arms need both cards: granite on the first,
+#   the 27B planner on the second (it does not fit beside granite, lp_live.pbs:62-66); a replay arm
+#   that sees fewer than 2 is refused (exit 2) before any server starts (j11_placement). C serves
+#   only the planner, so it asks for ngpus=1: LP-2's dev C ran exactly so, one H100, tensor-parallel
+#   1, 0.85, bf16, max-model-len 32768, max-num-seqs 64 (lp1_planner_alone.pbs:4,215-222; PBS
+#   25724763 schedselect ngpus=1, its vLLM log tensor_parallel_size=1). A C job that sees more than
+#   one card runs on the first and warns that the rest sit idle.
+# ⚠ Two servers, two ports, both picked per job and handed to the runner through the environment
+#   (SIDEKICK_VLLM_BASE_URL, SIDEKICK_PLANNER_BASE_URL), never the configs' 8000/8002.
+# Do NOT add reasoning-parser flags to vLLM (G3). The --lora-modules alias MUST equal
+# executor.lora_name or requests silently hit the base model.
+#
+# Self-test seam (tests/unit/test_j11_arm_pbs.py): J11_SELFTEST=1 runs every refusal and exits after
+#   preflight. J11_PREREG / J11_OUT / J11_LOGDIR / J11_GIT_ROOT redirect the prereg, the results root,
+#   the log root and the git checks into a test tree; none is honoured by a real submission.
+#   J11_SELFTEST_STAGE=placement (with CUDA_VISIBLE_DEVICES) runs j11_placement after preflight.
+
+set -uo pipefail
+
+REPO="${J11_REPO:-/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15}"  # J11_REPO: a pinned run checkout
+SELFTEST="${J11_SELFTEST:-0}"
+JOBTAG="${PBS_JOBID:-nopbs$$}"
+JOBNUM="${JOBTAG%%.*}"; JOBNUM="${JOBNUM//[^0-9A-Za-z]/}"
+PBS_LOGDIR="${REPO}/campaign/workers/logs"
+
+CFG="${CFG:-}"
+SYSTEM="${SYSTEM:-}"
+SPLIT="${SPLIT:-dev}"
+TASKS="${TASKS:-}"
+SEEDS="${SEEDS:-1,2}"
+CID="${CID:-}"
+DRYRUN="${DRYRUN:-0}"
+J11_CONFIRM="${J11_CONFIRM:-}"
+WORKERS="${WORKERS:-6}"
+RUN_TIMEOUT="${RUN_TIMEOUT:-30600}"
+SMOKE_TIMEOUT="${SMOKE_TIMEOUT:-3600}"
+N_SMOKE_TASKS=3
+REGISTERED_PLANNER_MODEL=Qwen/Qwen3.8-27B-FP8
+C_CAMPAIGN=j11_planner_alone_cap81_qwen38_27b_20260924  # arm C: the only arm that plans
+PREREG="${REPO}/docs/prereg_j11_lp2_test_20260924.md"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+GIT_ROOT="${REPO}"
+if [[ "${SELFTEST}" == "1" ]]; then
+  # Self-test seams only: never honoured by a real submission.
+  PREREG="${J11_PREREG:-${PREREG}}"
+  OUT="${J11_OUT:-${OUT}}"
+  LOGDIR="${J11_LOGDIR:-${LOGDIR}}"
+  GIT_ROOT="${J11_GIT_ROOT:-}"
+fi
+
+if [[ "${SELFTEST}" != "1" ]]; then
+  mkdir -p "${PBS_LOGDIR}"
+  CFG_TAG="$(basename "${CFG:-nocfg}" .yaml)"
+  exec >> "${PBS_LOGDIR}/j11_arm.${CFG_TAG}.${JOBTAG}.out" 2>&1
+fi
+
+fatal () { echo "[j11] FATAL: $*"; exit 2; }
+echo "[j11] start=$(date -Iseconds) job=${JOBTAG} host=$(hostname) cfg=${CFG} system=${SYSTEM:-<derive>} split=${SPLIT} tasks=${TASKS:-<split>} seeds=${SEEDS} cid=${CID:-<config>} dryrun=${DRYRUN} selftest=${SELFTEST}"
+
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+GRANITE_HF_HOME="${GRANITE_HF_HOME:-/scratch/n12194778/hf}"
+# The runner and the executor server read granite (and its tokenizer) from here; the planner
+# server gets its own HF_HOME at launch.
+export HF_HOME="${GRANITE_HF_HOME}"
+export APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="${REPO}/src:${REPO}:${PYTHONPATH:-}"
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+# DeepGEMM off for both servers, as the LP-2 ceiling was served (lp_live.pbs:543-549): its FP8 GEMM JIT
+# failed to compile on this box (job 25724310). Inert for the bf16 granite server.
+export VLLM_USE_DEEP_GEMM=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
+PY="${PY:-${SIDEKICK_VENV}/bin/python}"
+SUM="${REPO}/scripts/setup/campaign_summarize.py"
+MODEL_GRANITE=ibm-granite/granite-4.2-8b
+ALIAS_SFT_B_PLUS="${ALIAS_SFT_B_PLUS:-sft_b_plus}"
+# The directory every tailored J10 arm on test serves (j10_arm.pbs REGISTERED_ADAPTER_SFT_B_PLUS) and the
+# LP-2 dev arms loaded (lp_live.pbs ADAPTER_SFT_B_PLUS default). test_normal refuses any other.
+REGISTERED_ADAPTER_SFT_B_PLUS=/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b
+ADAPTER_SFT_B_PLUS="${ADAPTER_SFT_B_PLUS:-${REGISTERED_ADAPTER_SFT_B_PLUS}}"
+MAX_LORAS=4
+PLANNER_MAX_LEN="${PLANNER_MAX_LEN:-32768}"
+# Only the 27B's real copy: the one in ~/.cache/huggingface is SPARSE and reads as zeros (lp_live.pbs:67-69).
+PLANNER_HF_HOME="${PLANNER_HF_HOME:-/mnt/hpccs01/home/n12194778/.cache/hf_planners}"
+cd "${REPO}" || exit 1
+echo "[j11] repo=${REPO} repo_commit=${SIDEKICK_START_COMMIT} dirty_files=$(git -C "${REPO}" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+
+# ---- config -------------------------------------------------------------------
+[[ -n "${CFG}" ]] || fatal "CFG is required (a configs/j11_*.yaml path)"
+[[ "${CFG}" == /* ]] || CFG="${REPO}/${CFG}"
+[[ -f "${CFG}" ]] || fatal "config not found: ${CFG}"
+CFG_BASE="$(basename "${CFG}")"
+CFG_STEM="${CFG_BASE%.yaml}"
+[[ "${CFG_BASE}" == j11_*.yaml ]] || fatal "CFG must be a j11_*.yaml config, got ${CFG_BASE}"
+if [[ "${SELFTEST}" != "1" && "$(dirname "$(readlink -f "${CFG}")")" != "$(readlink -f "${REPO}/configs")" ]]; then
+  fatal "CFG must live in ${REPO}/configs (got ${CFG})"
+fi
+echo "[j11] config ${CFG} sha256=$(sha256sum "${CFG}" | cut -d' ' -f1)"
+
+CFG_CAMPAIGN_ID=""; PLANNER_TYPE=""; PLANNER_MODEL=""; PACKET_SOURCE=""; EXECUTOR_TYPE=""
+EXECUTOR_MODEL=""; LORA_NAME=""; HANDOFF_SOURCE=""; HAS_SPLIT_KEY=""; ON_MISSING=""; PACKET_SYSTEM=""
+FIXED_K=""; LIVE_PLAN_KEYS=""
+FACTS="$(timeout 60 "${PY}" - "${CFG}" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+
+data = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+if not isinstance(data, dict):
+    sys.exit("config is not a mapping")
+planner = data.get("planner") if isinstance(data.get("planner"), dict) else {}
+executor = data.get("executor") if isinstance(data.get("executor"), dict) else {}
+handoff = data.get("handoff") if isinstance(data.get("handoff"), dict) else {}
+lora = executor.get("lora_name")
+lora = "" if lora is None or str(lora).strip() in ("", "null", "None") else str(lora).strip()
+
+
+def clean(value):
+    return "" if value is None else str(value).strip().replace("\n", " ")
+
+
+facts = {
+    "CFG_CAMPAIGN_ID": clean(data.get("campaign_id")),
+    "PLANNER_TYPE": clean(planner.get("type") or data.get("planner_type") or "mock"),
+    "PLANNER_MODEL": clean(planner.get("model")),
+    "PACKET_SOURCE": clean(planner.get("packet_source")),
+    "EXECUTOR_TYPE": clean(executor.get("type") or data.get("executor_type") or "mock"),
+    "EXECUTOR_MODEL": clean(executor.get("model")),
+    "LORA_NAME": lora,
+    "HANDOFF_SOURCE": clean(handoff.get("source_campaign")),
+    "HAS_SPLIT_KEY": "1" if "split" in data else "0",
+    "ON_MISSING": clean(planner.get("on_missing") or "fail"),
+    "PACKET_SYSTEM": clean(planner.get("packet_system") or "planner_alone"),
+    "FIXED_K": clean(data.get("fixed_k")),
+    "LIVE_PLAN_KEYS": ",".join(str(k) for k in (planner.get("live_plan_keys") or [])),
+}
+for key, value in facts.items():
+    print(f"{key}={value}")
+PY
+)" || fatal "could not read ${CFG} (PyYAML / syntax)"
+while IFS='=' read -r key value; do
+  case "${key}" in
+    CFG_CAMPAIGN_ID) CFG_CAMPAIGN_ID="${value}";;
+    PLANNER_TYPE) PLANNER_TYPE="${value}";;
+    PLANNER_MODEL) PLANNER_MODEL="${value}";;
+    PACKET_SOURCE) PACKET_SOURCE="${value}";;
+    EXECUTOR_TYPE) EXECUTOR_TYPE="${value}";;
+    EXECUTOR_MODEL) EXECUTOR_MODEL="${value}";;
+    LORA_NAME) LORA_NAME="${value}";;
+    HANDOFF_SOURCE) HANDOFF_SOURCE="${value}";;
+    HAS_SPLIT_KEY) HAS_SPLIT_KEY="${value}";;
+    ON_MISSING) ON_MISSING="${value}";;
+    PACKET_SYSTEM) PACKET_SYSTEM="${value}";;
+    FIXED_K) FIXED_K="${value}";;
+    LIVE_PLAN_KEYS) LIVE_PLAN_KEYS="${value}";;
+  esac
+done <<< "${FACTS}"
+echo "[j11] config campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} planner.model=${PLANNER_MODEL:-<unset>} packet_source=${PACKET_SOURCE:-<none>} executor=${EXECUTOR_TYPE}:${EXECUTOR_MODEL:-<none>} lora_name=${LORA_NAME:-<none>} handoff.source_campaign=${HANDOFF_SOURCE:-<none>} on_missing=${ON_MISSING}"
+[[ -n "${CFG_CAMPAIGN_ID}" ]] || fatal "${CFG} has no campaign_id"
+[[ "${HAS_SPLIT_KEY}" == "0" ]] || fatal "${CFG} carries a split: key; the split is a CLI argument and a config key is inert (A1 §10.2)"
+
+case "${CFG_STEM}" in
+  j11_planner_alone_cap81_qwen38_27b) REG_SYSTEM=planner_alone;;
+  j11_takeover_*|j11_advise_*) REG_SYSTEM=fixed_k;;
+  j11_prefix_*) REG_SYSTEM=prefix_handoff;;
+  *) fatal "${CFG_STEM} is not a registered J11 arm (prereg §2)";;
+esac
+if [[ -z "${SYSTEM}" ]]; then
+  SYSTEM="${REG_SYSTEM}"
+elif [[ "${SYSTEM}" != "${REG_SYSTEM}" ]]; then
+  fatal "SYSTEM=${SYSTEM} disagrees with the registered system ${REG_SYSTEM} for ${CFG_STEM}"
+fi
+
+# ---- (a) split -------------------------------------------------------------------
+if [[ "${DRYRUN}" == "1" ]]; then
+  [[ "${SPLIT}" == "dev" ]] || echo "[j11] DRYRUN=1 forces SPLIT=dev (was ${SPLIT})"
+  SPLIT=dev
+  TASKS="${TASKS:-3}"
+fi
+case "${SPLIT}" in
+  test_challenge) fatal "SPLIT=test_challenge is never read (J11 prereg §7)";;
+  dev) N_SPLIT_TASKS=57;;
+  test_normal) N_SPLIT_TASKS=168;;
+  *) fatal "SPLIT must be dev or test_normal, got ${SPLIT}";;
+esac
+TASKS="${TASKS:-${N_SPLIT_TASKS}}"
+[[ "${TASKS}" =~ ^[0-9]+$ && "${TASKS}" -ge 1 ]] || fatal "TASKS must be a positive integer, got ${TASKS}"
+[[ "${SEEDS}" =~ ^[0-9]+(,[0-9]+)*$ ]] || fatal "SEEDS must look like 1,2 -- got ${SEEDS}"
+N_SEEDS=$(awk -F, '{print NF}' <<< "${SEEDS}")
+SMOKE_SEED="${SEEDS%%,*}"
+TARGET=$((TASKS * N_SEEDS))
+
+if [[ "${SPLIT}" == "test_normal" ]]; then
+  [[ -f "${PREREG}" ]] || fatal "prereg not found: ${PREREG}"
+  mapfile -t STATUS_LINES < <(grep -E '^\*\*Status\*\*' "${PREREG}")
+  [[ "${#STATUS_LINES[@]}" -eq 1 ]] || fatal "expected exactly one **Status** line in ${PREREG}, found ${#STATUS_LINES[@]}"
+  STATUS_LINE="${STATUS_LINES[0]}"
+  echo "[j11] prereg status line: ${STATUS_LINE}"
+  # "contains FROZEN" alone is not enough: the DRAFT line reads "DRAFT -- becomes FROZEN on commit".
+  if ! [[ "${STATUS_LINE}" =~ ^\*\*Status\*\*:[[:space:]]*(\*\*)?[[:space:]]*FROZEN ]]; then
+    fatal "J11 is not FROZEN: the **Status** value must begin with FROZEN"
+  fi
+  if grep -qi 'DRAFT' <<< "${STATUS_LINE}"; then
+    fatal "J11 status line still mentions DRAFT"
+  fi
+  [[ "${J11_CONFIRM}" == "J11_FROZEN" ]] || fatal "SPLIT=test_normal needs J11_CONFIRM=J11_FROZEN"
+  if [[ -n "${GIT_ROOT}" ]]; then
+    git -C "${GIT_ROOT}" ls-files --error-unmatch "${PREREG}" >/dev/null 2>&1 \
+      || fatal "${PREREG} is not committed; FROZEN means committed"
+    git -C "${GIT_ROOT}" diff --quiet HEAD -- "${PREREG}" \
+      || fatal "${PREREG} has uncommitted changes; the frozen text is the committed text"
+    # Every test episode must run code a commit names: the manifest stamps HEAD, so a dirty
+    # src/, scripts/ or configs/ would run code no commit records. Run from a pinned checkout.
+    [[ -z "$(git -C "${GIT_ROOT}" status --porcelain -- src scripts configs 2>/dev/null)" ]] \
+      || fatal "${GIT_ROOT} has uncommitted changes under src/, scripts/ or configs/; test_normal runs only committed code"
+  else
+    echo "[j11] selftest: git checks skipped (J11_GIT_ROOT unset)"
+  fi
+  [[ "${TASKS}" -eq 168 ]] || fatal "test_normal is registered at all 168 tasks (TASKS=${TASKS})"
+  [[ "${SEEDS}" == "1,2" ]] || fatal "test_normal is registered at seeds 1,2 (SEEDS=${SEEDS})"
+  # Exact string, so the logged lora-module path is the text J10 A1 registers; and for every arm,
+  # base-receiver ones included (their server registers the alias too, as on dev).
+  [[ "${ADAPTER_SFT_B_PLUS}" == "${REGISTERED_ADAPTER_SFT_B_PLUS}" ]] \
+    || fatal "test_normal serves sft_b_plus only from the registered adapter ${REGISTERED_ADAPTER_SFT_B_PLUS}; got ADAPTER_SFT_B_PLUS=${ADAPTER_SFT_B_PLUS}"
+fi
+
+# ---- campaign id -------------------------------------------------------------------
+if [[ -z "${CID}" ]]; then
+  CID="${CFG_CAMPAIGN_ID}"
+fi
+if [[ "${DRYRUN}" == "1" && "${CID}" != *_dryrun ]]; then
+  CID="${CID}_dryrun"
+fi
+[[ "${CID}" =~ ^[A-Za-z0-9_.-]+$ && "${CID}" != "." && "${CID}" != ".." ]] || fatal "unsafe CID ${CID}"
+if [[ "${SPLIT}" == "test_normal" && "${CID}" != "${CFG_CAMPAIGN_ID}" ]]; then
+  fatal "test_normal must write the registered campaign id ${CFG_CAMPAIGN_ID}, not ${CID}"
+fi
+if [[ "${SPLIT}" != "test_normal" && "${CID}" == "${CFG_CAMPAIGN_ID}" ]]; then
+  fatal "SPLIT=${SPLIT} into the registered test campaign id ${CID} would mix dev episodes into the test tree; use DRYRUN=1 or another CID"
+fi
+echo "[j11] cid=${CID} system=${SYSTEM} split=${SPLIT} tasks=${TASKS} seeds=${SEEDS} target=${TARGET}"
+
+# ---- (b) planner, receiver, replay source ---------------------------------------------
+echo "[j11] planner model from config: ${PLANNER_MODEL:-<unset>} (type ${PLANNER_TYPE})"
+[[ "${PLANNER_TYPE}" == "vllm" ]] \
+  || fatal "planner.type is '${PLANNER_TYPE}', need vllm: J11 serves a LOCAL planner; a codex arm would spend hosted quota and a mock one measures nothing"
+[[ "${PLANNER_MODEL}" == "${REGISTERED_PLANNER_MODEL}" ]] \
+  || fatal "planner.model is '${PLANNER_MODEL}', registered planner is exactly ${REGISTERED_PLANNER_MODEL}"
+[[ -z "${LIVE_PLAN_KEYS}" ]] \
+  || fatal "planner.live_plan_keys=${LIVE_PLAN_KEYS}: LP Amendment 4's key is a dev key; J11 plans live only through on_missing: call_if_planless"
+if [[ "${SYSTEM}" == "planner_alone" ]]; then
+  [[ "${EXECUTOR_TYPE}" == "mock" ]] || fatal "C must not construct an executor (executor.type=${EXECUTOR_TYPE})"
+  [[ -z "${PACKET_SOURCE}${HANDOFF_SOURCE}" ]] || fatal "C is the source; it must not replay anything (packet_source=${PACKET_SOURCE:-<none>} handoff=${HANDOFF_SOURCE:-<none>})"
+else
+  [[ "${EXECUTOR_TYPE}" == "vllm" && "${EXECUTOR_MODEL}" == "${MODEL_GRANITE}" ]] \
+    || fatal "executor must be vllm ${MODEL_GRANITE}, got ${EXECUTOR_TYPE} ${EXECUTOR_MODEL:-<none>}"
+  if [[ -n "${LORA_NAME}" ]]; then
+    [[ "${LORA_NAME}" == "${ALIAS_SFT_B_PLUS}" ]] \
+      || fatal "executor.lora_name=${LORA_NAME} is not the served alias ${ALIAS_SFT_B_PLUS}; requests would silently hit BASE"
+  elif [[ "${SYSTEM}" != "prefix_handoff" ]]; then
+    fatal "only a prefix arm may name the untailored receiver (executor.lora_name null); ${CFG_STEM} needs ${ALIAS_SFT_B_PLUS}"
+  fi
+  [[ -n "${PACKET_SOURCE}" ]] || fatal "replay arm ${CFG_STEM} has no planner.packet_source; every J11 replay arm replays C"
+  if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+    [[ -n "${HANDOFF_SOURCE}" ]] || fatal "prefix arm without handoff.source_campaign"
+  fi
+fi
+
+# ---- DRYRUN: replay C's dry-run campaign, never the registered one --------------------
+CFG_EFF="${CFG}"
+case "${HANDOFF_SOURCE}${PACKET_SOURCE}" in
+  *j11_*_20260924*) REGISTERED_SOURCE=1;;
+  *) REGISTERED_SOURCE=0;;
+esac
+if [[ "${DRYRUN}" == "1" && -n "${HANDOFF_SOURCE}${PACKET_SOURCE}" ]]; then
+  mkdir -p "${LOGDIR}/j11_dryrun_cfg"
+  CFG_EFF="${LOGDIR}/j11_dryrun_cfg/${CID}.${JOBNUM}.yaml"
+  timeout 60 "${PY}" - "${CFG}" "${CFG_EFF}" "${CID}" <<'PY' || fatal "could not write the dry-run config"
+import re
+import sys
+from pathlib import Path
+import yaml
+
+src, dest, cid = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
+data = yaml.safe_load(Path(src).read_text(encoding="utf-8")) or {}
+pattern = re.compile(r"^(.*/)?(j11_[A-Za-z0-9_]+_20260924)/?$")
+
+
+def rewrite(value):
+    if isinstance(value, dict):
+        return {k: rewrite(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [rewrite(v) for v in value]
+    if isinstance(value, str):
+        m = pattern.match(value)
+        if m:
+            return f"{m.group(1) or ''}{m.group(2)}_dryrun"
+    return value
+
+
+data = rewrite(data)
+data["campaign_id"] = cid
+dest.write_text(
+    f"# DRY-RUN derivative of {src}; J11 sources rewritten to *_dryrun. Never a registered config.\n"
+    + yaml.safe_dump(data, sort_keys=False),
+    encoding="utf-8",
+)
+print(f"[j11] dry-run config {dest}")
+PY
+  HANDOFF_SOURCE="$(grep -E '^[[:space:]]*source_campaign:' "${CFG_EFF}" | head -n 1 | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]+$//')"
+  PACKET_SOURCE="$(grep -E '^[[:space:]]*packet_source:' "${CFG_EFF}" | head -n 1 | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]+$//')"
+  echo "[j11] dry-run handoff.source_campaign=${HANDOFF_SOURCE:-<none>} planner.packet_source=${PACKET_SOURCE:-<none>}"
+elif [[ "${SPLIT}" == "dev" && "${REGISTERED_SOURCE}" == "1" ]]; then
+  fatal "a dev run of ${CFG_STEM} would replay the registered TEST C campaign; use DRYRUN=1"
+fi
+
+# Every replay arm replays C, and exactly C: its plan (packet_source) and, for a prefix arm, its
+# first m actions (handoff.source_campaign). The path is the results root's C campaign, so neither
+# another planner run nor the dev ceiling can stand in for it.
+if [[ "${SYSTEM}" != "planner_alone" ]]; then
+  C_SOURCE="${OUT}/${C_CAMPAIGN}"
+  [[ "${DRYRUN}" == "1" ]] && C_SOURCE="${C_SOURCE}_dryrun"
+  [[ "${PACKET_SOURCE%/}" == "${C_SOURCE}" ]] \
+    || fatal "planner.packet_source is ${PACKET_SOURCE}, but every J11 replay arm replays C at ${C_SOURCE}"
+  if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+    [[ "${HANDOFF_SOURCE%/}" == "${C_SOURCE}" ]] \
+      || fatal "handoff.source_campaign is ${HANDOFF_SOURCE}, but every J11 prefix arm replays C at ${C_SOURCE}"
+  fi
+fi
+
+# ---- (c) replay arms: C complete, planless keys counted and capped --------------------------
+# Against a partial C a replay episode either crashes on a missing packet or replays an episode that
+# crashed -- which C's next resubmission purges and re-plans, leaving this arm paired with a plan C
+# never scored. So C must exist and hold, for EACH seed, >= TASKS non-crashed result.json, with 0
+# crashed and 0 unreadable (lp_live.pbs's per-seed rule: 168 seed-1 rows must not pass a pooled 336).
+require_complete_c () {
+  local src="$1" stats c_ok c_crash c_bad c_exists c_short
+  stats="$(timeout 300 "${PY}" - "${src}" "${SEEDS}" "${TASKS}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+seeds = [s for s in sys.argv[2].split(",") if s]
+need = int(sys.argv[3])
+ok = {s: 0 for s in seeds}
+crash = bad = 0
+if root.is_dir():
+    for path in root.rglob("result.json"):
+        try:
+            row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            bad += 1
+            continue
+        if not isinstance(row, dict):
+            bad += 1
+        elif row.get("error_type") == "crash":
+            crash += 1
+        elif str(row.get("seed")) in ok:
+            ok[str(row.get("seed"))] += 1
+short = ",".join(f"seed{s}:{n}" for s, n in ok.items() if n < need) or "-"
+print(f"{sum(ok.values())} {crash} {bad} {1 if root.is_dir() else 0} {short}")
+PY
+)" || fatal "could not inspect C at ${src}"
+  read -r c_ok c_crash c_bad c_exists c_short <<< "${stats}"
+  echo "[j11] C ${src}: exists=${c_exists} non_crashed=${c_ok} crashed=${c_crash} unreadable=${c_bad} short_seeds=${c_short} (need >= ${TASKS} per seed, ${TARGET} in all, 0 crashed)"
+  if [[ "${c_exists}" != "1" || "${c_ok}" -lt "${TARGET}" || "${c_short}" != "-" || "${c_crash}" -ne 0 || "${c_bad}" -ne 0 ]]; then
+    fatal "C is not complete; C must complete before any replay arm starts (prereg §6)"
+  fi
+}
+N_PLANLESS=0
+if [[ "${SYSTEM}" != "planner_alone" ]]; then
+  require_complete_c "${PACKET_SOURCE}"
+  # A C episode scored without a crash whose last attempt wrote no plan (LP Amendment 4's 2/6171bbc_3 on
+  # dev). T / A / A1 plan it live (on_missing: call_if_planless); a prefix arm replays an empty prefix
+  # and runs it. j11_report.py drops the same keys in its sensitivity: both read planless_source_keys.
+  PLANLESS="$(timeout 300 "${PY}" - "${PACKET_SOURCE}" "${PACKET_SYSTEM}" "${SEEDS}" <<'PY'
+import sys
+
+from sidekick.agents.planner import planless_source_keys
+
+seeds = [s for s in sys.argv[3].split(",") if s]
+print(" ".join(planless_source_keys(sys.argv[1], sys.argv[2], seeds)))
+PY
+)" || fatal "could not list the C episodes without a plan under ${PACKET_SOURCE}"
+  N_PLANLESS=$(wc -w <<< "${PLANLESS}")
+  PLANLESS_CAP=$(( TARGET * 5 / 100 ))
+  echo "[j11] C episodes scored without a plan: ${N_PLANLESS} (cap ${PLANLESS_CAP}, prereg §2)${PLANLESS:+: ${PLANLESS}}"
+  if (( N_PLANLESS > PLANLESS_CAP )); then
+    fatal "${N_PLANLESS} C episodes wrote no plan, above the cap of ${PLANLESS_CAP} (5 % of ${TARGET}); no replay arm starts and J11 is reported as not run (prereg §6)"
+  fi
+  if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+    (( N_PLANLESS > 0 )) && echo "[j11] prefix arm: ${N_PLANLESS} planless C key(s) replay an empty prefix (effective_m 0) and run (LP Amendment 4)"
+  elif (( N_PLANLESS > 0 )) && [[ "${ON_MISSING}" != "call_if_planless" ]]; then
+    fatal "planner.on_missing is '${ON_MISSING}', so the ${N_PLANLESS} C episode(s) without a plan would crash; J11 registers call_if_planless"
+  fi
+fi
+
+# Gate flags: every planner usage record must name the served model. A prefix arm calls the
+# planner only for an executor ask, so it may show zero live calls (lp_live.pbs lp_gate_flags).
+if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+  GATE_ARGS=(--gate --allow-live-planner --expect-model "${REGISTERED_PLANNER_MODEL}")
+else
+  GATE_ARGS=(--gate --expect-planner --expect-model "${REGISTERED_PLANNER_MODEL}")
+fi
+
+# ---- smoke guards -----------------------------------------------------------------------------
+# One pass over a smoke campaign: result counts, and the events of each episode's LAST attempt.
+# Prints "n_results n_crash n_bad planner_actions shown_actions max_steps plan_parse_errors steps_zero".
+j11_smoke_facts () {
+  local cid="$1"
+  timeout 120 "${PY}" - "${OUT}" "${cid}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]) / sys.argv[2]
+n = crash = bad = acts = shown = max_steps = plan_parse = zero = 0
+for result in sorted(root.rglob("result.json")) if root.is_dir() else []:
+    n += 1
+    try:
+        row = json.loads(result.read_text(encoding="utf-8").strip() or "null")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        row = None
+    if not isinstance(row, dict):
+        bad += 1
+        continue
+    if row.get("error_type") == "crash":
+        crash += 1
+    try:
+        steps = int(row.get("steps") or 0)
+    except (TypeError, ValueError):
+        steps = 0
+    max_steps = max(max_steps, steps)
+    zero += int(steps == 0)
+    events = []
+    try:
+        lines = (result.parent / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        lines = []
+    for raw in lines:
+        try:
+            ev = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(ev, dict):
+            if ev.get("event_type") == "run_start":
+                events = []
+            events.append(ev)
+    for ev in events:
+        payload = ev.get("payload") if isinstance(ev.get("payload"), dict) else {}
+        if ev.get("event_type") == "action" and ev.get("actor") == "planner":
+            acts += 1  # loop.py takeover branch
+        if ev.get("event_type") == "intervention" and payload.get("source") == "shown_action":
+            shown += 1  # loop.py advice_from_act branch
+    if row.get("error_type") == "parse_error" and any(
+            ev.get("event_type") == "error" and ev.get("error_type") == "parse_error"
+            and (ev.get("payload") or {}).get("method") == "plan" for ev in events):
+        plan_parse += 1  # lp1_planner_alone.pbs smoke gate: the plan call produced no packet
+print(n, crash, bad, acts, shown, max_steps, plan_parse, zero)
+PY
+}
+
+# The smoke is the last point where a wrong channel or a planner that produces nothing costs three
+# episodes instead of an arm. Rules from lp_live.pbs (counts, lp_takeover_check), j10_arm.pbs
+# (advise arms author no planner action and show none) and lp1_planner_alone.pbs (C's plan call).
+j11_smoke_guard () {
+  local stem="$1" cid="$2" facts n crash bad acts shown max_steps plan_parse zero
+  facts="$(j11_smoke_facts "${cid}")" || { echo "[j11] FATAL: smoke guard could not read ${cid}"; return 1; }
+  read -r n crash bad acts shown max_steps plan_parse zero <<< "${facts}"
+  echo "[j11] smoke guard ${stem} on ${cid}: results=${n} crashed=${crash} unreadable=${bad} planner_actions=${acts} shown_action_interventions=${shown} max_steps=${max_steps} plan_parse_errors=${plan_parse} steps_zero=${zero}"
+  if [[ "${n}" -ne "${N_SMOKE_TASKS}" || "${crash}" -ne 0 || "${bad}" -ne 0 ]]; then
+    echo "[j11] FATAL: smoke wrote ${n}/${N_SMOKE_TASKS} results with ${crash} crash(es) and ${bad} unreadable; ${cid} kept; not launching the full run"
+    return 1
+  fi
+  case "${stem}" in
+    j11_planner_alone_*)
+      if (( plan_parse > 0 )); then
+        echo "[j11] FATAL: ${plan_parse}/${n} smoke episodes ended parse_error in the plan call; the planner produced no packet; ${cid} kept"
+        return 1
+      fi
+      if (( zero == n )); then
+        echo "[j11] FATAL: every smoke episode ended at steps == 0; the arm ran nothing past the plan; ${cid} kept"
+        return 1
+      fi;;
+    j11_takeover_*)
+      if (( shown > 0 )); then
+        echo "[j11] FATAL: takeover arm ${stem} has ${shown} shown_action interventions on smoke; it ran the show channel; ${cid} kept"
+        return 1
+      fi
+      if (( acts == 0 )); then
+        if [[ -z "${FIXED_K}" || "${max_steps}" -ge "${FIXED_K}" ]]; then
+          echo "[j11] FATAL: takeover arm ${stem} authored 0 planner actions although an episode reached step ${max_steps} >= k=${FIXED_K:-<unreadable>}; it ran the advise path; ${cid} kept"
+          return 1
+        fi
+        echo "[j11] WARN: takeover arm ${stem}: 0 planner actions on smoke, but no episode reached k=${FIXED_K}; smoke uninformative"
+      fi;;
+    j11_advise_*)
+      if (( acts > 0 || shown > 0 )); then
+        echo "[j11] FATAL: advise arm ${stem} has ${acts} planner-authored actions and ${shown} shown_action interventions on smoke; a takeover/advice_from_act setting made it another channel; ${cid} kept"
+        return 1
+      fi;;
+  esac
+  return 0
+}
+
+# ---- the tally: what an operator reads before resubmitting ------------------------------
+tally_campaign () {
+  local stats n_files n_bad n_crash n_ok n_other
+  echo "[j11] ---- error_type distribution (${CID}) ----"
+  stats="$(timeout 300 "${PY}" - "${OUT}/${CID}" "${SEEDS}" <<'PY'
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+
+root, seeds = Path(sys.argv[1]), {s for s in sys.argv[2].split(",") if s}
+n = bad = crash = ok = other = 0
+dist = Counter()
+for path in root.rglob("result.json") if root.is_dir() else []:
+    n += 1
+    try:
+        row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        row = None
+    if not isinstance(row, dict):
+        bad += 1
+        dist["unreadable"] += 1
+        continue
+    dist[str(row.get("error_type") or "none")] += 1
+    if row.get("error_type") == "crash":
+        crash += 1
+    elif str(row.get("seed")) in seeds:
+        ok += 1
+    else:
+        other += 1
+for key, count in dist.most_common():
+    print(f"{count:8d}  {key}", file=sys.stderr)
+print(n, bad, crash, ok, other)
+PY
+)" || { echo "[j11] FATAL: tally could not read ${OUT}/${CID}"; return 1; }
+  read -r n_files n_bad n_crash n_ok n_other <<< "${stats}"
+  local missing=$((TARGET - n_ok))
+  (( missing < 0 )) && missing=0
+  echo "[j11] tally cid=${CID} target=${TARGET} non_crashed=${n_ok} crashed=${n_crash} unreadable=${n_bad} other_seed=${n_other} missing=${missing} result_files=${n_files}"
+  if (( n_crash > 0 || n_bad > 0 || n_ok < TARGET )); then
+    echo "[j11] INCOMPLETE: ${n_ok}/${TARGET} non-crashed, ${n_crash} crashed -- resubmit this arm"
+    return 3
+  fi
+  (( n_ok > TARGET )) && echo "[j11] WARN: ${n_ok} non-crashed episodes exceed the target ${TARGET} (was TASKS changed between submissions?)"
+  echo "[j11] COMPLETE: ${n_ok}/${TARGET} non-crashed, 0 crashed"
+  return 0
+}
+
+# Placement: C serves only the planner, on the first visible card (it asks for ngpus=1). Every replay
+# arm serves granite on the first card and the 27B planner on the second, so it needs two; fewer is a
+# refusal (exit 2), before any server starts.
+j11_placement () {
+  if [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]]; then
+    IFS=, read -r -a GPU_LIST <<< "${CUDA_VISIBLE_DEVICES}"
+  else
+    mapfile -t GPU_LIST < <(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | tr -d ' ')
+  fi
+  [[ "${#GPU_LIST[@]}" -ge 1 ]] || fatal "no GPU visible"
+  EXECUTOR_GPU_UTIL="${EXECUTOR_GPU_UTIL:-0.85}"; PLANNER_GPU_UTIL="${PLANNER_GPU_UTIL:-0.85}"
+  if [[ "${SYSTEM}" != "planner_alone" || "${EXECUTOR_TYPE}" == "vllm" ]]; then
+    [[ "${#GPU_LIST[@]}" -ge 2 ]] || fatal "${CFG_STEM} is a replay arm: it serves granite AND the 27B planner, one card each; submit with ngpus=2 (${#GPU_LIST[@]} visible)"
+    EXECUTOR_DEV="${GPU_LIST[0]}"; PLANNER_DEV="${GPU_LIST[1]}"
+  else
+    EXECUTOR_DEV=""; PLANNER_DEV="${GPU_LIST[0]}"
+    (( ${#GPU_LIST[@]} > 1 )) && echo "[j11] WARN: C serves only the planner, on ${PLANNER_DEV}; ${#GPU_LIST[@]} cards visible, $(( ${#GPU_LIST[@]} - 1 )) idle (C's line asks for ngpus=1)"
+  fi
+  echo "[j11] placement executor@${EXECUTOR_DEV:-none} util=${EXECUTOR_GPU_UTIL} planner@${PLANNER_DEV} util=${PLANNER_GPU_UTIL} visible=${#GPU_LIST[@]}"
+}
+
+if [[ "${SELFTEST}" == "1" ]]; then
+  echo "[j11] selftest: preflight passed system=${SYSTEM} cid=${CID} split=${SPLIT} target=${TARGET} planless=${N_PLANLESS} cfg_eff=${CFG_EFF} gate=${GATE_ARGS[*]}"
+  case "${J11_SELFTEST_STAGE:-preflight}" in
+    placement)
+      j11_placement
+      exit 0;;
+    smoke_guard)
+      j11_smoke_guard "${CFG_STEM}" "${J11_GUARD_CID:?J11_GUARD_CID names a smoke campaign under J11_OUT}" || exit 1
+      echo "[j11] selftest: smoke guard passed"
+      exit 0;;
+    tally)
+      tally_campaign
+      exit $?;;
+  esac
+  exit 0
+fi
+
+# ---- toolchain and config gate --------------------------------------------------------------
+[[ -x "${CU13}/bin/nvcc" ]] || fatal "no nvcc at ${CU13}/bin/nvcc; vLLM's JIT kernels cannot build"
+if [[ "${SKIP_VERIFY_CONFIGS:-0}" != "1" ]]; then
+  echo "[j11] ---- scripts/setup/verify_configs.py ----"
+  timeout 300 "${PY}" "${REPO}/scripts/setup/verify_configs.py" >/dev/null
+  VERIFY_RC=$?
+  [[ "${VERIFY_RC}" -eq 0 ]] || fatal "verify_configs.py exited ${VERIFY_RC}; no server started"
+else
+  echo "[j11] WARN: SKIP_VERIFY_CONFIGS=1 -- config gate skipped"
+fi
+_hub_dir="${PLANNER_HF_HOME}/hub/models--${REGISTERED_PLANNER_MODEL//\//--}"
+[[ -d "${_hub_dir}" ]] || fatal "no cached ${REGISTERED_PLANNER_MODEL} under PLANNER_HF_HOME='${PLANNER_HF_HOME}' (${_hub_dir})"
+if [[ "${EXECUTOR_TYPE}" == "vllm" ]]; then
+  if [[ ! -f "${ADAPTER_SFT_B_PLUS}/adapter_config.json" ]] || \
+     [[ ! -f "${ADAPTER_SFT_B_PLUS}/adapter_model.safetensors" && ! -f "${ADAPTER_SFT_B_PLUS}/adapter_model.bin" && ! -f "${ADAPTER_SFT_B_PLUS}/adapter_model.pt" ]]; then
+    # A trainer output dir exists from step 0 with only trainer_state/; "is a directory" is not loadable.
+    fatal "${ADAPTER_SFT_B_PLUS} is not a loadable PEFT adapter (adapter_config.json + weights)"
+  fi
+fi
+
+# ---- placement (j11_placement: a replay arm with fewer than 2 cards is refused here) --------------
+j11_placement
+
+# ---- one job per campaign id at a time (purge + resume assume nobody else writes) ------
+LOCKROOT="${LOGDIR}/j11_locks"
+LOCK="${LOCKROOT}/${CID}.lock"
+mkdir -p "${LOCKROOT}" "${LOGDIR}" "${OUT}/results" "${FLASHINFER_CACHE_DIR}" "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}"
+if ! mkdir "${LOCK}" 2>/dev/null; then
+  OWNER="$(cat "${LOCK}/owner" 2>/dev/null || true)"
+  if [[ -n "${OWNER}" && "${OWNER}" != "${JOBTAG}" ]] && qstat "${OWNER}" >/dev/null 2>&1; then
+    fatal "campaign ${CID} is locked by live job ${OWNER} (${LOCK})"
+  fi
+  echo "[j11] WARN: taking over stale lock ${LOCK} (owner=${OWNER:-unknown} is not a live job)"
+  rm -rf "${LOCK}"
+  mkdir "${LOCK}" || fatal "could not take lock ${LOCK}"
+fi
+echo "${JOBTAG}" > "${LOCK}/owner"
+
+# ---- servers (lp_live.pbs:692-818) ----------------------------------------------------------
+EXEC_PID=""; PLANNER_PID=""
+j11_kill_group () {
+  local pid="$1" _
+  [[ -n "${pid}" ]] || return 0
+  kill -TERM -- -"${pid}" 2>/dev/null || true
+  for _ in $(seq 1 12); do kill -0 "${pid}" 2>/dev/null || break; sleep 5; done
+  kill -KILL -- -"${pid}" 2>/dev/null || true
+  wait "${pid}" 2>/dev/null || true
+}
+j11_stop_servers () {
+  j11_kill_group "${PLANNER_PID}"; PLANNER_PID=""
+  j11_kill_group "${EXEC_PID}"; EXEC_PID=""
+}
+cleanup () {
+  j11_stop_servers
+  echo "[j11] GPU after shutdown:"
+  nvidia-smi --query-gpu=index,memory.used --format=csv,noheader 2>/dev/null || true
+  if [[ "$(cat "${LOCK}/owner" 2>/dev/null)" == "${JOBTAG}" ]]; then
+    rm -rf "${LOCK}"
+  fi
+}
+trap cleanup EXIT
+# qdel and walltime send TERM; without this trap bash dies without running the EXIT trap and
+# both servers (their own sessions, via setsid) would outlive the job on a shared node.
+trap 'echo "[j11] caught signal; stopping both servers"; exit 143' TERM INT HUP
+
+j11_fatal () { echo "[j11] FATAL: $*"; exit 1; }
+
+j11_port_busy () {
+  local p="$1"
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltn 2>/dev/null | awk -v want="${p}" '$1 == "LISTEN" { n = split($4, a, ":"); if (a[n] == want) f = 1 } END { exit f ? 0 : 1 }'
+  else
+    curl -sf "http://127.0.0.1:${p}/v1/models" >/dev/null 2>&1
+  fi
+}
+# Runs inside $(...): complaints go to stderr, or the caller would read them as the port.
+j11_pick_port () {
+  local p="$1" avoid="$2" tries=0
+  while [[ "${p}" == "${avoid}" ]] || j11_port_busy "${p}"; do
+    tries=$((tries + 1))
+    if [[ "${tries}" -ge 50 ]]; then echo "[j11] FATAL: no free port after 50 tries (last ${p})" >&2; return 1; fi
+    p=$((p + 1)); [[ "${p}" -ge 40000 ]] && p=20000
+  done
+  echo "${p}"
+}
+
+j11_wait_healthy () {
+  local label="$1" pid="$2" port="$3" log="$4" t0 deadline
+  t0=$(date +%s); deadline=$((t0 + 900))
+  while (( $(date +%s) < deadline )); do
+    if ! kill -0 "${pid}" 2>/dev/null; then
+      echo "[j11] ${label} vllm died before healthy; log tail:"; tail -n 60 "${log}"; j11_fatal "${label} server died"
+    fi
+    if curl -sf "http://127.0.0.1:${port}/v1/models" >/dev/null 2>&1; then
+      echo "[j11] ${label} healthy on ${port} after $(( $(date +%s) - t0 ))s"; return 0
+    fi
+    sleep 5
+  done
+  tail -n 60 "${log}"; j11_fatal "${label} not healthy within 900s"
+}
+
+# Served-model identity. Every wanted id must be listed; with `exact` (the planner, which has no
+# LoRA), nothing else may be. Then the listener's process group must be ours: a port that answered
+# but belongs to another job's server would pass every health check while serving the wrong model.
+j11_identity () {
+  local label="$1" port="$2" pid="$3" mode="$4"; shift 4
+  local body ids w line lpid lpgid
+  body="$(curl -sf "http://127.0.0.1:${port}/v1/models")" || j11_fatal "${label}: /v1/models failed"
+  ids="$(jq -r '.data[]?.id' <<< "${body}" 2>/dev/null)" || j11_fatal "${label}: /v1/models is not JSON"
+  for w in "$@"; do
+    grep -Fxq "${w}" <<< "${ids}" || j11_fatal "${label}: served ids [$(tr '\n' ' ' <<< "${ids}")] lack '${w}'"
+  done
+  if [[ "${mode}" == "exact" && "$(grep -c . <<< "${ids}")" -ne "$#" ]]; then
+    j11_fatal "${label}: served ids [$(tr '\n' ' ' <<< "${ids}")], expected exactly [$*]"
+  fi
+  echo "[j11] ${label} serves: $(tr '\n' ' ' <<< "${ids}")"
+  if command -v ss >/dev/null 2>&1; then
+    line="$(ss -ltnp 2>/dev/null | awk -v p="${port}" '$1 == "LISTEN" { n = split($4, a, ":"); if (a[n] == p) { print; exit } }')"
+    if [[ "${line}" =~ pid=([0-9]+) ]]; then
+      lpid="${BASH_REMATCH[1]}"
+      lpgid="$(ps -o pgid= -p "${lpid}" 2>/dev/null | tr -d '[:space:]')"
+      [[ "${lpgid}" == "${pid}" ]] || j11_fatal "${label}: port ${port} held by pid=${lpid} pgid=${lpgid}, expected pgid=${pid}"
+      echo "[j11] ${label} listener pid=${lpid} pgid matches"
+    else
+      echo "[j11] WARN: ${label}: no pid on the LISTEN line for ${port}; pgid check skipped"
+    fi
+  fi
+}
+
+_jobnum="${JOBNUM//[^0-9]/}"; _jobnum="${_jobnum:-$$}"
+BASE_PORT=$(( 20000 + _jobnum % 20000 ))
+EXEC_PORT=""
+if [[ "${EXECUTOR_TYPE}" == "vllm" ]]; then
+  # The registered receiver server, as the LP-2 dev arms were served (lp_live.pbs:778-797): granite
+  # with the sft_b_plus alias registered for every arm; a zero-shot arm (lora_name null) asks for the
+  # base model, which the server lists under its own name.
+  EXEC_PORT="$(j11_pick_port "${BASE_PORT}" "")" || exit 1
+  EXEC_VLOG="${LOGDIR}/j11_arm.${CID}.${JOBNUM}_executor_vllm.log"
+  echo "[j11] executor: ${MODEL_GRANITE} + ${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS} adapter_config.sha256=$(sha256sum "${ADAPTER_SFT_B_PLUS}/adapter_config.json" | cut -d' ' -f1) port=${EXEC_PORT} log=${EXEC_VLOG}"
+  CUDA_VISIBLE_DEVICES="${EXECUTOR_DEV}" HF_HOME="${GRANITE_HF_HOME}" \
+  setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL_GRANITE}" \
+    --served-model-name "${MODEL_GRANITE}" \
+    --dtype bfloat16 \
+    --max-model-len 32768 \
+    --host 127.0.0.1 --port "${EXEC_PORT}" \
+    --gpu-memory-utilization "${EXECUTOR_GPU_UTIL}" \
+    --enable-lora \
+    --max-loras "${MAX_LORAS}" \
+    --max-lora-rank 64 \
+    --lora-modules "${ALIAS_SFT_B_PLUS}=${ADAPTER_SFT_B_PLUS}" \
+    > "${EXEC_VLOG}" 2>&1 &
+  EXEC_PID=$!
+  j11_wait_healthy executor "${EXEC_PID}" "${EXEC_PORT}" "${EXEC_VLOG}"
+  j11_identity executor "${EXEC_PORT}" "${EXEC_PID}" has "${MODEL_GRANITE}" "${ALIAS_SFT_B_PLUS}"
+  export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${EXEC_PORT}"
+fi
+
+PLANNER_PORT="$(j11_pick_port $(( BASE_PORT + 1 )) "${EXEC_PORT}")" || exit 1
+PLANNER_VLOG="${LOGDIR}/j11_arm.${CID}.${JOBNUM}_planner_vllm.log"
+echo "[j11] planner: ${REGISTERED_PLANNER_MODEL} port=${PLANNER_PORT} HF_HOME=${PLANNER_HF_HOME} max_len=${PLANNER_MAX_LEN} log=${PLANNER_VLOG}"
+# Served exactly as the LP-2 ceiling (lp1_planner_alone.pbs:215-222) and the LP-2 dev arms
+# (lp_live.pbs:804-812). --max-num-seqs 64: the hybrid 27B's Mamba cache cannot back vLLM's default
+# 1024 sequences (job 25724730); 64 is far above WORKERS and changes no output.
+CUDA_VISIBLE_DEVICES="${PLANNER_DEV}" HF_HOME="${PLANNER_HF_HOME}" HF_HUB_OFFLINE=1 \
+setsid "${SIDEKICK_VENV}/bin/vllm" serve "${REGISTERED_PLANNER_MODEL}" \
+  --served-model-name "${REGISTERED_PLANNER_MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len "${PLANNER_MAX_LEN}" \
+  --max-num-seqs 64 \
+  --host 127.0.0.1 --port "${PLANNER_PORT}" \
+  --gpu-memory-utilization "${PLANNER_GPU_UTIL}" \
+  > "${PLANNER_VLOG}" 2>&1 &
+PLANNER_PID=$!
+j11_wait_healthy planner "${PLANNER_PID}" "${PLANNER_PORT}" "${PLANNER_VLOG}"
+j11_identity planner "${PLANNER_PORT}" "${PLANNER_PID}" exact "${REGISTERED_PLANNER_MODEL}"
+export SIDEKICK_PLANNER_BASE_URL="http://127.0.0.1:${PLANNER_PORT}/v1"
+echo "[j11] SIDEKICK_VLLM_BASE_URL=${SIDEKICK_VLLM_BASE_URL:-<none>} SIDEKICK_PLANNER_BASE_URL=${SIDEKICK_PLANNER_BASE_URL}"
+nvidia-smi --query-gpu=index,memory.used,memory.total --format=csv,noheader 2>/dev/null || true
+
+# ---- (d) purge crashed episodes of THIS campaign only ------------------------------------
+echo "[j11] ---- purge crashed episodes (${CID} only; limit/timeout/parse_error are scored and kept) ----"
+# Captured, not piped to head: a closed pipe would SIGPIPE the summary print and fail the rc.
+PURGE_OUT="$(timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-crashed-only 2>&1)"
+PURGE_RC=$?
+printf '%s\n' "${PURGE_OUT}" | grep -E '^\[purge-crashed-only\]|Error|error' | head -n 5
+[[ "${PURGE_RC}" -eq 0 ]] || { echo "[j11] FATAL: purge exited ${PURGE_RC}"; printf '%s\n' "${PURGE_OUT}" | tail -n 20; exit 1; }
+N_EXISTING=$(find "${OUT}/${CID}" -type f -name result.json 2>/dev/null | wc -l | tr -d ' ')
+echo "[j11] resume: ${CID} has ${N_EXISTING} result.json after purge (target ${TARGET})"
+
+# ---- (e) smoke gate: first submission only, fresh campaign id every time ------------------
+if [[ "${N_EXISTING}" -eq 0 ]]; then
+  SCID="${CID}_smoke_${JOBNUM}"
+  echo "[j11] ---- smoke gate (${SCID}, split ${SPLIT}, ${N_SMOKE_TASKS} tasks, seed ${SMOKE_SEED}) ----"
+  timeout "${SMOKE_TIMEOUT}" "${PY}" -m sidekick.runner \
+    --system "${SYSTEM}" --split "${SPLIT}" --tasks "${N_SMOKE_TASKS}" --seeds "${SMOKE_SEED}" \
+    --env appworld --workers 3 \
+    --config "${CFG_EFF}" --campaign-id "${SCID}" --out "${OUT}"
+  SMOKE_RC=$?
+  [[ "${SMOKE_RC}" -eq 0 ]] || { echo "[j11] FATAL: smoke runner exited ${SMOKE_RC}"; exit "${SMOKE_RC}"; }
+  timeout 300 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${SCID}" \
+    --config "${CFG_EFF}" --repo "${REPO}" "${GATE_ARGS[@]}" --expect-split "${SPLIT}"
+  GATE_RC=$?
+  [[ "${GATE_RC}" -eq 0 ]] || { echo "[j11] FATAL: smoke gate failed (rc=${GATE_RC}); ${SCID} kept for inspection"; exit "${GATE_RC}"; }
+  # Before the dev smoke tree is deleted, so a refused arm leaves its evidence.
+  j11_smoke_guard "${CFG_STEM}" "${SCID}" || { echo "[j11] FATAL: smoke guard refused ${CFG_STEM}; not launching the full run"; exit 1; }
+  if [[ "${SPLIT}" == "dev" ]]; then
+    rm -rf "${OUT:?}/${SCID:?}"
+  else
+    echo "[j11] smoke tree ${OUT}/${SCID} kept: held-out episodes are never deleted"
+  fi
+else
+  echo "[j11] resume: smoke skipped (campaign already has results)"
+fi
+
+# ---- (f) the arm ---------------------------------------------------------------------------
+echo "[j11] ---- runner (${CID}) ----"
+timeout "${RUN_TIMEOUT}" "${PY}" -m sidekick.runner \
+  --system "${SYSTEM}" --split "${SPLIT}" --tasks "${TASKS}" --seeds "${SEEDS}" \
+  --env appworld --workers "${WORKERS}" \
+  --config "${CFG_EFF}" --out "${OUT}" --campaign-id "${CID}"
+CAMP_RC=$?
+echo "[j11] runner rc=${CAMP_RC}"
+
+echo "[j11] ---- summary + manifest + gate + split check (${CID}) ----"
+timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --config "${CFG_EFF}" \
+  --manifest "${OUT}/results/${CID}/manifest.json" --repo "${REPO}" \
+  "${GATE_ARGS[@]}" --expect-split "${SPLIT}"
+SUM_RC=$?
+
+tally_campaign
+TALLY_RC=$?
+
+j11_stop_servers
+JOB_RC=0
+if [[ "${TALLY_RC}" -ne 0 ]]; then
+  JOB_RC="${TALLY_RC}"
+elif [[ "${SUM_RC}" -ne 0 ]]; then
+  JOB_RC="${SUM_RC}"
+elif [[ "${CAMP_RC}" -ne 0 ]]; then
+  JOB_RC="${CAMP_RC}"
+fi
+echo "[j11] done=$(date -Iseconds) cid=${CID} runner_rc=${CAMP_RC} gate_rc=${SUM_RC} tally_rc=${TALLY_RC} job_rc=${JOB_RC}"
+exit "${JOB_RC}"

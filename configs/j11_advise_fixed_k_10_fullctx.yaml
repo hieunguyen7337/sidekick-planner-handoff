@@ -1,0 +1,67 @@
+# J11 held-out read on test_normal, arm A of docs/prereg_j11_lp2_test_20260924.md §2: prose advice at
+# k = 10, full context, with the LP-2 planner (Qwen/Qwen3.8-27B-FP8); replays C's first plan. The
+# advice half of L1 (T − A).
+# Source: configs/lp2_hj12_advise_fixed_k_10_fullctx.yaml
+# Differs from source in: campaign_id, planner.packet_source, planner.packet_source_pending, planner.live_plan_keys, planner.on_missing
+# tests/unit/test_j11_configs.py diffs the parsed YAML of both files against exactly this list.
+#
+# ⚠ This config deliberately carries NO `split:` key. The split is a command-line
+# argument (src/sidekick/runner.py:498, default "dev") and a `split:` line here would be
+# silently ignored, running the confirmatory read on dev while every name said test.
+# See A1 §10.2. Submit only via scripts/pbs/j11_arm.pbs, which passes --split test_normal.
+#
+# planner.live_plan_keys is gone: its one key (2/6171bbc_3, LP Amendment 4) is a DEV key. The test
+# split's planless keys are not known in advance, so on_missing is call_if_planless (J10 A1 §4.2's
+# mechanism, CachedPacketPlanner): a live first plan only for a C episode scored without a crash
+# whose last attempt wrote no plan. j11_arm.pbs counts them and refuses above 16 (5 % of 336).
+env: appworld
+campaign_id: j11_advise_fixed_k_10_fullctx_20260924
+correct_context: full
+fixed_k: 10         # review every 10 steps; ~4 reviews + 1 cached plan over a 40-step episode
+planner:
+  # The LOCALLY SERVED planner. Every generation setting below is copied from configs/lp2_planner_alone_cap81_qwen38_27b.yaml,
+  # so reviews and actions come from the same serving configuration as the plans they follow.
+  # scripts/pbs/j11_arm.pbs serves it on a per-job port and exports SIDEKICK_PLANNER_BASE_URL,
+  # which overrides base_url (src/sidekick/runner.py::resolve_planner_base_url).
+  type: vllm
+  model: Qwen/Qwen3.8-27B-FP8
+  base_url: http://127.0.0.1:8002/v1
+  temperature: 0.7
+  max_tokens: 2048
+  timeout_s: 300
+  chat_template_kwargs:
+    enable_thinking: false
+  # The first plan is replayed from J11's own ceiling C on test_normal, never from a dev sample.
+  packet_source: /scratch/n12194778/sidekick/results/j11_planner_alone_cap81_qwen38_27b_20260924
+  # verify_configs.py exempts the source only while the path is absent; once C has
+  # written it, it must resolve like any other.
+  packet_source_pending: produced by J11 arm C (j11_planner_alone_cap81_qwen38_27b_20260924, planner_alone cap-81 on test_normal), not yet run
+  packet_system: planner_alone
+  # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss aborts, with one
+  # registered exception (J11 prereg §2, J10 A1 §4.2): a C episode scored without a crash whose
+  # last attempt wrote no plan gets a live first plan, for that key only. An absent or crashed
+  # source episode still aborts.
+  on_missing: call_if_planless
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 81 = 2·max_steps + 1. The inherited 25 cap ended 11 of 12 `limit` episodes
+  # in HJ-1; max_steps: 40 must be the binding cap.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

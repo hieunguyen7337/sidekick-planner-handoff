@@ -1,0 +1,42 @@
+# J11 held-out read on test_normal, arm C of docs/prereg_j11_lp2_test_20260924.md §2: the LP-2
+# planner (Qwen/Qwen3.8-27B-FP8, "P27") acting alone at cap 81 -- the ceiling, and the source of every
+# other J11 arm's plan packet and prefix.
+# Source: configs/lp2_planner_alone_cap81_qwen38_27b.yaml
+# Differs from source in: campaign_id
+# tests/unit/test_j11_configs.py diffs the parsed YAML of both files against exactly this list.
+#
+# ⚠ This config deliberately carries NO `split:` key. The split is a command-line
+# argument (src/sidekick/runner.py:498, default "dev") and a `split:` line here would be
+# silently ignored, running the confirmatory read on dev while every name said test.
+# See A1 §10.2. Submit only via scripts/pbs/j11_arm.pbs, which passes --split test_normal.
+#
+# Served as the LP-2 dev ceiling was (lp1_planner_alone.pbs with the 27B): bf16 dtype flag on an
+# FP8 checkpoint, max-model-len 32768, max-num-seqs 64, DeepGEMM off, HF_HOME=hf_planners (the copy in
+# ~/.cache/huggingface is SPARSE and reads as zeros). j11_arm.pbs serves it that way.
+env: appworld
+campaign_id: j11_planner_alone_cap81_qwen38_27b_20260924
+planner:
+  type: vllm
+  model: Qwen/Qwen3.8-27B-FP8
+  # The PLANNER server, deliberately not port 8000: the executor's vLLM server owns that
+  # one. j11_arm.pbs picks a per-job port and exports SIDEKICK_PLANNER_BASE_URL, which
+  # overrides this default (src/sidekick/runner.py::resolve_planner_base_url).
+  base_url: http://127.0.0.1:8002/v1
+  temperature: 0.7
+  max_tokens: 2048
+  timeout_s: 300
+  chat_template_kwargs:
+    enable_thinking: false
+executor:
+  type: mock          # never called by planner_alone; must not be vllm
+  # Required by scripts/setup/verify_configs.py for every non-exempt config. The mock
+  # executor never generates, so this bound is inert here.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_planner_calls is the real limit
+  per_step_timeout_s: 120
+  # Matched to hj13_planner_alone_cap81 so the two ceilings differ in planner identity
+  # and nothing else.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

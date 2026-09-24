@@ -132,7 +132,7 @@ echo "[j10] repo_commit=${SIDEKICK_START_COMMIT} dirty_files=$(git -C "${REPO}" 
 [[ -f "${CFG}" ]] || fatal "config not found: ${CFG}"
 CFG_BASE="$(basename "${CFG}")"
 CFG_STEM="${CFG_BASE%.yaml}"
-[[ "${CFG_BASE}" == j10_*.yaml ]] || fatal "CFG must be a j10_*.yaml config, got ${CFG_BASE}"
+[[ "${CFG_BASE}" == j10_*.yaml || ( "${CFG_BASE}" == j12_prefix_*.yaml && "${J12_HANDOFF:-}" == "J12_GATE_PASSED" ) ]] || fatal "CFG must be a j10_*.yaml config, or a j12_prefix_*.yaml handed off by scripts/pbs/j12_arm.pbs after J12's gate (J12_HANDOFF), got ${CFG_BASE}"
 if [[ "${SELFTEST}" != "1" && "$(dirname "$(readlink -f "${CFG}")")" != "$(readlink -f "${REPO}/configs")" ]]; then
   fatal "CFG must live in ${REPO}/configs (got ${CFG})"
 fi
@@ -200,7 +200,7 @@ case "${CFG_STEM}" in
   j10_executor_alone|j10_executor_alone_bplus) REG_SYSTEM=executor_alone;;
   j10_sft_plan) REG_SYSTEM=sft_plan;;
   j10_planner_alone_cap81) REG_SYSTEM=planner_alone;;
-  j10_prefix_*) REG_SYSTEM=prefix_handoff;;
+  j10_prefix_*|j12_prefix_*) REG_SYSTEM=prefix_handoff;;
   j10_advise_*|j10_takeover_*|j10_show_*) REG_SYSTEM=fixed_k;;
   *) REG_SYSTEM="";;
 esac

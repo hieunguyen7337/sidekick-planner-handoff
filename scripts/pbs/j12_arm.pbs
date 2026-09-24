@@ -1,0 +1,215 @@
+#!/bin/bash
+#PBS -N j12-arm
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:gpu_id=H100:mem=64gb
+#PBS -l walltime=10:00:00
+#PBS -j oe
+#PBS -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/
+#
+# J12 -- ONE arm of the prefix-depth test (docs/prereg_j12_depth_test_20260924.md): M^bplus_6
+# (configs/j12_prefix_m6.yaml) or M^zs_6 (configs/j12_prefix_zs_m6.yaml), the m = 6 partners of
+# J10 arms 5 and 7. This wrapper checks J12's own freeze gate and J12 §6's order rule (arm 3
+# complete, and within A1 §4.2 item 5's planless-key cap), then hands the job, in place, to
+# scripts/pbs/j10_arm.pbs. Its gates, smoke, crash-only refill, tally, served-model probe,
+# arm-3-complete check and DRYRUN rewrite all apply unchanged, and so does A1's gate: J12 arms
+# replay A1's arm 3, so J10_CONFIRM=A1_FROZEN is set here and A1 must be FROZEN too.
+# j10_arm.pbs:135 admits a j12_prefix_* config only with J12_HANDOFF=J12_GATE_PASSED, which this
+# wrapper exports after every check below has passed, and nowhere else.
+# Hosted calls: zero planned hosted calls; live executor asks as A1 Amendment 1 §I, handled by
+# j10_arm.pbs exactly as for arms 4-7.
+#
+#   Dry run on dev, after the freeze (j10_arm.pbs forces SPLIT=dev, adds _dryrun to the id and
+#   replays the _dryrun arm 3, which must be complete for the tasks asked):
+#     qsub -v CFG=configs/j12_prefix_m6.yaml,DRYRUN=1,TASKS=3 scripts/pbs/j12_arm.pbs
+#     qsub -v CFG=configs/j12_prefix_zs_m6.yaml,DRYRUN=1,TASKS=3 scripts/pbs/j12_arm.pbs
+#   The registered arms (J12 prereg committed FROZEN; run from a checkout pinned at that commit):
+#     qsub -v CFG=configs/j12_prefix_m6.yaml,SPLIT=test_normal,J12_CONFIRM=J12_FROZEN,J12_REPO=<pinned checkout>,EXPECTED_CODEX_VERSION=0.153.4 <pinned checkout>/scripts/pbs/j12_arm.pbs
+#     qsub -v CFG=configs/j12_prefix_zs_m6.yaml,SPLIT=test_normal,J12_CONFIRM=J12_FROZEN,J12_REPO=<pinned checkout>,EXPECTED_CODEX_VERSION=0.153.4 <pinned checkout>/scripts/pbs/j12_arm.pbs
+#   (0.153.4 is the codex CLI A1 §9.1 pins; the -v list reaches j10_arm.pbs unchanged. No
+#   J10_CONFIRM on these lines: the hand-off below sets J10_CONFIRM=A1_FROZEN itself.)
+#
+# Job variables (qsub -v), beyond the ones j10_arm.pbs documents and reads itself:
+#   CFG          configs/j12_prefix_m6.yaml | configs/j12_prefix_zs_m6.yaml (required)
+#   J12_CONFIRM  must equal J12_FROZEN unless DRYRUN=1
+#   J12_REPO     the checkout to run from (default: the plan worktree); passed on as J10_REPO
+#   DRYRUN       1 skips J12's freeze gate and is passed on; j10_arm.pbs then runs the dev dry run
+#   SPLIT        test_normal unless DRYRUN=1; TASKS / SEEDS size arm 3's target as j10_arm.pbs does
+#
+# Refusals (exit 2), before j10_arm.pbs is started and so before any server:
+#   CFG not one of J12's two configs; and unless DRYRUN=1: the J12 prereg missing, without exactly
+#   one `**Status**` line, a Status value not beginning FROZEN or mentioning DRAFT, the prereg not
+#   committed or modified since HEAD, J12_CONFIRM != J12_FROZEN, SPLIT != test_normal, TASKS/SEEDS
+#   other than 168 / 1,2, EXPECTED_CODEX_VERSION other than 0.153.4. Always: the config's
+#   handoff.source_campaign not J10 arm 3; arm 3 (its _dryrun campaign under DRYRUN=1) lacking
+#   TARGET non-crashed result.json or holding any crashed/unreadable one; more planless arm-3 keys
+#   than 5 % of TARGET (16 of 336). Both arm-3 rules are j10_arm.pbs's own, run verbatim.
+# Exit codes after the hand-off are j10_arm.pbs's (0 complete, 2 refused, 3 resubmit, other).
+
+set -uo pipefail
+# Only the export after every check below may give j10_arm.pbs this token.
+unset J12_HANDOFF
+
+REPO="${J12_REPO:-/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15}"  # J12_REPO: a pinned run checkout
+SELFTEST="${J12_SELFTEST:-0}"
+JOBTAG="${PBS_JOBID:-nopbs$$}"
+PBS_LOGDIR="${REPO}/campaign/workers/logs"
+
+CFG="${CFG:-}"
+DRYRUN="${DRYRUN:-0}"
+J12_CONFIRM="${J12_CONFIRM:-}"
+PREREG12="${REPO}/docs/prereg_j12_depth_test_20260924.md"
+ARM3_ID=j10_planner_alone_cap81_20260924
+REGISTERED_CODEX_VERSION=0.153.4
+PY="${PY:-/scratch/n12194778/sidekick/env/bin/python}"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+if [[ "${SELFTEST}" == "1" ]]; then
+  # Self-test seam only (as j10_arm.pbs:76-81): never honoured by a real submission.
+  PREREG12="${J12_PREREG:-${PREREG12}}"
+fi
+
+if [[ "${SELFTEST}" != "1" ]]; then
+  mkdir -p "${PBS_LOGDIR}"
+  CFG_TAG="$(basename "${CFG:-nocfg}" .yaml)"
+  exec >> "${PBS_LOGDIR}/j12_arm.${CFG_TAG}.${JOBTAG}.out" 2>&1
+fi
+
+fatal () { echo "[j12] FATAL: $*"; exit 2; }
+echo "[j12] start=$(date -Iseconds) job=${JOBTAG} host=$(hostname) cfg=${CFG} split=${SPLIT:-<j10 default>} dryrun=${DRYRUN} repo=${REPO} selftest=${SELFTEST}"
+
+# ---- the config: one of J12's two arms (J12 §2) ---------------------------------------------
+# j10_arm.pbs then requires it to live in ${REPO}/configs and reads it.
+case "$(basename "${CFG}")" in
+  j12_prefix_m6.yaml|j12_prefix_zs_m6.yaml) ;;
+  *) fatal "CFG must be configs/j12_prefix_m6.yaml or configs/j12_prefix_zs_m6.yaml (J12 §2), got '${CFG}'";;
+esac
+[[ "${CFG}" == /* ]] || CFG="${REPO}/${CFG}"
+[[ -f "${CFG}" ]] || fatal "config not found: ${CFG}"
+
+# ---- J12's freeze gate (J12 §6) -----------------------------------------------------------------
+if [[ "${DRYRUN}" == "1" ]]; then
+  echo "[j12] DRYRUN=1: J12's freeze gate is skipped; j10_arm.pbs runs the dev dry run"
+else
+  [[ -f "${PREREG12}" ]] || fatal "J12 prereg not found: ${PREREG12}"
+  mapfile -t STATUS_LINES < <(grep -E '^\*\*Status\*\*' "${PREREG12}")
+  [[ "${#STATUS_LINES[@]}" -eq 1 ]] || fatal "expected exactly one **Status** line in ${PREREG12}, found ${#STATUS_LINES[@]}"
+  STATUS_LINE="${STATUS_LINES[0]}"
+  echo "[j12] prereg status line: ${STATUS_LINE}"
+  # As j10_arm.pbs: the DRAFT line reads "... becomes FROZEN on commit", so "contains FROZEN" is not enough.
+  if ! [[ "${STATUS_LINE}" =~ ^\*\*Status\*\*:[[:space:]]*(\*\*)?[[:space:]]*FROZEN ]]; then
+    fatal "J12 is not FROZEN: the **Status** value must begin with FROZEN"
+  fi
+  if grep -qi 'DRAFT' <<< "${STATUS_LINE}"; then
+    fatal "J12 status line still mentions DRAFT"
+  fi
+  # Checked in the self-test too (unlike j10_arm.pbs), so the refusal itself is tested.
+  git -C "${REPO}" ls-files --error-unmatch "${PREREG12}" >/dev/null 2>&1 \
+    || fatal "${PREREG12} is not committed in ${REPO}; FROZEN means committed"
+  git -C "${REPO}" diff --quiet HEAD -- "${PREREG12}" \
+    || fatal "${PREREG12} has uncommitted changes; the frozen text is the committed text"
+  [[ "${J12_CONFIRM}" == "J12_FROZEN" ]] || fatal "J12 arms need J12_CONFIRM=J12_FROZEN"
+  # j10_arm.pbs:308-315 checks the CLI only when this is set; J12 makes A1 §9.1's pin mandatory.
+  [[ "${EXPECTED_CODEX_VERSION:-}" == "${REGISTERED_CODEX_VERSION}" ]] \
+    || fatal "J12 test_normal arms need EXPECTED_CODEX_VERSION=${REGISTERED_CODEX_VERSION} (A1 §9.1), got '${EXPECTED_CODEX_VERSION:-}'"
+fi
+
+# ---- split and arm 3's target, as j10_arm.pbs:219-235 derives them ------------------------------
+J12_SEEDS="${SEEDS:-1,2}"
+if [[ "${DRYRUN}" == "1" ]]; then
+  J12_TASKS="${TASKS:-57}"  # j10_arm.pbs forces SPLIT=dev, whose default is 57 tasks
+else
+  [[ "${SPLIT:-}" == "test_normal" ]] || fatal "J12 arms run SPLIT=test_normal (or DRYRUN=1 on dev), got SPLIT=${SPLIT:-<unset>}"
+  J12_TASKS="${TASKS:-168}"
+  [[ "${J12_TASKS}" == "168" && "${J12_SEEDS}" == "1,2" ]] \
+    || fatal "J12 test_normal is registered at 168 tasks x seeds 1,2 = 336 pairs (J12 §2), got TASKS=${J12_TASKS} SEEDS=${J12_SEEDS}"
+fi
+[[ "${J12_TASKS}" =~ ^[0-9]+$ && "${J12_TASKS}" -ge 1 ]] || fatal "TASKS must be a positive integer, got ${J12_TASKS}"
+[[ "${J12_SEEDS}" =~ ^[0-9]+(,[0-9]+)*$ ]] || fatal "SEEDS must look like 1,2 -- got ${J12_SEEDS}"
+ARM3_TARGET=$(( J12_TASKS * $(awk -F, '{print NF}' <<< "${J12_SEEDS}") ))
+PLANLESS_CAP=$(( ARM3_TARGET * 5 / 100 ))  # j10_arm.pbs:437's formula: 16 for 336
+
+# ---- J12 §6 order rule: arm 3 complete and within the planless-key cap --------------------------
+# Arm 3 is the config's handoff.source_campaign, the directory j10_arm.pbs replays; under DRYRUN=1
+# j10_arm.pbs rewrites it to the _dryrun campaign, so that is the one judged here.
+ARM3_FACTS="$(timeout 60 "${PY}" - "${CFG}" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+
+data = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+handoff = data.get("handoff") if isinstance(data.get("handoff"), dict) else {}
+planner = data.get("planner") if isinstance(data.get("planner"), dict) else {}
+print(str(handoff.get("source_campaign") or "").strip())
+print(str(planner.get("packet_system") or "planner_alone").strip())
+PY
+)" || fatal "could not read ${CFG} (PyYAML / syntax)"
+{ read -r ARM3; read -r PACKET_SYSTEM; } <<< "${ARM3_FACTS}"
+ARM3="${ARM3%/}"
+[[ "$(basename "${ARM3:-none}")" == "${ARM3_ID}" ]] \
+  || fatal "handoff.source_campaign must be J10 arm 3 (${ARM3_ID}), got '${ARM3}'"
+if [[ "${DRYRUN}" == "1" ]]; then
+  ARM3="${ARM3}_dryrun"
+fi
+
+# Completeness: the body of j10_arm.pbs's require_complete_source (:385-405), verbatim, so J12 and
+# j10_arm.pbs:414-416 judge arm 3 by one rule; j10_arm.pbs checks it again after the hand-off.
+ARM3_STATS="$(timeout 300 "${PY}" - "${ARM3}" "${J12_SEEDS}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+seeds = {s for s in sys.argv[2].split(",") if s}
+ok = crash = bad = 0
+if root.is_dir():
+    for path in root.rglob("result.json"):
+        try:
+            row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            bad += 1
+            continue
+        if not isinstance(row, dict):
+            bad += 1
+        elif row.get("error_type") == "crash":
+            crash += 1
+        elif str(row.get("seed")) in seeds:
+            ok += 1
+print(f"{ok} {crash} {bad} {1 if root.is_dir() else 0}")
+PY
+)" || fatal "could not inspect arm 3 ${ARM3}"
+read -r A3_OK A3_CRASH A3_BAD A3_EXISTS <<< "${ARM3_STATS}"
+echo "[j12] arm 3 ${ARM3}: exists=${A3_EXISTS} non_crashed=${A3_OK} crashed=${A3_CRASH} unreadable=${A3_BAD} (need >= ${ARM3_TARGET}, 0 crashed)"
+if [[ "${A3_EXISTS}" != "1" || "${A3_OK}" -lt "${ARM3_TARGET}" || "${A3_CRASH}" -ne 0 || "${A3_BAD}" -ne 0 ]]; then
+  fatal "arm 3 is not complete; J12 arms start only after arm 3 is complete (J12 §6)"
+fi
+
+# Planless keys: j10_arm.pbs:418 skips this count for prefix arms, so J12 runs it here, with the
+# N_PLANLESS heredoc of j10_arm.pbs:427-434 verbatim (planless_source_keys, the one definition).
+PLANLESS="$(PYTHONPATH="${REPO}/src:${REPO}:${PYTHONPATH:-}" timeout 300 "${PY}" - "${ARM3}" "${PACKET_SYSTEM}" "${J12_SEEDS}" <<'PY'
+import sys
+
+from sidekick.agents.planner import planless_source_keys
+
+seeds = [s for s in sys.argv[3].split(",") if s]
+print(" ".join(planless_source_keys(sys.argv[1], sys.argv[2], seeds)))
+PY
+)" || fatal "could not list the arm-3 episodes without a plan under ${ARM3}"
+N_PLANLESS=$(wc -w <<< "${PLANLESS}")
+echo "[j12] arm-3 episodes scored without a plan: ${N_PLANLESS} (cap ${PLANLESS_CAP}, A1 §4.2 item 5)${PLANLESS:+: ${PLANLESS}}"
+if (( N_PLANLESS > PLANLESS_CAP )); then
+  fatal "${N_PLANLESS} arm-3 episodes wrote no plan, above A1 §4.2 item 5's cap of ${PLANLESS_CAP} (5 % of ${ARM3_TARGET}); no J12 arm starts (J12 §6)"
+fi
+
+# ---- hand the job to j10_arm.pbs ------------------------------------------------------------------
+J10_PBS="${REPO}/scripts/pbs/j10_arm.pbs"
+# Every J12 check has passed: the one place the token j10_arm.pbs:135 asks for is set.
+export J12_HANDOFF=J12_GATE_PASSED
+if [[ "${SELFTEST}" == "1" ]]; then
+  echo "[j12] selftest: J12 gates passed cfg=${CFG} dryrun=${DRYRUN}; would exec J12_HANDOFF=${J12_HANDOFF} J10_CONFIRM=A1_FROZEN J10_REPO=${REPO} bash ${J10_PBS}"
+  exit 0
+fi
+[[ -f "${J10_PBS}" ]] || fatal "${J10_PBS} not found"
+# j10_arm.pbs honours its seams only under J10_SELFTEST=1; none may reach a real job.
+unset J10_SELFTEST J10_SELFTEST_STAGE J10_PREREG J10_OUT J10_LOGDIR J10_STUB_DIR J10_GUARD_CID
+export CFG DRYRUN J10_CONFIRM=A1_FROZEN J10_REPO="${REPO}"
+echo "[j12] J12 gates passed; exec J12_HANDOFF=${J12_HANDOFF} J10_CONFIRM=A1_FROZEN J10_REPO=${REPO} bash ${J10_PBS} (its log: ${PBS_LOGDIR}/j10_arm.$(basename "${CFG}" .yaml).${JOBTAG}.out)"
+exec bash "${J10_PBS}"

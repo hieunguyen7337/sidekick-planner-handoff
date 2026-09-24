@@ -1,0 +1,450 @@
+{
+  "generated_by": "scripts/analysis/j11_power.py",
+  "split": "dev",
+  "purpose": "power of the J11 registration (LP's gate and L1-L5 for P27) at the test_normal design",
+  "prereg": "docs/prereg_j11_lp2_test_20260924.md \u00a75",
+  "loaded_through": {
+    "campaigns": "lp_report.resolve_campaigns(('P27',)) + lp_report.REFERENCE_CAMPAIGNS['E']",
+    "episodes": "lp_report.load_campaign -> j10_report.a1_arm_episodes (as lp_report._planner_block)",
+    "dev_values": "lp_report.evaluate_gate / lp_report.evaluate_contrast"
+  },
+  "campaigns": {
+    "C": "lp2_planner_alone_cap81_qwen38_27b_20260923",
+    "T": "lp2_hj12_takeover_fixed_k_10_20260923",
+    "A": "lp2_hj12_advise_fixed_k_10_fullctx_20260923",
+    "A1": "lp2_hj13_advise_fixed_k_1_fullctx_20260923",
+    "M_bplus_6": "lp2_prefix_bplus_m6_v2_20260923",
+    "M_bplus_11": "lp2_prefix_bplus_m11_v2_20260923",
+    "M_zs_6": "lp2_prefix_zs_m6_v2_20260923",
+    "M_zs_11": "lp2_prefix_zs_m11_v2_20260923",
+    "E": "hj8_executor_alone_bplus_20260919"
+  },
+  "arm_counts": {
+    "C": {
+      "n_scored": 114,
+      "n_expected": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true
+    },
+    "T": {
+      "n_scored": 114,
+      "n_expected": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true
+    },
+    "A": {
+      "n_scored": 114,
+      "n_expected": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true
+    },
+    "A1": {
+      "n_scored": 114,
+      "n_expected": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true
+    },
+    "M_bplus_6": {
+      "n_scored": 114,
+      "n_expected": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true
+    },
+    "M_bplus_11": {
+      "n_scored": 112,
+      "n_expected": 114,
+      "n_crash": 2,
+      "n_missing": 0,
+      "complete": false
+    },
+    "M_zs_6": {
+      "n_scored": 114,
+      "n_expected": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true
+    },
+    "M_zs_11": {
+      "n_scored": 112,
+      "n_expected": 114,
+      "n_crash": 2,
+      "n_missing": 0,
+      "complete": false
+    },
+    "E": {
+      "n_scored": 114,
+      "n_expected": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true
+    }
+  },
+  "pairs_per_contrast": {
+    "gate": 114,
+    "L1": 114,
+    "L2": 112,
+    "L3": 112,
+    "L4": 112,
+    "L5": 112
+  },
+  "design": {
+    "n_scenarios": 56,
+    "tasks_per_scenario": "as on dev (3)",
+    "seeds": [
+      1,
+      2
+    ],
+    "dev_scenarios": 19
+  },
+  "n_sims": 1000,
+  "n_boot_per_sim": 2000,
+  "seed": 20260924,
+  "alpha": 0.05,
+  "dev": {
+    "gate": {
+      "lp_report_key": "planners.P27.gate",
+      "lp_report_status": "COMPLETE",
+      "n_pairs": 114,
+      "counts": [
+        {
+          "arm": "C",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "E",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "point_pp": 5.18,
+      "ci95_pp_scenario": [
+        -6.24,
+        15.74
+      ],
+      "ci95_pp_task": [
+        -2.88,
+        13.13
+      ],
+      "p_raw": null,
+      "source": "lp_report.evaluate_gate"
+    },
+    "L1": {
+      "lp_report_key": "planners.P27.contrasts.L1",
+      "lp_report_status": "COMPLETE",
+      "n_pairs": 114,
+      "counts": [
+        {
+          "arm": "T",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "A",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "point_pp": 8.93,
+      "ci95_pp_scenario": [
+        2.37,
+        16.58
+      ],
+      "ci95_pp_task": [
+        3.0,
+        15.22
+      ],
+      "p_raw": 0.0042,
+      "source": "lp_report.evaluate_contrast"
+    },
+    "L2": {
+      "lp_report_key": "planners.P27.contrasts.L2",
+      "lp_report_status": "INCOMPLETE",
+      "n_pairs": 112,
+      "counts": [
+        {
+          "arm": "A1",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_bplus_11",
+          "complete": false,
+          "n_scored": 112,
+          "n_expected": 114,
+          "n_crash": 2,
+          "n_missing": 0
+        }
+      ],
+      "point_pp": 10.11,
+      "ci95_pp_scenario": [
+        2.41,
+        18.2
+      ],
+      "ci95_pp_task": [
+        2.25,
+        18.16
+      ],
+      "p_raw": 1.0,
+      "source": "PROVISIONAL: j10.a1_contrast on the pairs lp_report's loader returned; lp_report reads this contrast INCOMPLETE"
+    },
+    "L3": {
+      "lp_report_key": "planners.P27.contrasts.L3",
+      "lp_report_status": "INCOMPLETE",
+      "n_pairs": 112,
+      "counts": [
+        {
+          "arm": "M_bplus_11",
+          "complete": false,
+          "n_scored": 112,
+          "n_expected": 114,
+          "n_crash": 2,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_bplus_6",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "point_pp": 0.16,
+      "ci95_pp_scenario": [
+        -7.03,
+        7.7
+      ],
+      "ci95_pp_task": [
+        -7.62,
+        7.89
+      ],
+      "p_raw": 0.9546,
+      "source": "PROVISIONAL: j10.a1_contrast on the pairs lp_report's loader returned; lp_report reads this contrast INCOMPLETE"
+    },
+    "L4": {
+      "lp_report_key": "planners.P27.contrasts.L4",
+      "lp_report_status": "INCOMPLETE",
+      "n_pairs": 112,
+      "counts": [
+        {
+          "arm": "C",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_bplus_11",
+          "complete": false,
+          "n_scored": 112,
+          "n_expected": 114,
+          "n_crash": 2,
+          "n_missing": 0
+        }
+      ],
+      "point_pp": -1.05,
+      "ci95_pp_scenario": [
+        -10.52,
+        8.97
+      ],
+      "ci95_pp_task": [
+        -9.06,
+        6.76
+      ],
+      "p_raw": 0.106,
+      "source": "PROVISIONAL: j10.a1_contrast on the pairs lp_report's loader returned; lp_report reads this contrast INCOMPLETE"
+    },
+    "L5": {
+      "lp_report_key": "planners.P27.contrasts.L5",
+      "lp_report_status": "INCOMPLETE",
+      "n_pairs": 112,
+      "counts": [
+        {
+          "arm": "M_zs_11",
+          "complete": false,
+          "n_scored": 112,
+          "n_expected": 114,
+          "n_crash": 2,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_zs_6",
+          "complete": true,
+          "n_scored": 114,
+          "n_expected": 114,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "point_pp": -0.12,
+      "ci95_pp_scenario": [
+        -8.86,
+        8.19
+      ],
+      "ci95_pp_task": [
+        -7.36,
+        6.94
+      ],
+      "p_raw": 1.0,
+      "source": "PROVISIONAL: j10.a1_contrast on the pairs lp_report's loader returned; lp_report reads this contrast INCOMPLETE"
+    }
+  },
+  "dev_points_pp_from_pairs": {
+    "gate": 5.18,
+    "L1": 8.93,
+    "L2": 10.11,
+    "L3": 0.16,
+    "L4": -1.05,
+    "L5": -0.12
+  },
+  "half_effect_shift_pp": {
+    "gate": 2.59,
+    "L1": 4.463,
+    "L2": 5.057,
+    "L3": 0.078,
+    "L4": -4.025,
+    "L5": -0.058
+  },
+  "power_table": {
+    "gate_passes": {
+      "at_dev_effect": 0.951,
+      "at_half_effect": 0.781
+    },
+    "L1": {
+      "at_dev_effect": 0.948,
+      "at_half_effect": 0.317,
+      "reading": "L1 replicates",
+      "note": "gate passes AND the registered reading (Holm m = 5)"
+    },
+    "L2": {
+      "at_dev_effect": 0.0,
+      "at_half_effect": 0.0,
+      "reading": "supported",
+      "note": "gate passes AND the registered reading (Holm m = 5)"
+    },
+    "L3": {
+      "at_dev_effect": 0.017,
+      "at_half_effect": 0.005,
+      "reading": "supported",
+      "note": "gate passes AND the registered reading (Holm m = 5)"
+    },
+    "L4": {
+      "at_dev_effect": 0.579,
+      "at_half_effect": 0.058,
+      "reading": "supported",
+      "note": "gate passes AND the registered reading (Holm m = 5)"
+    },
+    "L5": {
+      "at_dev_effect": 0.01,
+      "at_half_effect": 0.01,
+      "reading": "supported",
+      "note": "gate passes AND the registered reading (Holm m = 5)"
+    },
+    "gate_and_L1_replicates": {
+      "at_dev_effect": 0.948,
+      "at_half_effect": 0.317
+    },
+    "gate_and_all_five_positive": {
+      "at_dev_effect": 0.0,
+      "at_half_effect": 0.0
+    }
+  },
+  "power_at_dev_effect": {
+    "gate_passes": 0.951,
+    "L": {
+      "L1": {
+        "positive_under_holm": 0.997,
+        "registered": 0.948
+      },
+      "L2": {
+        "positive_under_holm": 0.0,
+        "registered": 0.0
+      },
+      "L3": {
+        "positive_under_holm": 0.017,
+        "registered": 0.017
+      },
+      "L4": {
+        "positive_under_holm": 0.628,
+        "registered": 0.579
+      },
+      "L5": {
+        "positive_under_holm": 0.01,
+        "registered": 0.01
+      }
+    },
+    "L1_readings_ignoring_gate": {
+      "replicates": 0.997,
+      "fails_to_replicate": 0.0,
+      "reversed": 0.0,
+      "not_resolved": 0.003
+    },
+    "joint": {
+      "gate_and_L1_replicates": 0.948,
+      "gate_and_all_five_positive": 0.0
+    }
+  },
+  "power_at_half_effect": {
+    "gate_passes": 0.781,
+    "L": {
+      "L1": {
+        "positive_under_holm": 0.364,
+        "registered": 0.317
+      },
+      "L2": {
+        "positive_under_holm": 0.0,
+        "registered": 0.0
+      },
+      "L3": {
+        "positive_under_holm": 0.005,
+        "registered": 0.005
+      },
+      "L4": {
+        "positive_under_holm": 0.142,
+        "registered": 0.058
+      },
+      "L5": {
+        "positive_under_holm": 0.011,
+        "registered": 0.01
+      }
+    },
+    "L1_readings_ignoring_gate": {
+      "replicates": 0.364,
+      "fails_to_replicate": 0.397,
+      "reversed": 0.0,
+      "not_resolved": 0.239
+    },
+    "joint": {
+      "gate_and_L1_replicates": 0.317,
+      "gate_and_all_five_positive": 0.0
+    }
+  },
+  "caveats": [
+    "Resampling dev scenarios treats the dev effect as the truth; the half-effect rows are the guard against that optimism.",
+    "B per simulated read (2,000) is below the registered 10,000; interval endpoints carry Monte Carlo error of a few tenths of a pp.",
+    "POOL-04's boundary rule and the planless-key sensitivity are not simulated; each can only withhold a reading.",
+    "Contrasts on an arm below 114 non-crashed dev pairs use the pairs that exist (see arm_counts, pairs_per_contrast); their dev values are PROVISIONAL, and lp_report reads them INCOMPLETE until the refill lands."
+  ]
+}
