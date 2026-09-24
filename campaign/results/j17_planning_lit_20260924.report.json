@@ -1,0 +1,6260 @@
+{
+  "protocol": "J17-planning-lit",
+  "label": "EXPLORATORY dev analyses prompted by the planning literature; nothing here decides a registered verdict",
+  "brief": "campaign/workers/briefs/20260924_ana_planning_lit.md",
+  "status": "COMPLETE",
+  "warnings": [],
+  "plantax": {
+    "label": "EXPLORATORY (planning literature: tailoring x plan)",
+    "pairing": {
+      "rule": "keys non-crashed with goal_pass and TGC scored in every PLANTAX_CORE arm",
+      "core_arms": [
+        "exec_alone_bplus",
+        "sft_plan_bplus",
+        "exec_alone_base",
+        "prompt_only_base",
+        "prefix_bplus_m6",
+        "prefix_bplus_m9",
+        "prefix_bplus_m11",
+        "prefix_zs_m6",
+        "prefix_zs_m9",
+        "prefix_zs_m11"
+      ],
+      "n_keys": 114,
+      "seeds": [
+        1,
+        2
+      ],
+      "n_tasks": 57
+    },
+    "contrasts": {
+      "plan_gain_tailored": {
+        "definition": "sft_plan_bplus - exec_alone_bplus",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 18.926316,
+          "ci95_pp_scenario": [
+            11.742982,
+            26.853509
+          ],
+          "ci95_pp_task": [
+            12.016667,
+            26.074561
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 1.5e-05,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+18.93",
+            "ci95_pp_scenario": [
+              "+11.74",
+              "+26.85"
+            ],
+            "ci95_pp_task": [
+              "+12.02",
+              "+26.07"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0000"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.718149,
+            "exec_alone_bplus": 0.528886
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 26.315789,
+          "ci95_pp_scenario": [
+            14.035088,
+            40.350877
+          ],
+          "ci95_pp_task": [
+            15.789474,
+            36.842105
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.000977,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+26.32",
+            "ci95_pp_scenario": [
+              "+14.04",
+              "+40.35"
+            ],
+            "ci95_pp_task": [
+              "+15.79",
+              "+36.84"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0010"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.394737,
+            "exec_alone_bplus": 0.131579
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "plan_gain_base": {
+        "definition": "prompt_only_base - exec_alone_base",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 9.818421,
+          "ci95_pp_scenario": [
+            4.110526,
+            15.441228
+          ],
+          "ci95_pp_task": [
+            3.788596,
+            15.798246
+          ],
+          "p_two_sided": 0.0014,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0014,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.005188,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+9.82",
+            "ci95_pp_scenario": [
+              "+4.11",
+              "+15.44"
+            ],
+            "ci95_pp_task": [
+              "+3.79",
+              "+15.80"
+            ],
+            "p_two_sided": "0.0014",
+            "p_signflip_two_sided": "0.0052"
+          },
+          "means_on_pairs": {
+            "prompt_only_base": 0.288474,
+            "exec_alone_base": 0.190289
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 3.508772,
+          "ci95_pp_scenario": [
+            0.0,
+            7.017544
+          ],
+          "ci95_pp_task": [
+            0.0,
+            7.894737
+          ],
+          "p_two_sided": 0.1108,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.1252,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.21875,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+3.51",
+            "ci95_pp_scenario": [
+              "+0.00",
+              "+7.02"
+            ],
+            "ci95_pp_task": [
+              "+0.00",
+              "+7.89"
+            ],
+            "p_two_sided": "0.1108",
+            "p_signflip_two_sided": "0.2188"
+          },
+          "means_on_pairs": {
+            "prompt_only_base": 0.052632,
+            "exec_alone_base": 0.017544
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "did1": {
+        "definition": "(sft_plan_bplus - exec_alone_bplus) - (prompt_only_base - exec_alone_base)",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 9.107895,
+          "ci95_pp_scenario": [
+            -1.085088,
+            19.602632
+          ],
+          "ci95_pp_task": [
+            -0.533333,
+            18.989474
+          ],
+          "p_two_sided": 0.0836,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0628,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.115784,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+9.11",
+            "ci95_pp_scenario": [
+              "-1.09",
+              "+19.60"
+            ],
+            "ci95_pp_task": [
+              "-0.53",
+              "+18.99"
+            ],
+            "p_two_sided": "0.0836",
+            "p_signflip_two_sided": "0.1158"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.718149,
+            "exec_alone_bplus": 0.528886,
+            "prompt_only_base": 0.288474,
+            "exec_alone_base": 0.190289
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 22.807018,
+          "ci95_pp_scenario": [
+            9.649123,
+            36.842105
+          ],
+          "ci95_pp_task": [
+            12.280702,
+            33.333333
+          ],
+          "p_two_sided": 0.0002,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.005859,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+22.81",
+            "ci95_pp_scenario": [
+              "+9.65",
+              "+36.84"
+            ],
+            "ci95_pp_task": [
+              "+12.28",
+              "+33.33"
+            ],
+            "p_two_sided": "0.0002",
+            "p_signflip_two_sided": "0.0059"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.394737,
+            "exec_alone_bplus": 0.131579,
+            "prompt_only_base": 0.052632,
+            "exec_alone_base": 0.017544
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "g_plan": {
+        "definition": "sft_plan_bplus - prompt_only_base",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 42.967544,
+          "ci95_pp_scenario": [
+            33.715789,
+            51.894737
+          ],
+          "ci95_pp_task": [
+            35.267544,
+            50.854386
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 4e-06,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+42.97",
+            "ci95_pp_scenario": [
+              "+33.72",
+              "+51.89"
+            ],
+            "ci95_pp_task": [
+              "+35.27",
+              "+50.85"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0000"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.718149,
+            "prompt_only_base": 0.288474
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 34.210526,
+          "ci95_pp_scenario": [
+            19.298246,
+            49.122807
+          ],
+          "ci95_pp_task": [
+            22.807018,
+            45.614035
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.001953,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+34.21",
+            "ci95_pp_scenario": [
+              "+19.30",
+              "+49.12"
+            ],
+            "ci95_pp_task": [
+              "+22.81",
+              "+45.61"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0020"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.394737,
+            "prompt_only_base": 0.052632
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "g_act_m6": {
+        "definition": "prefix_bplus_m6 - prefix_zs_m6",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 4.120175,
+          "ci95_pp_scenario": [
+            -1.645614,
+            10.285088
+          ],
+          "ci95_pp_task": [
+            -2.226316,
+            10.559649
+          ],
+          "p_two_sided": 0.1634,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.2074,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.216187,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+4.12",
+            "ci95_pp_scenario": [
+              "-1.65",
+              "+10.29"
+            ],
+            "ci95_pp_task": [
+              "-2.23",
+              "+10.56"
+            ],
+            "p_two_sided": "0.1634",
+            "p_signflip_two_sided": "0.2162"
+          },
+          "means_on_pairs": {
+            "prefix_bplus_m6": 0.723675,
+            "prefix_zs_m6": 0.682474
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 4.385965,
+          "ci95_pp_scenario": [
+            -5.263158,
+            14.912281
+          ],
+          "ci95_pp_task": [
+            -4.385965,
+            13.157895
+          ],
+          "p_two_sided": 0.4634,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.3592,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.539062,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+4.39",
+            "ci95_pp_scenario": [
+              "-5.26",
+              "+14.91"
+            ],
+            "ci95_pp_task": [
+              "-4.39",
+              "+13.16"
+            ],
+            "p_two_sided": "0.4634",
+            "p_signflip_two_sided": "0.5391"
+          },
+          "means_on_pairs": {
+            "prefix_bplus_m6": 0.429825,
+            "prefix_zs_m6": 0.385965
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "g_act_m9": {
+        "definition": "prefix_bplus_m9 - prefix_zs_m9",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 0.064912,
+          "ci95_pp_scenario": [
+            -6.819298,
+            7.05
+          ],
+          "ci95_pp_task": [
+            -6.049123,
+            6.068421
+          ],
+          "p_two_sided": 0.9822,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.9916,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.982544,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+0.06",
+            "ci95_pp_scenario": [
+              "-6.82",
+              "+7.05"
+            ],
+            "ci95_pp_task": [
+              "-6.05",
+              "+6.07"
+            ],
+            "p_two_sided": "0.9822",
+            "p_signflip_two_sided": "0.9825"
+          },
+          "means_on_pairs": {
+            "prefix_bplus_m9": 0.785184,
+            "prefix_zs_m9": 0.784535
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 0.877193,
+          "ci95_pp_scenario": [
+            -7.894737,
+            9.649123
+          ],
+          "ci95_pp_task": [
+            -7.894737,
+            9.649123
+          ],
+          "p_two_sided": 0.8822,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.9158,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 1.0,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+0.88",
+            "ci95_pp_scenario": [
+              "-7.89",
+              "+9.65"
+            ],
+            "ci95_pp_task": [
+              "-7.89",
+              "+9.65"
+            ],
+            "p_two_sided": "0.8822",
+            "p_signflip_two_sided": "1.0000"
+          },
+          "means_on_pairs": {
+            "prefix_bplus_m9": 0.561404,
+            "prefix_zs_m9": 0.552632
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "g_act_m11": {
+        "definition": "prefix_bplus_m11 - prefix_zs_m11",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": -2.463158,
+          "ci95_pp_scenario": [
+            -6.514912,
+            1.495614
+          ],
+          "ci95_pp_task": [
+            -5.529825,
+            0.7
+          ],
+          "p_two_sided": 0.2258,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.1198,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.252441,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "-2.46",
+            "ci95_pp_scenario": [
+              "-6.51",
+              "+1.50"
+            ],
+            "ci95_pp_task": [
+              "-5.53",
+              "+0.70"
+            ],
+            "p_two_sided": "0.2258",
+            "p_signflip_two_sided": "0.2524"
+          },
+          "means_on_pairs": {
+            "prefix_bplus_m11": 0.809825,
+            "prefix_zs_m11": 0.834456
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": -1.754386,
+          "ci95_pp_scenario": [
+            -9.649123,
+            6.140351
+          ],
+          "ci95_pp_task": [
+            -7.894737,
+            4.385965
+          ],
+          "p_two_sided": 0.7626,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.685,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.835938,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "-1.75",
+            "ci95_pp_scenario": [
+              "-9.65",
+              "+6.14"
+            ],
+            "ci95_pp_task": [
+              "-7.89",
+              "+4.39"
+            ],
+            "p_two_sided": "0.7626",
+            "p_signflip_two_sided": "0.8359"
+          },
+          "means_on_pairs": {
+            "prefix_bplus_m11": 0.605263,
+            "prefix_zs_m11": 0.622807
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "did2_m6": {
+        "definition": "(sft_plan_bplus - prompt_only_base) - (prefix_bplus_m6 - prefix_zs_m6)",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 38.847368,
+          "ci95_pp_scenario": [
+            27.085965,
+            49.772807
+          ],
+          "ci95_pp_task": [
+            28.985965,
+            48.907895
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 3.8e-05,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+38.85",
+            "ci95_pp_scenario": [
+              "+27.09",
+              "+49.77"
+            ],
+            "ci95_pp_task": [
+              "+28.99",
+              "+48.91"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0000"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.718149,
+            "prompt_only_base": 0.288474,
+            "prefix_bplus_m6": 0.723675,
+            "prefix_zs_m6": 0.682474
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 29.824561,
+          "ci95_pp_scenario": [
+            13.157895,
+            46.491228
+          ],
+          "ci95_pp_task": [
+            15.789474,
+            42.982456
+          ],
+          "p_two_sided": 0.0002,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0002,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.005249,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+29.82",
+            "ci95_pp_scenario": [
+              "+13.16",
+              "+46.49"
+            ],
+            "ci95_pp_task": [
+              "+15.79",
+              "+42.98"
+            ],
+            "p_two_sided": "0.0002",
+            "p_signflip_two_sided": "0.0052"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.394737,
+            "prompt_only_base": 0.052632,
+            "prefix_bplus_m6": 0.429825,
+            "prefix_zs_m6": 0.385965
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "did2_m9": {
+        "definition": "(sft_plan_bplus - prompt_only_base) - (prefix_bplus_m9 - prefix_zs_m9)",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 42.902632,
+          "ci95_pp_scenario": [
+            34.330702,
+            50.997368
+          ],
+          "ci95_pp_task": [
+            34.087719,
+            52.076316
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 4e-06,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+42.90",
+            "ci95_pp_scenario": [
+              "+34.33",
+              "+51.00"
+            ],
+            "ci95_pp_task": [
+              "+34.09",
+              "+52.08"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0000"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.718149,
+            "prompt_only_base": 0.288474,
+            "prefix_bplus_m9": 0.785184,
+            "prefix_zs_m9": 0.784535
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 33.333333,
+          "ci95_pp_scenario": [
+            18.421053,
+            47.368421
+          ],
+          "ci95_pp_task": [
+            20.175439,
+            47.368421
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.001129,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+33.33",
+            "ci95_pp_scenario": [
+              "+18.42",
+              "+47.37"
+            ],
+            "ci95_pp_task": [
+              "+20.18",
+              "+47.37"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0011"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.394737,
+            "prompt_only_base": 0.052632,
+            "prefix_bplus_m9": 0.561404,
+            "prefix_zs_m9": 0.552632
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "did2_m11": {
+        "definition": "(sft_plan_bplus - prompt_only_base) - (prefix_bplus_m11 - prefix_zs_m11)",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 45.430702,
+          "ci95_pp_scenario": [
+            36.180702,
+            54.251754
+          ],
+          "ci95_pp_task": [
+            37.932456,
+            53.173684
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 4e-06,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+45.43",
+            "ci95_pp_scenario": [
+              "+36.18",
+              "+54.25"
+            ],
+            "ci95_pp_task": [
+              "+37.93",
+              "+53.17"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0000"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.718149,
+            "prompt_only_base": 0.288474,
+            "prefix_bplus_m11": 0.809825,
+            "prefix_zs_m11": 0.834456
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 35.964912,
+          "ci95_pp_scenario": [
+            19.298246,
+            52.631579
+          ],
+          "ci95_pp_task": [
+            23.684211,
+            48.245614
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.001373,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+35.96",
+            "ci95_pp_scenario": [
+              "+19.30",
+              "+52.63"
+            ],
+            "ci95_pp_task": [
+              "+23.68",
+              "+48.25"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0014"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus": 0.394737,
+            "prompt_only_base": 0.052632,
+            "prefix_bplus_m11": 0.605263,
+            "prefix_zs_m11": 0.622807
+          },
+          "n_dropped_missing_field": 0
+        }
+      }
+    },
+    "arm_means_on_keys": {
+      "exec_alone_bplus": {
+        "goal_pass": 0.528886,
+        "tgc": 0.131579
+      },
+      "sft_plan_bplus": {
+        "goal_pass": 0.718149,
+        "tgc": 0.394737
+      },
+      "exec_alone_base": {
+        "goal_pass": 0.190289,
+        "tgc": 0.017544
+      },
+      "prompt_only_base": {
+        "goal_pass": 0.288474,
+        "tgc": 0.052632
+      },
+      "prefix_bplus_m6": {
+        "goal_pass": 0.723675,
+        "tgc": 0.429825
+      },
+      "prefix_bplus_m9": {
+        "goal_pass": 0.785184,
+        "tgc": 0.561404
+      },
+      "prefix_bplus_m11": {
+        "goal_pass": 0.809825,
+        "tgc": 0.605263
+      },
+      "prefix_zs_m6": {
+        "goal_pass": 0.682474,
+        "tgc": 0.385965
+      },
+      "prefix_zs_m9": {
+        "goal_pass": 0.784535,
+        "tgc": 0.552632
+      },
+      "prefix_zs_m11": {
+        "goal_pass": 0.834456,
+        "tgc": 0.622807
+      }
+    },
+    "sensitivity_same_build": {
+      "why": "exec_alone_bplus exists only as the 20260919 adapter build and sft_plan_bplus is the iaware build (ledger ADV-FC-02), so plan_gain_tailored and did1 mix a build change into the plan gain; these rows use the 20260919 sft_plan run instead",
+      "n_keys": 114,
+      "plan_gain_tailored_same_build": {
+        "definition": "sft_plan_bplus_0919 - exec_alone_bplus",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 17.112281,
+          "ci95_pp_scenario": [
+            9.822807,
+            25.271053
+          ],
+          "ci95_pp_task": [
+            10.479825,
+            23.689474
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.000244,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+17.11",
+            "ci95_pp_scenario": [
+              "+9.82",
+              "+25.27"
+            ],
+            "ci95_pp_task": [
+              "+10.48",
+              "+23.69"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0002"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus_0919": 0.700009,
+            "exec_alone_bplus": 0.528886
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 27.192982,
+          "ci95_pp_scenario": [
+            14.912281,
+            41.22807
+          ],
+          "ci95_pp_task": [
+            16.666667,
+            37.719298
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.000977,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+27.19",
+            "ci95_pp_scenario": [
+              "+14.91",
+              "+41.23"
+            ],
+            "ci95_pp_task": [
+              "+16.67",
+              "+37.72"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0010"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus_0919": 0.403509,
+            "exec_alone_bplus": 0.131579
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "did1_same_build": {
+        "definition": "(sft_plan_bplus_0919 - exec_alone_bplus) - (prompt_only_base - exec_alone_base)",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 7.29386,
+          "ci95_pp_scenario": [
+            -2.480702,
+            17.121053
+          ],
+          "ci95_pp_task": [
+            -1.516667,
+            16.386842
+          ],
+          "p_two_sided": 0.1546,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.1048,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.181168,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+7.29",
+            "ci95_pp_scenario": [
+              "-2.48",
+              "+17.12"
+            ],
+            "ci95_pp_task": [
+              "-1.52",
+              "+16.39"
+            ],
+            "p_two_sided": "0.1546",
+            "p_signflip_two_sided": "0.1812"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus_0919": 0.700009,
+            "exec_alone_bplus": 0.528886,
+            "prompt_only_base": 0.288474,
+            "exec_alone_base": 0.190289
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 23.684211,
+          "ci95_pp_scenario": [
+            11.403509,
+            36.842105
+          ],
+          "ci95_pp_task": [
+            13.157895,
+            34.210526
+          ],
+          "p_two_sided": 0.0002,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.003662,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+23.68",
+            "ci95_pp_scenario": [
+              "+11.40",
+              "+36.84"
+            ],
+            "ci95_pp_task": [
+              "+13.16",
+              "+34.21"
+            ],
+            "p_two_sided": "0.0002",
+            "p_signflip_two_sided": "0.0037"
+          },
+          "means_on_pairs": {
+            "sft_plan_bplus_0919": 0.403509,
+            "exec_alone_bplus": 0.131579,
+            "prompt_only_base": 0.052632,
+            "exec_alone_base": 0.017544
+          },
+          "n_dropped_missing_field": 0
+        }
+      }
+    },
+    "qwen_floor": {
+      "why": "ledger QWEN-03's zero-shot Qwen3-8B floor pair: the plan gain as a third point, no DiD",
+      "n_keys": 114,
+      "plan_gain": {
+        "definition": "qwen_prompt_only - qwen_exec_alone",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 0.0,
+          "ci95_pp_scenario": [
+            0.0,
+            0.0
+          ],
+          "ci95_pp_task": [
+            0.0,
+            0.0
+          ],
+          "p_two_sided": 1.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 1.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 1.0,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+0.00",
+            "ci95_pp_scenario": [
+              "+0.00",
+              "+0.00"
+            ],
+            "ci95_pp_task": [
+              "+0.00",
+              "+0.00"
+            ],
+            "p_two_sided": "1.0000",
+            "p_signflip_two_sided": "1.0000"
+          },
+          "means_on_pairs": {
+            "qwen_prompt_only": 0.248053,
+            "qwen_exec_alone": 0.248053
+          },
+          "n_dropped_missing_field": 0
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 0.0,
+          "ci95_pp_scenario": [
+            0.0,
+            0.0
+          ],
+          "ci95_pp_task": [
+            0.0,
+            0.0
+          ],
+          "p_two_sided": 1.0,
+          "threshold_pp": 0.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 1.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 1.0,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+0.00",
+            "ci95_pp_scenario": [
+              "+0.00",
+              "+0.00"
+            ],
+            "ci95_pp_task": [
+              "+0.00",
+              "+0.00"
+            ],
+            "p_two_sided": "1.0000",
+            "p_signflip_two_sided": "1.0000"
+          },
+          "means_on_pairs": {
+            "qwen_prompt_only": 0.0,
+            "qwen_exec_alone": 0.0
+          },
+          "n_dropped_missing_field": 0
+        }
+      },
+      "n_keys_goal_pass_identical": 114
+    },
+    "plan_identity": {
+      "sft_plan_bplus vs prompt_only_base": {
+        "n_keys": 114,
+        "n_identical": 114,
+        "n_differ": 0,
+        "n_missing_plan": 0,
+        "differ_examples": []
+      },
+      "sft_plan_bplus_0919 vs prompt_only_base": {
+        "n_keys": 114,
+        "n_identical": 114,
+        "n_differ": 0,
+        "n_missing_plan": 0,
+        "differ_examples": []
+      },
+      "qwen_prompt_only vs prompt_only_base": {
+        "n_keys": 114,
+        "n_identical": 114,
+        "n_differ": 0,
+        "n_missing_plan": 0,
+        "differ_examples": []
+      }
+    }
+  },
+  "term": {
+    "label": "EXPLORATORY (Fan et al. arXiv 2609.20804-comparable termination census)",
+    "definitions": {
+      "action": "an event_type 'action' of the acting actor (loop.py:598-605 executor, :998-1005 planner driver); acting actor = executor, or planner in planner_alone arms",
+      "acted": "at least one action with payload.kind == 'CODE' (CODE and COMPLETE reach env.step, loop.py:1141-1143; COMPLETE ends the episode, loop.py:1169-1170)",
+      "after_handoff": "prefix arms: only actions with step > the handoff report's effective_m",
+      "categories": "first rule that applies: no_handoff (prefix arm, handoff_occurred not true); limit (error_type == 'limit'); other (any other non-null error_type, e.g. parse_error); stopped_before_acting (clean end, zero CODE actions); completed_after_acting (clean end, >= 1 CODE action). Crashes are dropped before classification",
+      "handoff_flag": "handoff_occurred of the last `report` event carrying that key (the prefix system's report, prefix_handoff.py:183-189); an executor REPORT action also writes a `report` event, without the key"
+    },
+    "arms": {
+      "noop": {
+        "campaigns": [
+          "dev_noop_complete_20260924"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 114,
+            "share": 1.0,
+            "ci95_scenario": [
+              1.0,
+              1.0
+            ],
+            "ci95_task": [
+              1.0,
+              1.0
+            ],
+            "printed": "1.0000"
+          },
+          "completed_after_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          }
+        },
+        "median_steps": 1.0,
+        "mean_steps": 1.0,
+        "median_acted": 0.0,
+        "mean_acted": 0.0,
+        "median_actions_any_kind": 1.0,
+        "action_kinds_total": {
+          "COMPLETE": 114
+        },
+        "zero_acted_by_error_type": {
+          "none": 114
+        },
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "exec_alone_base": {
+        "campaigns": [
+          "hj1r_exec8b_20260916"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 37,
+            "share": 0.324561,
+            "ci95_scenario": [
+              0.210526,
+              0.45614
+            ],
+            "ci95_task": [
+              0.236842,
+              0.412281
+            ],
+            "printed": "0.3246"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 77,
+            "share": 0.675439,
+            "ci95_scenario": [
+              0.54386,
+              0.789474
+            ],
+            "ci95_task": [
+              0.587719,
+              0.763158
+            ],
+            "printed": "0.6754"
+          }
+        },
+        "median_steps": 33.5,
+        "mean_steps": 30.157895,
+        "median_acted": 32.5,
+        "mean_acted": 29.526316,
+        "median_actions_any_kind": 33.5,
+        "action_kinds_total": {
+          "CODE": 3366,
+          "COMPLETE": 72
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "exec_alone_bplus": {
+        "campaigns": [
+          "hj8_executor_alone_bplus_20260919"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 31,
+            "share": 0.27193,
+            "ci95_scenario": [
+              0.166667,
+              0.385965
+            ],
+            "ci95_task": [
+              0.184211,
+              0.368421
+            ],
+            "printed": "0.2719"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 83,
+            "share": 0.72807,
+            "ci95_scenario": [
+              0.614035,
+              0.833333
+            ],
+            "ci95_task": [
+              0.631579,
+              0.815789
+            ],
+            "printed": "0.7281"
+          }
+        },
+        "median_steps": 17.5,
+        "mean_steps": 21.938596,
+        "median_acted": 16.5,
+        "mean_acted": 21.324561,
+        "median_actions_any_kind": 17.5,
+        "action_kinds_total": {
+          "CODE": 2431,
+          "COMPLETE": 70
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "prompt_only_base": {
+        "campaigns": [
+          "hj1r_prompt_only_20260916"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 40,
+            "share": 0.350877,
+            "ci95_scenario": [
+              0.245614,
+              0.464912
+            ],
+            "ci95_task": [
+              0.254386,
+              0.447368
+            ],
+            "printed": "0.3509"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 74,
+            "share": 0.649123,
+            "ci95_scenario": [
+              0.535088,
+              0.754386
+            ],
+            "ci95_task": [
+              0.552632,
+              0.745614
+            ],
+            "printed": "0.6491"
+          }
+        },
+        "median_steps": 34.0,
+        "mean_steps": 31.789474,
+        "median_acted": 33.0,
+        "mean_acted": 31.315789,
+        "median_actions_any_kind": 34.0,
+        "action_kinds_total": {
+          "ASK_PLANNER": 1,
+          "CODE": 3570,
+          "COMPLETE": 53
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "sft_plan_bplus": {
+        "campaigns": [
+          "hj8_sft_plan_bplus_20260921iaware"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 18,
+            "share": 0.157895,
+            "ci95_scenario": [
+              0.096491,
+              0.219298
+            ],
+            "ci95_task": [
+              0.087719,
+              0.22807
+            ],
+            "printed": "0.1579"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 96,
+            "share": 0.842105,
+            "ci95_scenario": [
+              0.780702,
+              0.903509
+            ],
+            "ci95_task": [
+              0.77193,
+              0.912281
+            ],
+            "printed": "0.8421"
+          }
+        },
+        "median_steps": 14.0,
+        "mean_steps": 18.684211,
+        "median_acted": 13.0,
+        "mean_acted": 18.122807,
+        "median_actions_any_kind": 14.0,
+        "action_kinds_total": {
+          "CODE": 2066,
+          "COMPLETE": 64
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "advise_k10": {
+        "campaigns": [
+          "hj12_advise_fixed_k_10_fullctx_20260923"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 13,
+            "share": 0.114035,
+            "ci95_scenario": [
+              0.035088,
+              0.201754
+            ],
+            "ci95_task": [
+              0.052632,
+              0.184211
+            ],
+            "printed": "0.1140"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 101,
+            "share": 0.885965,
+            "ci95_scenario": [
+              0.798246,
+              0.964912
+            ],
+            "ci95_task": [
+              0.815789,
+              0.947368
+            ],
+            "printed": "0.8860"
+          }
+        },
+        "median_steps": 14.0,
+        "mean_steps": 18.254386,
+        "median_acted": 13.5,
+        "mean_acted": 17.614035,
+        "median_actions_any_kind": 14.0,
+        "action_kinds_total": {
+          "CODE": 2008,
+          "COMPLETE": 73
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "takeover_k10": {
+        "campaigns": [
+          "hj12_takeover_fixed_k_10_20260923"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 1,
+            "share": 0.008772,
+            "ci95_scenario": [
+              0.0,
+              0.026316
+            ],
+            "ci95_task": [
+              0.0,
+              0.026316
+            ],
+            "printed": "0.0088"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 113,
+            "share": 0.991228,
+            "ci95_scenario": [
+              0.973684,
+              1.0
+            ],
+            "ci95_task": [
+              0.973684,
+              1.0
+            ],
+            "printed": "0.9912"
+          }
+        },
+        "median_steps": 15.0,
+        "mean_steps": 16.736842,
+        "median_acted": 13.0,
+        "mean_acted": 14.798246,
+        "median_actions_any_kind": 14.0,
+        "action_kinds_total": {
+          "CODE": 1687,
+          "COMPLETE": 72
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "advise_k10_neutral": {
+        "campaigns": [
+          "b2_advise_neutral_fixed_k_10_fullctx_20260923",
+          "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 14,
+            "share": 0.081871,
+            "ci95_scenario": [
+              0.035088,
+              0.140351
+            ],
+            "ci95_task": [
+              0.040936,
+              0.128655
+            ],
+            "printed": "0.0819"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 157,
+            "share": 0.918129,
+            "ci95_scenario": [
+              0.859649,
+              0.964912
+            ],
+            "ci95_task": [
+              0.871345,
+              0.959064
+            ],
+            "printed": "0.9181"
+          }
+        },
+        "median_steps": 13.0,
+        "mean_steps": 16.192982,
+        "median_acted": 12.0,
+        "mean_acted": 15.596491,
+        "median_actions_any_kind": 13.0,
+        "action_kinds_total": {
+          "CODE": 2667,
+          "COMPLETE": 102
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "show_k10": {
+        "campaigns": [
+          "b2_show_fixed_k_10_20260923",
+          "b2_show_fixed_k_10_s3_20260923"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 11,
+            "share": 0.064327,
+            "ci95_scenario": [
+              0.02924,
+              0.111111
+            ],
+            "ci95_task": [
+              0.02924,
+              0.099415
+            ],
+            "printed": "0.0643"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 160,
+            "share": 0.935673,
+            "ci95_scenario": [
+              0.888889,
+              0.97076
+            ],
+            "ci95_task": [
+              0.900585,
+              0.97076
+            ],
+            "printed": "0.9357"
+          }
+        },
+        "median_steps": 15.0,
+        "mean_steps": 17.309942,
+        "median_acted": 14.0,
+        "mean_acted": 16.654971,
+        "median_actions_any_kind": 15.0,
+        "action_kinds_total": {
+          "CODE": 2848,
+          "COMPLETE": 112
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "prefix_c81_bplus_m6": {
+        "campaigns": [
+          "hj17_prefix_c81_bplus_m6_20260923",
+          "hj18_prefix_c81s3_bplus_m6_20260924"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "prefix",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 4,
+            "share": 0.023392,
+            "ci95_scenario": [
+              0.0,
+              0.052632
+            ],
+            "ci95_task": [
+              0.005848,
+              0.046784
+            ],
+            "printed": "0.0234"
+          },
+          "limit": {
+            "n": 20,
+            "share": 0.116959,
+            "ci95_scenario": [
+              0.064327,
+              0.181287
+            ],
+            "ci95_task": [
+              0.070175,
+              0.169591
+            ],
+            "printed": "0.1170"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 5,
+            "share": 0.02924,
+            "ci95_scenario": [
+              0.005848,
+              0.05848
+            ],
+            "ci95_task": [
+              0.005848,
+              0.05848
+            ],
+            "printed": "0.0292"
+          },
+          "completed_after_acting": {
+            "n": 142,
+            "share": 0.830409,
+            "ci95_scenario": [
+              0.760234,
+              0.894737
+            ],
+            "ci95_task": [
+              0.777778,
+              0.883041
+            ],
+            "printed": "0.8304"
+          }
+        },
+        "median_steps": 14.0,
+        "mean_steps": 17.45614,
+        "median_acted": 7.0,
+        "mean_acted": 10.818713,
+        "median_actions_any_kind": 8.0,
+        "action_kinds_total": {
+          "CODE": 1850,
+          "COMPLETE": 109
+        },
+        "zero_acted_by_error_type": {
+          "none": 9
+        },
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "prefix_c81_bplus_m9": {
+        "campaigns": [
+          "hj17_prefix_c81_bplus_m9_20260923",
+          "hj18_prefix_c81s3_bplus_m9_20260924"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "prefix",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 54,
+            "share": 0.315789,
+            "ci95_scenario": [
+              0.233918,
+              0.397661
+            ],
+            "ci95_task": [
+              0.245614,
+              0.391813
+            ],
+            "printed": "0.3158"
+          },
+          "limit": {
+            "n": 13,
+            "share": 0.076023,
+            "ci95_scenario": [
+              0.035088,
+              0.122807
+            ],
+            "ci95_task": [
+              0.040936,
+              0.116959
+            ],
+            "printed": "0.0760"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 10,
+            "share": 0.05848,
+            "ci95_scenario": [
+              0.017544,
+              0.105263
+            ],
+            "ci95_task": [
+              0.023392,
+              0.099415
+            ],
+            "printed": "0.0585"
+          },
+          "completed_after_acting": {
+            "n": 94,
+            "share": 0.549708,
+            "ci95_scenario": [
+              0.461988,
+              0.637427
+            ],
+            "ci95_task": [
+              0.479532,
+              0.619883
+            ],
+            "printed": "0.5497"
+          }
+        },
+        "median_steps": 13.0,
+        "mean_steps": 15.982456,
+        "median_acted": 3.0,
+        "mean_acted": 6.736842,
+        "median_actions_any_kind": 4.0,
+        "action_kinds_total": {
+          "CODE": 1152,
+          "COMPLETE": 85
+        },
+        "zero_acted_by_error_type": {
+          "none": 53
+        },
+        "n_no_handoff_acted": 11,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "prefix_c81_bplus_m11": {
+        "campaigns": [
+          "hj17_prefix_c81_bplus_m11_20260923",
+          "hj18_prefix_c81s3_bplus_m11_20260924"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "prefix",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 100,
+            "share": 0.584795,
+            "ci95_scenario": [
+              0.497076,
+              0.672515
+            ],
+            "ci95_task": [
+              0.502924,
+              0.660819
+            ],
+            "printed": "0.5848"
+          },
+          "limit": {
+            "n": 7,
+            "share": 0.040936,
+            "ci95_scenario": [
+              0.011696,
+              0.076023
+            ],
+            "ci95_task": [
+              0.017544,
+              0.070175
+            ],
+            "printed": "0.0409"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 11,
+            "share": 0.064327,
+            "ci95_scenario": [
+              0.02924,
+              0.105263
+            ],
+            "ci95_task": [
+              0.02924,
+              0.105263
+            ],
+            "printed": "0.0643"
+          },
+          "completed_after_acting": {
+            "n": 53,
+            "share": 0.309942,
+            "ci95_scenario": [
+              0.222222,
+              0.409357
+            ],
+            "ci95_task": [
+              0.233918,
+              0.385965
+            ],
+            "printed": "0.3099"
+          }
+        },
+        "median_steps": 12.0,
+        "mean_steps": 14.748538,
+        "median_acted": 0.0,
+        "mean_acted": 4.251462,
+        "median_actions_any_kind": 1.0,
+        "action_kinds_total": {
+          "CODE": 727,
+          "COMPLETE": 58
+        },
+        "zero_acted_by_error_type": {
+          "none": 94
+        },
+        "n_no_handoff_acted": 17,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "prefix_c81_zs_m6": {
+        "campaigns": [
+          "hj17_prefix_c81_zs_m6_20260923",
+          "hj18_prefix_c81s3_zs_m6_20260924"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "prefix",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 4,
+            "share": 0.023392,
+            "ci95_scenario": [
+              0.0,
+              0.052632
+            ],
+            "ci95_task": [
+              0.005848,
+              0.046784
+            ],
+            "printed": "0.0234"
+          },
+          "limit": {
+            "n": 28,
+            "share": 0.163743,
+            "ci95_scenario": [
+              0.087719,
+              0.251462
+            ],
+            "ci95_task": [
+              0.111111,
+              0.222222
+            ],
+            "printed": "0.1637"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 139,
+            "share": 0.812865,
+            "ci95_scenario": [
+              0.725146,
+              0.888889
+            ],
+            "ci95_task": [
+              0.754386,
+              0.871345
+            ],
+            "printed": "0.8129"
+          }
+        },
+        "median_steps": 22.0,
+        "mean_steps": 23.380117,
+        "median_acted": 15.0,
+        "mean_acted": 16.643275,
+        "median_actions_any_kind": 16.0,
+        "action_kinds_total": {
+          "CODE": 2846,
+          "COMPLETE": 126
+        },
+        "zero_acted_by_error_type": {
+          "none": 4
+        },
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "prefix_c81_zs_m9": {
+        "campaigns": [
+          "hj17_prefix_c81_zs_m9_20260923",
+          "hj18_prefix_c81s3_zs_m9_20260924"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "prefix",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 54,
+            "share": 0.315789,
+            "ci95_scenario": [
+              0.233918,
+              0.397661
+            ],
+            "ci95_task": [
+              0.245614,
+              0.391813
+            ],
+            "printed": "0.3158"
+          },
+          "limit": {
+            "n": 5,
+            "share": 0.02924,
+            "ci95_scenario": [
+              0.011696,
+              0.052632
+            ],
+            "ci95_task": [
+              0.005848,
+              0.05848
+            ],
+            "printed": "0.0292"
+          },
+          "other": {
+            "n": 1,
+            "share": 0.005848,
+            "ci95_scenario": [
+              0.0,
+              0.017544
+            ],
+            "ci95_task": [
+              0.0,
+              0.017544
+            ],
+            "printed": "0.0058"
+          },
+          "stopped_before_acting": {
+            "n": 7,
+            "share": 0.040936,
+            "ci95_scenario": [
+              0.011696,
+              0.076023
+            ],
+            "ci95_task": [
+              0.011696,
+              0.076023
+            ],
+            "printed": "0.0409"
+          },
+          "completed_after_acting": {
+            "n": 104,
+            "share": 0.608187,
+            "ci95_scenario": [
+              0.520468,
+              0.701754
+            ],
+            "ci95_task": [
+              0.532164,
+              0.684211
+            ],
+            "printed": "0.6082"
+          }
+        },
+        "median_steps": 15.0,
+        "mean_steps": 18.555556,
+        "median_acted": 5.0,
+        "mean_acted": 9.192982,
+        "median_actions_any_kind": 6.0,
+        "action_kinds_total": {
+          "CODE": 1572,
+          "COMPLETE": 104
+        },
+        "zero_acted_by_error_type": {
+          "none": 50
+        },
+        "n_no_handoff_acted": 11,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "prefix_c81_zs_m11": {
+        "campaigns": [
+          "hj17_prefix_c81_zs_m11_20260923",
+          "hj18_prefix_c81s3_zs_m11_20260924"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "prefix",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "executor": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 100,
+            "share": 0.584795,
+            "ci95_scenario": [
+              0.497076,
+              0.672515
+            ],
+            "ci95_task": [
+              0.502924,
+              0.660819
+            ],
+            "printed": "0.5848"
+          },
+          "limit": {
+            "n": 8,
+            "share": 0.046784,
+            "ci95_scenario": [
+              0.011696,
+              0.087719
+            ],
+            "ci95_task": [
+              0.017544,
+              0.081871
+            ],
+            "printed": "0.0468"
+          },
+          "other": {
+            "n": 1,
+            "share": 0.005848,
+            "ci95_scenario": [
+              0.0,
+              0.017544
+            ],
+            "ci95_task": [
+              0.0,
+              0.017544
+            ],
+            "printed": "0.0058"
+          },
+          "stopped_before_acting": {
+            "n": 4,
+            "share": 0.023392,
+            "ci95_scenario": [
+              0.005848,
+              0.046784
+            ],
+            "ci95_task": [
+              0.005848,
+              0.046784
+            ],
+            "printed": "0.0234"
+          },
+          "completed_after_acting": {
+            "n": 58,
+            "share": 0.339181,
+            "ci95_scenario": [
+              0.263158,
+              0.415205
+            ],
+            "ci95_task": [
+              0.263158,
+              0.415205
+            ],
+            "printed": "0.3392"
+          }
+        },
+        "median_steps": 12.0,
+        "mean_steps": 17.099415,
+        "median_acted": 0.0,
+        "mean_acted": 6.520468,
+        "median_actions_any_kind": 1.0,
+        "action_kinds_total": {
+          "CODE": 1115,
+          "COMPLETE": 71
+        },
+        "zero_acted_by_error_type": {
+          "none": 87
+        },
+        "n_no_handoff_acted": 17,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "qwen_exec_alone": {
+        "campaigns": [
+          "hj15_executor_alone_zsq_20260923"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 114,
+            "share": 1.0,
+            "ci95_scenario": [
+              1.0,
+              1.0
+            ],
+            "ci95_task": [
+              1.0,
+              1.0
+            ],
+            "printed": "1.0000"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          }
+        },
+        "median_steps": 40.0,
+        "mean_steps": 40.0,
+        "median_acted": 40.0,
+        "mean_acted": 40.0,
+        "median_actions_any_kind": 40.0,
+        "action_kinds_total": {
+          "CODE": 4560
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "qwen_prompt_only": {
+        "campaigns": [
+          "hj15_prompt_only_zsq_20260923"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "executor",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "executor": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 113,
+            "share": 0.991228,
+            "ci95_scenario": [
+              0.973684,
+              1.0
+            ],
+            "ci95_task": [
+              0.973684,
+              1.0
+            ],
+            "printed": "0.9912"
+          },
+          "other": {
+            "n": 1,
+            "share": 0.008772,
+            "ci95_scenario": [
+              0.0,
+              0.026316
+            ],
+            "ci95_task": [
+              0.0,
+              0.026316
+            ],
+            "printed": "0.0088"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          }
+        },
+        "median_steps": 40.0,
+        "mean_steps": 39.894737,
+        "median_acted": 40.0,
+        "mean_acted": 39.885965,
+        "median_actions_any_kind": 40.0,
+        "action_kinds_total": {
+          "CODE": 4547
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "planner_alone_c81_medium": {
+        "campaigns": [
+          "hj13_planner_alone_cap81_20260923",
+          "hj13_planner_alone_cap81_seed3_20260924"
+        ],
+        "seeds": [
+          1,
+          2,
+          3
+        ],
+        "role": "planner",
+        "n_crash_dropped": 0,
+        "n_scored": 171,
+        "acting_actor": {
+          "planner": 171
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 27,
+            "share": 0.157895,
+            "ci95_scenario": [
+              0.070175,
+              0.263158
+            ],
+            "ci95_task": [
+              0.099415,
+              0.22807
+            ],
+            "printed": "0.1579"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 144,
+            "share": 0.842105,
+            "ci95_scenario": [
+              0.736842,
+              0.929825
+            ],
+            "ci95_task": [
+              0.77193,
+              0.900585
+            ],
+            "printed": "0.8421"
+          }
+        },
+        "median_steps": 12.0,
+        "mean_steps": 16.321637,
+        "median_acted": 10.0,
+        "mean_acted": 10.865497,
+        "median_actions_any_kind": 12.0,
+        "action_kinds_total": {
+          "ASK_PLANNER": 53,
+          "CODE": 1858,
+          "COMPLETE": 113,
+          "REPORT": 767
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      },
+      "planner_alone_c81_high": {
+        "campaigns": [
+          "dev_planner_alone_cap81_high_20260924"
+        ],
+        "seeds": [
+          1,
+          2
+        ],
+        "role": "planner",
+        "n_crash_dropped": 0,
+        "n_scored": 114,
+        "acting_actor": {
+          "planner": 114
+        },
+        "categories": {
+          "no_handoff": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "limit": {
+            "n": 4,
+            "share": 0.035088,
+            "ci95_scenario": [
+              0.0,
+              0.105263
+            ],
+            "ci95_task": [
+              0.0,
+              0.087719
+            ],
+            "printed": "0.0351"
+          },
+          "other": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "stopped_before_acting": {
+            "n": 0,
+            "share": 0.0,
+            "ci95_scenario": [
+              0.0,
+              0.0
+            ],
+            "ci95_task": [
+              0.0,
+              0.0
+            ],
+            "printed": "0.0000"
+          },
+          "completed_after_acting": {
+            "n": 110,
+            "share": 0.964912,
+            "ci95_scenario": [
+              0.894737,
+              1.0
+            ],
+            "ci95_task": [
+              0.912281,
+              1.0
+            ],
+            "printed": "0.9649"
+          }
+        },
+        "median_steps": 11.0,
+        "mean_steps": 12.649123,
+        "median_acted": 10.5,
+        "mean_acted": 10.894737,
+        "median_actions_any_kind": 11.0,
+        "action_kinds_total": {
+          "ASK_PLANNER": 7,
+          "CODE": 1242,
+          "COMPLETE": 98,
+          "REPORT": 95
+        },
+        "zero_acted_by_error_type": {},
+        "n_no_handoff_acted": 0,
+        "n_no_handoff_flag_missing": 0,
+        "n_without_events": 0,
+        "n_handoff_flag_differs_from_j10_reader": 0,
+        "n_clusters": {
+          "scenario": 19,
+          "task": 57
+        }
+      }
+    }
+  },
+  "ceilhi": {
+    "label": "EXPLORATORY (D3): planner alone at cap 81, reasoning_effort high vs medium, seeds 1-2; the prefix arms replay the MEDIUM-effort planner's trajectories",
+    "n_keys": 114,
+    "quality": {
+      "definition": "planner_alone_c81_high - planner_alone_c81_medium",
+      "goal_pass": {
+        "metric": "goal_pass",
+        "diff_pp": 11.967544,
+        "ci95_pp_scenario": [
+          6.142982,
+          18.431579
+        ],
+        "ci95_pp_task": [
+          5.952632,
+          18.250877
+        ],
+        "p_two_sided": 0.0,
+        "threshold_pp": 0.0,
+        "n_pairs": 114,
+        "n_clusters_scenario": 19,
+        "p_two_sided_task": 0.0002,
+        "n_clusters_task": 57,
+        "p_signflip_two_sided": 0.000793,
+        "signflip_method": "exact",
+        "printed": {
+          "diff_pp": "+11.97",
+          "ci95_pp_scenario": [
+            "+6.14",
+            "+18.43"
+          ],
+          "ci95_pp_task": [
+            "+5.95",
+            "+18.25"
+          ],
+          "p_two_sided": "0.0000",
+          "p_signflip_two_sided": "0.0008"
+        },
+        "means_on_pairs": {
+          "planner_alone_c81_high": 0.883368,
+          "planner_alone_c81_medium": 0.763693
+        },
+        "n_dropped_missing_field": 0
+      },
+      "tgc": {
+        "metric": "tgc",
+        "diff_pp": 19.298246,
+        "ci95_pp_scenario": [
+          9.649123,
+          28.070175
+        ],
+        "ci95_pp_task": [
+          10.526316,
+          28.070175
+        ],
+        "p_two_sided": 0.0,
+        "threshold_pp": 0.0,
+        "n_pairs": 114,
+        "n_clusters_scenario": 19,
+        "p_two_sided_task": 0.0004,
+        "n_clusters_task": 57,
+        "p_signflip_two_sided": 0.002075,
+        "signflip_method": "exact",
+        "printed": {
+          "diff_pp": "+19.30",
+          "ci95_pp_scenario": [
+            "+9.65",
+            "+28.07"
+          ],
+          "ci95_pp_task": [
+            "+10.53",
+            "+28.07"
+          ],
+          "p_two_sided": "0.0000",
+          "p_signflip_two_sided": "0.0021"
+        },
+        "means_on_pairs": {
+          "planner_alone_c81_high": 0.763158,
+          "planner_alone_c81_medium": 0.570175
+        },
+        "n_dropped_missing_field": 0
+      }
+    },
+    "limit_rates": {
+      "high": {
+        "all_scored": {
+          "n": 114,
+          "n_limit": 4,
+          "rate": 0.035088
+        },
+        "paired": {
+          "n": 114,
+          "n_limit": 4,
+          "rate": 0.035088
+        }
+      },
+      "medium": {
+        "all_scored": {
+          "n": 114,
+          "n_limit": 18,
+          "rate": 0.157895
+        },
+        "paired": {
+          "n": 114,
+          "n_limit": 18,
+          "rate": 0.157895
+        }
+      }
+    },
+    "n_crash_seeds_1_2": {
+      "high": 0,
+      "medium": 0
+    },
+    "run_settings": {
+      "high": {
+        "plan_effort_recorded": {
+          "high": 114
+        },
+        "per_step_timeout_s": {
+          "300.0": 114
+        },
+        "max_planner_calls": {
+          "81": 114
+        }
+      },
+      "medium": {
+        "plan_effort_recorded": {
+          "medium": 114
+        },
+        "per_step_timeout_s": {
+          "120.0": 114
+        },
+        "max_planner_calls": {
+          "81": 114
+        }
+      }
+    },
+    "cost": {
+      "n_keys": 114,
+      "axes": {
+        "hosted_calls_per_episode": {
+          "mean_high": 13.649123,
+          "mean_medium": 17.350877,
+          "ratio_high_over_medium": 0.786653,
+          "ratio_ci95_scenario": [
+            0.693405,
+            0.890337
+          ],
+          "ratio_ci95_task": [
+            0.703138,
+            0.880305
+          ],
+          "diff_high_minus_medium": -3.701754,
+          "diff_ci95_scenario": [
+            -5.824561,
+            -1.72807
+          ],
+          "diff_ci95_task": [
+            -5.526316,
+            -1.929825
+          ],
+          "n_pairs": 114,
+          "n_dropped_missing": 0
+        },
+        "input_tokens": {
+          "mean_high": 794623.22807,
+          "mean_medium": 1155863.763158,
+          "ratio_high_over_medium": 0.687471,
+          "ratio_ci95_scenario": [
+            0.505707,
+            0.853551
+          ],
+          "ratio_ci95_task": [
+            0.518613,
+            0.890115
+          ],
+          "diff_high_minus_medium": -361240.535088,
+          "diff_ci95_scenario": [
+            -634969.324561,
+            -133734.657895
+          ],
+          "diff_ci95_task": [
+            -629726.026316,
+            -116598.254386
+          ],
+          "n_pairs": 114,
+          "n_dropped_missing": 0
+        },
+        "cached_input_tokens": {
+          "mean_high": 695262.315789,
+          "mean_medium": 1045481.54386,
+          "ratio_high_over_medium": 0.665016,
+          "ratio_ci95_scenario": [
+            0.471456,
+            0.838177
+          ],
+          "ratio_ci95_task": [
+            0.487411,
+            0.876898
+          ],
+          "diff_high_minus_medium": -350219.22807,
+          "diff_ci95_scenario": [
+            -612289.122807,
+            -132715.789474
+          ],
+          "diff_ci95_task": [
+            -606167.578947,
+            -114681.263158
+          ],
+          "n_pairs": 114,
+          "n_dropped_missing": 0
+        },
+        "output_tokens": {
+          "mean_high": 4290.517544,
+          "mean_medium": 2968.473684,
+          "ratio_high_over_medium": 1.445361,
+          "ratio_ci95_scenario": [
+            1.328274,
+            1.572601
+          ],
+          "ratio_ci95_task": [
+            1.32278,
+            1.582142
+          ],
+          "diff_high_minus_medium": 1322.04386,
+          "diff_ci95_scenario": [
+            970.684211,
+            1700.5
+          ],
+          "diff_ci95_task": [
+            980.675439,
+            1683.964912
+          ],
+          "n_pairs": 114,
+          "n_dropped_missing": 0
+        },
+        "reasoning_output_tokens": {
+          "mean_high": 2632.666667,
+          "mean_medium": 1382.912281,
+          "ratio_high_over_medium": 1.903712,
+          "ratio_ci95_scenario": [
+            1.68131,
+            2.153112
+          ],
+          "ratio_ci95_task": [
+            1.682271,
+            2.161638
+          ],
+          "diff_high_minus_medium": 1249.754386,
+          "diff_ci95_scenario": [
+            961.342105,
+            1560.464912
+          ],
+          "diff_ci95_task": [
+            980.350877,
+            1531.614035
+          ],
+          "n_pairs": 114,
+          "n_dropped_missing": 0
+        },
+        "usd_per_episode": {
+          "mean_high": 0.042085,
+          "mean_medium": 0.048208,
+          "ratio_high_over_medium": 0.872998,
+          "ratio_ci95_scenario": [
+            0.736793,
+            1.011397
+          ],
+          "ratio_ci95_task": [
+            0.739223,
+            1.025563
+          ],
+          "diff_high_minus_medium": -0.006122,
+          "diff_ci95_scenario": [
+            -0.014048,
+            0.000475
+          ],
+          "diff_ci95_task": [
+            -0.013927,
+            0.001146
+          ],
+          "n_pairs": 114,
+          "n_dropped_missing": 0
+        }
+      },
+      "inputs": {
+        "prices": "configs/cost/prices_2026-09.yaml",
+        "schedule_date": "2026-09-15",
+        "high": {
+          "diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "n_rows": 114,
+          "root": "/scratch/n12194778/sidekick/results/dev_planner_alone_cap81_high_20260924/planner_alone"
+        },
+        "medium": {
+          "diagnostics": {
+            "n_usage_without_cache_split": 0,
+            "n_episodes_priced": 114,
+            "n_episodes_missing_usage": 0,
+            "n_episodes_with_wall_time": 0
+          },
+          "n_rows": 114,
+          "root": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923/planner_alone"
+        }
+      },
+      "definition": "hosted calls and USD per j8_frontier.summarise_arm / j12_cost_axes.price_arm_episodes (output and reasoning_output tokens both billed at the output rate by j12.price_usage_record); token sums over j12.extract_events_usages; ratio = mean high / mean medium, whole clusters resampled (j16_robustness.cost_contrast)"
+    },
+    "ni_reread": {
+      "n_keys": 114,
+      "margin_pp": 7.0,
+      "rule": "ceiling - arm; holds iff round(scenario upper bound, 2) < +7.00, else fails",
+      "caveat": "the registered NI is prefix_m11 against the medium-effort planner whose trajectories the prefixes replay; the high ceiling is an independent sample the prefixes never saw. Exploratory: nothing registered is re-labelled",
+      "high_minus_prefix_c81_bplus_m11": {
+        "definition": "planner_alone_c81_high - prefix_c81_bplus_m11",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 7.22193,
+          "ci95_pp_scenario": [
+            3.207895,
+            11.469298
+          ],
+          "ci95_pp_task": [
+            0.961404,
+            13.409649
+          ],
+          "p_two_sided": 0.9442,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.9512,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.917629,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+7.22",
+            "ci95_pp_scenario": [
+              "+3.21",
+              "+11.47"
+            ],
+            "ci95_pp_task": [
+              "+0.96",
+              "+13.41"
+            ],
+            "p_two_sided": "0.9442",
+            "p_signflip_two_sided": "0.9176"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_high": 0.883368,
+            "prefix_c81_bplus_m11": 0.811149
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "fails",
+          "reading_task": "fails"
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 16.666667,
+          "ci95_pp_scenario": [
+            8.77193,
+            24.561404
+          ],
+          "ci95_pp_task": [
+            7.894737,
+            25.438596
+          ],
+          "p_two_sided": 0.0126,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.026,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.032715,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+16.67",
+            "ci95_pp_scenario": [
+              "+8.77",
+              "+24.56"
+            ],
+            "ci95_pp_task": [
+              "+7.89",
+              "+25.44"
+            ],
+            "p_two_sided": "0.0126",
+            "p_signflip_two_sided": "0.0327"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_high": 0.763158,
+            "prefix_c81_bplus_m11": 0.596491
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "fails",
+          "reading_task": "fails"
+        }
+      },
+      "medium_minus_prefix_c81_bplus_m11": {
+        "definition": "planner_alone_c81_medium - prefix_c81_bplus_m11",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": -4.745614,
+          "ci95_pp_scenario": [
+            -11.805263,
+            1.164912
+          ],
+          "ci95_pp_task": [
+            -9.582456,
+            -0.007895
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.000774,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "-4.75",
+            "ci95_pp_scenario": [
+              "-11.81",
+              "+1.16"
+            ],
+            "ci95_pp_task": [
+              "-9.58",
+              "-0.01"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0008"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_medium": 0.763693,
+            "prefix_c81_bplus_m11": 0.811149
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "holds",
+          "reading_task": "holds"
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": -2.631579,
+          "ci95_pp_scenario": [
+            -11.403509,
+            5.263158
+          ],
+          "ci95_pp_task": [
+            -9.649123,
+            3.508772
+          ],
+          "p_two_sided": 0.0234,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.006,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.034824,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "-2.63",
+            "ci95_pp_scenario": [
+              "-11.40",
+              "+5.26"
+            ],
+            "ci95_pp_task": [
+              "-9.65",
+              "+3.51"
+            ],
+            "p_two_sided": "0.0234",
+            "p_signflip_two_sided": "0.0348"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_medium": 0.570175,
+            "prefix_c81_bplus_m11": 0.596491
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "holds",
+          "reading_task": "holds"
+        }
+      },
+      "high_minus_prefix_c81_zs_m11": {
+        "definition": "planner_alone_c81_high - prefix_c81_zs_m11",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": 9.018421,
+          "ci95_pp_scenario": [
+            3.963158,
+            14.055263
+          ],
+          "ci95_pp_task": [
+            4.023684,
+            13.972807
+          ],
+          "p_two_sided": 0.4408,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.4318,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.455639,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+9.02",
+            "ci95_pp_scenario": [
+              "+3.96",
+              "+14.06"
+            ],
+            "ci95_pp_task": [
+              "+4.02",
+              "+13.97"
+            ],
+            "p_two_sided": "0.4408",
+            "p_signflip_two_sided": "0.4556"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_high": 0.883368,
+            "prefix_c81_zs_m11": 0.793184
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "fails",
+          "reading_task": "fails"
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 21.052632,
+          "ci95_pp_scenario": [
+            11.403509,
+            29.824561
+          ],
+          "ci95_pp_task": [
+            12.280702,
+            29.824561
+          ],
+          "p_two_sided": 0.0016,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0028,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.009178,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+21.05",
+            "ci95_pp_scenario": [
+              "+11.40",
+              "+29.82"
+            ],
+            "ci95_pp_task": [
+              "+12.28",
+              "+29.82"
+            ],
+            "p_two_sided": "0.0016",
+            "p_signflip_two_sided": "0.0092"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_high": 0.763158,
+            "prefix_c81_zs_m11": 0.552632
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "fails",
+          "reading_task": "fails"
+        }
+      },
+      "medium_minus_prefix_c81_zs_m11": {
+        "definition": "planner_alone_c81_medium - prefix_c81_zs_m11",
+        "goal_pass": {
+          "metric": "goal_pass",
+          "diff_pp": -2.949123,
+          "ci95_pp_scenario": [
+            -8.684211,
+            1.909649
+          ],
+          "ci95_pp_task": [
+            -7.783333,
+            1.60614
+          ],
+          "p_two_sided": 0.0,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.0,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.000374,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "-2.95",
+            "ci95_pp_scenario": [
+              "-8.68",
+              "+1.91"
+            ],
+            "ci95_pp_task": [
+              "-7.78",
+              "+1.61"
+            ],
+            "p_two_sided": "0.0000",
+            "p_signflip_two_sided": "0.0004"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_medium": 0.763693,
+            "prefix_c81_zs_m11": 0.793184
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "holds",
+          "reading_task": "holds"
+        },
+        "tgc": {
+          "metric": "tgc",
+          "diff_pp": 1.754386,
+          "ci95_pp_scenario": [
+            -4.385965,
+            7.017544
+          ],
+          "ci95_pp_task": [
+            -4.385965,
+            7.894737
+          ],
+          "p_two_sided": 0.0656,
+          "threshold_pp": 7.0,
+          "n_pairs": 114,
+          "n_clusters_scenario": 19,
+          "p_two_sided_task": 0.109,
+          "n_clusters_task": 57,
+          "p_signflip_two_sided": 0.076115,
+          "signflip_method": "exact",
+          "printed": {
+            "diff_pp": "+1.75",
+            "ci95_pp_scenario": [
+              "-4.39",
+              "+7.02"
+            ],
+            "ci95_pp_task": [
+              "-4.39",
+              "+7.89"
+            ],
+            "p_two_sided": "0.0656",
+            "p_signflip_two_sided": "0.0761"
+          },
+          "means_on_pairs": {
+            "planner_alone_c81_medium": 0.570175,
+            "prefix_c81_zs_m11": 0.552632
+          },
+          "n_dropped_missing_field": 0,
+          "reading": "fails",
+          "reading_task": "fails"
+        }
+      }
+    }
+  },
+  "provenance": {
+    "exec_alone_bplus": {
+      "campaigns": [
+        {
+          "campaign": "hj8_executor_alone_bplus_20260919",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 31,
+        "none": 83
+      },
+      "goal_pass_mean": 0.528886,
+      "tgc_mean": 0.131579,
+      "by_campaign": {
+        "hj8_executor_alone_bplus_20260919": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-18T19:09:47.406929+00:00",
+          "created_at_last": "2026-09-18T19:29:59.669698+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 114
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "sft_plan_bplus": {
+      "campaigns": [
+        {
+          "campaign": "hj8_sft_plan_bplus_20260921iaware",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 18,
+        "none": 96
+      },
+      "goal_pass_mean": 0.718149,
+      "tgc_mean": 0.394737,
+      "by_campaign": {
+        "hj8_sft_plan_bplus_20260921iaware": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-20T15:38:21.411983+00:00",
+          "created_at_last": "2026-09-20T15:54:26.190978+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "exec_alone_base": {
+      "campaigns": [
+        {
+          "campaign": "hj1r_exec8b_20260916",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 37,
+        "none": 77
+      },
+      "goal_pass_mean": 0.190289,
+      "tgc_mean": 0.017544,
+      "by_campaign": {
+        "hj1r_exec8b_20260916": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-16T10:06:41.707348+00:00",
+          "created_at_last": "2026-09-16T11:32:28.353680+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 114
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "120.0": 104,
+            "300.0": 10
+          }
+        }
+      }
+    },
+    "prompt_only_base": {
+      "campaigns": [
+        {
+          "campaign": "hj1r_prompt_only_20260916",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 40,
+        "none": 74
+      },
+      "goal_pass_mean": 0.288474,
+      "tgc_mean": 0.052632,
+      "by_campaign": {
+        "hj1r_prompt_only_20260916": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-16T11:35:17.076828+00:00",
+          "created_at_last": "2026-09-16T15:06:55.627277+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "sft_plan_bplus_0919": {
+      "campaigns": [
+        {
+          "campaign": "hj8_sft_plan_bplus_20260919",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 21,
+        "none": 93
+      },
+      "goal_pass_mean": 0.700009,
+      "tgc_mean": 0.403509,
+      "by_campaign": {
+        "hj8_sft_plan_bplus_20260919": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-18T19:33:35.858421+00:00",
+          "created_at_last": "2026-09-18T19:52:08.922739+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "prefix_bplus_m6": {
+      "campaigns": [
+        {
+          "campaign": "hj12_prefix_m6_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "prefix",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 13,
+        "none": 101
+      },
+      "goal_pass_mean": 0.723675,
+      "tgc_mean": 0.429825,
+      "by_campaign": {
+        "hj12_prefix_m6_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T05:17:48.151543+00:00",
+          "created_at_last": "2026-09-22T05:30:50.981395+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 111
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj1b_planner_20260915": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "prefix_bplus_m9": {
+      "campaigns": [
+        {
+          "campaign": "hj12_prefix_m9_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "prefix",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 10,
+        "none": 104
+      },
+      "goal_pass_mean": 0.785184,
+      "tgc_mean": 0.561404,
+      "by_campaign": {
+        "hj12_prefix_m9_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T05:16:35.799134+00:00",
+          "created_at_last": "2026-09-22T05:45:34.283831+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 83
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj1b_planner_20260915": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "prefix_bplus_m11": {
+      "campaigns": [
+        {
+          "campaign": "hj12_prefix_m11_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "prefix",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 9,
+        "none": 105
+      },
+      "goal_pass_mean": 0.809825,
+      "tgc_mean": 0.605263,
+      "by_campaign": {
+        "hj12_prefix_m11_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T06:32:09.353495+00:00",
+          "created_at_last": "2026-09-22T06:54:56.786746+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 58
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj1b_planner_20260915": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "prefix_zs_m6": {
+      "campaigns": [
+        {
+          "campaign": "hj13_prefix_zs_m6_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "prefix",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 14,
+        "none": 98,
+        "parse_error": 2
+      },
+      "goal_pass_mean": 0.682474,
+      "tgc_mean": 0.385965,
+      "by_campaign": {
+        "hj13_prefix_zs_m6_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T06:11:21.085512+00:00",
+          "created_at_last": "2026-09-22T07:06:45.819345+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 111
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj1b_planner_20260915": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "prefix_zs_m9": {
+      "campaigns": [
+        {
+          "campaign": "hj13_prefix_zs_m9_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "prefix",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 10,
+        "none": 103,
+        "parse_error": 1
+      },
+      "goal_pass_mean": 0.784535,
+      "tgc_mean": 0.552632,
+      "by_campaign": {
+        "hj13_prefix_zs_m9_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T07:08:57.882501+00:00",
+          "created_at_last": "2026-09-22T07:55:57.737029+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 83
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj1b_planner_20260915": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "prefix_zs_m11": {
+      "campaigns": [
+        {
+          "campaign": "hj13_prefix_zs_m11_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "prefix",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 8,
+        "none": 105,
+        "parse_error": 1
+      },
+      "goal_pass_mean": 0.834456,
+      "tgc_mean": 0.622807,
+      "by_campaign": {
+        "hj13_prefix_zs_m11_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T07:59:17.805750+00:00",
+          "created_at_last": "2026-09-22T08:28:05.782833+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 58
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj1b_planner_20260915": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "qwen_exec_alone": {
+      "campaigns": [
+        {
+          "campaign": "hj15_executor_alone_zsq_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 114
+      },
+      "goal_pass_mean": 0.248053,
+      "tgc_mean": 0.0,
+      "by_campaign": {
+        "hj15_executor_alone_zsq_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T09:46:55.612820+00:00",
+          "created_at_last": "2026-09-22T09:54:22.178571+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "Qwen/Qwen3-8B|lora=None": 114
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "qwen_prompt_only": {
+      "campaigns": [
+        {
+          "campaign": "hj15_prompt_only_zsq_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 113,
+        "parse_error": 1
+      },
+      "goal_pass_mean": 0.248053,
+      "tgc_mean": 0.0,
+      "by_campaign": {
+        "hj15_prompt_only_zsq_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T09:55:30.922360+00:00",
+          "created_at_last": "2026-09-22T10:06:36.901731+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "Qwen/Qwen3-8B|lora=None": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "noop": {
+      "campaigns": [
+        {
+          "campaign": "dev_noop_complete_20260924",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "dev": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "none": 114
+      },
+      "goal_pass_mean": 0.356947,
+      "tgc_mean": 0.0,
+      "by_campaign": {
+        "dev_noop_complete_20260924": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-24T08:31:54.426506+00:00",
+          "created_at_last": "2026-09-24T08:32:04.055361+00:00",
+          "git_sha": {
+            "9460b06ebf65eaa371113165f19cdbc6a1ff7497": 114
+          },
+          "git_dirty": {
+            "True": 114
+          },
+          "config_path": {
+            "configs/dev_noop_complete.yaml": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "dev": 114
+          },
+          "executor_adapter_episodes": {
+            "mock-executor|lora=None": 114
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "advise_k10": {
+      "campaigns": [
+        {
+          "campaign": "hj12_advise_fixed_k_10_fullctx_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 13,
+        "none": 101
+      },
+      "goal_pass_mean": 0.73386,
+      "tgc_mean": 0.438596,
+      "by_campaign": {
+        "hj12_advise_fixed_k_10_fullctx_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T09:09:30.671929+00:00",
+          "created_at_last": "2026-09-22T09:29:39.461254+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "takeover_k10": {
+      "campaigns": [
+        {
+          "campaign": "hj12_takeover_fixed_k_10_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "executor",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 1,
+        "none": 113
+      },
+      "goal_pass_mean": 0.800719,
+      "tgc_mean": 0.517544,
+      "by_campaign": {
+        "hj12_takeover_fixed_k_10_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T09:41:59.671442+00:00",
+          "created_at_last": "2026-09-22T09:58:27.554039+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    },
+    "advise_k10_neutral": {
+      "campaigns": [
+        {
+          "campaign": "b2_advise_neutral_fixed_k_10_fullctx_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "dev": 114
+          }
+        },
+        {
+          "campaign": "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "dev": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "executor",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 14,
+        "none": 157
+      },
+      "goal_pass_mean": 0.765819,
+      "tgc_mean": 0.502924,
+      "by_campaign": {
+        "b2_advise_neutral_fixed_k_10_fullctx_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-23T00:04:16.150305+00:00",
+          "created_at_last": "2026-09-23T00:22:06.010337+00:00",
+          "git_sha": {
+            "864c6034642ea56819c0919b4b213a05f8a8a6e1": 114
+          },
+          "git_dirty": {
+            "False": 114
+          },
+          "config_path": {
+            "configs/b2_advise_neutral_fixed_k_10_fullctx.yaml": 114
+          },
+          "planner_reasoning_effort": {
+            "medium": 114
+          },
+          "split": {
+            "dev": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-23T01:05:30.824547+00:00",
+          "created_at_last": "2026-09-23T01:15:50.705375+00:00",
+          "git_sha": {
+            "730003a0fbd8c5546a8668796d3be210e68d51bb": 57
+          },
+          "git_dirty": {
+            "True": 57
+          },
+          "config_path": {
+            "configs/b2_advise_neutral_fixed_k_10_fullctx_s3.yaml": 57
+          },
+          "planner_reasoning_effort": {
+            "medium": 57
+          },
+          "split": {
+            "dev": 57
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 57
+          },
+          "plan_source": {
+            "replayed:hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 57
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "show_k10": {
+      "campaigns": [
+        {
+          "campaign": "b2_show_fixed_k_10_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "dev": 114
+          }
+        },
+        {
+          "campaign": "b2_show_fixed_k_10_s3_20260923",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "dev": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "executor",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 11,
+        "none": 160
+      },
+      "goal_pass_mean": 0.75155,
+      "tgc_mean": 0.45614,
+      "by_campaign": {
+        "b2_show_fixed_k_10_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T23:44:52.247613+00:00",
+          "created_at_last": "2026-09-23T02:00:48.781448+00:00",
+          "git_sha": {
+            "08fe9e2bb5cf43d976e15b57ad3eaf4563b52d6a": 113,
+            "a786c998f2bc97e7996ebe6f08b440f8638f57d0": 1
+          },
+          "git_dirty": {
+            "True": 114
+          },
+          "config_path": {
+            "configs/b2_show_fixed_k_10.yaml": 114
+          },
+          "planner_reasoning_effort": {
+            "medium": 114
+          },
+          "split": {
+            "dev": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 114
+          },
+          "plan_source": {
+            "replayed:hj1b_planner_20260915": 114
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "b2_show_fixed_k_10_s3_20260923": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-23T00:51:19.209514+00:00",
+          "created_at_last": "2026-09-23T01:00:21.346709+00:00",
+          "git_sha": {
+            "5c331bfdf5f9fad72b029faef75a26efa056877d": 57
+          },
+          "git_dirty": {
+            "False": 57
+          },
+          "config_path": {
+            "configs/b2_show_fixed_k_10_s3.yaml": 57
+          },
+          "planner_reasoning_effort": {
+            "medium": 57
+          },
+          "split": {
+            "dev": 57
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 57
+          },
+          "plan_source": {
+            "replayed:hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "plan_effort_recorded": {
+            "unrecorded": 57
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "prefix_c81_bplus_m6": {
+      "campaigns": [
+        {
+          "campaign": "hj17_prefix_c81_bplus_m6_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "hj18_prefix_c81s3_bplus_m6_20260924",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "prefix",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 20,
+        "none": 151
+      },
+      "goal_pass_mean": 0.729942,
+      "tgc_mean": 0.438596,
+      "by_campaign": {
+        "hj17_prefix_c81_bplus_m6_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T10:35:23.008911+00:00",
+          "created_at_last": "2026-09-22T10:47:06.048307+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 113
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_20260923": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "hj18_prefix_c81s3_bplus_m6_20260924": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-22T14:45:20.791260+00:00",
+          "created_at_last": "2026-09-22T14:51:25.565727+00:00",
+          "git_sha": {
+            "unrecorded": 57
+          },
+          "git_dirty": {
+            "unrecorded": 57
+          },
+          "config_path": {
+            "unrecorded": 57
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 57
+          },
+          "split": {
+            "unrecorded": 57
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 54
+          },
+          "plan_source": {
+            "no_plan_event": 57
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "prefix_c81_bplus_m9": {
+      "campaigns": [
+        {
+          "campaign": "hj17_prefix_c81_bplus_m9_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "hj18_prefix_c81s3_bplus_m9_20260924",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "prefix",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 15,
+        "none": 156
+      },
+      "goal_pass_mean": 0.771357,
+      "tgc_mean": 0.526316,
+      "by_campaign": {
+        "hj17_prefix_c81_bplus_m9_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T10:55:06.076525+00:00",
+          "created_at_last": "2026-09-22T11:01:06.672638+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 83
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_20260923": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "hj18_prefix_c81s3_bplus_m9_20260924": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-22T14:56:40.866301+00:00",
+          "created_at_last": "2026-09-22T15:00:39.479535+00:00",
+          "git_sha": {
+            "unrecorded": 57
+          },
+          "git_dirty": {
+            "unrecorded": 57
+          },
+          "config_path": {
+            "unrecorded": 57
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 57
+          },
+          "split": {
+            "unrecorded": 57
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 45
+          },
+          "plan_source": {
+            "no_plan_event": 57
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "prefix_c81_bplus_m11": {
+      "campaigns": [
+        {
+          "campaign": "hj17_prefix_c81_bplus_m11_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "hj18_prefix_c81s3_bplus_m11_20260924",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "prefix",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 11,
+        "none": 160
+      },
+      "goal_pass_mean": 0.813854,
+      "tgc_mean": 0.596491,
+      "by_campaign": {
+        "hj17_prefix_c81_bplus_m11_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T11:03:08.803004+00:00",
+          "created_at_last": "2026-09-22T11:07:21.786360+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 60
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_20260923": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "hj18_prefix_c81s3_bplus_m11_20260924": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-22T15:05:28.076761+00:00",
+          "created_at_last": "2026-09-22T15:07:57.462452+00:00",
+          "git_sha": {
+            "unrecorded": 57
+          },
+          "git_dirty": {
+            "unrecorded": 57
+          },
+          "config_path": {
+            "unrecorded": 57
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 57
+          },
+          "split": {
+            "unrecorded": 57
+          },
+          "executor_adapter_episodes": {
+            "sft_b_plus|lora=sft_b_plus": 28
+          },
+          "plan_source": {
+            "no_plan_event": 57
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "prefix_c81_zs_m6": {
+      "campaigns": [
+        {
+          "campaign": "hj17_prefix_c81_zs_m6_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "hj18_prefix_c81s3_zs_m6_20260924",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "prefix",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 28,
+        "none": 143
+      },
+      "goal_pass_mean": 0.712175,
+      "tgc_mean": 0.444444,
+      "by_campaign": {
+        "hj17_prefix_c81_zs_m6_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T09:48:23.445262+00:00",
+          "created_at_last": "2026-09-22T10:07:33.636919+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 113
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_20260923": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "hj18_prefix_c81s3_zs_m6_20260924": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-22T14:44:12.966332+00:00",
+          "created_at_last": "2026-09-22T14:52:36.492246+00:00",
+          "git_sha": {
+            "unrecorded": 57
+          },
+          "git_dirty": {
+            "unrecorded": 57
+          },
+          "config_path": {
+            "unrecorded": 57
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 57
+          },
+          "split": {
+            "unrecorded": 57
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 54
+          },
+          "plan_source": {
+            "no_plan_event": 57
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "prefix_c81_zs_m9": {
+      "campaigns": [
+        {
+          "campaign": "hj17_prefix_c81_zs_m9_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "hj18_prefix_c81s3_zs_m9_20260924",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "prefix",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 10,
+        "none": 160,
+        "parse_error": 1
+      },
+      "goal_pass_mean": 0.774731,
+      "tgc_mean": 0.538012,
+      "by_campaign": {
+        "hj17_prefix_c81_zs_m9_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T10:09:39.157044+00:00",
+          "created_at_last": "2026-09-22T10:19:23.322656+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 83
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_20260923": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "hj18_prefix_c81s3_zs_m9_20260924": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-22T14:55:01.556288+00:00",
+          "created_at_last": "2026-09-22T15:00:19.748384+00:00",
+          "git_sha": {
+            "unrecorded": 57
+          },
+          "git_dirty": {
+            "unrecorded": 57
+          },
+          "config_path": {
+            "unrecorded": 57
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 57
+          },
+          "split": {
+            "unrecorded": 57
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 45
+          },
+          "plan_source": {
+            "no_plan_event": 57
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "prefix_c81_zs_m11": {
+      "campaigns": [
+        {
+          "campaign": "hj17_prefix_c81_zs_m11_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "hj18_prefix_c81s3_zs_m11_20260924",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "prefix",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 10,
+        "none": 160,
+        "parse_error": 1
+      },
+      "goal_pass_mean": 0.789164,
+      "tgc_mean": 0.561404,
+      "by_campaign": {
+        "hj17_prefix_c81_zs_m11_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T10:21:32.604930+00:00",
+          "created_at_last": "2026-09-22T10:29:38.278991+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 60
+          },
+          "plan_source": {
+            "no_plan_event": 114
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_20260923": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        },
+        "hj18_prefix_c81s3_zs_m11_20260924": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-22T15:02:05.012792+00:00",
+          "created_at_last": "2026-09-22T15:05:35.613424+00:00",
+          "git_sha": {
+            "unrecorded": 57
+          },
+          "git_dirty": {
+            "unrecorded": 57
+          },
+          "config_path": {
+            "unrecorded": 57
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 57
+          },
+          "split": {
+            "unrecorded": 57
+          },
+          "executor_adapter_episodes": {
+            "ibm-granite/granite-4.2-8b|lora=None": 28
+          },
+          "plan_source": {
+            "no_plan_event": 57
+          },
+          "plan_effort_recorded": {},
+          "prefix_source_campaign": {
+            "hj13_planner_alone_cap81_seed3_20260924": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "300.0": 57
+          }
+        }
+      }
+    },
+    "planner_alone_c81_medium": {
+      "campaigns": [
+        {
+          "campaign": "hj13_planner_alone_cap81_20260923",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 114
+          }
+        },
+        {
+          "campaign": "hj13_planner_alone_cap81_seed3_20260924",
+          "present": true,
+          "n_results": 57,
+          "by_seed": {
+            "3": 57
+          },
+          "n_scored": 57,
+          "n_crash": 0,
+          "split_provenance": {
+            "unrecorded": 57
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "role": "planner",
+      "n_scored": 171,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 27,
+        "none": 144
+      },
+      "goal_pass_mean": 0.769749,
+      "tgc_mean": 0.590643,
+      "by_campaign": {
+        "hj13_planner_alone_cap81_20260923": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-22T04:33:36.535706+00:00",
+          "created_at_last": "2026-09-22T08:57:40.677167+00:00",
+          "git_sha": {
+            "unrecorded": 114
+          },
+          "git_dirty": {
+            "unrecorded": 114
+          },
+          "config_path": {
+            "unrecorded": 114
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 114
+          },
+          "split": {
+            "unrecorded": 114
+          },
+          "executor_adapter_episodes": {},
+          "plan_source": {
+            "live:codex": 114
+          },
+          "plan_effort_recorded": {
+            "medium": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "120.0": 114
+          }
+        },
+        "hj13_planner_alone_cap81_seed3_20260924": {
+          "n_episodes": 57,
+          "created_at_first": "2026-09-22T12:54:25.451084+00:00",
+          "created_at_last": "2026-09-22T14:10:32.156802+00:00",
+          "git_sha": {
+            "unrecorded": 57
+          },
+          "git_dirty": {
+            "unrecorded": 57
+          },
+          "config_path": {
+            "unrecorded": 57
+          },
+          "planner_reasoning_effort": {
+            "unrecorded": 57
+          },
+          "split": {
+            "unrecorded": 57
+          },
+          "executor_adapter_episodes": {},
+          "plan_source": {
+            "live:codex": 57
+          },
+          "plan_effort_recorded": {
+            "medium": 57
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 57
+          },
+          "max_planner_calls": {
+            "81": 57
+          },
+          "per_step_timeout_s": {
+            "120.0": 57
+          }
+        }
+      }
+    },
+    "planner_alone_c81_high": {
+      "campaigns": [
+        {
+          "campaign": "dev_planner_alone_cap81_high_20260924",
+          "present": true,
+          "n_results": 114,
+          "by_seed": {
+            "1": 57,
+            "2": 57
+          },
+          "n_scored": 114,
+          "n_crash": 0,
+          "split_provenance": {
+            "dev": 114
+          }
+        }
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "role": "planner",
+      "n_scored": 114,
+      "n_crash": 0,
+      "n_missing": 0,
+      "error_types": {
+        "limit": 4,
+        "none": 110
+      },
+      "goal_pass_mean": 0.883368,
+      "tgc_mean": 0.763158,
+      "by_campaign": {
+        "dev_planner_alone_cap81_high_20260924": {
+          "n_episodes": 114,
+          "created_at_first": "2026-09-24T08:31:55.273046+00:00",
+          "created_at_last": "2026-09-24T09:22:34.167498+00:00",
+          "git_sha": {
+            "9460b06ebf65eaa371113165f19cdbc6a1ff7497": 114
+          },
+          "git_dirty": {
+            "True": 114
+          },
+          "config_path": {
+            "configs/dev_planner_alone_cap81_high.yaml": 114
+          },
+          "planner_reasoning_effort": {
+            "high": 114
+          },
+          "split": {
+            "dev": 114
+          },
+          "executor_adapter_episodes": {},
+          "plan_source": {
+            "live:codex": 114
+          },
+          "plan_effort_recorded": {
+            "high": 114
+          },
+          "prefix_source_campaign": {
+            "unrecorded": 114
+          },
+          "max_planner_calls": {
+            "81": 114
+          },
+          "per_step_timeout_s": {
+            "300.0": 114
+          }
+        }
+      }
+    }
+  },
+  "ledger_confirmation": [
+    {
+      "ledger": "TAILOR-01",
+      "arm": "prefix_bplus_m6",
+      "campaigns": [
+        "hj12_prefix_m6_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj13_receiver_contrast_m6_20260923.report.json",
+      "key": "arms.prefix_m6_tailored.goal_pass_all",
+      "reported": 0.723675,
+      "recomputed_goal_pass_mean": 0.723675,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "TAILOR-01",
+      "arm": "prefix_zs_m6",
+      "campaigns": [
+        "hj13_prefix_zs_m6_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj13_receiver_contrast_m6_20260923.report.json",
+      "key": "arms.prefix_m6_zeroshot.goal_pass_all",
+      "reported": 0.682474,
+      "recomputed_goal_pass_mean": 0.682474,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "TAILOR-04",
+      "arm": "prefix_bplus_m9",
+      "campaigns": [
+        "hj12_prefix_m9_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj13_receiver_contrast_m9_20260923.report.json",
+      "key": "arms.prefix_m9_tailored.goal_pass_all",
+      "reported": 0.785184,
+      "recomputed_goal_pass_mean": 0.785184,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "TAILOR-04",
+      "arm": "prefix_zs_m9",
+      "campaigns": [
+        "hj13_prefix_zs_m9_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj13_receiver_contrast_m9_20260923.report.json",
+      "key": "arms.prefix_m9_zeroshot.goal_pass_all",
+      "reported": 0.784535,
+      "recomputed_goal_pass_mean": 0.784535,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "TAILOR-07",
+      "arm": "prefix_bplus_m11",
+      "campaigns": [
+        "hj12_prefix_m11_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj13_receiver_contrast_m11_20260923.report.json",
+      "key": "arms.prefix_m11_tailored.goal_pass_all",
+      "reported": 0.809825,
+      "recomputed_goal_pass_mean": 0.809825,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "TAILOR-07",
+      "arm": "prefix_zs_m11",
+      "campaigns": [
+        "hj13_prefix_zs_m11_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj13_receiver_contrast_m11_20260923.report.json",
+      "key": "arms.prefix_m11_zeroshot.goal_pass_all",
+      "reported": 0.834456,
+      "recomputed_goal_pass_mean": 0.834456,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "QWEN-03",
+      "arm": "qwen_exec_alone",
+      "campaigns": [
+        "hj15_executor_alone_zsq_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj15_qwen_curve_20260923.report.json",
+      "key": "arms.qwen_executor_alone.goal_pass_all",
+      "reported": 0.248053,
+      "recomputed_goal_pass_mean": 0.248053,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "QWEN-03",
+      "arm": "qwen_prompt_only",
+      "campaigns": [
+        "hj15_prompt_only_zsq_20260923"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj15_qwen_curve_20260923.report.json",
+      "key": "arms.qwen_plan_only.goal_pass_all",
+      "reported": 0.248053,
+      "recomputed_goal_pass_mean": 0.248053,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "CEIL-07",
+      "arm": "planner_alone_c81_medium",
+      "campaigns": [
+        "hj13_planner_alone_cap81_20260923",
+        "hj13_planner_alone_cap81_seed3_20260924"
+      ],
+      "seeds": [
+        1,
+        2
+      ],
+      "report": "campaign/results/hj13_ceiling_cap25_vs_cap81_20260923.report.json",
+      "key": "arms.ceiling_cap81.goal_pass_all",
+      "reported": 0.763693,
+      "recomputed_goal_pass_mean": 0.763693,
+      "n": 114,
+      "match": true
+    },
+    {
+      "ledger": "DEC-01",
+      "arm": "advise_k10_neutral",
+      "campaigns": [
+        "b2_advise_neutral_fixed_k_10_fullctx_20260923",
+        "b2_advise_neutral_fixed_k_10_fullctx_s3_20260923"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "report": "campaign/results/b2_decomposition_20260923.report.json",
+      "key": "arms.N.goal_pass_mean",
+      "reported": 0.765819,
+      "recomputed_goal_pass_mean": 0.765819,
+      "n": 171,
+      "match": true
+    },
+    {
+      "ledger": "DEC-01",
+      "arm": "show_k10",
+      "campaigns": [
+        "b2_show_fixed_k_10_20260923",
+        "b2_show_fixed_k_10_s3_20260923"
+      ],
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "report": "campaign/results/b2_decomposition_20260923.report.json",
+      "key": "arms.S.goal_pass_mean",
+      "reported": 0.75155,
+      "recomputed_goal_pass_mean": 0.75155,
+      "n": 171,
+      "match": true
+    }
+  ],
+  "settings": {
+    "n_boot": 10000,
+    "seed": 20260924,
+    "results_root": "/scratch/n12194778/sidekick/results",
+    "clustering": "scenario (primary: every p and ci95_pp_scenario) and task (ci95_pp_task)",
+    "interval": "95% percentile, j10.a1_interval (pairs cluster bootstrap, int(0.025 B), int(0.975 B))",
+    "p_value": "j10.bootstrap_pvalue(scenario means, threshold, 'two-sided'); p_signflip_two_sided = cluster_inference.registered_signflip over scenarios",
+    "crash_convention": "error_type == 'crash' is dropped from every pair and counted; 'limit' is scored",
+    "precision": "floats rounded to 6 dp (j16_robustness.round_floats); `printed` blocks hold the 2 dp pp forms",
+    "definitions": {
+      "action": "an event_type 'action' of the acting actor (loop.py:598-605 executor, :998-1005 planner driver); acting actor = executor, or planner in planner_alone arms",
+      "acted": "at least one action with payload.kind == 'CODE' (CODE and COMPLETE reach env.step, loop.py:1141-1143; COMPLETE ends the episode, loop.py:1169-1170)",
+      "after_handoff": "prefix arms: only actions with step > the handoff report's effective_m",
+      "categories": "first rule that applies: no_handoff (prefix arm, handoff_occurred not true); limit (error_type == 'limit'); other (any other non-null error_type, e.g. parse_error); stopped_before_acting (clean end, zero CODE actions); completed_after_acting (clean end, >= 1 CODE action). Crashes are dropped before classification",
+      "handoff_flag": "handoff_occurred of the last `report` event carrying that key (the prefix system's report, prefix_handoff.py:183-189); an executor REPORT action also writes a `report` event, without the key",
+      "plan_source": "first `plan` event: usage.provider 'cache' = replayed, from usage.raw.cached_from's campaign; any other provider = live",
+      "plan_identity": "sha256 of the first plan event's payload.packet, canonical JSON (sort_keys)",
+      "ni_reading": "ceiling - arm; holds iff round(scenario upper bound, 2) < +7.00, else fails"
+    }
+  }
+}
