@@ -274,3 +274,20 @@ Written before any LP-2 arm has run: at 17:15 AEST the results root holds only t
 - **Nothing was chosen after them.** LP-2 live job 25748167 was running and prefix job 25748168 was queued, both
   submitted under Amendment 4 before the diagnostic ran. No rule, arm, key or threshold changes. P27's gate and
   L1–L5 are read only from `lp_report.py`, as registered.
+
+## Amendment 6 — disclosure: a provisional `lp_report.py` run before the m11 refill (2026-09-24 ~18:10 AEST; no registered item changes)
+
+- **What ran.** `lp_report.py --date 20260924` (both planners, the registered defaults), in PBS job 25837120, output to
+  the job's scratch directory, not to `campaign/results/`.
+  - At that time `lp2_prefix_zs_m11_v2_20260923` and `lp2_prefix_bplus_m11_v2_20260923` held 112/114 non-crashed
+    episodes each (2 crashed each), with the refill (PBS 25832832) still queued.
+  - The script reported `INCOMPLETE` (exit 1), as §3 requires. L2–L5 carried no reading, and L1 carried "none
+    (Holm family incomplete)".
+- **What was seen:**
+  - The P27 gate passes: C − E = +5.18 pp, scenario [−6.24, +15.74].
+  - L1's unadjusted interval: T − A = +8.93 pp, scenario [+2.37, +16.58], task [+3.00, +15.22].
+- **Why it was run.** To decide whether to register J11, a `test_normal` replication of this family with P27
+  (`docs/plan_top_venue_20260924.md` §6 DA), before any `test_normal` episode exists. Nothing in this registration
+  was chosen from it.
+- **What does not change.** The registered read is the rerun after the refill. L1–L5 and their readings come only
+  from that run. The P27 L1 verdict is taken from the full Holm family, never from the unadjusted interval above.
