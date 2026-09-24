@@ -291,3 +291,22 @@ Written before any LP-2 arm has run: at 17:15 AEST the results root holds only t
   was chosen from it.
 - **What does not change.** The registered read is the rerun after the refill. L1–L5 and their readings come only
   from that run. The P27 L1 verdict is taken from the full Holm family, never from the unadjusted interval above.
+
+## Amendment 7 — disclosure: provisional L2–L5 point values seen through `j11_power.py` (2026-09-24 ~19:30 AEST; no registered item changes)
+
+- **What ran.** `scripts/analysis/j11_power.py` computed J11's power (`campaign/results/j11_power_dev_20260924.report.json`,
+  key `dev`).
+  - It loads P27's arms only through this registration's own functions: `lp_report.resolve_campaigns`,
+    `load_campaign`, `evaluate_gate` and `evaluate_contrast`.
+  - It ran before the refill (PBS 25832832 still queued), so M^bplus_11 and M^zs_11 held 112/114 non-crashed pairs
+    each.
+  - L2–L5 are therefore **incomplete** under §3 and carry no reading.
+- **What was seen beyond Amendment 6.** Point values and scenario intervals on 112 pairs, in pp:
+  - L2 (A1 − M^bplus_11, predicted < 0): +10.11 [+2.41, +18.20], the opposite side of the prediction.
+  - L3 (M^bplus_11 − M^bplus_6, predicted > 0): +0.16 [−7.03, +7.70].
+  - L4 (C − M^bplus_11, predicted upper bound < +7.00): −1.05 [−10.52, +8.97].
+  - L5 (M^zs_11 − M^zs_6, predicted > 0): −0.12 [−8.86, +8.19].
+- **Why.** Power for J11 (`docs/prereg_j11_lp2_test_20260924.md` §5) has to be computed from the dev pairs of every
+  prediction J11 carries. J11 carries L1–L5 unchanged.
+- **What does not change.** The registered read is still the post-refill rerun of `lp_report.py`. No prediction,
+  margin, family or rule here was altered after these values were seen.
