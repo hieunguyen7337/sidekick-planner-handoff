@@ -1486,6 +1486,72 @@ def test_am1_decomposition_by_hand(tmp_path: Path):
     assert report["amendment1"]["b4_companions"]["P3"] == "amendment1.handoff_only_ni[B1a]"
 
 
+def _write_control(arm_root: Path, flag: dict, live: set, eff: int = 11) -> None:
+    """Rewrite a prefix arm's events: the handoff record (flag, effective_m) and, for `live` keys,
+    an executor action at step eff + 1 -- the executor took control (h* = 1)."""
+    for (task_id, seed), f in flag.items():
+        events = [{"event_type": "run_start", "actor": "system", "step": 0, "payload": {}},
+                  {"event_type": "report", "actor": "system", "step": eff,
+                   "payload": {"handoff_occurred": f, "effective_m": eff}}]
+        if (task_id, seed) in live:
+            events.append({"event_type": "action", "actor": "executor", "step": eff + 1,
+                           "payload": {"kind": "CODE", "code": "x"}})
+        events.append({"event_type": "evaluate", "actor": "environment", "step": eff + 1, "payload": {}})
+        (arm_root / "sys" / str(seed) / task_id / "events.jsonl").write_text(
+            "".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+
+
+def test_am1_hstar_companions_sit_beside_the_flag_ones_by_hand(tmp_path: Path):
+    # prefix_m11's flag is true on HANDOFF_KEYS (8) and it scores 0.25 there; the executor also took
+    # control on the _2 tasks (8 keys, flag false: the source stopped within m without finishing),
+    # scoring 0.5 there; the _3 tasks (8) are terminal at 0.75. planner_alone_cap81 scores 0.75.
+    live_unflagged = [k for k in GRID if k[0].endswith("_2")]
+    gp11 = {k: 0.25 if k in HANDOFF_KEYS else 0.5 if k in live_unflagged else 0.75 for k in GRID}
+    dirs = write_a1_matrix(tmp_path, dict(AM1_GP, prefix_m9=0.25))
+    write_a1_arm(tmp_path, "prefix_m11", gp11)
+    _write_control(dirs["prefix_m11"], {k: k in HANDOFF_KEYS for k in GRID}, set(HANDOFF_KEYS) | set(live_unflagged))
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    am1 = report["amendment1"]
+    assert am1["hstar"]["status"] == "ok" and am1["hstar"]["decision_bearing"] is False
+    counts = am1["handoff_control_counts"]["prefix_m11"]
+    assert (counts["n_h_flag_true"], counts["n_live_but_unflagged"], counts["n_terminal"]) == (8, 8, 8)
+    # The flag-based B1a is unchanged: d = −0.5 on its 8 keys.
+    b1 = {r["id"]: r for r in am1["handoff_only_ni"]}["B1a"]["goal_pass"]
+    assert (b1["n_handoff"], b1["handoff_only"]["diff_pp"]) == (8, -50.0)
+    # h*: (8 x −0.5 + 8 x −0.25) / 16 = −37.5 pp over 16 handoff pairs; silenced = the 8 terminal at 0.
+    b1h = {r["id"]: r for r in am1["handoff_only_ni_hstar"]}["B1a"]
+    assert b1h["h"] == "h_star" and "h*" in b1h["estimand"]
+    gp = b1h["goal_pass"]
+    assert (gp["n_handoff"], gp["n_silenced"], gp["handoff_only"]["diff_pp"], gp["silenced"]["diff_pp"]) == (
+        16, 8, -37.5, 0.0)
+    assert gp["ni"]["reading"] == "fails"
+    # §B2 with h*: m11 − m9 = 0 on flagged, +0.25 on live-unflagged, +0.5 on terminal keys.
+    dec = am1["decomposition_hstar"]["tailored"]["goal_pass"]
+    assert (dec["n_handoff"], dec["contribution_handoff"]["diff_pp"], dec["delta_total"]["diff_pp"]) == (
+        16, round(8 * 0.25 / 24 * 100, 2), 25.0)
+    assert am1["decomposition"]["tailored"]["goal_pass"]["n_handoff"] == 8
+    s6 = next(r for r in report["supporting_contrasts"] if r["id"] == "S6")
+    assert s6["goal_pass"]["tailored"]["n_handoff"] == 8 and s6["goal_pass_hstar"]["tailored"]["n_handoff"] == 16
+    assert s6["goal_pass_hstar"]["tailored"]["handoff_only"]["diff_pp"] == 12.5  # (0 x 8 + 0.25 x 8) / 16
+    assert am1["b4_companions_hstar"]["P3"] == "amendment1.handoff_only_ni_hstar[B1a]"
+    assert am1["b4_companions"]["P3"] == "amendment1.handoff_only_ni[B1a]"
+    assert "multiplicity_sensitivity_hstar" in am1
+
+
+def test_am1_hstar_failure_is_recorded_and_never_fatal(tmp_path: Path, monkeypatch):
+    from scripts.analysis import handoff_control
+
+    def boom(*_a, **_k):
+        raise OSError("unreadable")
+
+    monkeypatch.setattr(handoff_control, "arm_control", boom)
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert report["amendment1"]["hstar"]["status"] == "error"
+    assert "OSError" in report["amendment1"]["hstar"]["error"]
+    assert "handoff_only_ni" in report["amendment1"] and report["verdicts"]
+
+
 def test_am1_chord_by_hand(tmp_path: Path):
     # Costs: floor sft_plan 100, reference planner 500, m11 300 (f = 0.5), m9 200 (f = 0.25).
     # Quality: floor 0.5, reference 0.75. m11 0.75 → 0.75 − (0.5 + 0.5 × 0.25) = +12.5 pp;

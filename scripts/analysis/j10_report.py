@@ -3826,7 +3826,7 @@ def build_report_a1(
             "limit / timeout / parse_error / api_error are scored outcomes."
         ),
     }
-    return report, (0 if all_decided and not reasons else 1)
+    return a1_hstar_companions(report, arms, arm_dirs, n_boot=n_boot, seed=bootstrap_seed), (0 if all_decided and not reasons else 1)
 
 
 def build_parser_a1() -> argparse.ArgumentParser:
@@ -3914,6 +3914,121 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(json.dumps({"refused": True, "reason": f"unknown --protocol {protocol!r} (a1|v1)"}))
         return 2
     return main_a1(args)
+
+
+# ---- h* companions of A1 Amendment 1 §B (unit HSTAR, 2026-09-24) ----------------------------------
+# handoff_occurred (renamed h_flag in these companions) is `effective_m < n_source_actions`
+# (src/sidekick/prefix_source.py:184); the loop skips its live phase only when the replayed prefix is
+# terminal (src/sidekick/systems/loop.py:743-756). h* -- the executor took control after the prefix,
+# scripts/analysis/handoff_control.py -- is computed beside every flag-based handoff number as a new
+# `*_hstar` key; no existing key or value changes. The code sits at the end of the file and is called
+# from build_report_a1's return line, so that no line this file's citations name moves.
+A1_HSTAR_ESTIMAND = ("Σ d·h / Σ h, d = left − right, h = h* of the left (prefix) episode: the executor "
+                     "took control after the replayed prefix (scripts/analysis/handoff_control.py)")
+A1_AM1_B4_COMPANIONS_HSTAR = {
+    "P3": "amendment1.handoff_only_ni_hstar[B1a]",
+    "P4": "supporting_contrasts[S6].goal_pass_hstar.untailored.handoff_only",
+    "S3": "supporting_contrasts[S6].goal_pass_hstar.tailored.handoff_only",
+    "S4": "amendment1.decomposition_hstar (both receivers)",
+    "S5": "amendment1.b4_extra.S5_handoff_only_hstar",
+    "E1": "amendment1.handoff_only_ni_hstar[B1b] (negated)",
+}
+
+
+def a1_hstar_companions(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """Add the h* companions to an A1 report in place and return it. Information only: an error
+    here is recorded under amendment1.hstar and never stops the registered analysis."""
+    if report.get("refused") or not isinstance(report.get("amendment1"), dict):
+        return report
+    try:
+        _a1_add_hstar(report, arms, arm_dirs, n_boot=n_boot, seed=seed)
+    except Exception as exc:  # information only: never fatal
+        report["amendment1"]["hstar"] = {"status": "error", "error": f"{type(exc).__name__}: {exc}",
+                                         "decision_bearing": False}
+    return report
+
+
+def _a1_add_hstar(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    *,
+    n_boot: int,
+    seed: int,
+) -> None:
+    from scripts.analysis import handoff_control as hc
+
+    am1 = report["amendment1"]
+    labels = sorted(a for a in (report.get("no_handoff_counts") or {}) if a in arm_dirs)
+    controls = {a: hc.arm_control(Path(arm_dirs[a])) for a in labels}
+    hstar = {a: {k: c[hc.HSTAR_NAME] for k, c in ctl.items()} for a, ctl in controls.items()}
+    # The per-arm count table: n h_flag true, n live-but-unflagged, n terminal (over scored episodes).
+    am1["handoff_control_counts"] = {
+        a: {"m": A1_PREFIX_ARMS.get(a)} | hc.control_counts(controls[a], keys=arms[a]["episodes"].keys())
+        for a in labels if a in arms}
+    # §B1: handoff-only NI with h*.
+    handoff_ni = []
+    for spec in A1_AM1_HANDOFF_NI:
+        row = am1_handoff_ni(spec, arms, hstar, n_boot=n_boot, seed=seed)
+        row.update(estimand=A1_HSTAR_ESTIMAND, h=hc.HSTAR_NAME, citation=f"{A1_AM1} §B1 (h* companion)")
+        handoff_ni.append(row)
+    am1["handoff_only_ni_hstar"] = _strip_internal(handoff_ni)
+    # §B2: the decomposition with h*.
+    decomposition = {}
+    for receiver, (target, base) in A1_AM1_DECOMPOSITION.items():
+        if target not in arms or base not in arms:
+            decomposition[receiver] = {"target": target, "base": base, "status": "arm_absent"}
+            continue
+        decomposition[receiver] = {"target": target, "base": base, "h": hc.HSTAR_NAME} | {
+            metric: am1_decomposition(arms[target]["episodes"], arms[base]["episodes"], hstar.get(target, {}),
+                                      A1_METRIC_FIELDS[metric], n_boot=n_boot, seed=seed)
+            for metric in ("goal_pass", "tgc")}
+    am1["decomposition_hstar"] = _strip_internal(decomposition)
+    # §B4: S5's handoff-only companion, and S6 (every handoff_depth row) with h*.
+    s5 = next((s for s in A1_SUPPORTING if s["id"] == "S5"), None)
+    if s5 and s5["left"] in arms and s5["right"] in arms:
+        am1.setdefault("b4_extra", {})["S5_handoff_only_hstar"] = _strip_internal(
+            {"target": s5["left"], "base": s5["right"], "h": hc.HSTAR_NAME} | a1_handoff_depth(
+                arms[s5["left"]]["episodes"], arms[s5["right"]]["episodes"], hstar.get(s5["left"], {}),
+                A1_METRIC_FIELDS["goal_pass"], n_boot=n_boot, seed=seed))
+    for rows in (report.get("supporting_contrasts") or [], report.get("exploratory_contrasts") or []):
+        for row in rows:
+            if row.get("kind") != "handoff_depth":
+                continue
+            receivers = {}
+            for name, (target, base) in row["receivers"].items():
+                if target not in arms or base not in arms:
+                    receivers[name] = {"target": target, "base": base, "status": "arm_absent"}
+                    continue
+                receivers[name] = {"target": target, "base": base, "h": hc.HSTAR_NAME} | a1_handoff_depth(
+                    arms[target]["episodes"], arms[base]["episodes"], hstar.get(target, {}),
+                    A1_METRIC_FIELDS["goal_pass"], n_boot=n_boot, seed=seed)
+            row["goal_pass_hstar"] = _strip_internal(receivers)
+            targets = [t for t, _b in row["receivers"].values() if t in hstar]
+            if len(targets) == 2:
+                fa, fb = hstar[targets[0]], hstar[targets[1]]
+                row["hstar_mismatch_between_receivers"] = sum(1 for k in set(fa) & set(fb) if fa[k] != fb[k])
+    am1["b4_companions_hstar"] = A1_AM1_B4_COMPANIONS_HSTAR
+    # §F with the B1 entries read through h*; every other entry is as in multiplicity_sensitivity.
+    am1["multiplicity_sensitivity_hstar"] = am1_by_fdr(am1_by_entries(
+        report.get("predictions") or [], (am1.get("cf") or {}).get("predictions") or [],
+        report.get("supporting_contrasts") or [], report.get("exploratory_contrasts") or [],
+        am1["handoff_only_ni_hstar"]))
+    am1["hstar"] = {
+        "status": "ok", "decision_bearing": False, "h_star": hc.DEFINITION, "h_flag": hc.FLAG_DEFINITION,
+        "keys": ["amendment1.handoff_control_counts", "amendment1.handoff_only_ni_hstar",
+                 "amendment1.decomposition_hstar", "amendment1.b4_extra.S5_handoff_only_hstar",
+                 "supporting_contrasts[S6].goal_pass_hstar", "amendment1.b4_companions_hstar",
+                 "amendment1.multiplicity_sensitivity_hstar"],
+        "unchanged": "every flag-based key (h_flag) keeps its name and value",
+    }
 
 
 if __name__ == "__main__":

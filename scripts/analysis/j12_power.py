@@ -22,8 +22,14 @@ counts that joint event as well.
 Dev input: the pooled cap-81 prefix family, seeds 1-3 (hj17 + hj18), loaded exactly as
 j17_depth_fixes loads it (family_sources / load_depth_rows / drop_crashed, imported). Pairs are
 A1's population: crash dropped, every other outcome scored, keyed (task_id, seed); d = m11 − m6 and
-h = the m11 episode's handoff_occurred (j17_depth_fixes.paired_components' estimand). The dev point
-values are checked against j17's report before any power number is trusted.
+h = the m11 episode's handoff indicator (j17_depth_fixes.paired_components' estimand). The dev point
+values are checked against the matching j17 report before any power number is trusted.
+
+The indicator (--handoff): `hstar` (default) is h*, the executor took control after the replayed
+prefix (scripts/analysis/handoff_control.py, loaded per episode by j17_hstar.load_controls), which
+the pending J12 Amendment 1 registers for D3 / D4; its dev check is j17_hstar's report. `flag` is
+handoff_occurred (h_flag), the estimand of the committed campaign/results/j12_power_dev_20260924
+.report.json; its dev check is j17_depth_fixes' report. D1 / D2 do not use h.
 
 Dev only: every path is refused if it names a held-out split or a J10 campaign.
 """
@@ -59,6 +65,9 @@ DEFAULT_R = am1.DEFAULT_R  # 1,000 simulated reads
 DEFAULT_B = am1.DEFAULT_B  # 2,000 bootstrap draws per read
 DEFAULT_SEED = am1.DEFAULT_SEED  # 20260924
 DEV_REPORT = REPO_ROOT / j12_report.J12_DEV_REPORT
+DEV_REPORT_HSTAR = REPO_ROOT / j12_report.J12_DEV_REPORT_HSTAR
+HANDOFF_CHOICES = ("hstar", "flag")
+DEV_REPORT_BY_HANDOFF = {"hstar": DEV_REPORT_HSTAR, "flag": DEV_REPORT}
 # j12_report arm label -> j17_depth_fixes.family_sources label (pooled cap-81 dev campaigns).
 DEV_LABEL = {"prefix_m6": "bplus_m6", "prefix_m11": "bplus_m11",
              "prefix_zs_m6": "zs_m6", "prefix_zs_m11": "zs_m11"}
@@ -78,10 +87,13 @@ def power_specs() -> dict[str, dict[str, Any]]:
 
 
 # ---- dev input -------------------------------------------------------------------------------------
-def load_dev(root: Path = RESULTS) -> tuple[dict[str, dict], dict[str, Any]]:
-    """The four pooled dev arms in am1_power's row shape, crashes dropped, with their inputs."""
+def load_dev(root: Path = RESULTS, handoff: str = "hstar") -> tuple[dict[str, dict], dict[str, Any]]:
+    """The four pooled dev arms in am1_power's row shape, crashes dropped, with their inputs. The row
+    key `handoff_occurred` (am1_power.paired_rows reads it) holds h* or the flag, per `handoff`."""
     from scripts.analysis import j17_depth_fixes as j17  # dev paths; j17 refuses held-out and J10 ones
 
+    if handoff not in HANDOFF_CHOICES:
+        raise ValueError(f"handoff must be one of {HANDOFF_CHOICES}, not {handoff!r}")
     j17.refuse_path(root)
     sources = j17.family_sources(root)
     arms: dict[str, dict] = {}
@@ -89,16 +101,26 @@ def load_dev(root: Path = RESULTS) -> tuple[dict[str, dict], dict[str, Any]]:
     for label in sorted(set(DEV_LABEL.values())):
         rows, entries = j17.load_depth_rows(sources[label])
         kept = j17.drop_crashed(rows)
+        if handoff == "hstar":
+            from scripts.analysis import j17_hstar  # dev only; refuses held-out and J10-J12 paths
+
+            controls = j17_hstar.load_controls(sources[label])
+            h_of = {key: (controls.get(key) or {}).get("h_star") for key in kept}
+        else:
+            h_of = {key: j16.handoff_flag(row) for key, row in kept.items()}
         arms[label] = {
             key: {"goal_pass_rate": None if row.get("goal_pass_rate") is None else float(row["goal_pass_rate"]),
                   "tgc": None if row.get("tgc") is None else float(row["tgc"]),
-                  "handoff_occurred": j16.handoff_flag(row)}
+                  "handoff_occurred": h_of[key]}
             for key, row in kept.items()}
         inputs[label] = {"campaign_dirs": [e["campaign_dir"] for e in entries],
                          "seeds": sorted({s for e in entries for s in e["seeds"]}),
                          "n_episodes": sum(e["n_episodes"] for e in entries),
                          "n_crash_excluded": sum(e["n_crash"] for e in entries),
-                         "n_scored": len(kept)}
+                         "n_scored": len(kept),
+                         "handoff_indicator": "h_star" if handoff == "hstar" else "h_flag",
+                         "n_h_true": sum(1 for v in h_of.values() if v is True),
+                         "n_h_undefined": sum(1 for v in h_of.values() if v is None)}
     return arms, inputs
 
 
@@ -198,8 +220,15 @@ def build_from_arms(
     seed: int,
     inputs: Optional[dict[str, Any]] = None,
     n_scenarios: int = am1.TEST_SCENARIOS,
-    report_path: Path = DEV_REPORT,
+    report_path: Optional[Path] = None,
+    handoff: str = "hstar",
 ) -> dict[str, Any]:
+    if handoff not in HANDOFF_CHOICES:
+        raise ValueError(f"handoff must be one of {HANDOFF_CHOICES}, not {handoff!r}")
+    if report_path is None:
+        report_path = DEV_REPORT_BY_HANDOFF[handoff]
+    h_word = ("h* (the executor took control after the replayed prefix)" if handoff == "hstar"
+              else "handoff_occurred (h_flag)")
     specs = power_specs()
     rows = {name: am1.paired_rows(arms[s["left"]], arms[s["right"]]) for name, s in specs.items()}
     indices = {name: am1.index_by_scenario(r) for name, r in rows.items()}
@@ -229,11 +258,14 @@ def build_from_arms(
         "analysis": {"interval": "scenario-cluster percentile, 95%", "p": "bootstrap, 'greater' at 0",
                      "multiplicity": "Holm across D1-D4", "alpha": ALPHA,
                      "supported": "Holm-adjusted p <= alpha and CI lower bound > 0",
-                     "handoff_only": "Σ d·h / Σ h, h from the m11 arm"},
+                     "handoff_only": f"Σ d·h / Σ h, h = the m11 arm's {h_word}"},
+        "handoff_indicator": "h_star" if handoff == "hstar" else "h_flag",
         "n_sims": n_sims, "n_boot_per_sim": n_boot, "seed": seed, "seed_half_effect": seed + 1,
         "specs": specs,
         "dev": dev,
         "dev_check_against_j17": j17_check(dev, report_path),
+        "dev_reference_flag": {p["id"]: p.get("dev_reference_flag") for p in j12_report.J12_PREDICTIONS
+                               if p.get("dev_reference_flag") is not None},
         "power_table": {"at_dev_effect": table(at_dev), "at_half_effect": table(at_half),
                         "value": "rate of Holm-supported per D; the family; D1 and D2 jointly"},
         "power_at_dev_effect": at_dev,
@@ -248,9 +280,9 @@ def build_from_arms(
     }
 
 
-def build(root: Path, n_sims: int, n_boot: int, seed: int) -> dict[str, Any]:
-    arms, inputs = load_dev(root)
-    return build_from_arms(arms, n_sims=n_sims, n_boot=n_boot, seed=seed, inputs=inputs)
+def build(root: Path, n_sims: int, n_boot: int, seed: int, handoff: str = "hstar") -> dict[str, Any]:
+    arms, inputs = load_dev(root, handoff)
+    return build_from_arms(arms, n_sims=n_sims, n_boot=n_boot, seed=seed, inputs=inputs, handoff=handoff)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -259,11 +291,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--sims", type=int, default=DEFAULT_R)
     ap.add_argument("--boot", type=int, default=DEFAULT_B)
     ap.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    ap.add_argument("--handoff", choices=HANDOFF_CHOICES, default="hstar",
+                    help="D3 / D4's h: hstar (h*, default) or flag (handoff_occurred, the committed report's)")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args(argv)
     j16.refuse_heldout(args.out)
     j16.refuse_heldout(args.root)
-    report = build(args.root, args.sims, args.boot, args.seed)
+    report = build(args.root, args.sims, args.boot, args.seed, args.handoff)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"dev": report["dev"], "dev_check_against_j17": report["dev_check_against_j17"],

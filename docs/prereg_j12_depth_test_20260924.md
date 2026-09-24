@@ -174,3 +174,62 @@ better, and a "not replicated" reading is then a statement about effect size, no
 - Nothing about `test_challenge`, which stays sealed.
 
 *J12 ends.*
+
+## Amendment 1 — the handoff indicator of D3 and D4 (2026-09-24, appended under §6's fault clause before any J12 `test_normal` episode, and before any episode of J10's prefix arms, exists; D3/D4's population is corrected to the one §1 names; no arm, depth, receiver, direction, Holm family, estimation rule, seed, order or abort rule changes)
+
+**Why.** §1 asks whether a later handoff raises quality "over the episodes that actually hand off". §3 implements
+that with h = the m = 11 episode's `handoff_occurred`.
+- That flag is `effective_m < n_source_actions` (`src/sidekick/prefix_source.py:184`), counting only the source's
+  executed actions.
+- The loop, however, skips the executor only when the replayed prefix is terminal (`src/sidekick/systems/loop.py:743-756`).
+- So the flag is false for live handoffs in two cases:
+  - a source that made at most m executed actions and did not finish;
+  - a planless key.
+- The flag therefore does not measure what §1 names. J10 A1 Amendment 3 records the finding and its dev evidence.
+
+**Change.**
+- In §3's handoff-only estimand and in D3 and D4, h is **h\***: h = 1 iff the m = 11 episode's loop ran its live
+  phase after the replayed prefix (the executor took control).
+  - It is read from that episode's own events by `scripts/analysis/handoff_control.py`.
+  - On dev it agrees with `prefix_is_terminal` recomputed on the source in 171 of 171 episodes in each of the six
+    cap-81 arms (ledger HSTAR-01).
+- The `handoff_occurred` versions are reported beside them as a flag sensitivity (`D3_flag`, `D4_flag`), in their
+  own Holm re-read of four. They are not decision-bearing.
+- D1, D2, the readings table and every other rule are unchanged.
+- `scripts/analysis/j12_report.py` implements this.
+
+**What was known when this was written (dev, exploratory; `campaign/results/j17_hstar_20260924.report.json`, key
+`handoff_only_contrasts.{bplus,zs}.m6_to_m11.goal_pass.handoff_only`; ledger HSTAR-15).** It replaces §1's
+handoff-only column and §4's dev values for D3 and D4.
+
+| | flag (§1 as frozen) | h* |
+|---|---|---|
+| D3, tailored, handoff-only | +12.03 pp, 71 pairs | **+7.66 pp**, 88 pairs, scenario [+1.19, +14.06], task [+0.80, +14.69] |
+| D4, untailored, handoff-only | +13.93 pp, 71 pairs | **+7.81 pp**, 88 pairs, scenario [+0.79, +13.95], task [−0.02, +15.57] |
+
+**Power at the test design, re-run with h\*** (`campaign/results/j12_power_dev_hstar_20260924.report.json`, key
+`power_table`).
+- Same method, settings and seed as §5.
+- The frozen §5 file is reproduced exactly when the script is run with the flag.
+
+| item | at the dev effect | at half the dev effect |
+|---|---|---|
+| D1 | 0.999 | 0.643 |
+| D2 | 0.997 | 0.566 |
+| D3 | 0.866 | 0.299 |
+| D4 | 0.819 | 0.242 |
+| all four supported | 0.733 | 0.125 |
+
+- D1 and D2 move only through Holm.
+- D3 and D4 are now less than certain at the dev effect, and weak at half of it. §4's rule stands: a D that is
+  not supported is reported as **not replicated**, never as evidence of no effect.
+
+**Runtime.** Nothing the arms execute changes. J12's arms run from the checkout pinned at 6f40fec. The read uses
+`j12_report.py` as committed with this amendment.
+
+**Checked at commit.**
+- The only non-`_dryrun` `j10_*` / `j11_*` / `j12_*` campaigns under `/scratch/n12194778/sidekick/results` are J10
+  arm 3 (`j10_planner_alone_cap81_20260924`, incomplete, 81 of 336 non-crashed) and its smoke.
+- No arm-3 result was read beyond the disclosure in A1 Amendment 3.
+
+*Amendment 1 ends.*

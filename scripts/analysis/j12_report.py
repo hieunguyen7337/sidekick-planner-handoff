@@ -6,8 +6,15 @@ bound of the scenario-clustered 95 % interval above 0 and the Holm-adjusted p <=
 
   D1  J10 prefix_m11    − J12 prefix_m6     all pairs
   D2  J10 prefix_zs_m11 − J12 prefix_zs_m6  all pairs
-  D3  as D1, handoff-only: Σ d·h / Σ h, h = the m = 11 episode's handoff_occurred
+  D3  as D1, handoff-only: Σ d·h / Σ h, h = the m = 11 episode's h* (the executor took control)
   D4  as D2, handoff-only
+
+h* (scripts/analysis/handoff_control.py) is 1 iff the loop ran live after the replayed prefix. It
+replaces handoff_occurred (effective_m < n_source_actions, src/sidekick/prefix_source.py:184), which is
+false whenever the source made at most m executed actions even if its prefix was not terminal and the
+executor then took control (src/sidekick/systems/loop.py:743-756); the pending J12 Amendment 1 makes h*
+the registered D3 / D4 estimand. The flag versions are kept as the sensitivity keys D3_flag / D4_flag
+(``sensitivity_h_flag``), re-read in the same Holm family of four; D1 / D2 do not use h.
 
 Reuse, not re-implementation
 ----------------------------
@@ -59,11 +66,16 @@ for _p in (str(REPO_ROOT), str(REPO_ROOT / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from scripts.analysis import handoff_control as hc  # noqa: E402
 from scripts.analysis import j10_report as j10  # noqa: E402
 from scripts.analysis import j16_robustness as j16  # noqa: E402
 
 J12_PREREG = "docs/prereg_j12_depth_test_20260924.md"
 J12_DEV_REPORT = "campaign/results/j17_depth_fixes_20260924.report.json"
+# D3 / D4's dev values with h* (scripts/analysis/j17_hstar.py; same key paths as J12_DEV_REPORT).
+J12_DEV_REPORT_HSTAR = "campaign/results/j17_hstar_20260924.report.json"
+J12_H_DESCRIPTION = {hc.HSTAR_NAME: "h* (the executor took control after the replayed prefix)",
+                     hc.HFLAG_NAME: "handoff_occurred"}
 J12_DEFAULT_OUT = "campaign/results/j12_depth_test_normal.report.json"
 A1_AM1_I = "docs/prereg_j10_amendment_20260924.md Amendment 1 §I"
 
@@ -84,16 +96,20 @@ J12_BOUND_FLAG_PP = 1.00  # A1 Amendment 1 §I: a bound reaching 1.00 pp is prin
 REGISTERED_TEST_ID = re.compile(r"^j1[02]_[A-Za-z0-9_]+_20260924$")
 
 
-def _dev(key: str, diff_pp: float, ci: list[float], n_pairs: int, n_handoff: Optional[int] = None) -> dict[str, Any]:
+def _dev(key: str, diff_pp: float, ci: list[float], n_pairs: int, n_handoff: Optional[int] = None,
+         source: str = J12_DEV_REPORT, h: Optional[str] = None) -> dict[str, Any]:
     ref: dict[str, Any] = {"diff_pp": diff_pp, "ci95_pp_scenario": ci, "n_pairs": n_pairs}
     if n_handoff is not None:
         ref["n_handoff"] = n_handoff
-    return ref | {"source": J12_DEV_REPORT, "key": key, "bootstrap_seed": j10.A1_BOOTSTRAP_SEED,
+    if h is not None:
+        ref["h"] = h
+    return ref | {"source": source, "key": key, "bootstrap_seed": j10.A1_BOOTSTRAP_SEED,
                   "population": "pooled cap-81 dev family, seeds 1-3 (hj17 + hj18)"}
 
 
-# J12 §4, as data. dev_reference is j17's value rounded to 2 dp (tests/unit/test_j12_report.py
-# checks it against the JSON).
+# J12 §4, as data. dev_reference is the dev value rounded to 2 dp, from the report its `source` names
+# (tests/unit/test_j12_report.py checks it against that JSON): j17_depth_fixes for D1 / D2, j17_hstar
+# for D3 / D4 (h*). dev_reference_flag keeps D3 / D4's flag-based dev value, the frozen text's number.
 J12_PREDICTIONS: list[dict[str, Any]] = [
     {"id": "D1", "kind": "paired_contrast", "receiver": "bplus", "population": "all", "metric": "goal_pass",
      "left": "prefix_m11", "right": "prefix_m6", "rule": J12_RULE, "threshold_pp": 0.0, "holm_family": True,
@@ -106,19 +122,25 @@ J12_PREDICTIONS: list[dict[str, Any]] = [
      "citation": f"{J12_PREREG} §4",
      "dev_reference": _dev("handoff_only_contrasts.zs.m6_to_m11.goal_pass.all", 7.70, [3.69, 12.06], 171)},
     {"id": "D3", "kind": "handoff_only", "receiver": "bplus", "population": "handoff_only", "metric": "goal_pass",
-     "left": "prefix_m11", "right": "prefix_m6", "flags_from": "prefix_m11", "rule": J12_RULE,
+     "left": "prefix_m11", "right": "prefix_m6", "flags_from": "prefix_m11", "h": hc.HSTAR_NAME, "rule": J12_RULE,
      "threshold_pp": 0.0, "holm_family": True,
-     "statement": "as D1 on handoff episodes: Σ d·h / Σ h > 0, h from the prefix_m11 episode",
-     "citation": f"{J12_PREREG} §3-§4",
-     "dev_reference": _dev("handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only", 12.03,
-                           [5.49, 18.57], 171, n_handoff=71)},
+     "statement": ("as D1 on handoff episodes: Σ d·h / Σ h > 0, h = h* of the prefix_m11 episode (the "
+                   "executor took control after the replayed prefix)"),
+     "citation": f"{J12_PREREG} §3-§4; h* per the pending J12 Amendment 1",
+     "dev_reference": _dev("handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only", 7.66,
+                           [1.19, 14.06], 171, n_handoff=88, source=J12_DEV_REPORT_HSTAR, h=hc.HSTAR_NAME),
+     "dev_reference_flag": _dev("handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only", 12.03,
+                                [5.49, 18.57], 171, n_handoff=71, h=hc.HFLAG_NAME)},
     {"id": "D4", "kind": "handoff_only", "receiver": "zs", "population": "handoff_only", "metric": "goal_pass",
-     "left": "prefix_zs_m11", "right": "prefix_zs_m6", "flags_from": "prefix_zs_m11", "rule": J12_RULE,
-     "threshold_pp": 0.0, "holm_family": True,
-     "statement": "as D2 on handoff episodes: Σ d·h / Σ h > 0, h from the prefix_zs_m11 episode",
-     "citation": f"{J12_PREREG} §3-§4",
-     "dev_reference": _dev("handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only", 13.93,
-                           [5.12, 21.22], 171, n_handoff=71)},
+     "left": "prefix_zs_m11", "right": "prefix_zs_m6", "flags_from": "prefix_zs_m11", "h": hc.HSTAR_NAME,
+     "rule": J12_RULE, "threshold_pp": 0.0, "holm_family": True,
+     "statement": ("as D2 on handoff episodes: Σ d·h / Σ h > 0, h = h* of the prefix_zs_m11 episode (the "
+                   "executor took control after the replayed prefix)"),
+     "citation": f"{J12_PREREG} §3-§4; h* per the pending J12 Amendment 1",
+     "dev_reference": _dev("handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only", 7.81,
+                           [0.79, 13.95], 171, n_handoff=88, source=J12_DEV_REPORT_HSTAR, h=hc.HSTAR_NAME),
+     "dev_reference_flag": _dev("handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only", 13.93,
+                                [5.12, 21.22], 171, n_handoff=71, h=hc.HFLAG_NAME)},
 ]
 # J12 §4 "Readings, fixed now": per receiver, (all-episode id, handoff-only id).
 J12_READING_PAIRS = {"bplus": ("D1", "D3"), "zs": ("D2", "D4")}
@@ -143,7 +165,8 @@ def j12_evaluate_handoff_only(
     stability: bool = True,
 ) -> dict[str, Any]:
     """D3 / D4: Σ d·h / Σ h with d = left − right per (task_id, seed) and h the `flags_from` (m11)
-    episode's handoff_occurred, whole clusters resampled. Returns the keys
+    episode's indicator in ``handoff_flags`` -- h* for the registered read, handoff_occurred for the
+    D3_flag / D4_flag sensitivity (``pred["h"]`` names which) -- whole clusters resampled. Returns the keys
     a1_evaluate_contrast_prediction returns, so a1_decide_family decides it unchanged.
 
     The interval and the p come from one set of scenario resamples (keep_samples); a resample with
@@ -167,7 +190,9 @@ def j12_evaluate_handoff_only(
                                   keep_samples=True)
     contrast: dict[str, Any] = {
         "field": field,
-        "estimand": f"Σ d·h / Σ h, d = {pred['left']} − {pred['right']}, h = {pred['flags_from']}'s handoff_occurred",
+        "estimand": (f"Σ d·h / Σ h, d = {pred['left']} − {pred['right']}, h = {pred['flags_from']}'s "
+                     f"{J12_H_DESCRIPTION.get(pred.get('h', hc.HSTAR_NAME), pred.get('h'))}"),
+        "h": pred.get("h", hc.HSTAR_NAME),
         "n_shared": len(set(left) & set(right)),
         "n_pairs": len(comps),
         "n_handoff": int(sum(c[1] for c in comps.values())),
@@ -291,6 +316,51 @@ def j12_key_exclusion_sensitivity(
                      "verdict_holm_without_keys": s.get("verdict_holm"), "differs": differ,
                      "contrast_without_keys": s.get("contrast")})
     return {"rows": rows, "differs": differs}
+
+
+# ---- the handoff_occurred sensitivity: D3_flag / D4_flag ------------------------------------------
+def j12_flag_sensitivity(
+    results: list[dict[str, Any]],
+    arms: dict[str, dict[str, Any]],
+    flag_handoff: dict[str, dict[tuple[str, int], Optional[bool]]],
+    *,
+    n_boot: int,
+    seed: int,
+    expected_pairs: Optional[int] = None,
+) -> dict[str, Any]:
+    """D3 / D4 re-read with h = handoff_occurred (h_flag) in place of h*, reported as D3_flag / D4_flag.
+    Same bootstrap, the same Holm family of four (D1, D2 and the two flag reads), the same rule and pair
+    rule; POOL-04 and the sign-flip not re-run, as in the key-exclusion re-read. Not decision-bearing."""
+    sens = [j12_evaluate(dict(p, h=hc.HFLAG_NAME) if p["kind"] == "handoff_only" else dict(p), arms,
+                         flag_handoff, n_boot=n_boot, seed=seed, stability=False)
+            for p in J12_PREDICTIONS]
+    if expected_pairs is not None:
+        for s in sens:
+            j12_apply_pair_rule(s, arms, expected_pairs)
+    j10.a1_decide_family(sens)
+    by_id = {r["id"]: r for r in results}
+    out: dict[str, Any] = {
+        "decision_bearing": False,
+        "what": ("D3 / D4 with h = the m = 11 episode's handoff_occurred (h_flag) in place of h*; Holm over "
+                 "D1, D2, D3_flag, D4_flag; POOL-04 and the sign-flip not re-run"),
+        "h_flag": hc.FLAG_DEFINITION,
+    }
+    differs = []
+    for s in sens:
+        if s["kind"] != "handoff_only":
+            continue
+        r = by_id.get(s["id"], {})
+        differ = bool(r.get("decidable") and s.get("decidable") and r.get("verdict_holm") != s.get("verdict_holm"))
+        if differ:
+            differs.append(s["id"])
+        out[f"{s['id']}_flag"] = {
+            "id": f"{s['id']}_flag", "sensitivity_of": s["id"], "h": hc.HFLAG_NAME,
+            "contrast": s.get("contrast"), "p_value": s.get("p_value"),
+            "verdict_unadjusted": s.get("verdict_unadjusted"), "holm": s.get("holm"),
+            "verdict_holm": s.get("verdict_holm"), "verdict_holm_with_hstar": r.get("verdict_holm"),
+            "differs_from_hstar": differ, "decidable": s.get("decidable"), "reason": s.get("reason")}
+    out["verdict_holm_differs"] = differs
+    return out
 
 
 # ---- A1 Amendment 1 §I: live answers to executor asks --------------------------------------------
@@ -470,12 +540,17 @@ def build_report_j12(
         for arm in arms.values():
             arm["complete"] = False
 
-    handoff_flags = {a: j10.a1_handoff_flags(contrast_dirs[a]) for a in sorted(contrast_dirs)}
+    # h* is D3 / D4's indicator; the flag (handoff_occurred, h_flag) is kept for the sensitivity.
+    flag_handoff = {a: j10.a1_handoff_flags(contrast_dirs[a]) for a in sorted(contrast_dirs)}
+    controls = {a: hc.arm_control(contrast_dirs[a]) for a in sorted(contrast_dirs)}
+    handoff_flags = {a: {k: c[hc.HSTAR_NAME] for k, c in ctl.items()} for a, ctl in controls.items()}
     results = [j12_evaluate(dict(p), arms, handoff_flags, n_boot=n_boot, seed=bootstrap_seed)
                for p in J12_PREDICTIONS]
     for r in results:
         j12_apply_pair_rule(r, arms, expected_pairs)
     multiplicity = j12_decide_family(results)
+    flag_sensitivity = j12_flag_sensitivity(results, arms, flag_handoff, n_boot=n_boot, seed=bootstrap_seed,
+                                            expected_pairs=expected_pairs)
 
     # A1 §4.2 (J12 §3): the primary keeps every pair; a verdict that changes without arm 3's
     # planless keys is on the boundary. The cap is A1's 5 % of the matrix.
@@ -503,19 +578,25 @@ def build_report_j12(
     for r in results:
         r["live_ask_bound"] = bounds[r["id"]]
     readings = j12_readings(results)
-    decomposition = {}
+    decomposition, decomposition_flag = {}, {}
     for receiver, (target, base) in J12_RECEIVERS.items():
         if target not in arms or base not in arms:
-            decomposition[receiver] = {"target": target, "base": base, "status": "arm_absent"}
+            decomposition[receiver] = decomposition_flag[receiver] = {
+                "target": target, "base": base, "status": "arm_absent"}
             continue
-        decomposition[receiver] = {"target": target, "base": base} | {
-            metric: j10.am1_decomposition(arms[target]["episodes"], arms[base]["episodes"],
-                                          handoff_flags.get(target, {}), j10.A1_METRIC_FIELDS[metric],
-                                          n_boot=n_boot, seed=bootstrap_seed)
-            for metric in ("goal_pass", "tgc")}
-    silenced = {a: j10.a1_no_handoff_counts(arms[a], handoff_flags.get(a, {}), J12_PREFIX_M.get(a))
-                | {"citation": f"{J12_PREREG} §4 (silenced count: episodes with no handoff)"}
+        for out_, flags_, h in ((decomposition, handoff_flags, hc.HSTAR_NAME),
+                                (decomposition_flag, flag_handoff, hc.HFLAG_NAME)):
+            out_[receiver] = {"target": target, "base": base, "h": h} | {
+                metric: j10.am1_decomposition(arms[target]["episodes"], arms[base]["episodes"],
+                                              flags_.get(target, {}), j10.A1_METRIC_FIELDS[metric],
+                                              n_boot=n_boot, seed=bootstrap_seed)
+                for metric in ("goal_pass", "tgc")}
+    # silenced_counts keep the flag (h_flag) as before; handoff_control_counts give h* beside it.
+    silenced = {a: j10.a1_no_handoff_counts(arms[a], flag_handoff.get(a, {}), J12_PREFIX_M.get(a))
+                | {"citation": f"{J12_PREREG} §4 (silenced count: episodes with no handoff)", "h": hc.HFLAG_NAME}
                 for a in sorted(arms)}
+    control_counts = {a: {"m": J12_PREFIX_M.get(a)} | hc.control_counts(controls[a], keys=arms[a]["episodes"].keys())
+                      for a in sorted(arms) if a in controls}
 
     decided = [r for r in results if r.get("decidable")]
     all_decided = len(decided) == len(results)
@@ -563,12 +644,17 @@ def build_report_j12(
         "predictions": results,
         "verdicts": {r["id"]: r.get("verdict") for r in results},
         "readings": readings,
+        "handoff_indicator": {"D3_D4": hc.HSTAR_NAME, "h_star": hc.DEFINITION, "h_flag": hc.FLAG_DEFINITION,
+                              "sensitivity": "sensitivity_h_flag (D3_flag, D4_flag)"},
+        "sensitivity_h_flag": flag_sensitivity,
         # Reported beside the family, not decision-bearing (J12 §4).
         "beside": {
             "decision_bearing": False,
             "tgc": {r["id"]: r.get("tgc_secondary") for r in results},
             "silenced_counts": silenced,
+            "handoff_control_counts": control_counts,
             "decomposition": decomposition,
+            "decomposition_h_flag": decomposition_flag,
             "limit_rates": j10.am1_limit_rates(arms),
             "sign_flip_p": {r["id"]: (r.get("permutation_sensitivity") or {}).get("p_value") for r in results},
             "live_asks": live,
@@ -598,6 +684,16 @@ def render_markdown(report: dict[str, Any], json_name: str) -> str:
             f"| {r['id']} | {r['left']} − {r['right']} | {r['population']} | {_fmt(scen.get('diff_pp'))} | "
             f"{_fmt(scen.get('ci95_pp'))} | {_fmt(task.get('ci95_pp'))} | {_fmt(r.get('p_value'))} | "
             f"{_fmt((r.get('holm') or {}).get('p_adjusted'))} | {r.get('verdict')} |")
+    sens = report.get("sensitivity_h_flag") or {}
+    lines += ["", "D3 / D4: h = h*, the executor took control after the replayed prefix "
+              "(scripts/analysis/handoff_control.py). Sensitivity with h = handoff_occurred (not decision-bearing):", ""]
+    for sid in ("D3_flag", "D4_flag"):
+        s = sens.get(sid) or {}
+        scen = (s.get("contrast") or {}).get("scenario") or {}
+        lines.append(f"- {sid}: {_fmt(scen.get('diff_pp'))} pp {_fmt(scen.get('ci95_pp'))}, n handoff "
+                     f"{_fmt((s.get('contrast') or {}).get('n_handoff'))}, Holm p "
+                     f"{_fmt((s.get('holm') or {}).get('p_adjusted'))}, verdict {_fmt(s.get('verdict_holm'))} "
+                     f"(h*: {_fmt(s.get('verdict_holm_with_hstar'))})")
     lines += ["", "## Readings (J12 §4)", ""]
     for receiver, rd in report["readings"].items():
         lines.append(f"- {receiver}: {rd['reading'] or rd['no_reading_reason']}"
@@ -616,6 +712,9 @@ def render_markdown(report: dict[str, Any], json_name: str) -> str:
     for arm, v in report["beside"]["silenced_counts"].items():
         lines.append(f"- {arm} (m = {v['m']}): handoff {v['n_handoff']}, no handoff {v['n_no_handoff']}, "
                      f"flag missing {v['n_flag_missing']}")
+    for arm, v in (report["beside"].get("handoff_control_counts") or {}).items():
+        lines.append(f"- {arm} (m = {v['m']}): h_flag true {v['n_h_flag_true']}, live but unflagged "
+                     f"{v['n_live_but_unflagged']}, terminal {v['n_terminal']}, h* undefined {v['n_hstar_undefined']}")
     return "\n".join(lines) + "\n"
 
 

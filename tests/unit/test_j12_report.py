@@ -22,18 +22,26 @@ N_BOOT = 2000  # non-registered: dev only; test_normal cases use the registered 
 
 def write_arm(root: Path, label: str, goal_pass, *, handoff: dict | None = None,
               error_types: dict | None = None, manifest_split: str = "dev",
-              live_asks: dict | None = None, other_provider_asks: dict | None = None) -> Path:
+              live_asks: dict | None = None, other_provider_asks: dict | None = None,
+              live: set | None = None) -> Path:
     """One arm in runner layout. goal_pass: a value or {(task, seed): value}. handoff: the system
-    `report` event's handoff_occurred per key. live_asks: codex-answered asks per key."""
+    `report` event's handoff_occurred per key (effective_m 6). live: the keys whose executor took
+    control -- an executor action at step 7 = effective_m + 1, so h* = 1 -- by default the keys whose
+    flag is true. live_asks: codex-answered asks per key."""
     arm_root = root / label
+    if live is None:
+        live = {k for k, v in (handoff or {}).items() if v}
     for task_id, seed in KEYS:
         key = (task_id, seed)
         dest = arm_root / "prefix_handoff" / str(seed) / task_id
         dest.mkdir(parents=True, exist_ok=True)
         events = [{"event_type": "run_start", "payload": {}}]
         if handoff is not None and key in handoff:
-            events.append({"event_type": "report", "actor": "system",
+            events.append({"event_type": "report", "actor": "system", "step": 6,
                            "payload": {"handoff_occurred": handoff[key], "effective_m": 6}})
+            if key in live:
+                events.append({"event_type": "action", "actor": "executor", "step": 7,
+                               "payload": {"kind": "CODE", "code": "x"}})
         n_live = (live_asks or {}).get(key, 0)
         for provider, n in (("codex", n_live), ("mock", (other_provider_asks or {}).get(key, 0))):
             for _ in range(n):
@@ -90,9 +98,14 @@ def test_registry_is_one_holm_family_of_four_all_greater_than_zero():
 
 
 def test_dev_references_are_the_j17_report_values_rounded():
-    data = json.loads((REPO / j12.J12_DEV_REPORT).read_text(encoding="utf-8"))
-    for p in j12.J12_PREDICTIONS:
-        ref = p["dev_reference"]
+    # D1 / D2 from j17_depth_fixes; D3 / D4 from j17_hstar (h*), with the flag-based value kept beside.
+    assert [p["dev_reference"]["source"] for p in j12.J12_PREDICTIONS] == [
+        j12.J12_DEV_REPORT, j12.J12_DEV_REPORT, j12.J12_DEV_REPORT_HSTAR, j12.J12_DEV_REPORT_HSTAR]
+    refs = [(p, p["dev_reference"]) for p in j12.J12_PREDICTIONS]
+    refs += [(p, p["dev_reference_flag"]) for p in j12.J12_PREDICTIONS if "dev_reference_flag" in p]
+    assert [r["source"] for p, r in refs[4:]] == [j12.J12_DEV_REPORT, j12.J12_DEV_REPORT]
+    for p, ref in refs:
+        data = json.loads((REPO / ref["source"]).read_text(encoding="utf-8"))
         node = data
         for part in ref["key"].split("."):
             node = node[part]
@@ -102,6 +115,10 @@ def test_dev_references_are_the_j17_report_values_rounded():
         assert ref["n_pairs"] == pairing["n_pairs"]
         if p["kind"] == "handoff_only":
             assert ref["n_handoff"] == node["n_pairs"] == pairing["n_handoff"]
+    # The h* report's all-episode values are j17_depth_fixes' exactly (they do not depend on h).
+    hstar = json.loads((REPO / j12.J12_DEV_REPORT_HSTAR).read_text(encoding="utf-8"))
+    assert hstar["changes_vs_flag"]["all_episode_values_unchanged"] is True
+    assert hstar["validation"]["all_hold"] is True
 
 
 # ---- one all-episode contrast, by hand ------------------------------------------------------------
@@ -189,6 +206,38 @@ def test_handoff_only_evaluator_directly_matches_the_estimand():
                                       stability=False)
     assert r["contrast"]["scenario"]["diff_pp"] == 50.0
     assert (r["contrast"]["n_handoff"], r["contrast"]["n_silenced"], r["contrast"]["n_flag_missing"]) == (1, 2, 1)
+
+
+def test_d3_reads_h_star_and_d3_flag_keeps_the_flag(tmp_path: Path):
+    # m11's flag is true on sc0, sc1 (12 keys); the executor also took control on sc2 although its
+    # flag is false (the source made <= m executed actions without ending); sc3's prefix was terminal.
+    flag = {k: k[0].startswith(("sc0", "sc1")) for k in KEYS}
+    live = {k for k in KEYS if not k[0].startswith("sc3")}
+    m11 = {k: (0.875 if flag[k] else 0.75 if k in live else 0.25) for k in KEYS}
+    dirs = write_family(tmp_path, dict(CONSTANT, prefix_m11=m11),
+                        prefix_m11={"handoff": flag, "live": live}, prefix_zs_m11={"handoff": ALL_H})
+    report, _ = report_for(dirs)
+    d3 = by_id(report)["D3"]
+    # d vs m6 0.625: +0.25 on 12 flagged keys, +0.125 on 6 live-unflagged, −0.375 on 6 terminal.
+    # h*: (12 x 0.25 + 6 x 0.125) / 18 = 0.2083 -> 20.83 pp; the flag: 12 x 0.25 / 12 = 25 pp.
+    assert (d3["contrast"]["n_handoff"], d3["contrast"]["n_silenced"], d3["contrast"]["h"]) == (18, 6, "h_star")
+    assert d3["contrast"]["scenario"]["diff_pp"] == 20.83
+    assert "h*" in d3["contrast"]["estimand"]
+    sens = report["sensitivity_h_flag"]
+    assert sens["decision_bearing"] is False
+    f3 = sens["D3_flag"]
+    assert (f3["contrast"]["n_handoff"], f3["contrast"]["h"], f3["sensitivity_of"]) == (12, "h_flag", "D3")
+    assert f3["contrast"]["scenario"]["diff_pp"] == 25.0
+    assert f3["holm"]["m"] == 4 and f3["verdict_holm_with_hstar"] == d3["verdict_holm"]
+    assert sens["D4_flag"]["contrast"]["n_handoff"] == 24
+    counts = report["beside"]["handoff_control_counts"]["prefix_m11"]
+    assert (counts["n_h_flag_true"], counts["n_live_but_unflagged"], counts["n_terminal"]) == (12, 6, 6)
+    # The flag-based silenced count is unchanged; the decomposition reads h*, with the flag beside it.
+    assert report["beside"]["silenced_counts"]["prefix_m11"]["n_handoff"] == 12
+    assert report["beside"]["decomposition"]["bplus"]["goal_pass"]["n_handoff"] == 18
+    assert report["beside"]["decomposition_h_flag"]["bplus"]["goal_pass"]["n_handoff"] == 12
+    md = j12.render_markdown(report, "x.json")
+    assert "D3_flag: 25.0 pp" in md and "live but unflagged 6" in md
 
 
 # ---- the Holm step --------------------------------------------------------------------------------

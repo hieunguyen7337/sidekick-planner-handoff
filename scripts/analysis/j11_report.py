@@ -4,7 +4,8 @@
 Computes ``docs/prereg_j11_lp2_test_20260924.md`` §3-§4: LP's informativeness gate and L1-L5 with
 Holm within the planner, POOL-04, the sign-flip sensitivity and the readings, at J11's matrix
 (168 test_normal tasks x seeds 1, 2 = 336 pairs, 56 scenario clusters), plus the planless-key
-sensitivity and the reporting-only additions of §4 (handoff-only companions of L3-L5; L1's limit
+sensitivity and the reporting-only additions of §4 (handoff-only companions of L3-L5, h = h* with the
+handoff_occurred flag kept as a sensitivity, scripts/analysis/handoff_control.py; L1's limit
 rates, limit split and limit-as-0), and prereg §2's executor-ask counts with J10 A1 Amendment 1 §I's
 bound. It chooses nothing.
 
@@ -49,6 +50,7 @@ for _p in (str(REPO_ROOT), str(REPO_ROOT / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from scripts.analysis import handoff_control as hc  # noqa: E402
 from scripts.analysis import j10_report as j10  # noqa: E402
 from scripts.analysis import lp_report as lp  # noqa: E402
 
@@ -236,9 +238,15 @@ def read_family(gate: dict[str, Any], records: dict[str, dict[str, Any]], expect
 
 def _handoff_companion(spec: dict[str, Any], arms: dict[str, dict[str, Any]],
                        flags: dict[str, dict[tuple[str, int], Optional[bool]]], *, n_boot: int,
-                       seed: int) -> dict[str, Any]:
-    """j10.am1_handoff_ni on one L contrast; for L3 / L5 its −7.00 pp NI reading is not theirs and is dropped."""
+                       seed: int, h: str = hc.HSTAR_NAME) -> dict[str, Any]:
+    """j10.am1_handoff_ni on one L contrast; for L3 / L5 its −7.00 pp NI reading is not theirs and is dropped.
+
+    ``flags`` hold the indicator named by ``h``: h* (primary: the executor took control after the
+    replayed prefix, scripts/analysis/handoff_control.py) or h_flag (handoff_occurred, the sensitivity)."""
     row = j10.am1_handoff_ni(spec, arms, flags, n_boot=n_boot, seed=seed)
+    row["h"] = h
+    if h == hc.HSTAR_NAME:
+        row["estimand"] = j10.A1_HSTAR_ESTIMAND
     row["citation"] = f"{PREREG} §4 (J10 A1 Amendment 1 §B pattern)"
     if spec["threshold_pp"] != j10.A1_AM1_NI_MARGIN_PP:
         row["margin_pp"] = None
@@ -445,15 +453,24 @@ def build_report(
     contrasts = _rescale_text(contrasts, expected)
 
     # Reporting only (prereg §4): never changes a reading.
+    # h* (the executor took control after the replayed prefix) is primary; the flag (handoff_occurred,
+    # h_flag) is kept as a sensitivity (unit HSTAR, 2026-09-24).
     flags = {code: j10.a1_handoff_flags(results_root / campaigns[code]["campaign"])
              for code in {s["flags_from"] for s in HANDOFF_COMPANIONS}}
-    companions = {}
+    controls = {code: hc.arm_control(results_root / campaigns[code]["campaign"]) for code in sorted(flags)}
+    hstar = {code: {k: c[hc.HSTAR_NAME] for k, c in ctl.items()} for code, ctl in controls.items()}
+    companions, companions_flag = {}, {}
     for spec in HANDOFF_COMPANIONS:
         if contrasts[spec["companion_of"]]["status"] != "COMPLETE":
-            companions[spec["id"]] = {**spec, "status": "not_computed",
-                                      "reason": f"{spec['companion_of']} is incomplete"}
+            companions[spec["id"]] = companions_flag[spec["id"]] = {
+                **spec, "status": "not_computed", "reason": f"{spec['companion_of']} is incomplete"}
         else:
-            companions[spec["id"]] = _handoff_companion(spec, arms, flags, n_boot=n_boot, seed=bootstrap_seed)
+            companions[spec["id"]] = _handoff_companion(spec, arms, hstar, n_boot=n_boot, seed=bootstrap_seed,
+                                                        h=hc.HSTAR_NAME)
+            companions_flag[spec["id"]] = _handoff_companion(spec, arms, flags, n_boot=n_boot,
+                                                             seed=bootstrap_seed, h=hc.HFLAG_NAME)
+    control_counts = {code: hc.control_counts(controls[code], keys=arms[code]["episodes"].keys())
+                      for code in sorted(controls)}
     l1_limits = (_l1_limits(arms, n_boot=n_boot, seed=bootstrap_seed)
                  if contrasts["L1"]["status"] == "COMPLETE"
                  else {"status": "not_computed", "reason": "L1 is incomplete"})
@@ -513,6 +530,10 @@ def build_report(
         reporting_only={
             "label": "REPORTED BESIDE THE PREDICTIONS: not decision-bearing (prereg §4)",
             "handoff_only": companions,
+            "handoff_only_h_flag": companions_flag,
+            "handoff_indicator": {"primary": hc.HSTAR_NAME, "sensitivity": hc.HFLAG_NAME,
+                                  "h_star": hc.DEFINITION, "h_flag": hc.FLAG_DEFINITION},
+            "handoff_control_counts": control_counts,
             "L1_limit": l1_limits,
             "executor_asks": asks,
         },
@@ -588,6 +609,9 @@ def render_markdown(report: dict[str, Any], json_path: Optional[Path] = None) ->
                 L.append(f"| {cid} | - | - | - | incomplete |")
     ro = report["reporting_only"]
     L += ["", "## Reported beside the predictions (not decision-bearing)", "",
+          "Handoff-only companions: h = h*, the executor took control after the replayed prefix "
+          "(scripts/analysis/handoff_control.py); the flag version (handoff_occurred, h_flag) is in the JSON "
+          "under `reporting_only.handoff_only_h_flag`.", "",
           "| companion | orientation | n pairs | n handoff | handoff-only (pp) | scenario CI (pp) | reading |",
           "|---|---|---|---|---|---|---|"]
     for cid, row in ro["handoff_only"].items():

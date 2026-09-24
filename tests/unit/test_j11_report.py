@@ -52,8 +52,10 @@ def write_episode(cdir: Path, system: str, seed: int, task: str, gp: float, *, s
 
 
 def write_tree(root: Path, design: dict, *, split: str = "test_normal", tasks=TASKS, campaigns=CAMPAIGNS,
-               errors=None, flags=None, skip=(), split_of=None) -> Path:
-    """design[code] is a value or f(task, seed); flags[code] is f(task, seed) -> handoff_occurred."""
+               errors=None, flags=None, skip=(), split_of=None, live=None) -> Path:
+    """design[code] is a value or f(task, seed); flags[code] is f(task, seed) -> handoff_occurred, written
+    in the handoff record (effective_m 11). live[code] is f(task, seed) -> the executor took control (an
+    executor action at step 12, so h* = 1); by default live equals the flag."""
     for code, value in design.items():
         if code in skip:
             continue
@@ -63,7 +65,11 @@ def write_tree(root: Path, design: dict, *, split: str = "test_normal", tasks=TA
                 ev = None
                 if flags and code in flags:
                     ev = [{"event_type": "run_start"},
-                          {"event_type": "report", "payload": {"handoff_occurred": flags[code](task, seed)}}]
+                          {"event_type": "report", "actor": "system", "step": 11,
+                           "payload": {"handoff_occurred": flags[code](task, seed), "effective_m": 11}}]
+                    if ((live or {}).get(code) or flags[code])(task, seed):
+                        ev.append({"event_type": "action", "actor": "executor", "step": 12,
+                                   "payload": {"kind": "CODE", "code": "x"}})
                 write_episode(root / campaigns[code]["campaign"], SYSTEM[code], seed, task, fn(task, seed),
                               split=(split_of or {}).get(code, split),
                               error_type=(errors or {}).get((code, task, seed)), events=ev)
@@ -191,6 +197,35 @@ def test_handoff_only_companions_limit_blocks_and_planless_sensitivity(tmp_path:
     assert readings(report) == ALL_SUPPORTED  # the same without the key: nothing on the boundary
     md = j11.render_markdown(report)
     assert "Sensitivity without 2/sc00_1 (335 pairs)" in md and "L4_handoff_only" in md
+    # h* is primary; with live == flag here, the flag sensitivity carries the same numbers.
+    assert ho["L3_handoff_only"]["h"] == "h_star"
+    flag3 = report["reporting_only"]["handoff_only_h_flag"]["L3_handoff_only"]
+    assert flag3["h"] == "h_flag" and flag3["goal_pass"]["handoff_only"]["diff_pp"] == 22.0
+
+
+def test_handoff_companions_read_h_star_with_the_flag_as_sensitivity(tmp_path: Path):
+    # M^bplus_11's flag is true in scenarios 0-27 only, but the executor took control in scenarios 0-41:
+    # 84 keys (scenarios 28-41) are live but unflagged, as when the source planner stopped within m
+    # executed actions without finishing. M^bplus_6 scores .5 there and .6 elsewhere.
+    flag = lambda t, s: SCEN[t] < 28  # noqa: E731
+    live = lambda t, s: SCEN[t] < 42  # noqa: E731
+    design = dict(REPLICATE, M_bplus_6=lambda t, s: 0.5 if SCEN[t] < 42 else 0.6)
+    root = write_tree(tmp_path, design, flags={"M_bplus_11": flag, "M_zs_11": lambda t, s: True},
+                      live={"M_bplus_11": live})
+    report, rc = build(root)
+    assert rc == 0, report["headline"]
+    ro = report["reporting_only"]
+    l3 = ro["handoff_only"]["L3_handoff_only"]["goal_pass"]
+    # h*: 252 live keys at .72 - .50 = +22; the flag: its 168 keys, the same +22 (all at .5 on m6).
+    assert (l3["n_handoff"], l3["n_silenced"], l3["handoff_only"]["diff_pp"]) == (252, 84, 22.0)
+    l3f = ro["handoff_only_h_flag"]["L3_handoff_only"]["goal_pass"]
+    assert (l3f["n_handoff"], l3f["n_silenced"]) == (168, 168)
+    # Silenced differ: h* leaves scenarios 42-55 (.72 - .60 = +12); the flag also counts 28-41 (+22).
+    assert l3["silenced"]["diff_pp"] == 12.0 and l3f["silenced"]["diff_pp"] == round((84 * 22 + 84 * 12) / 168, 2)
+    counts = ro["handoff_control_counts"]["M_bplus_11"]
+    assert (counts["n_h_flag_true"], counts["n_live_but_unflagged"], counts["n_terminal"]) == (168, 84, 84)
+    assert ro["handoff_indicator"]["primary"] == "h_star"
+    assert "handoff_only_h_flag" in j11.render_markdown(report)
 
 
 def test_executor_asks_answered_live_are_counted_with_the_amendment_1_bound(tmp_path: Path):

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -165,10 +166,13 @@ def test_amendment1_keeps_one_status_line_and_passes_the_gate(tmp_path: Path):
     status = [line for line in text.splitlines() if line.startswith("**Status**")]
     assert len(status) == 1 and status[0].startswith("**Status**: **FROZEN**")
     assert "*Amendment A1 ends. J9 remains frozen and unedited.*\n\n## Amendment 1 " in text
-    # Later amendments append below Amendment 1's end marker (Amendment 2, 3a97543), never above it.
+    # Later amendments append below Amendment 1's end marker (Amendment 2, 3a97543; Amendment 3, h*),
+    # never above it, each closing with its own end marker.
     assert text.count("*Amendment 1 ends.*") == 1
     tail = text.split("*Amendment 1 ends.*", 1)[1].strip()
-    assert tail == "" or (tail.startswith("## Amendment 2 ") and tail.endswith("*Amendment 2 ends.*"))
+    later = [int(n) for n in re.findall(r"^## Amendment (\d+) ", tail, flags=re.M)]
+    assert later == list(range(2, 2 + len(later)))
+    assert tail == "" or tail.endswith(f"*Amendment {later[-1]} ends.*")
     prereg = tmp_path / "a1_with_amendment1.md"
     prereg.write_text(text, encoding="utf-8")
     cfg, src = _replay_variant(tmp_path, "j10_advise_k1_fullctx.yaml")

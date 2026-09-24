@@ -918,3 +918,64 @@ holds 13 `j10_*` campaigns, all ending `_dryrun`.
 - Wherever P3 is reported, the dev high-effort result is cited beside it.
 
 *Amendment 2 ends.*
+
+## Amendment 3 — the handoff indicator, and one disclosure (2026-09-24, appended before any `test_normal` episode of a prefix arm exists; §B's handoff indicator is corrected to what §B's text describes; no arm, prediction, decision rule, threshold, Holm family, margin, seed, order, budget or abort rule above any end marker changes)
+
+**Why.** A dev termination census (ledger TERM-03, HSTAR-01..16) found that `handoff_occurred`, the indicator
+Amendment 1 §B names, does not record whether the executor took control.
+- The runner sets it as `effective_m < n_source_actions` (`src/sidekick/prefix_source.py:184`). `n_source_actions`
+  counts the source's *executed* CODE/COMPLETE actions only.
+- The loop skips its live phase only when the replayed prefix is terminal: its last observation is done, or its
+  last action is COMPLETE (`src/sidekick/systems/loop.py:743-756`, `prefix_is_terminal` at `:172-180`).
+- So the flag is false, while the executor takes control and acts, in two cases:
+  - a source that made at most m executed actions and then did not finish (on dev, it repeated REPORT to the
+    40-step limit);
+  - a planless key, whose empty prefix (A1 §4.2 item 2) hands the executor the whole episode.
+- §B's text asks about episodes that "hand off" and describes the others as ones where "arm 3's trajectory
+  finished inside the prefix". The flag does not implement that.
+
+**What was known when this was written (dev, exploratory; `campaign/results/j17_hstar_20260924.report.json`).**
+- Pooled cap-81 family, 171 episodes per arm, both receivers:
+  - the flag is false in 4, 54 and 100 episodes at m = 6, 9 and 11;
+  - of those, 0, 11 and 17 are live: the executor took control.
+- At m = 11 the 17 live-but-unflagged episodes are sources that hit the step limit after 7–11 executed actions.
+  The arm beats the source planner on them by +48.29 pp `goal_pass` (tailored) and +37.74 pp (untailored)
+  (HSTAR-14).
+- The quantity §B.1 registers for P3 (`prefix_m11 − planner_alone_cap81`, tailored, `goal_pass`, handoff-only):
+  - under the flag, **−0.94 pp** over 71 episodes (scenario [−9.53, +7.45]; Amendment 1 §B printed [−9.51, +7.26]
+    from an earlier draw), which fails;
+  - under h*, **+8.57 pp** over 88 episodes (scenario [−1.63, +18.25], task [+0.67, +16.30]), which holds (HSTAR-11).
+  - Untailored at m = 11: the flag version fails, h* holds (HSTAR-12).
+- Every all-episode value is unchanged; only handoff / silenced splits move (HSTAR-16).
+
+**Change (to Amendment 1 §B and every handoff-only quantity it registers; none is decision-bearing).**
+- The indicator h is **h\***: h = 1 iff the loop ran its live phase after the replayed prefix.
+  - It is read from the prefix episode's own events: an event only the live loop writes, at step
+    ≥ `effective_m` + 1.
+  - It is implemented by `scripts/analysis/handoff_control.py` and validated on dev against `prefix_is_terminal`
+    recomputed on the source (171 of 171 agree in all six cap-81 arms; HSTAR-01).
+- A planless key's episode therefore counts as handed off.
+- The `handoff_occurred` version of every such quantity is printed beside it as a flag sensitivity (`*_flag`), with
+  the counts of flag-true, live-but-unflagged and terminal episodes per prefix arm.
+- §B's readings and their wording are otherwise unchanged. §B's "Why" figures are superseded by the values above.
+  P3's power over handoff episodes under h* was not recomputed; the companion never changes P3's verdict.
+- `scripts/analysis/j10_report.py` computes the h* companions as new `*_hstar` keys beside the existing ones. No
+  existing key or value changes, and no line this file cites moves.
+
+**Runtime.** Nothing the arms execute changes. J10's arms run from the checkout pinned at a8b63f0, as before.
+
+**Disclosure of test contact since Amendment 2.**
+- J10 arm 3 ran once on `test_normal` (PBS 25841223, 2026-09-24 20:12–20:58) and ended incomplete:
+  - 81 of 336 episodes non-crashed, 255 crashed;
+  - the crashes were `CodexExecError` when the luna subscription's usage window was exhausted.
+- It is resubmitted, under A1 §9's crash-only refill, after the window resets.
+- While reading the wrapper log for its tally, Claude saw two `success_rate` lines that `campaign_summarize`
+  prints:
+  - one for the 3-task smoke;
+  - one over all 336 result files, 255 of them crashes.
+- No per-episode score was read and no contrast was computed. Later tallies are read from the `[j10] tally` line
+  only.
+- Checked at commit: the only non-`_dryrun` `j10_*` campaigns are `j10_planner_alone_cap81_20260924` and its smoke
+  `j10_planner_alone_cap81_20260924_smoke_25841223`. No prefix arm, J11 arm or J12 arm has a `test_normal` episode.
+
+*Amendment 3 ends.*

@@ -175,3 +175,28 @@ Source: `campaign/results/j11_power_dev_20260924.report.json`, key `power_table`
 - No claim about any planner other than P27 and luna.
 
 *J11 ends.*
+
+## Amendment 1 — the handoff indicator of L3–L5's companions (2026-09-24, appended before any J11 `test_normal` episode exists; reporting only: no arm, prediction, rule, threshold, Holm family, seed, order or abort rule changes)
+
+**Why.** §4's handoff-only companions for L3, L4 and L5 take h from the prefix arm. The only such indicator the
+runner records is `handoff_occurred`.
+- That flag is `effective_m < n_source_actions` (`src/sidekick/prefix_source.py:184`).
+- It is false whenever the replayed source made at most m executed actions, including a planless key, even though
+  the loop then hands the executor control (`src/sidekick/systems/loop.py:743-756`).
+- J10 A1 Amendment 3 records the finding and its dev evidence.
+- It matters more for this planner than for luna. On dev the LP-2 planner alone ended at the step limit in 35 of
+  114 episodes (PBS 25724763), and those are exactly the sources the flag misclassifies.
+
+**Change.**
+- In L3–L5's handoff-only companions, h is **h\***: the prefix episode's loop ran its live phase after the replayed
+  prefix.
+  - It is read from that episode's own events by `scripts/analysis/handoff_control.py`.
+  - It is validated on dev against `prefix_is_terminal` (ledger HSTAR-01).
+- The `handoff_occurred` version is printed beside each as a flag sensitivity.
+- The companions stay reporting-only. `scripts/analysis/j11_report.py` implements this.
+
+**Runtime.** Nothing the arms execute changes. J11's arms run from the checkout pinned at 6f40fec.
+
+**Checked at commit.** No `j11_*` campaign exists under `/scratch/n12194778/sidekick/results`.
+
+*Amendment 1 ends.*
