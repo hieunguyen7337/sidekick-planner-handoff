@@ -123,7 +123,7 @@ def test_neutral_style_differs_from_the_registered_prompt_in_its_first_line_only
 
 
 def test_unknown_style_raises_everywhere_it_can_enter():
-    assert CORRECT_PROMPT_STYLES == ("correction", "neutral")
+    assert CORRECT_PROMPT_STYLES == ("correction", "neutral", "structured")  # D2 added the third
     with pytest.raises(ValueError):
         build_advice_prompt(PACKET, "d", "friendly")
     with pytest.raises(ValueError):

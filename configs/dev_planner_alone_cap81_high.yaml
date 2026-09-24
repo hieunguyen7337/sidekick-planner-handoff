@@ -1,0 +1,53 @@
+# Dev arm D3: the planner alone at high reasoning effort, cap 81 (docs/plan_top_venue_20260924.md,
+# G4, job W4). EXPLORATORY, DEV ONLY: not registered, and never a J10 arm.
+# Source: configs/hj13_planner_alone_cap81.yaml
+# Differs from source in: campaign_id, planner.reasoning_effort, limits.per_step_timeout_s
+# tests/unit/test_dev_arms.py diffs the parsed YAML of both files against exactly this list.
+#
+# Same model, harness and cap as the medium-effort ceiling; codex runs with
+# model_reasoning_effort=high (src/sidekick/agents/planner.py:217). It asks how much of the gap
+# to a scaffolded agent is effort.
+# limits.per_step_timeout_s is 300, not the source's 120. It bounds every planner call
+# (src/sidekick/systems/loop.py:310), and slower high-effort calls must not score as timeouts in
+# an arm that probes the ceiling. 300 equals planner.timeout_s. The medium-effort source had
+# 0 timeouts in 114 episodes (18 limit, 96 none), so 120 was not binding there and this change
+# frees only the high-effort arm; disclose it beside the result.
+#
+# Expected hosted calls: ≈ 1,700 [INFERRED from plan, docs/plan_top_venue_20260924.md:126].
+# MAX_PLANNER_CALLS does not apply: hj1b_planner_alone.pbs has no job-level ceiling, so the bound
+# is limits.max_planner_calls 81 × 114 episodes = 9,234 calls at worst. (The hj12_live.pbs:72
+# default of 3,780 covers R2.4 only if R2.4 runs alone in its job; it plays no part here.)
+# planner_drives=True: the mock executor is never called, so no GPU and no vLLM server.
+# Submit (Claude, never a worker) once this branch is merged into the plan worktree, which
+# hj1b_planner_alone.pbs runs from (REPO, :30). The wrapper takes CONFIG and CID unchanged
+# (:36, :41). -o keeps its fixed log hj1b_planner.out (:7) from overwriting an earlier one:
+#   qsub -o /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/logs/dev_planner_alone_cap81_high_20260924.out -v CONFIG="/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/configs/dev_planner_alone_cap81_high.yaml",CID="dev_planner_alone_cap81_high_20260924",SEEDS="1,2" /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/scripts/pbs/hj1b_planner_alone.pbs
+# ⚠ Resubmitting re-rolls scored failures: the wrapper starts with --purge-broken (:74), which
+# deletes timeout and parse_error episodes as well as crashes (scripts/setup/campaign_summarize.py:33).
+#
+# The model and effort MUST be stated explicitly. ~/.codex/config.toml on this box
+# defaults to gpt-5.6-sol at xhigh; relying on the default would run a different and
+# far more expensive model and invalidate the arm.
+env: appworld
+campaign_id: dev_planner_alone_cap81_high_20260924
+planner:
+  type: codex
+  binary: codex
+  model: gpt-5.6-luna
+  reasoning_effort: high
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+executor:
+  type: mock          # never called by planner_alone; must not be vllm
+  # Required by scripts/setup/verify_configs.py for every non-exempt config; the
+  # frozen-pilot source escapes that check, so the copy inherited a gap it never
+  # had. The mock executor never generates, so this bound is inert here.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_planner_calls=25 is the real limit.
+  # 32000 made every episode die at step 2 -- each codex call resends the whole
+  # transcript on ~15.4k scaffolding, so 2 calls cost 88k input tokens.
+  per_step_timeout_s: 300
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

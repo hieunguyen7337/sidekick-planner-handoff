@@ -474,3 +474,19 @@ class MockExecutor:
         raw = self.script[self._index]
         self._index += 1
         return raw
+
+    @classmethod
+    def from_config(cls, exec_cfg: dict[str, Any]) -> MockExecutor:
+        """The `type: mock` executor block of a config (runner.make_executor).
+
+        `script` replaces the default script; the R7.1 no-op floor sets ["COMPLETE"]. A bare
+        string would be read one character per action and run as nonsense, so anything but a
+        non-empty list of strings raises. Without the key the default is unchanged, which is
+        every mock config written before configs/dev_noop_complete.yaml.
+        """
+        script = exec_cfg.get("script")
+        if script is None:
+            return cls()
+        if not isinstance(script, list) or not script or not all(isinstance(a, str) for a in script):
+            raise ValueError(f"executor.script must be a non-empty list of strings, got {script!r}")
+        return cls(script=list(script))

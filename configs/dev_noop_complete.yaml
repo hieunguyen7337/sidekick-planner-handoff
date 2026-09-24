@@ -1,0 +1,40 @@
+# Dev arm R7.1: the no-op floor (docs/plan_top_venue_20260924.md, G9). The executor answers
+# COMPLETE at step 1 of every episode, so each score is what AppWorld credits for doing nothing:
+# the floor that goal_pass's partial credit is read against. EXPLORATORY, DEV ONLY: never a J10 arm.
+# Source: configs/hj8_executor_alone_bplus.yaml
+# Differs from source in: campaign_id, executor.type, executor.script, executor.model, executor.base_url, executor.lora_name, executor.temperature, executor.max_tokens, executor.stop, executor.chat_template_kwargs.enable_thinking, executor.timeout_s
+# tests/unit/test_dev_arms.py diffs the parsed YAML of both files against exactly this list.
+#
+# Why hj8_executor_alone_bplus and not hj14_executor_alone: both are executor_alone with a mock
+# planner and the same limits, and hj14 is a Qwen copy of hj8 (its header says so). hj8 is the
+# floor that J10 arms 1 and 1b copy. Every key that changes sits under executor:, which becomes
+# the mock, so the choice only decides which model the dropped keys named.
+# The vLLM keys are dropped, not kept inert: run provenance records executor.model and
+# executor.lora_name (src/sidekick/provenance.py:102-103), and a no-op run must not claim
+# granite + sft_b_plus. executor.max_prompt_tokens stays: scripts/setup/verify_configs.py:68-71
+# requires it on every config.
+#
+# 57 tasks x seeds 1,2 = 114 episodes, CPU only. Zero hosted calls: the planner is the mock, and
+# executor_alone never calls it. Zero vLLM calls: MockExecutor never opens a connection.
+# executor.script reaches the mock through runner.make_executor -> MockExecutor.from_config,
+# for type: mock only.
+# Submit (Claude, never a worker) once this branch is merged into the plan worktree:
+#   hpc --cpus 8 --mem 32gb --time 04:00:00 bash -c 'cd /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15 && export PYTHONPATH=src:. OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 APPWORLD_ROOT=/scratch/n12194778/sidekick/appworld SIDEKICK_START_COMMIT=$(git rev-parse HEAD) && timeout 12600 /scratch/n12194778/sidekick/env/bin/python -m sidekick.runner --system executor_alone --split dev --tasks 57 --seeds 1,2 --env appworld --workers 6 --config configs/dev_noop_complete.yaml --out /scratch/n12194778/sidekick/results --campaign-id dev_noop_complete_20260924; timeout 600 /scratch/n12194778/sidekick/env/bin/python scripts/setup/campaign_summarize.py --out /scratch/n12194778/sidekick/results --campaign-id dev_noop_complete_20260924 --config configs/dev_noop_complete.yaml --repo /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15 --manifest /scratch/n12194778/sidekick/results/results/dev_noop_complete_20260924/manifest.json'
+env: appworld
+campaign_id: dev_noop_complete_20260924
+planner:
+  type: mock          # never called by executor_alone; must not be codex
+executor:
+  type: mock
+  # One action, then the episode ends. Once its script is spent MockExecutor answers COMPLETE
+  # anyway (src/sidekick/agents/executor.py:472-473), so the script cannot run out.
+  script: ["COMPLETE"]
+  # Required by scripts/setup/verify_configs.py for every non-exempt config. The mock never
+  # generates, so this bound is inert here.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

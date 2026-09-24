@@ -238,7 +238,7 @@ def make_executor(cfg: dict[str, Any]) -> Any:
             ),
             logprobs=request_logprobs,
         )
-    return MockExecutor()
+    return MockExecutor.from_config(exec_cfg) if kind == "mock" else MockExecutor()
 
 
 def make_verifier(cfg: dict[str, Any]) -> Any:

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, Protocol
 
+from sidekick.agents.advice_styles import build_structured_advice_prompt
 from sidekick.protocols.schemas import (
     DelegationPacket,
     PlanStep,
@@ -19,7 +20,6 @@ from sidekick.protocols.schemas import (
     Usage,
     utc_now_iso,
 )
-
 DEFAULT_PLANNER_MODEL = "gpt-5.6-luna"
 DEFAULT_REASONING_EFFORT = "medium"
 DEFAULT_PLANNER_TIMEOUT_S = 300.0
@@ -126,7 +126,7 @@ def build_correct_prompt(packet: DelegationPacket, transcript_delta: str) -> str
 # the two features a reviewer called a handicap -- the presumption that the executor has erred
 # ("needs a correction") and the cap ("concise correction text only") -- and keeps the packet
 # and transcript lines identical, so the two styles differ in their first line only.
-CORRECT_PROMPT_STYLES = ("correction", "neutral")
+CORRECT_PROMPT_STYLES = ("correction", "neutral", "structured")
 
 
 def build_advice_prompt(
@@ -141,9 +141,9 @@ def build_advice_prompt(
             f"packet:\n{packet.model_dump_json()}\n"
             f"transcript_delta:\n{transcript_delta}\n"
         )
-    raise ValueError(
-        f"unknown correct_prompt style {style!r}; expected one of {CORRECT_PROMPT_STYLES}"
-    )
+    if style == "structured":  # D2 (plan 2026-09-24); the text lives in advice_styles.py
+        return build_structured_advice_prompt(packet, transcript_delta)
+    raise ValueError(f"unknown correct_prompt style {style!r}; expected one of {CORRECT_PROMPT_STYLES}")
 
 
 def build_act_prompt(task_id: str, transcript: str, allow_handoff: bool = False) -> str:

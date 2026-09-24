@@ -180,11 +180,19 @@ WAVE_B_ARMS=(
   "fixed_k|${REPO}/configs/b1_advise_fixed_k_10_fullctx_s3.yaml|b1_advise_fixed_k_10_fullctx_s3"
 )
 
+# Review arms (plan 2026-09-24, docs/plan_top_venue_20260924.md G3): R2.4 neutral advice at
+# k = 1 and D2 structured advice at k = 10. Dev only, exploratory. Like WAVE_B_ARMS,
+# selectable ONLY by an explicit ARMS=..., never by ARMSET.
+REVIEW_ARMS=(
+  "fixed_k|${REPO}/configs/dev_advise_neutral_fixed_k_1_fullctx.yaml|dev_advise_neutral_fixed_k_1_fullctx"
+  "fixed_k|${REPO}/configs/dev_advise_structured_fixed_k_10_fullctx.yaml|dev_advise_structured_fixed_k_10_fullctx"
+)
+
 hj12_select_arms () {
   SELECTED_ARMS=()
   local all_specs valid_stems spec sys cfg s matches
   local -a given=()
-  all_specs=("${LIVE_ARMS[@]}" "${WAVE_B_ARMS[@]}")
+  all_specs=("${LIVE_ARMS[@]}" "${WAVE_B_ARMS[@]}" "${REVIEW_ARMS[@]}")
   valid_stems=()
   for spec in "${all_specs[@]}"; do
     IFS='|' read -r sys cfg s <<<"${spec}"
@@ -921,6 +929,11 @@ hj12_run_guard_selftest () {
       hj12_select_arms
       echo "[hj12] UNREACHABLE: arms_unknown should have been FATAL"
       exit 99
+      ;;
+    arms_select)
+      # The selection alone, one spec per line; nothing is run (tests/unit/test_dev_arms.py).
+      hj12_select_arms
+      printf '%s\n' "${SELECTED_ARMS[@]}"
       ;;
     health_missing_alias)
       export VLLM_PORT="${VLLM_PORT:-21001}"
