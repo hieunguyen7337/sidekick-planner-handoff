@@ -69,6 +69,7 @@ for _p in (str(REPO_ROOT), str(REPO_ROOT / "src")):
 from scripts.analysis import handoff_control as hc  # noqa: E402
 from scripts.analysis import j10_report as j10  # noqa: E402
 from scripts.analysis import j16_robustness as j16  # noqa: E402
+from scripts.analysis import replay_divergence as rd  # noqa: E402
 
 J12_PREREG = "docs/prereg_j12_depth_test_20260924.md"
 J12_DEV_REPORT = "campaign/results/j17_depth_fixes_20260924.report.json"
@@ -94,6 +95,10 @@ J12_RULE = "lower_bound_above_threshold"  # A1_RULES: supported iff CI lo > t; p
 J12_BOUND_FLAG_PP = 1.00  # A1 Amendment 1 §I: a bound reaching 1.00 pp is printed with the verdict
 # A registered J10 / J12 test campaign id; its dev dry-run twin ends in _dryrun and does not match.
 REGISTERED_TEST_ID = re.compile(r"^j1[02]_[A-Za-z0-9_]+_20260924$")
+# J12 Amendment 2 (2026-09-25): J10 A1 Amendment 5 §B unchanged. Every J12 arm replays arm 3's environment
+# prefix (the two M^r_6 arms and J10's prefix_m11 / prefix_zs_m11), so D1-D4 each remove the union of
+# their two arms' divergent keys (scripts/analysis/replay_divergence.py), up to 16.
+J12_AM2 = f"{J12_PREREG} Amendment 2"
 
 
 def _dev(key: str, diff_pp: float, ci: list[float], n_pairs: int, n_handoff: Optional[int] = None,
@@ -180,7 +185,9 @@ def j12_evaluate_handoff_only(
     if missing:
         out.update(decidable=False, verdict="arm_absent", reason=f"no --arm for {missing}")
         return out
-    left, right = arms[pred["left"]]["episodes"], arms[pred["right"]]["episodes"]
+    # J12 Amendment 2: both arms without the pair's divergent keys (the two arms themselves without any).
+    left_arm, right_arm = j10.a1_am5_pair(arms, pred["left"], pred["right"])
+    left, right = left_arm["episodes"], right_arm["episodes"]
     flags = handoff_flags.get(pred["flags_from"], {})
     field = j10.A1_METRIC_FIELDS[pred["metric"]]
     t = float(pred["threshold_pp"]) / 100.0
@@ -241,7 +248,7 @@ def j12_evaluate_handoff_only(
         out["permutation_sensitivity"] = j10.a1_permutation(
             {"keys": keys, "diffs": [comps[k][0] for k in keys]}, t, pred.get("permutation_alternative", "two-sided"))
     out["_point"], out["_lo"], out["_hi"] = st["point"], lo, hi
-    incomplete = [a for a in (pred["left"], pred["right"]) if not arms[a]["complete"]]
+    incomplete = [a for a, arm in ((pred["left"], left_arm), (pred["right"], right_arm)) if not arm["complete"]]
     if incomplete:
         out.update(decidable=False, verdict="refused_incomplete",
                    reason=f"arm(s) below the registered non-crashed matrix: {incomplete}")
@@ -265,15 +272,25 @@ def j12_evaluate(
 
 
 def j12_apply_pair_rule(r: dict[str, Any], arms: dict[str, dict[str, Any]], expected_pairs: int) -> None:
-    """J12 §3 / A1 §9: a contrast whose arms lack `expected_pairs` non-crashed pairs is incomplete."""
+    """J12 §3 / A1 §9: a contrast whose arms lack `expected_pairs` non-crashed pairs is incomplete.
+
+    J12 Amendment 2 (A1 Amendment 5 §B.3): read with the pair's divergent keys removed -- the pairs counted
+    without them, against `expected_pairs` minus their number -- up to 16; above that the D is incomplete."""
     if r["left"] not in arms or r["right"] not in arms:
         return
-    shared = len(set(arms[r["left"]]["episodes"]) & set(arms[r["right"]]["episodes"]))
+    excluded, verdict = j10.a1_am5_exclusion(arms, r["left"], r["right"])
+    shared = len((set(arms[r["left"]]["episodes"]) & set(arms[r["right"]]["episodes"])) - set(excluded))
+    expected = expected_pairs - len(excluded) if verdict == rd.VERDICT_OK else expected_pairs
     r["n_noncrashed_pairs"] = shared
-    r["expected_pairs"] = expected_pairs
-    if shared < expected_pairs and r.get("decidable"):
+    r["expected_pairs"] = expected
+    if verdict != rd.VERDICT_OK:
+        why = f"{J12_AM2}: {len(excluded)} divergent keys to remove > cap {rd.DIVERGENCE_CAP}"
         r.update(decidable=False, verdict="refused_incomplete",
-                 reason=f"{shared} non-crashed pairs, below the registered {expected_pairs}")
+                 reason="; ".join(x for x in (r.get("reason"), why) if x))
+        return
+    if shared < expected and r.get("decidable"):
+        r.update(decidable=False, verdict="refused_incomplete",
+                 reason=f"{shared} non-crashed pairs, below the registered {expected}")
 
 
 def j12_decide_family(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -490,6 +507,61 @@ def j12_protocol_guard(
     return None
 
 
+def j12_am2_block(
+    arms: dict[str, dict[str, Any]],
+    results: list[dict[str, Any]],
+    flag_sensitivity: dict[str, Any],
+    decomposition: dict[str, Any],
+) -> dict[str, Any]:
+    """J12 Amendment 2 (A1 Amendment 5 §B.5), reported regardless of outcome: each J12 arm's divergent keys and
+    their count, zero included, and each affected D's (and companion's) number of pairs."""
+    per_arm = {}
+    for label in J12_ARMS:
+        if label in arms:
+            keys = arms[label].get(j10.A1_AM5_PRIVATE) or []
+            per_arm[label] = {"n_divergent": len(keys), "keys": [rd.key_label(k) for k in keys],
+                              "n_crash_other": arms[label]["n_crash"] - len(keys),
+                              "arm_complete": arms[label]["complete"]}
+    contrasts: dict[str, Any] = {}
+    for r in results:
+        if r["left"] not in arms or r["right"] not in arms:
+            continue
+        excluded, verdict = j10.a1_am5_exclusion(arms, r["left"], r["right"])
+        if excluded:
+            flag = flag_sensitivity.get(f"{r['id']}_flag") or {}
+            contrasts[r["id"]] = {
+                "left": r["left"], "right": r["right"], "population": r.get("population"),
+                "n_excluded": len(excluded), "excluded_keys": [rd.key_label(k) for k in excluded],
+                "verdict": verdict, "n_pairs": (r.get("contrast") or {}).get("n_pairs"),
+                "n_noncrashed_pairs": r.get("n_noncrashed_pairs"), "expected_pairs": r.get("expected_pairs"),
+                "decision": r.get("verdict")}
+            if flag:
+                contrasts[r["id"]]["n_pairs_h_flag"] = (flag.get("contrast") or {}).get("n_pairs")
+    companions: dict[str, Any] = {}
+    for receiver, blk in decomposition.items():
+        excluded, _verdict = j10.a1_am5_exclusion(arms, blk.get("target"), blk.get("base"))
+        if excluded:
+            companions[f"decomposition.{receiver}"] = {
+                "n_excluded": len(excluded), "n_pairs": (blk.get("goal_pass") or {}).get("n_pairs")}
+    non_replay = {label: [rd.key_label(k) for k in arm[j10.A1_AM5_NONREPLAY]]
+                  for label, arm in arms.items() if arm.get(j10.A1_AM5_NONREPLAY)}
+    return {
+        "rule": f"{J12_AM2} (J10 A1 Amendment 5 §B, unchanged)",
+        "decision_bearing": "completeness only: every statistic, the Holm family and every threshold run as registered",
+        "definition": rd.DEFINITION,
+        "cap": rd.DIVERGENCE_CAP,
+        "replay_arms": list(J12_ARMS),
+        "per_arm": per_arm,
+        "n_divergent_total": sum(v["n_divergent"] for v in per_arm.values()),
+        "contrasts": contrasts,
+        "companions": companions,
+        "non_replay_divergent": {"keys": non_replay, "treated_as": "an ordinary crash"},
+        "notes": list(j10.A1_AM5_NOTES[:2]) + [
+            "D3 / D4's handoff-only populations, their h_flag sensitivity, the decomposition and the planless-key "
+            "sensitivity are all read on the pairs left after the removal."],
+    }
+
+
 # ---- report ------------------------------------------------------------------------------------
 def build_report_j12(
     *,
@@ -519,7 +591,10 @@ def build_report_j12(
     absent = sorted(set(J12_ARMS) - set(contrast_dirs))
     if absent:
         reasons.append(f"arm_absent:{absent}")
-    arms = {label: j10.a1_arm_episodes(label, blob, tasks, seeds) for label, blob in loaded.items()}
+    # J12 Amendment 2 (A1 Amendment 5 §B.1 / §B.3): an arm whose only crashes are divergent keys is complete;
+    # a D whose two arms would lose more than 16 keys is named in the reasons.
+    arms = j10.a1_am5_arms({label: j10.a1_arm_episodes(label, blob, tasks, seeds) for label, blob in loaded.items()},
+                           contrast_dirs, tasks, seeds, J12_PREDICTIONS, reasons, replay_arms=tuple(J12_PREFIX_M))
     provenance = {label: j10.a1_split_provenance(path) for label, path in contrast_dirs.items()}
     split_problems = []
     for label, counts in provenance.items():
@@ -661,6 +736,7 @@ def build_report_j12(
         },
         "crash_convention": ("error_type == 'crash' is not an outcome (dropped, counted, arm incomplete); "
                              "limit / timeout / parse_error / api_error are scored outcomes."),
+        "j12_am2_divergence": j12_am2_block(arms, results, flag_sensitivity, decomposition),
     }
     report = j10._strip_internal(report)
     return report, (0 if all_decided and not reasons else 1)

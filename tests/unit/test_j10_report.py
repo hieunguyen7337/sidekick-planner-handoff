@@ -1779,3 +1779,229 @@ def test_am4_failure_is_recorded_and_never_fatal(tmp_path: Path, monkeypatch):
     assert report["a1_am4_calls"] == {"status": "error", "error": "ImportError: j12_cost_axes unavailable"}
     assert report["verdicts"]["P2"] == "supported"
 
+
+# ---- Amendment 5: a replay that cannot pass its own check (unit DIVRULE, 2026-09-25) -----------------------
+AM5_KEY = ("sc0_1", 1)
+
+
+def _am5_crash(arm_root: Path, keys, reason: str = "replay_divergence") -> None:
+    """Rewrite these episodes of an arm as crashes whose last attempt's error event carries `reason`."""
+    for task_id, seed in keys:
+        dest = arm_root / "sys" / str(seed) / task_id
+        row = json.loads((dest / "result.json").read_text(encoding="utf-8"))
+        row["error_type"] = "crash"
+        (dest / "result.json").write_text(json.dumps(row) + "\n", encoding="utf-8")
+        events = [{"event_type": "run_start", "actor": "system", "step": 0, "payload": {}},
+                  {"event_type": "error", "actor": "system", "step": 11, "error_type": "crash",
+                   "payload": {"reason": reason, "detail": "synthetic"}}]
+        (dest / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+
+
+def _am5_rows_cost(per_arm: dict, odd: dict | None = None) -> dict:
+    """A j12_cost_axes-shaped report: constant per-episode rows per arm (odd[(label, key)] overrides one row),
+    and each arm's published means over all 24 rows, as j12 publishes them."""
+    import statistics
+
+    arms = {}
+    for label, fields in per_arm.items():
+        rows = [{"task_id": t, "seed": s, **fields, **(odd or {}).get((label, (t, s)), {})} for t, s in GRID]
+        arm = {"n_episodes": len(rows), "episodes": rows}
+        for f in fields:
+            arm[f] = round(statistics.fmean(r[f] for r in rows), 6)
+        arms[label] = arm
+    return {"arms": arms}
+
+
+AM5_P2_COST = {"advise_k1_fullctx": {"noncached_tokens_per_episode": 1414410.0, "hosted_calls_per_episode": 19.0},
+               "prefix_m11": {"noncached_tokens_per_episode": 443361.0, "hosted_calls_per_episode": 11.25}}
+# The divergent episode's rows: prefix_m11 charged its replayed prefix only (0 here), advice 2,000,000 tokens.
+AM5_P2_ODD = {("prefix_m11", AM5_KEY): {"noncached_tokens_per_episode": 0.0, "hosted_calls_per_episode": 0.0},
+              ("advise_k1_fullctx", AM5_KEY): {"noncached_tokens_per_episode": 2_000_000.0}}
+
+
+def _am5_off(monkeypatch) -> None:
+    """Every Amendment 5 hook replaced by the call it wraps: the report as it was before the amendment."""
+    monkeypatch.setattr(j10, "a1_am5_arms", lambda arms, *_a, **_k: arms)
+    monkeypatch.setattr(j10, "a1_am5_pair", lambda arms, left, right: (arms[left], arms[right]))
+    monkeypatch.setattr(j10, "a1_am5_cost_prediction",
+                        lambda pred, cost, n, _arms, **kw: j10.a1_evaluate_cost_prediction(pred, cost, n, **kw))
+    monkeypatch.setattr(j10, "a1_am5_p2_arms", lambda arms: arms)
+    monkeypatch.setattr(j10, "a1_am5_p2_cost", lambda _arms, cost: cost)
+    monkeypatch.setattr(j10, "a1_am5_divergence", lambda rep, *_a, **_k: rep)
+
+
+def test_am5_zero_divergent_keys_leave_every_key_and_value_unchanged(tmp_path: Path, monkeypatch):
+    """(a) and constraint 3: no divergent key -- on a clean matrix, and with an ORDINARY crash in a replay arm,
+    which keeps today's behaviour (arm incomplete) -- the report equals the pre-amendment one but for the block."""
+    cost = _am5_rows_cost(AM5_P2_COST)
+    clean = write_a1_matrix(tmp_path / "clean")
+    crashed = write_a1_matrix(tmp_path / "crashed")
+    _am5_crash(crashed["prefix_m11"], [AM5_KEY], reason="replay_error")
+    new = [a1_report(d, cost_report=cost) for d in (clean, crashed)]
+    _am5_off(monkeypatch)
+    old = [a1_report(d, cost_report=cost) for d in (clean, crashed)]
+    blocks = []
+    for (rep, rc), (base, rc0) in zip(new, old):
+        block = rep.pop("a1_am5_divergence")
+        blocks.append(block)
+        assert "a1_am5_divergence" not in base and rc == rc0
+        assert json.dumps(rep, sort_keys=True, default=str) == json.dumps(base, sort_keys=True, default=str)
+        assert {a: (v["n_divergent"], v["keys"]) for a, v in block["per_arm"].items()} == {
+            a: (0, []) for a in j10.A1_PREFIX_ARMS}
+        assert block["n_divergent_total"] == 0 and block["contrasts"] == {} and block["companions"] == {}
+        assert block["cap"] == 16 and block["non_replay_divergent"]["keys"] == {}
+    assert new[0][1] == 0 and new[1][1] == 1
+    assert new[1][0]["arms"]["prefix_m11"]["complete"] is False
+    assert by_id(new[1][0])["P1"]["verdict"] == "refused_incomplete"
+    assert blocks[1]["per_arm"]["prefix_m11"]["n_crash_other"] == 1
+
+
+def test_am5_one_divergent_key_leaves_both_arms_of_its_contrasts_only(tmp_path: Path):
+    """(b) and (g). prefix_m11 diverges on AM5_KEY, where advice scores 1.0 (0.5 elsewhere). Every contrast,
+    companion and sensitivity that uses prefix_m11 loses the key on BOTH sides and is complete on 23 pairs;
+    every other contrast keeps its 24; the block lists the key."""
+    dirs = write_a1_matrix(tmp_path, {"advise_k1_fullctx": {k: 1.0 if k == AM5_KEY else 0.5 for k in GRID}})
+    _am5_crash(dirs["prefix_m11"], [AM5_KEY])
+    _planless_arm3(dirs["planner_alone_cap81"], [("sc1_2", 1)])  # §4.2: one planless key (cap 1)
+    report, rc = a1_report(dirs, cost_report=_am5_rows_cost(AM5_P2_COST, AM5_P2_ODD))
+    assert rc == 0 and report["incomplete_reasons"] == [], report["headline"]
+    arm = report["arms"]["prefix_m11"]
+    assert (arm["n_crash"], arm["n_scored"], arm["complete"]) == (1, 23, True)  # §B.3: complete
+    assert not [k for k in arm if k.startswith("_")]
+    p = by_id(report)
+    # P1 = advise − prefix_m11 = 0.5 − 0.75 on the 23 remaining pairs: the key's 1.0 is gone from advice too.
+    c1 = p["P1"]["contrast"]
+    assert (c1["n_pairs"], c1["n_shared"], c1["n_left_only"], c1["n_right_only"]) == (23, 23, 0, 0)
+    assert c1["scenario"]["ci95_pp"] == [-25.0, -25.0] and p["P1"]["decidable"] is True
+    assert (p["P3"]["contrast"]["n_pairs"], p["P3"]["decidable"]) == (23, True)
+    # P5 = advise − sft_plan uses no replay arm: all 24 pairs, the key's +50 pp kept -> 50 / 24 = +2.08 pp.
+    assert (p["P5"]["contrast"]["n_pairs"], p["P5"]["contrast"]["scenario"]["diff_pp"]) == (24, 2.08)
+    assert p["P4"]["contrast"]["n_pairs"] == p["P6"]["contrast"]["n_pairs"] == 24
+    # P2 on the rows without the key: 23 each, means back to the constants (published: 424,887.625 for m11).
+    obs = p["P2"]["observed"]
+    assert (obs["left_n_episodes"], obs["right_n_episodes"]) == (23, 23)
+    assert (obs["left_tokens_per_episode"], obs["right_tokens_per_episode"]) == (1414410.0, 443361.0)
+    assert obs["right_calls_per_episode"] == 11.25 and p["P2"]["ratio"] == round(1414410.0 / 443361.0, 4)
+    assert p["P2"]["decidable"] is True and p["P2"]["ratio_interval"]["n_pairs"] == 23
+    assert report["verdicts"]["P1"] == report["verdicts"]["P2"] == report["verdicts"]["P3"] == "supported"
+    # Amendment 4's P2 clauses read the same 23 episodes on both sides.
+    am4 = report["a1_am4_calls"]["per_arm"]
+    assert am4["advise_k1_fullctx"]["n_episodes"] == am4["prefix_m11"]["n_episodes"] == 23
+    assert am4["prefix_m11"]["tokens_as_published_mean"] == 443361.0
+    assert am4["sft_plan"]["n_episodes"] == 24
+    # §4.2: the sensitivity drops the planless key AND sees the divergent one (22); P5 only the planless (23).
+    rows = {r["id"]: r for r in report["planless_contingency"]["sensitivity"]["rows"]}
+    assert rows["P1"]["contrast_without_keys"]["n_pairs"] == 22 and rows["P5"]["contrast_without_keys"]["n_pairs"] == 23
+    # Companions: S2 (advise_k10 − m11), B1a (m11 − arm 3), P1's limit split: 23; S1 (advise − m9): untouched.
+    s2 = next(r for r in report["supporting_contrasts"] if r["id"] == "S2")
+    assert s2["goal_pass"]["n_pairs"] == 23
+    assert report["amendment1"]["limits"]["split"]["P1"]["n_pairs"] == 23
+    blk = report["a1_am5_divergence"]
+    assert blk["per_arm"]["prefix_m11"] == {"n_divergent": 1, "keys": ["1/sc0_1"], "n_crash_other": 0,
+                                            "arm_complete": True}
+    assert {a: v["n_divergent"] for a, v in blk["per_arm"].items()} == {
+        "prefix_m9": 0, "prefix_m11": 1, "prefix_zs_m9": 0, "prefix_zs_m11": 0}
+    assert blk["n_divergent_total"] == 1 and set(blk["contrasts"]) == {"P1", "P2", "P3"}
+    assert blk["contrasts"]["P1"] == {"left": "advise_k1_fullctx", "right": "prefix_m11", "n_excluded": 1,
+                                      "excluded_keys": ["1/sc0_1"], "verdict": "ok", "n_pairs": 23,
+                                      "decision": "supported"}
+    assert blk["contrasts"]["P2"]["n_pairs"] == 23
+    comp = blk["companions"]
+    assert comp["S2"] == {"arms": ["advise_k10_fullctx", "prefix_m11"], "n_excluded": 1, "n_pairs": 23}
+    assert comp["amendment1.B1a"]["n_pairs"] == 23 and comp["amendment1.limits.split.P1"]["n_pairs"] == 23
+    assert "S1" not in comp and "amendment1.limits.split.P6" not in comp
+
+
+def test_am5_two_replay_arms_remove_the_union_of_their_keys(tmp_path: Path):
+    """(c) P4 = prefix_zs_m11 − prefix_zs_m9: {sc0_1/1} ∪ {sc0_1/1, sc1_1/2} = 2 keys, 22 pairs."""
+    dirs = write_a1_matrix(tmp_path)
+    _am5_crash(dirs["prefix_zs_m11"], [("sc0_1", 1)])
+    _am5_crash(dirs["prefix_zs_m9"], [("sc0_1", 1), ("sc1_1", 2)])
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 0, report["headline"]
+    p4 = by_id(report)["P4"]
+    assert (p4["contrast"]["n_pairs"], p4["decidable"], p4["verdict"]) == (22, True, "not_supported")
+    blk = report["a1_am5_divergence"]
+    assert blk["contrasts"]["P4"]["excluded_keys"] == ["1/sc0_1", "2/sc1_1"]
+    assert blk["contrasts"]["P4"]["n_excluded"] == 2 and blk["n_divergent_total"] == 3
+    # E1 (arm 3 − prefix_zs_m11) loses 1 key; S4 (all four prefix arms) and the untailored decomposition 2.
+    assert blk["companions"]["E1"]["n_pairs"] == 23
+    assert blk["companions"]["S4"]["n_pairs"] == 22
+    assert blk["companions"]["amendment1.decomposition.untailored"]["n_pairs"] == 22
+    assert "P1" not in blk["contrasts"] and by_id(report)["P1"]["contrast"]["n_pairs"] == 24
+
+
+def test_am5_seventeen_divergent_keys_make_the_contrast_incomplete_sixteen_do_not(tmp_path: Path):
+    """(d) 17 > 16 removed keys: P1, P2, P3 draw no reading, though the arm itself is complete (§B.3);
+    at exactly 16 they are read on the remaining 8 pairs."""
+    for n, n_pairs in ((17, 7), (16, 8)):
+        dirs = write_a1_matrix(tmp_path / str(n))
+        _am5_crash(dirs["prefix_m11"], GRID[:n])
+        report, rc = a1_report(dirs, cost_report=_am5_rows_cost(AM5_P2_COST))
+        p = by_id(report)
+        assert report["arms"]["prefix_m11"]["complete"] is True
+        assert p["P1"]["contrast"]["n_pairs"] == p["P3"]["contrast"]["n_pairs"] == n_pairs
+        assert p["P6"]["verdict"] == "supported" and p["P5"]["decidable"] is True
+        if n == 17:
+            assert rc == 1
+            for pid in ("P1", "P2", "P3"):
+                assert p[pid]["verdict"] == "refused_incomplete", pid
+            assert "replay_divergence_above_cap:P1=17>16" in report["incomplete_reasons"]
+            assert "cap 16" in p["P2"]["reason"]
+            assert report["a1_am5_divergence"]["contrasts"]["P1"]["verdict"] == "over_cap"
+        else:
+            assert rc == 0, report["headline"]
+            assert p["P1"]["decidable"] and p["P3"]["decidable"] and p["P2"]["decidable"]
+            assert report["a1_am5_divergence"]["contrasts"]["P1"]["verdict"] == "ok"
+
+
+def test_am5_a_divergent_key_plus_an_ordinary_crash_is_incomplete(tmp_path: Path):
+    """(e) §B.3: any other residual crash still makes the arm incomplete."""
+    dirs = write_a1_matrix(tmp_path)
+    _am5_crash(dirs["prefix_m11"], [AM5_KEY])
+    _am5_crash(dirs["prefix_m11"], [("sc2_1", 2)], reason="replay_error")
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 1
+    arm = report["arms"]["prefix_m11"]
+    assert (arm["n_crash"], arm["complete"]) == (2, False)
+    assert "incomplete_arm:prefix_m11 scored=22/24 crash=2 missing=0" in report["incomplete_reasons"]
+    p = by_id(report)
+    assert p["P1"]["verdict"] == p["P3"]["verdict"] == "refused_incomplete"
+    assert p["P1"]["contrast"]["n_pairs"] == 22
+    assert report["a1_am5_divergence"]["per_arm"]["prefix_m11"] == {
+        "n_divergent": 1, "keys": ["1/sc0_1"], "n_crash_other": 1, "arm_complete": False}
+
+
+def test_am5_a_divergent_key_in_a_non_replay_arm_is_an_ordinary_crash(tmp_path: Path):
+    """Constraint 3: impossible by construction; if seen, the arm stays incomplete and the block names it."""
+    dirs = write_a1_matrix(tmp_path)
+    _am5_crash(dirs["advise_k1_fullctx"], [AM5_KEY])
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 1 and report["arms"]["advise_k1_fullctx"]["complete"] is False
+    assert by_id(report)["P1"]["verdict"] == "refused_incomplete"
+    blk = report["a1_am5_divergence"]
+    assert blk["non_replay_divergent"]["keys"] == {"advise_k1_fullctx": ["1/sc0_1"]}
+    assert blk["contrasts"] == {} and blk["n_divergent_total"] == 0
+
+
+def test_am5_b3_chord_cost_plug_in_is_read_without_the_divergent_key(tmp_path: Path):
+    """B3: prefix_m11 costs 300 per episode but 0 on its divergent key, so its published mean is 287.5 and
+    f = (287.5 − 100) / 400 = 0.46875. Without the key f = (300 − 100) / 400 = 0.5, and the residual
+    0.75 − (0.5 + 0.5 × 0.25) = +12.5 pp on the 23 triples left."""
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    _am5_crash(dirs["prefix_m11"], [AM5_KEY])
+    tokens = "noncached_tokens_per_episode"
+    cost = _am5_rows_cost({"sft_plan": {tokens: 100.0}, "planner_alone_cap81": {tokens: 500.0},
+                           "prefix_m11": {tokens: 300.0, "hosted_calls_per_episode": 11.0},
+                           "advise_k1_fullctx": {tokens: 1000.0, "hosted_calls_per_episode": 19.0}},
+                          {("prefix_m11", AM5_KEY): {tokens: 0.0, "hosted_calls_per_episode": 0.0}})
+    assert cost["arms"]["prefix_m11"][tokens] == 287.5
+    report, _ = a1_report(dirs, cost_report=cost)
+    chord = report["amendment1"]["chord"]["arms"]["prefix_m11"]
+    assert (chord["cost_fraction"], chord["cost_arm"]) == (0.5, 300.0)
+    assert chord["goal_pass"]["n_triples"] == 23 and chord["goal_pass"]["scenario"]["ci95_pp"] == [12.5, 12.5]
+    note = report["a1_am5_divergence"]["companions"]["amendment1.chord.prefix_m11"]
+    assert note["n_pairs"] == 23 and note["cost_plug_in"].startswith("B3 cost plug-in re-read")
+    # prefix_m9 has no divergent key: its chord is as published.
+    assert report["amendment1"]["chord"]["arms"]["prefix_m9"]["status"] == "not_computed"
+

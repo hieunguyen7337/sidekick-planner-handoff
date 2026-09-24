@@ -53,6 +53,7 @@ for _p in (str(REPO_ROOT), str(REPO_ROOT / "src")):
 from scripts.analysis import handoff_control as hc  # noqa: E402
 from scripts.analysis import j10_report as j10  # noqa: E402
 from scripts.analysis import lp_report as lp  # noqa: E402
+from scripts.analysis import replay_divergence as rd  # noqa: E402
 
 PREREG = "docs/prereg_j11_lp2_test_20260924.md"
 RESULTS_ROOT = j10.RAW_RESULTS_ROOT
@@ -97,6 +98,12 @@ HANDOFF_COMPANIONS: tuple[dict[str, Any], ...] = (
      "flags_from": "M_zs_11", "threshold_pp": 0.0, "orientation": "as L5: M^zs_11 − M^zs_6"},
 )
 NOT_RUN = "none (J11 not run: more than 5 % of C's episodes are planless, prereg §6)"
+
+# Amendment 2 (2026-09-25): a prefix replay whose rebuilt world fails its own hash check crashes with
+# payload.reason "replay_divergence" on every attempt. The rule is J10 A1 Amendment 5 §B's, applied to the four
+# M^r_m arms, the only J11 arms that replay the environment (T, A and A1 replay only C's first plan).
+AM2 = f"{PREREG} Amendment 2"
+PREFIX_ARMS: tuple[str, ...] = ("M_bplus_6", "M_bplus_11", "M_zs_6", "M_zs_11")
 
 # prereg §2 "Executor asks ... counted and reported", read by J10 A1 Amendment 1 §I (ledger PROV-02): an ask
 # answered live is part of the system and is kept; per arm the report gives the episodes that received a
@@ -346,6 +353,83 @@ def executor_asks(arms: dict[str, dict[str, Any]], counts: dict[str, dict[tuple[
     }
 
 
+def am2_evaluate_contrast(spec: dict[str, Any], arms: dict[str, dict[str, Any]], *, n_boot: int,
+                          seed: int) -> tuple[dict[str, Any], dict[str, Any]]:
+    """lp.evaluate_contrast under Amendment 2 §B.2-§B.3. A contrast that uses a prefix arm with divergent keys
+    (j10.a1_am5_arms lists them on the arm) is read with them removed from both arms -- the union for L3 / L5 --
+    against §3's 336 minus their number, if it removes at most 16; above that it is INCOMPLETE. Every statistic
+    is lp_report's, unchanged. Without a divergent key: lp.evaluate_contrast itself."""
+    left, right = spec["left"], spec["right"]
+    excluded, verdict = j10.a1_am5_exclusion(arms, left, right)
+    if not excluded:
+        return lp.evaluate_contrast(spec, arms, n_boot=n_boot, seed=seed)
+    if verdict != rd.VERDICT_OK:
+        out, _record = lp.evaluate_contrast(spec, arms, n_boot=n_boot, seed=seed)
+        why = f"{AM2} §B.3: {len(excluded)} divergent keys to remove > cap {rd.DIVERGENCE_CAP}"
+        out = dict(out, status="INCOMPLETE", reason="; ".join(r for r in (out.get("reason"), why) if r))
+        return out, {"status": "INCOMPLETE"}
+    gone = set(excluded)
+    view = dict(arms)
+    for code in (left, right):
+        episodes = {k: v for k, v in arms[code]["episodes"].items() if k not in gone}
+        view[code] = dict(arms[code], episodes=episodes, n_scored=len(episodes))
+    saved = lp.EXPECTED_PAIRS
+    lp.EXPECTED_PAIRS = saved - len(excluded)
+    try:
+        return lp.evaluate_contrast(spec, view, n_boot=n_boot, seed=seed)
+    finally:
+        lp.EXPECTED_PAIRS = saved
+
+
+def am2_block(arms: dict[str, dict[str, Any]], contrasts: dict[str, dict[str, Any]],
+              companions: dict[str, dict[str, Any]], companions_flag: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Amendment 2 §B.5, reported regardless of outcome: each prefix arm's divergent keys and their count, zero
+    included, and each affected contrast's (and handoff-only companion's) number of pairs."""
+    per_arm = {}
+    for code in PREFIX_ARMS:
+        if code in arms:
+            keys = arms[code].get(j10.A1_AM5_PRIVATE) or []
+            per_arm[code] = {"n_divergent": len(keys), "keys": [rd.key_label(k) for k in keys],
+                             "n_crash_other": arms[code]["n_crash"] - len(keys), "arm_complete": arms[code]["complete"]}
+    affected: dict[str, Any] = {}
+    for spec in lp.CONTRASTS:
+        excluded, verdict = j10.a1_am5_exclusion(arms, spec["left"], spec["right"])
+        if excluded:
+            c = contrasts.get(spec["id"]) or {}
+            affected[spec["id"]] = {"left": spec["left"], "right": spec["right"], "n_excluded": len(excluded),
+                                    "excluded_keys": [rd.key_label(k) for k in excluded], "verdict": verdict,
+                                    "n_pairs": c.get("n_pairs"), "n_expected": c.get("n_expected"),
+                                    "status": c.get("status")}
+    comp: dict[str, Any] = {}
+    for spec in HANDOFF_COMPANIONS:
+        excluded, _verdict = j10.a1_am5_exclusion(arms, spec["left"], spec["right"])
+        if excluded:
+            comp[spec["id"]] = {"n_excluded": len(excluded),
+                                "n_pairs": ((companions.get(spec["id"]) or {}).get("goal_pass") or {}).get("n_pairs"),
+                                "n_pairs_h_flag": ((companions_flag.get(spec["id"]) or {}).get("goal_pass")
+                                                   or {}).get("n_pairs")}
+    non_replay = {code: [rd.key_label(k) for k in arm[j10.A1_AM5_NONREPLAY]]
+                  for code, arm in arms.items() if arm.get(j10.A1_AM5_NONREPLAY)}
+    return {
+        "rule": f"{AM2} §B (J10 A1 Amendment 5 §B applied to J11)",
+        "decision_bearing": "completeness only: every statistic, the Holm family and every threshold run as registered",
+        "definition": rd.DEFINITION,
+        "cap": rd.DIVERGENCE_CAP,
+        "prefix_arms": list(PREFIX_ARMS),
+        "per_arm": per_arm,
+        "n_divergent_total": sum(v["n_divergent"] for v in per_arm.values()),
+        "contrasts": affected,
+        "handoff_only_companions": comp,
+        "unaffected": "the gate (C - E) and L1 (T - A) use no prefix arm and keep every pair",
+        "non_replay_divergent": {"keys": non_replay,
+                                 "treated_as": "an ordinary crash (T, A and A1 replay only C's first plan)"},
+        "notes": list(j10.A1_AM5_NOTES[:2]) + [
+            "The planless-key sensitivity re-reads each complete contrast on the pairs both arms score, so the "
+            "divergent keys are absent from it too.",
+            "Not retroactive (§B.6): lp_report.py is not edited, and LP's registered read is unchanged."],
+    }
+
+
 def build_report(
     *,
     split: str,
@@ -412,7 +496,10 @@ def build_report(
             reasons.append(f"split_provenance_mismatch:{code}:{loaded[code]['campaign']['campaign']}={wrong}")
         if registered and counts.get("unrecorded"):
             reasons.append(f"split_provenance_unrecorded:{code}={counts['unrecorded']}")
-    arms = {code: j10.a1_arm_episodes(code, loaded[code], tasks, list(SEEDS)) for code in ALL_ARMS}
+    # Amendment 2 §B.1 / §B.3: a prefix arm whose only crashes are divergent keys is complete.
+    arms = j10.a1_am5_arms({code: j10.a1_arm_episodes(code, loaded[code], tasks, list(SEEDS)) for code in ALL_ARMS},
+                           {code: results_root / campaigns[code]["campaign"] for code in ALL_ARMS}, tasks,
+                           list(SEEDS), replay_arms=PREFIX_ARMS)
     for arm in arms.values():
         # A matrix of the wrong size or from the wrong split cannot be complete at any count.
         arm["complete"] = bool(arm["complete"] and not reasons and arm["n_expected"] == expected)
@@ -430,7 +517,7 @@ def build_report(
         contrasts: dict[str, dict[str, Any]] = {}
         records: dict[str, dict[str, Any]] = {}
         for spec in lp.CONTRASTS:
-            contrasts[spec["id"]], records[spec["id"]] = lp.evaluate_contrast(
+            contrasts[spec["id"]], records[spec["id"]] = am2_evaluate_contrast(
                 spec, arms, n_boot=n_boot, seed=bootstrap_seed)
         read = read_family(gate, records, expected)
         sensitivity = lp.key_exclusion_sensitivity(PLANNER, arms, gate, records, n_boot=n_boot,
@@ -540,6 +627,7 @@ def build_report(
         arms={code: {**{k: v for k, v in arms[code].items() if k != "episodes"},
                      "campaign": loaded[code]["campaign"]} for code in ALL_ARMS},
         ambiguities=AMBIGUITIES,
+        j11_am2_divergence=am2_block(arms, contrasts, companions, companions_flag),
     )
     return j10._strip_internal(report), code
 

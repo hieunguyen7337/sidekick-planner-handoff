@@ -1075,3 +1075,83 @@ for arm 2 are Amendment 1 §B3's c̄_floor in the chord's f (A1:743-745).
   its smoke. No episode of arms 2 or 4–12 exists on `test_normal`.
 
 *Amendment 4 ends.*
+
+## Amendment 5 — a replay that cannot pass its own check (2026-09-25, appended before any `test_normal` episode of a replay arm (arms 4–7) exists; one completeness rule for one named crash class; no arm, prediction, decision rule, threshold, Holm family, margin, seed, order, budget or abort rule above any end marker changes)
+
+### §A What was found (dev only)
+- A replay arm rebuilds the world by re-executing the source episode's first m actions, then checks the rebuilt
+  world against the source: the last replayed observation's recorded `env_state_hash` must equal the live one
+  (`src/sidekick/prefix_source.py:157-175`, identical at a8b63f0 and 6f40fec). On a mismatch the episode is a crash
+  with `payload.reason = "replay_divergence"` and the executor never acts.
+- That hash is not of the database. It is a sha256 of the cumulative execute input and **printed output**
+  (`src/sidekick/environments/appworld_env.py:147-158`). Printed text that varies between Python processes
+  therefore fails the check even when the world is identical. Two such kinds were observed: an object repr
+  carrying a memory address, and the print order of a Python `set` of strings (`PYTHONHASHSEED` is not fixed
+  anywhere in `src/` or `scripts/pbs/`).
+- **Observed on dev** (LP-05, LP-06, DIV-01): two keys of the Qwen3.8-27B-sourced m = 11 replays, `68ee2c9_2`
+  (an address, step 11) and `df61dc5_2` (set order, step 10), fail in both receivers, before and after a
+  crash-only refill. Replayed step by step in two fresh processes, each key's hash breaks at exactly the first
+  step whose printed text differs, the two processes also differ from each other there, and wherever the text
+  is equal the hash is equal (`campaign/results/replay_divergence_diagnosis_dev_20260925.json`, `summary`). Two
+  control keys replay hash-equal at every step. Such a key crashes on every attempt, so a refill cannot
+  complete its arm.
+- **Luna-sourced replays** (arms 4–7 replay arm 3, a `gpt-5.6-luna` source): 0 surviving divergences across the
+  dev prefix-replay campaigns (LP-06), and 0 address or set prints in the first 11 steps of 285 luna source
+  episodes (DIV-01; a regex scan, so a lower bound on exposure). The case is expected to be rare here. It is
+  registered now because §5.1 would otherwise turn one such key into an incomplete arm and silence every
+  contrast that uses it.
+
+### §B The rule
+1. **Divergent key.** For a replay arm, a `(task_id, seed)` whose episode, after at least one crash-only
+   resumption (§8) run after the crash was first recorded, still has `error_type == "crash"` and, in its last
+   attempt's events, an `error` event whose `payload.reason` is `replay_divergence`. No other crash qualifies.
+   The resumption is the wrapper's crash-only refill, and its tally lines are the record of it. A refill deletes
+   the crashed attempt, so the report reads only the crash and the last attempt's reason.
+2. **Exclusion.** A divergent key is removed from both arms of every paired contrast, companion and sensitivity
+   in which that replay arm is one of the two arms: P1–P6 where they involve arms 4–7, Amendment 1's handoff
+   companions and B3 chord, Amendment 3's h* companions, and the §4.2 key-exclusion sensitivity. A contrast
+   between two replay arms removes the union of their divergent keys. Contrasts that use no replay arm keep all
+   336 pairs. P2's arm means (under both of Amendment 4's conventions) and B3's cost plug-in f are likewise
+   computed over the keys that remain in both arms. Per-arm figures that are not contrasts (§7's error counts,
+   Amendment 1 §D1's limit rates) stay over the arm's scored episodes, and a divergent key is counted there as a
+   crash with its reason.
+3. **Completeness.** An arm whose only crashes are divergent keys is complete for §5.1 and §9. A contrast is
+   read on its remaining pairs if it removes **at most 16** keys (a fixed number: 5 % of the 336-pair matrix, as
+   §4.2's cap); otherwise it is **incomplete** and draws no reading. Any other residual crash still makes the arm
+   incomplete under §5.1.
+4. **Unchanged.** The bootstrap, the Holm families and their m, every threshold, POOL-04, the permutation and
+   the sign-flip sensitivity run exactly as registered, on the remaining pairs. The estimand of an affected
+   contrast is over the keys whose prefix replays.
+5. **Reported regardless of outcome** (§7): each replay arm's divergent keys, listed, and their count, including
+   zero, and for each affected contrast its number of pairs.
+
+### §C Why exclusion and not a looser check
+A check that ignores addresses and set order would change `src/` at both run pins after freeze, and it would
+also accept real reorderings when code acts in set order. Excluding the key from both sides keeps every
+contrast paired and every replayed world verified. Whether a key is divergent depends only on the source
+episode's printed output and on process state, never on either arm's outcome.
+
+### §D Code
+- **One definition**, read by all three reports: `scripts/analysis/replay_divergence.py` (`divergent_keys`,
+  `DIVERGENCE_CAP = 16`, `contrast_exclusion`). Its last-attempt rule is tested against
+  `sidekick.replay._events_of_last_attempt`.
+- `scripts/analysis/j10_report.py:4259-4572` (`a1_am5_*`), appended after Amendment 4's block and before the
+  `__main__` guard. It is hooked in by editing five existing lines in place, so no line moves: :2700 and :2711
+  (a contrast's two arms, without its divergent keys), :3657 (the arms), :3686 (P2) and :3829 (the report's
+  return, adding the block `a1_am5_divergence`).
+- With no divergent key, every existing key and value is unchanged. On the seven dev arms of the A1 dry run, the
+  report from this code and from f690b6a are identical once the new block is removed (PBS 25852146, 25852147).
+- Tests: `tests/unit/test_replay_divergence.py` (5), and in `tests/unit/test_j10_report.py`
+  `test_am5_zero_divergent_keys_leave_every_key_and_value_unchanged`,
+  `test_am5_one_divergent_key_leaves_both_arms_of_its_contrasts_only`,
+  `test_am5_two_replay_arms_remove_the_union_of_their_keys`,
+  `test_am5_seventeen_divergent_keys_make_the_contrast_incomplete_sixteen_do_not`,
+  `test_am5_a_divergent_key_plus_an_ordinary_crash_is_incomplete`,
+  `test_am5_a_divergent_key_in_a_non_replay_arm_is_an_ordinary_crash`,
+  `test_am5_b3_chord_cost_plug_in_is_read_without_the_divergent_key`.
+
+- Checked at commit: the only non-`_dryrun` `j10_*` campaigns are arm 3's, `j10_planner_alone_cap81_20260924`, and
+  its smoke. No episode of arms 4–7 exists on `test_normal`, and no content of an arm-3 test episode has been
+  read (only the wrapper's tally lines).
+
+*Amendment 5 ends.*

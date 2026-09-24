@@ -433,3 +433,116 @@ def test_default_out_is_the_registered_path_and_j17_is_not_imported():
     src = (REPO / "scripts" / "analysis" / "j12_report.py").read_text(encoding="utf-8")
     imports = [line for line in src.splitlines() if line.startswith(("import ", "from "))]
     assert imports and not any("j17" in line for line in imports)  # j17 refuses held-out paths by design
+
+
+# ---- J12 Amendment 2: a replay that cannot pass its own check (unit DIVRULE, 2026-09-25) -------------------
+AM2_KEY = ("sc0_1", 1)
+
+
+def _am2_crash(arm_root: Path, keys, reason: str = "replay_divergence") -> None:
+    """These episodes become crashes whose last attempt's error event carries `reason`."""
+    for task_id, seed in keys:
+        dest = arm_root / "prefix_handoff" / str(seed) / task_id
+        row = json.loads((dest / "result.json").read_text(encoding="utf-8"))
+        row["error_type"] = "crash"
+        (dest / "result.json").write_text(json.dumps(row) + "\n", encoding="utf-8")
+        events = [{"event_type": "run_start", "payload": {}},
+                  {"event_type": "error", "actor": "system", "step": 6, "error_type": "crash",
+                   "payload": {"reason": reason}}]
+        (dest / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+
+
+def _am2_family(root: Path, **gp) -> dict[str, Path]:
+    return write_family(root, dict(CONSTANT, **gp), prefix_m11={"handoff": ALL_H}, prefix_zs_m11={"handoff": ALL_H})
+
+
+def test_am2_no_divergent_key_changes_nothing_but_adds_the_block(tmp_path: Path, monkeypatch):
+    """(a) and an ordinary crash (still incomplete): the report equals the pre-amendment one but for the block."""
+    clean = _am2_family(tmp_path / "clean")
+    crashed = _am2_family(tmp_path / "crashed")
+    _am2_crash(crashed["prefix_m6"], [("sc1_2", 2)], reason="replay_error")
+    new = [report_for(d) for d in (clean, crashed)]
+    monkeypatch.setattr(j10, "a1_am5_arms", lambda arms, *_a, **_k: arms)
+    monkeypatch.setattr(j10, "a1_am5_pair", lambda arms, left, right: (arms[left], arms[right]))
+    monkeypatch.setattr(j10, "a1_am5_exclusion", lambda *_a: ([], "ok"))
+    old = [report_for(d) for d in (clean, crashed)]
+    blocks = []
+    for (rep, code), (base, code0) in zip(new, old):
+        blocks.append(rep.pop("j12_am2_divergence"))
+        base.pop("j12_am2_divergence")
+        assert code == code0
+        assert json.dumps(rep, sort_keys=True, default=str) == json.dumps(base, sort_keys=True, default=str)
+        assert {a: (v["n_divergent"], v["keys"]) for a, v in blocks[-1]["per_arm"].items()} == {
+            a: (0, []) for a in j12.J12_ARMS}
+        assert blocks[-1]["contrasts"] == {} and blocks[-1]["companions"] == {}
+    assert new[0][1] == 0 and new[1][1] == 1 and by_id(new[1][0])["D1"]["verdict"] == "refused_incomplete"
+    assert blocks[1]["per_arm"]["prefix_m6"]["n_crash_other"] == 1
+
+
+def test_am2_one_divergent_key_in_a_j10_arm_reads_d1_d3_on_23_pairs(tmp_path: Path):
+    """(b) J10's prefix_m11 diverges on AM2_KEY, where prefix_m6 scores 0.0: D1 and D3 lose the key on both
+    sides and are decided on 23 pairs against 23; D2 / D4 keep 24."""
+    dirs = _am2_family(tmp_path, prefix_m6={k: 0.0 if k == AM2_KEY else 0.625 for k in KEYS})
+    _am2_crash(dirs["prefix_m11"], [AM2_KEY])
+    report, code = report_for(dirs)
+    assert code == 0 and report["incomplete_reasons"] == [], report["headline"]
+    d = by_id(report)
+    for pid in ("D1", "D3"):
+        assert d[pid]["decidable"] is True and d[pid]["verdict"] == "supported", pid
+        assert (d[pid]["n_noncrashed_pairs"], d[pid]["expected_pairs"], d[pid]["contrast"]["n_pairs"]) == (23, 23, 23)
+        assert d[pid]["contrast"]["scenario"]["ci95_pp"] == [12.5, 12.5]  # m6's 0.0 on the key is gone
+    for pid in ("D2", "D4"):
+        assert (d[pid]["n_noncrashed_pairs"], d[pid]["expected_pairs"], d[pid]["contrast"]["n_pairs"]) == (24, 24, 24)
+    assert report["arms"]["prefix_m11"]["complete"] is True and report["arms"]["prefix_m11"]["n_crash"] == 1
+    assert report["sensitivity_h_flag"]["D3_flag"]["decidable"] is True
+    assert report["beside"]["decomposition"]["bplus"]["goal_pass"]["n_pairs"] == 23
+    blk = report["j12_am2_divergence"]
+    assert blk["per_arm"]["prefix_m11"] == {"n_divergent": 1, "keys": ["1/sc0_1"], "n_crash_other": 0,
+                                            "arm_complete": True}
+    assert {a: v["n_divergent"] for a, v in blk["per_arm"].items()} == {
+        "prefix_m6": 0, "prefix_zs_m6": 0, "prefix_m11": 1, "prefix_zs_m11": 0}
+    assert set(blk["contrasts"]) == {"D1", "D3"}
+    assert blk["contrasts"]["D1"]["excluded_keys"] == ["1/sc0_1"] and blk["contrasts"]["D3"]["n_pairs"] == 23
+    assert blk["contrasts"]["D3"]["n_pairs_h_flag"] == 23
+    assert blk["companions"] == {"decomposition.bplus": {"n_excluded": 1, "n_pairs": 23}}
+
+
+def test_am2_two_arms_of_a_d_remove_the_union(tmp_path: Path):
+    """(c) D2 / D4: {sc0_1/1} from prefix_zs_m11 and {sc0_1/1, sc1_1/2} from prefix_zs_m6: 2 keys, 22 pairs."""
+    dirs = _am2_family(tmp_path)
+    _am2_crash(dirs["prefix_zs_m11"], [AM2_KEY])
+    _am2_crash(dirs["prefix_zs_m6"], [AM2_KEY, ("sc1_1", 2)])
+    report, code = report_for(dirs)
+    assert code == 0, report["headline"]
+    d = by_id(report)
+    for pid in ("D2", "D4"):
+        assert (d[pid]["n_noncrashed_pairs"], d[pid]["expected_pairs"], d[pid]["decidable"]) == (22, 22, True)
+    assert report["j12_am2_divergence"]["contrasts"]["D2"]["excluded_keys"] == ["1/sc0_1", "2/sc1_1"]
+
+
+def test_am2_more_than_16_divergent_keys_leave_the_d_incomplete(tmp_path: Path):
+    """(d) 17 keys: D1 and D3 draw no reading, although the arm is complete; D2 and D4 are decided."""
+    dirs = _am2_family(tmp_path)
+    _am2_crash(dirs["prefix_m6"], KEYS[:17])
+    report, code = report_for(dirs)
+    assert code == 1 and report["arms"]["prefix_m6"]["complete"] is True
+    d = by_id(report)
+    for pid in ("D1", "D3"):
+        assert d[pid]["decidable"] is False and d[pid]["verdict"] == "refused_incomplete", pid
+        assert "cap 16" in d[pid]["reason"]
+    assert d["D2"]["decidable"] is True and d["D4"]["decidable"] is True
+    assert "replay_divergence_above_cap:D1=17>16" in report["incomplete_reasons"]
+    assert report["j12_am2_divergence"]["contrasts"]["D1"]["verdict"] == "over_cap"
+
+
+def test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete(tmp_path: Path):
+    """(e) §B.3: any other residual crash keeps the arm, and so D1 / D3, incomplete."""
+    dirs = _am2_family(tmp_path)
+    _am2_crash(dirs["prefix_m6"], [AM2_KEY])
+    _am2_crash(dirs["prefix_m6"], [("sc2_1", 2)], reason="replay_error")
+    report, code = report_for(dirs)
+    assert code == 1 and report["arms"]["prefix_m6"]["complete"] is False
+    assert "incomplete_arm:prefix_m6 scored=22/24 crash=2 missing=0" in report["incomplete_reasons"]
+    d = by_id(report)
+    assert d["D1"]["verdict"] == d["D3"]["verdict"] == "refused_incomplete"
+    assert report["j12_am2_divergence"]["per_arm"]["prefix_m6"]["n_crash_other"] == 1

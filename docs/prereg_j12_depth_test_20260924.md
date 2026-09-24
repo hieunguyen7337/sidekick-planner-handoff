@@ -233,3 +233,31 @@ handoff-only column and §4's dev values for D3 and D4.
 - No arm-3 result was read beyond the disclosure in A1 Amendment 3.
 
 *Amendment 1 ends.*
+
+## Amendment 2 — a replay that cannot pass its own check (2026-09-25, appended before any J12 `test_normal` episode exists; one completeness rule for one named crash class; no arm, prediction, rule, threshold, Holm family, seed, order or abort rule above any end marker changes)
+
+- J10 A1 Amendment 5 (committed with this amendment) registers how a `replay_divergence` crash is handled: what
+  a divergent key is, the exclusion from both arms of a contrast, the 16-key completeness cap, and what is
+  reported. **It applies to J12 unchanged**, to J12's arms M^bplus_6 and M^zs_6 and to the J10 arms J12 reads
+  (`prefix_m11`, `prefix_zs_m11`).
+- D1–D4 each pair two prefix arms, so each removes the union of its two arms' divergent keys. D3's and D4's
+  handoff-only populations, their h* companions (Amendment 1) and the planless-key sensitivity are computed on
+  the remaining pairs.
+- §3's completeness rule ("a contrast whose two arms lack 336 non-crashed pairs is incomplete") and §6's "a
+  single D is reported incomplete if its arms cannot reach 336 non-crashed pairs" are read with divergent keys
+  removed, up to 16 per contrast. Above 16 the D is incomplete.
+- Exposure is expected to be small. Both J12 arms replay J10 arm 3, a `gpt-5.6-luna` source. On dev no luna
+  source printed process-varying text within its first 11 steps (0 of 285 episodes), and no luna-sourced replay
+  kept a divergence (DIV-01, LP-06).
+- Code: `scripts/analysis/j12_report.py`.
+  - `j12_apply_pair_rule` (:274) counts a D's pairs against 336 minus its removed keys.
+  - The handoff-only view in `j12_evaluate_handoff_only` drops the same keys.
+  - `j12_am2_block` (:510) is reported under the key `j12_am2_divergence` (:739).
+  - With no divergent key, the dev report from this code matches f690b6a's once the new block is removed (PBS
+    25852148, 25852149).
+- Tests in `tests/unit/test_j12_report.py`: `test_am2_no_divergent_key_changes_nothing_but_adds_the_block`,
+  `test_am2_one_divergent_key_in_a_j10_arm_reads_d1_d3_on_23_pairs`, `test_am2_two_arms_of_a_d_remove_the_union`,
+  `test_am2_more_than_16_divergent_keys_leave_the_d_incomplete`,
+  `test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete`.
+
+*Amendment 2 ends.*

@@ -200,3 +200,57 @@ runner records is `handoff_occurred`.
 **Checked at commit.** No `j11_*` campaign exists under `/scratch/n12194778/sidekick/results`.
 
 *Amendment 1 ends.*
+
+## Amendment 2 — a replay that cannot pass its own check (2026-09-25, appended after C's `test_normal` episodes began and before any episode of a replay arm (T, A, A1, M^r_m) exists; one completeness rule for one named crash class; no arm, prediction, rule, threshold, Holm family, seed, order or abort rule above any end marker changes)
+
+### §A What was found, and what had been seen
+- J10 A1 Amendment 5 §A (committed with this amendment) records the mechanism. A prefix replay is checked by a
+  hash of the printed execute output, not of the database. Printed text that varies between processes, such as
+  an object's memory address or the order of a printed `set`, therefore fails the check on every attempt,
+  although the world is identical.
+- **It is the reason LP's registered read is incomplete.** Two P27-sourced dev keys, `68ee2c9_2` and
+  `df61dc5_2`, fail both m = 11 replay arms deterministically, which left M^bplus_11 and M^zs_11 at 112/114
+  (LP-05, DIV-01). J11's §4 dev values for L2–L5 are those 112-pair values, disclosed in LP Amendment 7.
+- **J11 is more exposed than J10.** C is a P27 source, and on dev 2 of 114 P27 episodes printed such text within
+  their first 11 steps, against 0 of 285 luna episodes (DIV-01). At that rate an m = 11 arm would lose about 6 of
+  336 keys. No dev P27 episode printed such text within its first 6 steps.
+- **Test contact at commit.** C (PBS 25845109) has written `test_normal` episodes. Only the wrapper's tally lines
+  have been read: counts of non-crashed, crashed and missing episodes, and no episode's content, output or
+  score. No replay arm has run on `test_normal`, and the rule below depends only on the source's printed output
+  and on process state, never on any arm's outcome.
+
+### §B The rule (the same rule as J10 A1 Amendment 5 §B, applied to J11)
+1. **Divergent key.** For a prefix replay arm M^r_m, a `(task_id, seed)` whose episode, after at least one
+   crash-only resumption run after the crash was first recorded, still has `error_type == "crash"` and, in its
+   last attempt's events, an `error` event whose `payload.reason` is `replay_divergence`. No other crash
+   qualifies. T, A and A1 replay only C's first plan, not the environment, and cannot produce one.
+2. **Exclusion.** A divergent key is removed from both arms of every paired contrast, companion and sensitivity
+   in which that arm is one of the two arms (L2–L5, their h* companions under Amendment 1, and the planless-key
+   sensitivity). A contrast between two prefix arms (L3, L5) removes the union of their divergent keys. The gate
+   and L1 use no prefix arm and keep all 336 pairs.
+3. **Completeness.** A prefix arm whose only residual crashes are divergent keys is complete. §3's rule ("a
+   contrast whose arms lack 336 non-crashed pairs is incomplete") is read with divergent keys removed. A contrast
+   that removes **at most 16** keys (a fixed number: 5 % of 336, as §6's planless cap) is read on its remaining
+   pairs; above that it is **incomplete**. Any other residual crash still makes it incomplete. L1–L5 are one Holm
+   family (§3), so one incomplete member leaves every L without a reading, as it did in LP.
+4. **Unchanged.** The bootstrap, the Holm family and its m, thresholds, POOL-04 and the sign-flip test run as
+   registered, on the remaining pairs. The estimand of an affected contrast is over the keys whose prefix
+   replays.
+5. **Reported regardless of outcome:** each prefix arm's divergent keys, listed, and their count, including zero,
+   and for each affected contrast its number of pairs.
+6. **Not retroactive.** LP's registered read stays as reported (INCOMPLETE; LP-04, LP-05). This rule is
+   registered for J11 only.
+
+### §C Code
+- The definition is J10 A1 Amendment 5 §D's `scripts/analysis/replay_divergence.py`, and the arm-level
+  completeness rule is `j10_report.a1_am5_arms`.
+- `scripts/analysis/j11_report.py`: `am2_evaluate_contrast` (:356-381) reads a contrast with its divergent keys
+  removed, against 336 minus their number, using lp_report's statistics unchanged. `am2_block` (:384-430) is
+  reported under the key `j11_am2_divergence` (:630).
+- With no divergent key, `lp_report.evaluate_contrast` is called exactly as before.
+- Tests in `tests/unit/test_j11_report.py`: `test_am2_no_divergent_key_changes_nothing_but_adds_the_block`,
+  `test_am2_one_divergent_key_reads_its_contrasts_on_335_pairs`, `test_am2_two_prefix_arms_remove_the_union`,
+  `test_am2_more_than_16_divergent_keys_leave_the_contrast_incomplete`,
+  `test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete`.
+
+*Amendment 2 ends.*

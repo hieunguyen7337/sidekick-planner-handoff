@@ -1,0 +1,1178 @@
+{
+  "brief": "campaign/workers/briefs/20260925_replay_divergence_diagnose.md",
+  "date": "2026-09-25",
+  "script": "scripts/analysis/replay_divergence_diagnose.py",
+  "test": "tests/unit/test_replay_divergence_diagnose.py",
+  "test_result": "14 passed in 0.31s",
+  "pbs_job_ids": [
+    "25850886.aqua"
+  ],
+  "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+  "system": "planner_alone",
+  "seed": 1,
+  "m": 11,
+  "summary": {
+    "failing": {
+      "68ee2c9_2": {
+        "A": {
+          "first_text_diff_step": 11,
+          "first_hash_diff_step": 11,
+          "classification": "address",
+          "all_hash_equal": false,
+          "final_snapshot_hash_equal_last_recorded": false,
+          "pid": 68109
+        },
+        "B": {
+          "first_text_diff_step": 11,
+          "first_hash_diff_step": 11,
+          "classification": "address",
+          "all_hash_equal": false,
+          "final_snapshot_hash_equal_last_recorded": false,
+          "pid": 68428
+        },
+        "A_vs_B": {
+          "steps_live_text_differs_A_vs_B": [
+            11
+          ],
+          "steps_live_hash_differs_A_vs_B": [
+            11
+          ],
+          "hash_of_probe_string_differs_A_vs_B": true,
+          "processes_differ_from_each_other": true
+        }
+      },
+      "df61dc5_2": {
+        "A": {
+          "first_text_diff_step": 10,
+          "first_hash_diff_step": 10,
+          "classification": "reordering",
+          "all_hash_equal": false,
+          "final_snapshot_hash_equal_last_recorded": false,
+          "pid": 68652
+        },
+        "B": {
+          "first_text_diff_step": 10,
+          "first_hash_diff_step": 10,
+          "classification": "reordering",
+          "all_hash_equal": false,
+          "final_snapshot_hash_equal_last_recorded": false,
+          "pid": 69592
+        },
+        "A_vs_B": {
+          "steps_live_text_differs_A_vs_B": [
+            10,
+            11
+          ],
+          "steps_live_hash_differs_A_vs_B": [
+            10,
+            11
+          ],
+          "hash_of_probe_string_differs_A_vs_B": true,
+          "processes_differ_from_each_other": true
+        }
+      }
+    },
+    "controls": {
+      "68ee2c9_1": {
+        "first_text_diff_step": null,
+        "first_hash_diff_step": null,
+        "classification": null,
+        "all_hash_equal": true,
+        "final_snapshot_hash_equal_last_recorded": true,
+        "pid": 73195
+      },
+      "df61dc5_3": {
+        "first_text_diff_step": null,
+        "first_hash_diff_step": null,
+        "classification": null,
+        "all_hash_equal": true,
+        "final_snapshot_hash_equal_last_recorded": true,
+        "pid": 76497
+      }
+    },
+    "scan": [
+      {
+        "source": "lp2_planner_alone_cap81_qwen38_27b_20260923",
+        "system": "planner_alone",
+        "max_step": 11,
+        "n_episodes_scanned": 114,
+        "address_episodes": 1,
+        "address_broad_episodes": 1,
+        "set_print_episodes": 1,
+        "either": 2
+      },
+      {
+        "source": "hj13_planner_alone_cap81_20260923",
+        "system": "planner_alone",
+        "max_step": 11,
+        "n_episodes_scanned": 114,
+        "address_episodes": 0,
+        "address_broad_episodes": 0,
+        "set_print_episodes": 0,
+        "either": 0
+      },
+      {
+        "source": "hj13_planner_alone_cap81_seed3_20260924",
+        "system": "planner_alone",
+        "max_step": 11,
+        "n_episodes_scanned": 57,
+        "address_episodes": 0,
+        "address_broad_episodes": 0,
+        "set_print_episodes": 0,
+        "either": 0
+      },
+      {
+        "source": "hj1b_planner_20260915",
+        "system": "planner_alone",
+        "max_step": 11,
+        "n_episodes_scanned": 114,
+        "address_episodes": 0,
+        "address_broad_episodes": 0,
+        "set_print_episodes": 0,
+        "either": 0
+      }
+    ]
+  },
+  "replay": {
+    "failing": {
+      "68ee2c9_2": {
+        "A": {
+          "subcommand": "replay",
+          "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+          "system": "planner_alone",
+          "seed": 1,
+          "task": "68ee2c9_2",
+          "m": 11,
+          "events_path": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923/planner_alone/1/68ee2c9_2/events.jsonl",
+          "experiment_name": "divdiag_20260925/p68109_1790265561/planner_alone/1/68ee2c9_2",
+          "started": "2026-09-25T01:59:21",
+          "process": {
+            "pid": 68109,
+            "hostname": "cpu1n042",
+            "pbs_jobid": "25850886.aqua",
+            "PYTHONHASHSEED": null,
+            "hash_randomization_flag": 1,
+            "hash_of_probe_string": -1226131220349182474,
+            "set_iteration_probe": [
+              "alpha",
+              "bravo",
+              "charlie",
+              "echo",
+              "delta"
+            ],
+            "python": "3.12.13"
+          },
+          "n_executed": 11,
+          "steps": [
+            {
+              "step": 0,
+              "executed": 0,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "e072f1a0bcf1f8703d0a2e942be298b6b3f5a75ffb3330ccf4a99784862d13fc",
+              "live_hash": "ef8adb1f93836deb19f01a11650c78774aa974d267d3e93b3af4b9330c156de6"
+            },
+            {
+              "step": 1,
+              "executed": 1,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "da920d1a9278a6f13c375c0a4303948dffb0743d2a301141bf9e9c2866d9bb1d",
+              "live_hash": "f3bd24c578951a216477c52bd8eac51c9f91106323f75abd66d50672374af567"
+            },
+            {
+              "step": 2,
+              "executed": 2,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "9a5c99a5bb564fa8f00d175e5027577f5c65969d7f48ee7b5854e830222dae3e",
+              "live_hash": "ec08cdb9456793a438a10676dbdbd5efbdad4e01c86129386f358253744e14a4"
+            },
+            {
+              "step": 3,
+              "executed": 3,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "103034fdd42a69de29a99ac07e2179de24f33aebc2cff8bb3e4f956921f56320",
+              "live_hash": "9ccdee00b71039629adc17f31fa1983a471d3987e43cb5ea48bec1f15f97adb3"
+            },
+            {
+              "step": 4,
+              "executed": 4,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "9ff6791c621fc39fa68c5008c19a36c9f3673a8b8a3c5a02e776a500abce838c",
+              "live_hash": "1f34091aae897e623688e574b98ed3383ce5cf8a844f5cc2a662850e8956069c"
+            },
+            {
+              "step": 5,
+              "executed": 5,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "b3acfb2920617daa7814ad36aff81d091bca4d8c05b338f5ecb11cd7f821cb25",
+              "live_hash": "02240c247b53d9eeace1113bcd0a2f772c5637707e7b59dff3a1967d8d8069aa"
+            },
+            {
+              "step": 6,
+              "executed": 6,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "37b0f7db4c3fb2335725a730d61b378bd570266c66fd178c0247795fe6392bad",
+              "live_hash": "613bc6bf80c08fb90b605855a7b7d9363a948236862cb39dac7d644459522d2f"
+            },
+            {
+              "step": 7,
+              "executed": 7,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "18c0ad45ba847acabe91e593fac44f16ec022379bc8002709f565661d4c76dcd",
+              "live_hash": "a5b43f81859b4bb05648c31a461778e991e383c60c24d6dff9480e79f65938ff"
+            },
+            {
+              "step": 8,
+              "executed": 8,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "24c1bd4de83a6ebabef596d000fc0206525538679285562c9809bb5ce963d685",
+              "live_hash": "59cd63f63e9f6b0f3df143c64cf61433777647c71d2b595ae9c3eeb072d1953b"
+            },
+            {
+              "step": 9,
+              "executed": 9,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "24c1bd4de83a6ebabef596d000fc0206525538679285562c9809bb5ce963d685",
+              "live_hash": "1b78c318ea2b3cb9af9886fcd0588431d44249c0743f4fc3ae26c396d3547680"
+            },
+            {
+              "step": 10,
+              "executed": 10,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "561f78dffe172864c1cce17ad25b3dbcca366310327bfe036257193c5dd5a45a",
+              "live_hash": "1d8c3aaa414055168596d52bc7c83e0362cf000f2418205a7b933ac00fdee25a"
+            },
+            {
+              "step": 11,
+              "executed": 11,
+              "text_equal": false,
+              "hash_equal": false,
+              "live_text_sha256": "bbd50391daf7b9aec48e63553a045a38cde99a294ebd803e6984aee68a67fd76",
+              "live_hash": "064faabc4557ffb4172c89d56fba9abb85ba90c9f95cf8261861ce09b52e96a9"
+            }
+          ],
+          "all_text_equal": false,
+          "all_hash_equal": false,
+          "first_text_diff_step": 11,
+          "first_hash_diff_step": 11,
+          "first_text_diff": {
+            "step": 11,
+            "classification": "address",
+            "region": {
+              "first_diff_char": 293,
+              "region_start": 143,
+              "recorded": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14804efed640>, use_cache=True, scope=None)) -> list[str]\n",
+              "live": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14ba767ba990>, use_cache=True, scope=None)) -> list[str]\n",
+              "recorded_len": 348,
+              "live_len": 348
+            }
+          },
+          "text_diff_steps": [
+            {
+              "step": 11,
+              "classification": "address"
+            }
+          ],
+          "final_snapshot_hash_equal_last_recorded": false,
+          "error": null
+        },
+        "B": {
+          "subcommand": "replay",
+          "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+          "system": "planner_alone",
+          "seed": 1,
+          "task": "68ee2c9_2",
+          "m": 11,
+          "events_path": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923/planner_alone/1/68ee2c9_2/events.jsonl",
+          "experiment_name": "divdiag_20260925/p68428_1790265570/planner_alone/1/68ee2c9_2",
+          "started": "2026-09-25T01:59:30",
+          "process": {
+            "pid": 68428,
+            "hostname": "cpu1n042",
+            "pbs_jobid": "25850886.aqua",
+            "PYTHONHASHSEED": null,
+            "hash_randomization_flag": 1,
+            "hash_of_probe_string": 8554424122934424949,
+            "set_iteration_probe": [
+              "delta",
+              "echo",
+              "alpha",
+              "charlie",
+              "bravo"
+            ],
+            "python": "3.12.13"
+          },
+          "n_executed": 11,
+          "steps": [
+            {
+              "step": 0,
+              "executed": 0,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "e072f1a0bcf1f8703d0a2e942be298b6b3f5a75ffb3330ccf4a99784862d13fc",
+              "live_hash": "ef8adb1f93836deb19f01a11650c78774aa974d267d3e93b3af4b9330c156de6"
+            },
+            {
+              "step": 1,
+              "executed": 1,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "da920d1a9278a6f13c375c0a4303948dffb0743d2a301141bf9e9c2866d9bb1d",
+              "live_hash": "f3bd24c578951a216477c52bd8eac51c9f91106323f75abd66d50672374af567"
+            },
+            {
+              "step": 2,
+              "executed": 2,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "9a5c99a5bb564fa8f00d175e5027577f5c65969d7f48ee7b5854e830222dae3e",
+              "live_hash": "ec08cdb9456793a438a10676dbdbd5efbdad4e01c86129386f358253744e14a4"
+            },
+            {
+              "step": 3,
+              "executed": 3,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "103034fdd42a69de29a99ac07e2179de24f33aebc2cff8bb3e4f956921f56320",
+              "live_hash": "9ccdee00b71039629adc17f31fa1983a471d3987e43cb5ea48bec1f15f97adb3"
+            },
+            {
+              "step": 4,
+              "executed": 4,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "9ff6791c621fc39fa68c5008c19a36c9f3673a8b8a3c5a02e776a500abce838c",
+              "live_hash": "1f34091aae897e623688e574b98ed3383ce5cf8a844f5cc2a662850e8956069c"
+            },
+            {
+              "step": 5,
+              "executed": 5,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "b3acfb2920617daa7814ad36aff81d091bca4d8c05b338f5ecb11cd7f821cb25",
+              "live_hash": "02240c247b53d9eeace1113bcd0a2f772c5637707e7b59dff3a1967d8d8069aa"
+            },
+            {
+              "step": 6,
+              "executed": 6,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "37b0f7db4c3fb2335725a730d61b378bd570266c66fd178c0247795fe6392bad",
+              "live_hash": "613bc6bf80c08fb90b605855a7b7d9363a948236862cb39dac7d644459522d2f"
+            },
+            {
+              "step": 7,
+              "executed": 7,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "18c0ad45ba847acabe91e593fac44f16ec022379bc8002709f565661d4c76dcd",
+              "live_hash": "a5b43f81859b4bb05648c31a461778e991e383c60c24d6dff9480e79f65938ff"
+            },
+            {
+              "step": 8,
+              "executed": 8,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "24c1bd4de83a6ebabef596d000fc0206525538679285562c9809bb5ce963d685",
+              "live_hash": "59cd63f63e9f6b0f3df143c64cf61433777647c71d2b595ae9c3eeb072d1953b"
+            },
+            {
+              "step": 9,
+              "executed": 9,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "24c1bd4de83a6ebabef596d000fc0206525538679285562c9809bb5ce963d685",
+              "live_hash": "1b78c318ea2b3cb9af9886fcd0588431d44249c0743f4fc3ae26c396d3547680"
+            },
+            {
+              "step": 10,
+              "executed": 10,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "561f78dffe172864c1cce17ad25b3dbcca366310327bfe036257193c5dd5a45a",
+              "live_hash": "1d8c3aaa414055168596d52bc7c83e0362cf000f2418205a7b933ac00fdee25a"
+            },
+            {
+              "step": 11,
+              "executed": 11,
+              "text_equal": false,
+              "hash_equal": false,
+              "live_text_sha256": "fd882525c1046e0dcc39881dbad532e1afbf8f50e08d742c5d4dc6769ee39824",
+              "live_hash": "e86a75b1829c90be18a340e58c3bf1425177b683a7b86efb28a2da4828ce022c"
+            }
+          ],
+          "all_text_equal": false,
+          "all_hash_equal": false,
+          "first_text_diff_step": 11,
+          "first_hash_diff_step": 11,
+          "first_text_diff": {
+            "step": 11,
+            "classification": "address",
+            "region": {
+              "first_diff_char": 293,
+              "region_start": 143,
+              "recorded": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14804efed640>, use_cache=True, scope=None)) -> list[str]\n",
+              "live": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14d2c9396a50>, use_cache=True, scope=None)) -> list[str]\n",
+              "recorded_len": 348,
+              "live_len": 348
+            }
+          },
+          "text_diff_steps": [
+            {
+              "step": 11,
+              "classification": "address"
+            }
+          ],
+          "final_snapshot_hash_equal_last_recorded": false,
+          "error": null
+        }
+      },
+      "df61dc5_2": {
+        "A": {
+          "subcommand": "replay",
+          "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+          "system": "planner_alone",
+          "seed": 1,
+          "task": "df61dc5_2",
+          "m": 11,
+          "events_path": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923/planner_alone/1/df61dc5_2/events.jsonl",
+          "experiment_name": "divdiag_20260925/p68652_1790265574/planner_alone/1/df61dc5_2",
+          "started": "2026-09-25T01:59:34",
+          "process": {
+            "pid": 68652,
+            "hostname": "cpu1n042",
+            "pbs_jobid": "25850886.aqua",
+            "PYTHONHASHSEED": null,
+            "hash_randomization_flag": 1,
+            "hash_of_probe_string": 994317626424104282,
+            "set_iteration_probe": [
+              "bravo",
+              "echo",
+              "delta",
+              "charlie",
+              "alpha"
+            ],
+            "python": "3.12.13"
+          },
+          "n_executed": 11,
+          "steps": [
+            {
+              "step": 0,
+              "executed": 0,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "4f6be28060a4ca67ccf105f3539efbdd2eb7432f1bf3cadb6b66c63ab97d2e49",
+              "live_hash": "ef8adb1f93836deb19f01a11650c78774aa974d267d3e93b3af4b9330c156de6"
+            },
+            {
+              "step": 1,
+              "executed": 1,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "c3aa5aa0e5c58103baa29ca4665937badebbfed3060d13b5766b6c5fe5602f0a",
+              "live_hash": "ba265568dfb60ffc21fbae3ded74cbc93f7fe9807d233a744d29511203e8b157"
+            },
+            {
+              "step": 2,
+              "executed": 2,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "5efc1a469e5b76dd9bc7bdc777701bca20dba30db44a8bfa6cc9c72a82338126",
+              "live_hash": "d7311c2a277a6f0aa90e4bfa64e1cd974ea1ea55220812ffe621da1680a2111e"
+            },
+            {
+              "step": 3,
+              "executed": 3,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "26ad65cda541c2a24f05d088a0b49fd7f66f08f27344ef47ce5cfa80f1489ff0",
+              "live_hash": "227bd5932513d51f5f5e67f657daa674f41166be7efe8af80b1d49b40d3d1542"
+            },
+            {
+              "step": 4,
+              "executed": 4,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "5c5856db4f686e3acd88d858fd85f9758c412c02cd0fa7ce68ca3c3094fbdc8f",
+              "live_hash": "cf6792420184d209ead5716d95bb28d53a0f0f7605b69b91d695bf7e630401ba"
+            },
+            {
+              "step": 5,
+              "executed": 5,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "ed1f45d37f2ac8591ab2e40e6216ba040d1f73854a8485bb6cdb3406013de330",
+              "live_hash": "467ff559d10fba79f7550d9d4cb92e148e50e32d945d130ab155fb3337fe23e6"
+            },
+            {
+              "step": 6,
+              "executed": 6,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "c3aa5aa0e5c58103baa29ca4665937badebbfed3060d13b5766b6c5fe5602f0a",
+              "live_hash": "9d031be7e20e5e394b79ef2579fb11c352f61bc0558539f0084f31bc4fecf622"
+            },
+            {
+              "step": 7,
+              "executed": 7,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "9cdb5964ab08c60ee4f0618e7326308f0489212bb3d3dfcd590b936c50082655",
+              "live_hash": "8c0c3feb072f2b5b0c7ffb85591771e265aadc1e0f609e13bb06f8b4c96060e2"
+            },
+            {
+              "step": 8,
+              "executed": 8,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "3f4f20a33f6f425410bd8ea376603e0848bdd820119e9170f13d1da4ac31f969",
+              "live_hash": "ebc686ef6471c9a1d42adedd30488cb6576afa66ef59d152c60cdc5e2957ff63"
+            },
+            {
+              "step": 9,
+              "executed": 9,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "680e2da20209bf394212b1cc0a822bfca42fb370b3c9e3317710fc4f2dd7a186",
+              "live_hash": "ebe2f0b18894a12034ec01fd1c95ad871457939a8c59ff1eaddb8d5352dabbe7"
+            },
+            {
+              "step": 10,
+              "executed": 10,
+              "text_equal": false,
+              "hash_equal": false,
+              "live_text_sha256": "52ae1222686c06211a8270114c6a155ae6e7beea342587d7b674e40735639961",
+              "live_hash": "7c4f94a2bf726b92583de09d40afcfb44707ef32aa36f25007446a1394c2be9d"
+            },
+            {
+              "step": 11,
+              "executed": 11,
+              "text_equal": false,
+              "hash_equal": false,
+              "live_text_sha256": "90fb387f494808ab95724b631461b97e99f81dd52aa433548275be99329f4085",
+              "live_hash": "ede61b06a37e75bc3b0d4ad511087bf3de45997927ca5b6160de3ea117ca304c"
+            }
+          ],
+          "all_text_equal": false,
+          "all_hash_equal": false,
+          "first_text_diff_step": 10,
+          "first_hash_diff_step": 10,
+          "first_text_diff": {
+            "step": 10,
+            "classification": "reordering",
+            "region": {
+              "first_diff_char": 96,
+              "region_start": 0,
+              "recorded": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona9@example.invalid', 'persona2@example.invalid', 'persona7@example.invalid', 'persona4@example.invalid', 'persona12@example.invalid', 'persona6@example.invalid', 'jasonsi",
+              "live": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona5@example.invalid', 'persona9@example.invalid', 'persona4@example.invalid', 'persona7@example.invalid', 'persona12@example.invalid', 'persona6@example.invalid', 'bradley_ba",
+              "recorded_len": 823,
+              "live_len": 823
+            }
+          },
+          "text_diff_steps": [
+            {
+              "step": 10,
+              "classification": "reordering"
+            },
+            {
+              "step": 11,
+              "classification": "reordering"
+            }
+          ],
+          "final_snapshot_hash_equal_last_recorded": false,
+          "error": null
+        },
+        "B": {
+          "subcommand": "replay",
+          "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+          "system": "planner_alone",
+          "seed": 1,
+          "task": "df61dc5_2",
+          "m": 11,
+          "events_path": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923/planner_alone/1/df61dc5_2/events.jsonl",
+          "experiment_name": "divdiag_20260925/p69592_1790265583/planner_alone/1/df61dc5_2",
+          "started": "2026-09-25T01:59:43",
+          "process": {
+            "pid": 69592,
+            "hostname": "cpu1n042",
+            "pbs_jobid": "25850886.aqua",
+            "PYTHONHASHSEED": null,
+            "hash_randomization_flag": 1,
+            "hash_of_probe_string": -7333651452632427310,
+            "set_iteration_probe": [
+              "bravo",
+              "alpha",
+              "delta",
+              "charlie",
+              "echo"
+            ],
+            "python": "3.12.13"
+          },
+          "n_executed": 11,
+          "steps": [
+            {
+              "step": 0,
+              "executed": 0,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "4f6be28060a4ca67ccf105f3539efbdd2eb7432f1bf3cadb6b66c63ab97d2e49",
+              "live_hash": "ef8adb1f93836deb19f01a11650c78774aa974d267d3e93b3af4b9330c156de6"
+            },
+            {
+              "step": 1,
+              "executed": 1,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "c3aa5aa0e5c58103baa29ca4665937badebbfed3060d13b5766b6c5fe5602f0a",
+              "live_hash": "ba265568dfb60ffc21fbae3ded74cbc93f7fe9807d233a744d29511203e8b157"
+            },
+            {
+              "step": 2,
+              "executed": 2,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "5efc1a469e5b76dd9bc7bdc777701bca20dba30db44a8bfa6cc9c72a82338126",
+              "live_hash": "d7311c2a277a6f0aa90e4bfa64e1cd974ea1ea55220812ffe621da1680a2111e"
+            },
+            {
+              "step": 3,
+              "executed": 3,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "26ad65cda541c2a24f05d088a0b49fd7f66f08f27344ef47ce5cfa80f1489ff0",
+              "live_hash": "227bd5932513d51f5f5e67f657daa674f41166be7efe8af80b1d49b40d3d1542"
+            },
+            {
+              "step": 4,
+              "executed": 4,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "5c5856db4f686e3acd88d858fd85f9758c412c02cd0fa7ce68ca3c3094fbdc8f",
+              "live_hash": "cf6792420184d209ead5716d95bb28d53a0f0f7605b69b91d695bf7e630401ba"
+            },
+            {
+              "step": 5,
+              "executed": 5,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "ed1f45d37f2ac8591ab2e40e6216ba040d1f73854a8485bb6cdb3406013de330",
+              "live_hash": "467ff559d10fba79f7550d9d4cb92e148e50e32d945d130ab155fb3337fe23e6"
+            },
+            {
+              "step": 6,
+              "executed": 6,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "c3aa5aa0e5c58103baa29ca4665937badebbfed3060d13b5766b6c5fe5602f0a",
+              "live_hash": "9d031be7e20e5e394b79ef2579fb11c352f61bc0558539f0084f31bc4fecf622"
+            },
+            {
+              "step": 7,
+              "executed": 7,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "9cdb5964ab08c60ee4f0618e7326308f0489212bb3d3dfcd590b936c50082655",
+              "live_hash": "8c0c3feb072f2b5b0c7ffb85591771e265aadc1e0f609e13bb06f8b4c96060e2"
+            },
+            {
+              "step": 8,
+              "executed": 8,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "3f4f20a33f6f425410bd8ea376603e0848bdd820119e9170f13d1da4ac31f969",
+              "live_hash": "ebc686ef6471c9a1d42adedd30488cb6576afa66ef59d152c60cdc5e2957ff63"
+            },
+            {
+              "step": 9,
+              "executed": 9,
+              "text_equal": true,
+              "hash_equal": true,
+              "live_text_sha256": "680e2da20209bf394212b1cc0a822bfca42fb370b3c9e3317710fc4f2dd7a186",
+              "live_hash": "ebe2f0b18894a12034ec01fd1c95ad871457939a8c59ff1eaddb8d5352dabbe7"
+            },
+            {
+              "step": 10,
+              "executed": 10,
+              "text_equal": false,
+              "hash_equal": false,
+              "live_text_sha256": "3259f3e4fbd4cb6d5c38c7b0bbc447783938d66e7fe2411f9fc760d998959162",
+              "live_hash": "6708abea290f7795ddc84968e7b62e7595694935afec95cfc17acf5f94ed573a"
+            },
+            {
+              "step": 11,
+              "executed": 11,
+              "text_equal": false,
+              "hash_equal": false,
+              "live_text_sha256": "6fcc2bd863a95ae4e92e21d102941edaa19572b3b6741dc056df19ba9235ecd7",
+              "live_hash": "98c38ec71ad5ae770df38ccf5594fba80d5ec84d429da176271c9361a78b1fa1"
+            }
+          ],
+          "all_text_equal": false,
+          "all_hash_equal": false,
+          "first_text_diff_step": 10,
+          "first_hash_diff_step": 10,
+          "first_text_diff": {
+            "step": 10,
+            "classification": "reordering",
+            "region": {
+              "first_diff_char": 96,
+              "region_start": 0,
+              "recorded": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona9@example.invalid', 'persona2@example.invalid', 'persona7@example.invalid', 'persona4@example.invalid', 'persona12@example.invalid', 'persona6@example.invalid', 'jasonsi",
+              "live": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona12@example.invalid', 'persona4@example.invalid', 'persona7@example.invalid', 'persona9@example.invalid', 'persona2@example.invalid', 'persona5@example.invalid', 'ta.wea",
+              "recorded_len": 823,
+              "live_len": 823
+            }
+          },
+          "text_diff_steps": [
+            {
+              "step": 10,
+              "classification": "reordering"
+            },
+            {
+              "step": 11,
+              "classification": "reordering"
+            }
+          ],
+          "final_snapshot_hash_equal_last_recorded": false,
+          "error": null
+        }
+      }
+    },
+    "control_selection": "same source and seed 1, >= 11 executed actions in the source, lp2_prefix_zs_m11_v2_20260923/prefix_handoff/1/<key>/result.json error_type null (no crash); same task families as the failing keys; no address/set print at step <= 11",
+    "control": {
+      "68ee2c9_1": {
+        "subcommand": "replay",
+        "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+        "system": "planner_alone",
+        "seed": 1,
+        "task": "68ee2c9_1",
+        "m": 11,
+        "events_path": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923/planner_alone/1/68ee2c9_1/events.jsonl",
+        "experiment_name": "divdiag_20260925/p73195_1790265592/planner_alone/1/68ee2c9_1",
+        "started": "2026-09-25T01:59:52",
+        "process": {
+          "pid": 73195,
+          "hostname": "cpu1n042",
+          "pbs_jobid": "25850886.aqua",
+          "PYTHONHASHSEED": null,
+          "hash_randomization_flag": 1,
+          "hash_of_probe_string": -3474614745290343180,
+          "set_iteration_probe": [
+            "charlie",
+            "bravo",
+            "delta",
+            "alpha",
+            "echo"
+          ],
+          "python": "3.12.13"
+        },
+        "n_executed": 11,
+        "steps": [
+          {
+            "step": 0,
+            "executed": 0,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "ca86f295011f6dc202a9e6ca54eb74237d34fbd220d1f92b737aca63b68b82fb",
+            "live_hash": "ef8adb1f93836deb19f01a11650c78774aa974d267d3e93b3af4b9330c156de6"
+          },
+          {
+            "step": 1,
+            "executed": 1,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "e30f2fefcd46fea384a6154ea0bd8ec396ea67dba2d75ef877518c93fc70ae32",
+            "live_hash": "440770bf3a5b836e7d557e5738ab278665f889e1e7f08d729ce93752519e808b"
+          },
+          {
+            "step": 2,
+            "executed": 2,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "33db5a0abfa2db16bbe9c23aeea5303f5c08622f0a43f63540227eac63df66a3",
+            "live_hash": "431b9e263b92504d88db55d2830de5d0548298d82dea15277333ea6c0a9dde77"
+          },
+          {
+            "step": 3,
+            "executed": 3,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "a486d9761a2a4c78e34a7698d44cda00ca4d2529df9862b1086d398490673f14",
+            "live_hash": "1723a70745218e4b8c9ee6991cd3f114e5bd4852850dbbb826b113ece23acfad"
+          },
+          {
+            "step": 4,
+            "executed": 4,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "08b84026c72e0ac3e4164382ef39d2ed31af77b7c9ecab809cef51a76df73368",
+            "live_hash": "abdc6980a7684cae3efa28373027e6781e3361a8408ec80b67bfbabd31b1b801"
+          },
+          {
+            "step": 5,
+            "executed": 5,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "50ee255fb8d8aa1de2221a76b9eb26ab9674921f171059dd1e3bdeb832519eee",
+            "live_hash": "f2e8ceae5d63d08463ac9961e8a6828600e968a0a2018a6439506af9318a9137"
+          },
+          {
+            "step": 6,
+            "executed": 6,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "5ceac6645557fc0451b9338d4626d01ad1aa7a0984b586f468db15bc16ea4436",
+            "live_hash": "0cccce70c15428e17c67ef506cfd051cdad320be6d32e1b2e323a3ff389784c7"
+          },
+          {
+            "step": 7,
+            "executed": 7,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "a8689f15d7c2da1777264fa07a062d2072dc2ee78940a3f14343dc2e5090368f",
+            "live_hash": "f11c790e97d128450973796c62871f8b50c64079cf80fb93b8a8e2888374dcb3"
+          },
+          {
+            "step": 8,
+            "executed": 8,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "a8689f15d7c2da1777264fa07a062d2072dc2ee78940a3f14343dc2e5090368f",
+            "live_hash": "b84bd55bb2a3ab57e4f6a12e1c6fd5280c9863281bb8d04292b28087b29254f4"
+          },
+          {
+            "step": 9,
+            "executed": 9,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "f0ced83ee3a2e960ec978bfdaf074e0746e32d723adf064bc07ae58c689fe28d",
+            "live_hash": "b25fdcb783259a64d170d8472f62d0ed736e11aa406f169265af65871805f0d9"
+          },
+          {
+            "step": 10,
+            "executed": 10,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "5ad16c3f49e9a3ac7f92174b5f80eb662000c389a19e3e5bbd672ce879b8c2d7",
+            "live_hash": "e48bd972f5a025d2c99884f14f9472c348a20e8e6f14f96557ca3104d6168a36"
+          },
+          {
+            "step": 11,
+            "executed": 11,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "a8689f15d7c2da1777264fa07a062d2072dc2ee78940a3f14343dc2e5090368f",
+            "live_hash": "0210fad43afb68e1c08bf1a150c7484836e4463b3b745a68c8710ed84e96eeae"
+          }
+        ],
+        "all_text_equal": true,
+        "all_hash_equal": true,
+        "first_text_diff_step": null,
+        "first_hash_diff_step": null,
+        "first_text_diff": null,
+        "text_diff_steps": [],
+        "final_snapshot_hash_equal_last_recorded": true,
+        "error": null
+      },
+      "df61dc5_3": {
+        "subcommand": "replay",
+        "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+        "system": "planner_alone",
+        "seed": 1,
+        "task": "df61dc5_3",
+        "m": 11,
+        "events_path": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923/planner_alone/1/df61dc5_3/events.jsonl",
+        "experiment_name": "divdiag_20260925/p76497_1790265600/planner_alone/1/df61dc5_3",
+        "started": "2026-09-25T02:00:00",
+        "process": {
+          "pid": 76497,
+          "hostname": "cpu1n042",
+          "pbs_jobid": "25850886.aqua",
+          "PYTHONHASHSEED": null,
+          "hash_randomization_flag": 1,
+          "hash_of_probe_string": 5093810455483289676,
+          "set_iteration_probe": [
+            "charlie",
+            "echo",
+            "alpha",
+            "bravo",
+            "delta"
+          ],
+          "python": "3.12.13"
+        },
+        "n_executed": 11,
+        "steps": [
+          {
+            "step": 0,
+            "executed": 0,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "47b11a5b32f81665992a364b4387c30630c264be65ac31b50775b00a36ec335c",
+            "live_hash": "ef8adb1f93836deb19f01a11650c78774aa974d267d3e93b3af4b9330c156de6"
+          },
+          {
+            "step": 1,
+            "executed": 1,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "f6928c5cbcc9b87b568dff2cfc0d12487d4f2cf1987ac15f0a15d4dd786f02d6",
+            "live_hash": "42e6c984ba49a0214cf974f69fc7668d3f2e14484b7c0650f687f2581ac5d1af"
+          },
+          {
+            "step": 2,
+            "executed": 2,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "7faa4dd3326b0a4d0776dfbdeeeb8547b2ef18be558e4b4729e8ffe0e8ab4ca4",
+            "live_hash": "99cd3438b188123b0021eebe1501b208159a7b38834d1ab5ffcb8ba3a3bd6a42"
+          },
+          {
+            "step": 3,
+            "executed": 3,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "dc5f2c49fa40b6ca16ac0ce902a827ec13db735a668f4da0203e0924aaddecb4",
+            "live_hash": "806d09f8f17d3d7d192d3a8d2c0939b0341e70c414f2a8d1ea9dd00918b24f9b"
+          },
+          {
+            "step": 4,
+            "executed": 4,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "868266bd447793125537174d967886fccbd2ec1e377a1ea5694ea5f3cde81aef",
+            "live_hash": "9cb5e5a79353342e727d2a1aaef9e43fd324c441fb6f23d2cb349f355ab1efd8"
+          },
+          {
+            "step": 5,
+            "executed": 5,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "237917b4d904d21295e0bf185c908185462a97558f7b0248421f8faeb3cd764d",
+            "live_hash": "98e71329495dcff5a5b0f47198764ef36adb6e91ed3a7cc3928ab432f63e118d"
+          },
+          {
+            "step": 6,
+            "executed": 6,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "cf4f187e22a23b8a4a560bbcf6da23f961aa66f0aeb4297118c9806bb5f4db2f",
+            "live_hash": "c6d4221683214830076873e074930112e0f1a7bff2301240a3bc8610a2b07700"
+          },
+          {
+            "step": 7,
+            "executed": 7,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "4d26f6987ff40ec1ce864098416a4a88a8915603eab62e3a9323dc442f9c2aaf",
+            "live_hash": "a8561abca0487db28bee7ef0518bb3649486517c82ebce71428f1f53a4ce89cd"
+          },
+          {
+            "step": 8,
+            "executed": 8,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "34288d8b23d8e5c6c530866f52eeddf9406adc6d6853cf44bdecd0671f103590",
+            "live_hash": "35795f08bf60421c98595fd4f406dd3f883ab485df4d5e920d5960f7d8789a7f"
+          },
+          {
+            "step": 9,
+            "executed": 9,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "247db04d15fd5ea01246fca5714f4230084c534e857db4393b8cbf0747c779cf",
+            "live_hash": "0fc7a5b6ab89c3912d3f1d7b61bc69676740bc9badf669c4c7e278c52f3003bf"
+          },
+          {
+            "step": 10,
+            "executed": 10,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "893e75a4b2a311f8352fcdd7f2742d70db1e1b4e0fea4d0ba8bacd1e1a4eb152",
+            "live_hash": "7375c018db3dcfbb72f31bf147f4456b94af937c40d123bce2a2635772e7199a"
+          },
+          {
+            "step": 11,
+            "executed": 11,
+            "text_equal": true,
+            "hash_equal": true,
+            "live_text_sha256": "6f5705214cf8148f454f0b77687ff2396c06ad62dfa2be5ce621f428fc3a6aa1",
+            "live_hash": "dc955d269be7370df2cb4717e3e61f394794dba3a1f45e05729a62e8cd8ff3ba"
+          }
+        ],
+        "all_text_equal": true,
+        "all_hash_equal": true,
+        "first_text_diff_step": null,
+        "first_hash_diff_step": null,
+        "first_text_diff": null,
+        "text_diff_steps": [],
+        "final_snapshot_hash_equal_last_recorded": true,
+        "error": null
+      }
+    }
+  },
+  "scan": [
+    {
+      "subcommand": "scan",
+      "source": "/scratch/n12194778/sidekick/results/lp2_planner_alone_cap81_qwen38_27b_20260923",
+      "system": "planner_alone",
+      "max_step": 11,
+      "n_episodes_scanned": 114,
+      "n_episodes_without_run_start": 0,
+      "address": {
+        "n": 1,
+        "first_step_by_key": {
+          "1/68ee2c9_2": 11
+        }
+      },
+      "address_broad": {
+        "n": 1,
+        "first_step_by_key": {
+          "1/68ee2c9_2": 11
+        }
+      },
+      "set_print": {
+        "n": 1,
+        "first_step_by_key": {
+          "1/df61dc5_2": 10
+        }
+      },
+      "either_address_or_set": {
+        "n": 2,
+        "keys": [
+          "1/68ee2c9_2",
+          "1/df61dc5_2"
+        ]
+      },
+      "regexes": {
+        "address": "object at 0x[0-9a-fA-F]+",
+        "address_broad": " at 0x[0-9a-fA-F]{6,}",
+        "set_print": "\\{'[^'{}]*'(?:, '[^'{}]*')+\\}"
+      },
+      "regex_known_misses": [
+        "set_literal: strings containing an apostrophe (repr uses double quotes) or a brace",
+        "set_literal: sets of tuples / mixed element types, e.g. {('a', 1), ('b', 2)}",
+        "set_literal: set reprs truncated before the closing brace",
+        "set_literal: order derived from iterating a set without printing it (list(s), join, loops, dicts/JSON built from a set)",
+        "address: '<function f at 0x..>' / '<bound method ..>' without 'object at' (see address_broad), id(x) integers, hex(id(x))"
+      ]
+    },
+    {
+      "subcommand": "scan",
+      "source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_20260923",
+      "system": "planner_alone",
+      "max_step": 11,
+      "n_episodes_scanned": 114,
+      "n_episodes_without_run_start": 0,
+      "address": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "address_broad": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "set_print": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "either_address_or_set": {
+        "n": 0,
+        "keys": []
+      },
+      "regexes": {
+        "address": "object at 0x[0-9a-fA-F]+",
+        "address_broad": " at 0x[0-9a-fA-F]{6,}",
+        "set_print": "\\{'[^'{}]*'(?:, '[^'{}]*')+\\}"
+      },
+      "regex_known_misses": [
+        "set_literal: strings containing an apostrophe (repr uses double quotes) or a brace",
+        "set_literal: sets of tuples / mixed element types, e.g. {('a', 1), ('b', 2)}",
+        "set_literal: set reprs truncated before the closing brace",
+        "set_literal: order derived from iterating a set without printing it (list(s), join, loops, dicts/JSON built from a set)",
+        "address: '<function f at 0x..>' / '<bound method ..>' without 'object at' (see address_broad), id(x) integers, hex(id(x))"
+      ]
+    },
+    {
+      "subcommand": "scan",
+      "source": "/scratch/n12194778/sidekick/results/hj13_planner_alone_cap81_seed3_20260924",
+      "system": "planner_alone",
+      "max_step": 11,
+      "n_episodes_scanned": 57,
+      "n_episodes_without_run_start": 0,
+      "address": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "address_broad": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "set_print": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "either_address_or_set": {
+        "n": 0,
+        "keys": []
+      },
+      "regexes": {
+        "address": "object at 0x[0-9a-fA-F]+",
+        "address_broad": " at 0x[0-9a-fA-F]{6,}",
+        "set_print": "\\{'[^'{}]*'(?:, '[^'{}]*')+\\}"
+      },
+      "regex_known_misses": [
+        "set_literal: strings containing an apostrophe (repr uses double quotes) or a brace",
+        "set_literal: sets of tuples / mixed element types, e.g. {('a', 1), ('b', 2)}",
+        "set_literal: set reprs truncated before the closing brace",
+        "set_literal: order derived from iterating a set without printing it (list(s), join, loops, dicts/JSON built from a set)",
+        "address: '<function f at 0x..>' / '<bound method ..>' without 'object at' (see address_broad), id(x) integers, hex(id(x))"
+      ]
+    },
+    {
+      "subcommand": "scan",
+      "source": "/scratch/n12194778/sidekick/results/hj1b_planner_20260915",
+      "system": "planner_alone",
+      "max_step": 11,
+      "n_episodes_scanned": 114,
+      "n_episodes_without_run_start": 0,
+      "address": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "address_broad": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "set_print": {
+        "n": 0,
+        "first_step_by_key": {}
+      },
+      "either_address_or_set": {
+        "n": 0,
+        "keys": []
+      },
+      "regexes": {
+        "address": "object at 0x[0-9a-fA-F]+",
+        "address_broad": " at 0x[0-9a-fA-F]{6,}",
+        "set_print": "\\{'[^'{}]*'(?:, '[^'{}]*')+\\}"
+      },
+      "regex_known_misses": [
+        "set_literal: strings containing an apostrophe (repr uses double quotes) or a brace",
+        "set_literal: sets of tuples / mixed element types, e.g. {('a', 1), ('b', 2)}",
+        "set_literal: set reprs truncated before the closing brace",
+        "set_literal: order derived from iterating a set without printing it (list(s), join, loops, dicts/JSON built from a set)",
+        "address: '<function f at 0x..>' / '<bound method ..>' without 'object at' (see address_broad), id(x) integers, hex(id(x))"
+      ]
+    }
+  ]
+}

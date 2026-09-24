@@ -353,3 +353,122 @@ def test_lp_matrix_restores_lp_report_globals_even_on_error():
     assert (lp.N_TASKS, lp.SEEDS, lp.EXPECTED_PAIRS, lp.SENSITIVITY_EXCLUDE) == before
     with j11.lp_matrix(3, (1, 2)):
         assert lp.SENSITIVITY_EXCLUDE == {} and lp.EXPECTED_PAIRS == 6
+
+
+# ---- Amendment 2: a replay that cannot pass its own check (unit DIVRULE, 2026-09-25) -----------------------
+def _crash(root: Path, code: str, keys, reason: str = "replay_divergence") -> None:
+    """These episodes of arm `code` become crashes whose last attempt's error event carries `reason`."""
+    for task, seed in keys:
+        ep = root / CAMPAIGNS[code]["campaign"] / SYSTEM[code] / str(seed) / task
+        row = json.loads((ep / "result.json").read_text(encoding="utf-8"))
+        row.update(error_type="crash", tgc=0.0)
+        (ep / "result.json").write_text(json.dumps(row) + "\n", encoding="utf-8")
+        events = [{"event_type": "run_start"},
+                  {"event_type": "error", "actor": "system", "step": 11, "error_type": "crash",
+                   "payload": {"reason": reason}}]
+        (ep / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+
+
+def test_am2_no_divergent_key_changes_nothing_but_adds_the_block(tmp_path: Path, monkeypatch):
+    """(a) and an ordinary crash in a prefix arm (still incomplete): the report equals the pre-amendment one."""
+    clean = write_tree(tmp_path / "clean", REPLICATE)
+    crashed = write_tree(tmp_path / "crashed", REPLICATE)
+    _crash(crashed, "M_zs_6", [("sc03_1", 2)], reason="replay_error")
+    new = [build(root) for root in (clean, crashed)]
+    monkeypatch.setattr(j11.j10, "a1_am5_arms", lambda arms, *_a, **_k: arms)
+    monkeypatch.setattr(j11, "am2_evaluate_contrast", lambda spec, arms, **kw: lp.evaluate_contrast(spec, arms, **kw))
+    old = [build(root) for root in (clean, crashed)]
+    blocks = []
+    for (rep, rc), (base, rc0) in zip(new, old):
+        blocks.append(rep.pop("j11_am2_divergence"))
+        base.pop("j11_am2_divergence")
+        assert rc == rc0 and json.dumps(rep, sort_keys=True, default=str) == json.dumps(base, sort_keys=True, default=str)
+        assert {c: (v["n_divergent"], v["keys"]) for c, v in blocks[-1]["per_arm"].items()} == {
+            c: (0, []) for c in j11.PREFIX_ARMS}
+        assert blocks[-1]["contrasts"] == {} and blocks[-1]["handoff_only_companions"] == {}
+    assert new[0][1] == 0 and new[1][1] == 1
+    assert new[1][0]["contrasts"]["L5"]["status"] == "INCOMPLETE"
+    assert blocks[1]["per_arm"]["M_zs_6"]["n_crash_other"] == 1
+
+
+def test_am2_one_divergent_key_reads_its_contrasts_on_335_pairs(tmp_path: Path):
+    """(b) M^bplus_11 diverges on one key, where A1 scores 1.0: L2-L4 lose it on both sides and are read on 335
+    pairs against 335; the gate, L1 and L5 keep 336; the readings are those of the full matrix."""
+    key = ("sc00_1", 1)
+    root = write_tree(tmp_path, dict(REPLICATE, A1=lambda t, s: 1.0 if (t, s) == key else 0.5))
+    _crash(root, "M_bplus_11", [key])
+    report, rc = build(root)
+    assert rc == 0 and report["status"] == "COMPLETE", report["headline"]
+    c = report["contrasts"]
+    assert {k: c[k]["n_pairs"] for k in lp.L_IDS} == {"L1": 336, "L2": 335, "L3": 335, "L4": 335, "L5": 336}
+    assert {k: c[k]["n_expected"] for k in lp.L_IDS} == {"L1": 336, "L2": 335, "L3": 335, "L4": 335, "L5": 336}
+    # L2 = A1 - Mb11 = .50 - .72 on every remaining key: the excluded key's 1.0 is gone from A1 too.
+    assert c["L2"]["point_pp"] == -22.0 and c["L2"]["scenario"]["ci95_pp"] == [-22.0, -22.0]
+    assert report["gate"]["n_pairs"] == 336 and readings(report) == ALL_SUPPORTED
+    arm = report["arms"]["M_bplus_11"]
+    assert (arm["n_crash"], arm["complete"]) == (1, True) and not [k for k in arm if k.startswith("_")]
+    assert lp.EXPECTED_PAIRS == 114  # lp_report's own globals are restored
+    blk = report["j11_am2_divergence"]
+    assert blk["per_arm"]["M_bplus_11"] == {"n_divergent": 1, "keys": ["1/sc00_1"], "n_crash_other": 0,
+                                            "arm_complete": True}
+    assert blk["n_divergent_total"] == 1 and set(blk["contrasts"]) == {"L2", "L3", "L4"}
+    assert blk["contrasts"]["L3"] == {"left": "M_bplus_11", "right": "M_bplus_6", "n_excluded": 1,
+                                     "excluded_keys": ["1/sc00_1"], "verdict": "ok", "n_pairs": 335,
+                                     "n_expected": 335, "status": "COMPLETE"}
+    comp = blk["handoff_only_companions"]
+    assert comp["L4_handoff_only"]["n_pairs"] == comp["L4_handoff_only"]["n_pairs_h_flag"] == 335
+    assert report["reporting_only"]["handoff_only"]["L3_handoff_only"]["goal_pass"]["n_pairs"] == 335
+    assert "L5_handoff_only" not in comp
+
+
+def test_am2_two_prefix_arms_remove_the_union(tmp_path: Path):
+    """(c) L5 = M^zs_11 - M^zs_6: {sc00_1/1} and {sc00_1/1, sc01_2/2} remove 2 keys, 334 pairs."""
+    root = write_tree(tmp_path, REPLICATE)
+    _crash(root, "M_zs_11", [("sc00_1", 1)])
+    _crash(root, "M_zs_6", [("sc00_1", 1), ("sc01_2", 2)])
+    report, rc = build(root)
+    assert rc == 0, report["headline"]
+    l5 = report["contrasts"]["L5"]
+    assert (l5["n_pairs"], l5["n_expected"], l5["status"], l5["point_pp"]) == (334, 334, "COMPLETE", 20.0)
+    blk = report["j11_am2_divergence"]
+    assert blk["contrasts"]["L5"]["excluded_keys"] == ["1/sc00_1", "2/sc01_2"]
+    assert blk["contrasts"]["L5"]["n_excluded"] == 2 and set(blk["contrasts"]) == {"L5"}
+
+
+def test_am2_more_than_16_divergent_keys_leave_the_contrast_incomplete(tmp_path: Path):
+    """(d) 17 keys: L2-L4 draw no reading (the arm itself is complete); 16 keys: read on 320 pairs."""
+    for n in (17, 16):
+        root = write_tree(tmp_path / str(n), REPLICATE)
+        _crash(root, "M_bplus_11", [(t, 1) for t in TASKS[:n]])
+        report, rc = build(root)
+        c = report["contrasts"]
+        assert report["arms"]["M_bplus_11"]["complete"] is True
+        assert c["L1"]["status"] == c["L5"]["status"] == "COMPLETE"
+        if n == 17:
+            assert rc == 1 and report["status"] == "INCOMPLETE"
+            for k in ("L2", "L3", "L4"):
+                assert c[k]["status"] == "INCOMPLETE" and "cap 16" in c[k]["reason"], k
+                assert c[k]["reading"] == lp.INCOMPLETE
+            assert report["j11_am2_divergence"]["contrasts"]["L2"]["verdict"] == "over_cap"
+            assert any(r.startswith("L2 ") and "cap 16" in r for r in report["incomplete"])
+        else:
+            assert rc == 0 and readings(report) == ALL_SUPPORTED, report["headline"]
+            assert {k: c[k]["n_pairs"] for k in ("L2", "L3", "L4")} == {"L2": 320, "L3": 320, "L4": 320}
+
+
+def test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete(tmp_path: Path):
+    """(e) §B.3: any other residual crash keeps the contrast incomplete. A divergence-looking crash in A1 (which
+    replays no environment) is an ordinary crash and is named in the block."""
+    root = write_tree(tmp_path, REPLICATE)
+    _crash(root, "M_bplus_11", [("sc00_1", 1)])
+    _crash(root, "M_bplus_11", [("sc02_3", 2)], reason="replay_error")
+    _crash(root, "A1", [("sc04_1", 1)])
+    report, rc = build(root)
+    assert rc == 1 and report["arms"]["M_bplus_11"]["complete"] is False
+    for k in ("L2", "L3", "L4"):
+        assert report["contrasts"][k]["status"] == "INCOMPLETE", k
+    blk = report["j11_am2_divergence"]
+    assert blk["per_arm"]["M_bplus_11"] == {"n_divergent": 1, "keys": ["1/sc00_1"], "n_crash_other": 1,
+                                            "arm_complete": False}
+    assert blk["non_replay_divergent"]["keys"] == {"A1": ["1/sc04_1"]}
+    assert report["arms"]["A1"]["complete"] is False

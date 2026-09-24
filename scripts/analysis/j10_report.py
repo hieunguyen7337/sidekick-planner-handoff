@@ -2697,7 +2697,7 @@ def a1_evaluate_contrast_prediction(
     if missing:
         out.update(decidable=False, verdict="arm_absent", reason=f"no --arm for {missing}")
         return out
-    left, right = arms[pred["left"]], arms[pred["right"]]
+    left, right = a1_am5_pair(arms, pred["left"], pred["right"])
     field = A1_METRIC_FIELDS[pred["metric"]]
     cmp = a1_contrast(left["episodes"], right["episodes"], field, n_boot=n_boot, seed=seed)
     primary = cmp["scenario"]
@@ -2708,7 +2708,7 @@ def a1_evaluate_contrast_prediction(
         if pred["metric"] != "tgc" and stability
         else None
     )
-    incomplete = [a for a in (pred["left"], pred["right"]) if not arms[a]["complete"]]
+    incomplete = [a for a, arm in ((pred["left"], left), (pred["right"], right)) if not arm["complete"]]
     if primary["point"] is None:
         out.update(decidable=False, verdict="refused_no_pairs", reason="no scored pairs")
         return out
@@ -3654,7 +3654,7 @@ def build_report_a1(
     reasons: list[str] = []
     if len(tasks) != expected_n_tasks:
         reasons.append(f"task_count_is_{len(tasks)}_expected_{expected_n_tasks}")
-    arms = {label: a1_arm_episodes(label, blob, tasks, seeds) for label, blob in loaded.items()}
+    arms = a1_am5_arms({label: a1_arm_episodes(label, blob, tasks, seeds) for label, blob in loaded.items()}, arm_dirs, tasks, seeds, preds, reasons)
     provenance = {label: a1_split_provenance(path) for label, path in arm_dirs.items()}
     split_problems = []
     for label, counts in provenance.items():
@@ -3683,7 +3683,7 @@ def build_report_a1(
     results: list[dict[str, Any]] = []
     for pred in preds:
         if pred["kind"] == "cost_ratio":
-            row = a1_evaluate_cost_prediction(pred, cost_report, expected_n_tasks * len(seeds),
+            row = a1_am5_cost_prediction(pred, cost_report, expected_n_tasks * len(seeds), arms,
                                               n_boot=n_boot, seed=bootstrap_seed)
             if blocking and row.get("decidable"):
                 row.update(decidable=False, verdict="refused_incomplete",
@@ -3826,7 +3826,7 @@ def build_report_a1(
             "limit / timeout / parse_error / api_error are scored outcomes."
         ),
     }
-    return a1_am4_calls(a1_hstar_companions(report, arms, arm_dirs, n_boot=n_boot, seed=bootstrap_seed), arms, arm_dirs, cost_report), (0 if all_decided and not reasons else 1)
+    return a1_am5_divergence(a1_am4_calls(a1_hstar_companions(report, arms, arm_dirs, n_boot=n_boot, seed=bootstrap_seed), a1_am5_p2_arms(arms), arm_dirs, a1_am5_p2_cost(arms, cost_report)), arms, cost_report, n_boot=n_boot, seed=bootstrap_seed), (0 if all_decided and not reasons else 1)
 
 
 def build_parser_a1() -> argparse.ArgumentParser:
@@ -4253,6 +4253,322 @@ def a1_am4_calls(
         }
     except Exception as exc:  # information only: never fatal
         report["a1_am4_calls"] = {"status": "error", "error": f"{type(exc).__name__}: {exc}"}
+    return report
+
+
+# ---- Amendment 5: a replay that cannot pass its own check (unit DIVRULE, 2026-09-25) ------------------------
+# A prefix arm (4-7) whose replayed world fails its hash check crashes with payload.reason "replay_divergence"
+# on every attempt (Amendment 5 §A). §B: such a key -- scripts/analysis/replay_divergence.py holds the one
+# definition that J10, J11 and J12 read -- leaves BOTH arms of every contrast, companion and sensitivity that
+# uses its arm (the union when both arms are replay arms); an arm whose only crashes are divergent keys is
+# complete, and a contrast that removes at most 16 keys is read on its remaining pairs, above that it is
+# incomplete. Everything else runs as registered. The code sits at the end of the file and is hooked in by
+# editing existing lines in place -- build_report_a1's arms line, P2's call and its return line, and
+# a1_evaluate_contrast_prediction's pair and completeness lines -- so no line this file's citations name moves.
+# With no divergent key every hook hands back its input unchanged and only the a1_am5_divergence block is added.
+A1_AM5 = f"{A1_PREREG} Amendment 5"
+A1_AM5_PRIVATE = "_am5_divergent"  # on a replay arm's dict, and only when it has a divergent key
+A1_AM5_NONREPLAY = "_am5_divergent_non_replay"  # impossible by construction; an ordinary crash if seen
+A1_AM5_COST_FIELDS = ("noncached_tokens_per_episode", "hosted_calls_per_episode", "usd_per_episode")
+A1_AM5_NOTES = (
+    "Paired statistics pair on the (task_id, seed) keys both arms score, and a divergent key is a crash, "
+    "which a1_arm_episodes already drops from its replay arm; so removing it from the other arm changes no "
+    "paired statistic, only the counts of unpaired keys (n_left_only / n_right_only) and completeness.",
+    "Amendment 5 §B.1's 'after at least one crash-only resumption' cannot be read from an arm's files: the "
+    "refill deletes a crashed episode's directory whole (scripts/setup/campaign_summarize.py purge_crashed) "
+    "and re-runs it, so a divergent key is read as a crash whose last attempt holds the divergence error; "
+    "the wrapper's tally lines record the resumption.",
+    "P2 and Amendment 4's P2 clauses are read from the cost report's per-episode rows without the removed "
+    "keys; B3's cost plug-in likewise for a replay arm with divergent keys.",
+)
+
+
+def _load_replay_divergence() -> Any:
+    """Lazy import of scripts/analysis/replay_divergence.py (an import at the top would move cited lines)."""
+    from scripts.analysis import replay_divergence as rd  # noqa: E402
+
+    return rd
+
+
+def a1_am5_arms(
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    tasks: list[str],
+    seeds: list[int],
+    contrasts: Iterable[dict[str, Any]] = (),
+    reasons: Optional[list[str]] = None,
+    *,
+    replay_arms: Iterable[str] = tuple(A1_PREFIX_ARMS),
+) -> dict[str, dict[str, Any]]:
+    """§B.1 and §B.3 on a1_arm_episodes' arms, in place; returns them.
+
+    A replay arm with divergent keys in the registered matrix carries them as `_am5_divergent`, and is marked
+    complete when they are its only crashes and nothing else keeps it incomplete (no missing episode; no
+    empty, unreadable or duplicate result; its root exists). For each contrast in `contrasts` (id / left /
+    right) that would remove more than the cap, one reason is appended to `reasons`. A divergent key in an arm
+    not in `replay_arms` cannot occur; if one does it is kept as `_am5_divergent_non_replay`, reported, and
+    stays an ordinary crash. An arm without a crash is not scanned."""
+    rd = _load_replay_divergence()
+    replay = set(replay_arms)
+    matrix = {(t, s) for t in tasks for s in seeds}
+    for label, arm in arms.items():
+        if not arm.get("n_crash") or label not in arm_dirs:
+            continue
+        keys = [k for k in rd.divergent_keys(Path(arm_dirs[label])) if k in matrix and k not in arm["episodes"]]
+        if not keys:
+            continue
+        if label not in replay:
+            arm[A1_AM5_NONREPLAY] = keys
+            continue
+        arm[A1_AM5_PRIVATE] = keys
+        if (arm["n_crash"] == len(keys) and arm["n_missing"] == 0 and not arm["n_empty_files"]
+                and not arm["n_unreadable"] and not arm["n_duplicates"] and not arm["root_missing"]
+                and arm["n_scored"] + len(keys) == arm["n_expected"]):
+            arm["complete"] = True
+    if reasons is not None:
+        for spec in contrasts:
+            left, right = spec.get("left"), spec.get("right")
+            if not isinstance(left, str) or not isinstance(right, str) or left not in arms or right not in arms:
+                continue
+            excluded, verdict = a1_am5_exclusion(arms, left, right)
+            if verdict != rd.VERDICT_OK:
+                reasons.append(f"replay_divergence_above_cap:{spec.get('id')}={len(excluded)}>{rd.DIVERGENCE_CAP}")
+    return arms
+
+
+def a1_am5_exclusion(arms: dict[str, dict[str, Any]], left: str, right: str) -> tuple[list[tuple[str, int]], str]:
+    """(keys that leave both arms of left − right, 'ok' | 'over_cap'), from the arms' `_am5_divergent` lists."""
+    rd = _load_replay_divergence()
+    divergent = {a: (arms.get(a) or {}).get(A1_AM5_PRIVATE) or [] for a in (left, right)}
+    return rd.contrast_exclusion(divergent, left, right)
+
+
+def a1_am5_pair(
+    arms: dict[str, dict[str, Any]], left: str, right: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """§B.2-§B.3 for one contrast: both arms without the contrast's divergent keys. Above the cap every arm that
+    contributes a key is incomplete for this contrast. With no divergent key: the two arm dicts themselves."""
+    la, ra = arms[left], arms[right]
+    if not la.get(A1_AM5_PRIVATE) and not ra.get(A1_AM5_PRIVATE):
+        return la, ra
+    excluded, verdict = a1_am5_exclusion(arms, left, right)
+    gone = set(excluded)
+    over = verdict != _load_replay_divergence().VERDICT_OK
+
+    def view(arm: dict[str, Any]) -> dict[str, Any]:
+        return dict(arm, episodes={k: v for k, v in arm["episodes"].items() if k not in gone},
+                    complete=bool(arm["complete"] and not (over and arm.get(A1_AM5_PRIVATE))))
+
+    return view(la), view(ra)
+
+
+def _a1_am5_row_key(row: Any) -> Optional[tuple[str, int]]:
+    try:
+        return (str(row["task_id"]), int(row["seed"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def a1_am5_cost_view(
+    cost_report: Optional[dict[str, Any]],
+    labels: Iterable[str],
+    excluded: Iterable[tuple[str, int]],
+) -> tuple[dict[str, Any], list[str]]:
+    """The cost report with `labels`' per-episode rows minus `excluded` and their means recomputed from the rows
+    kept (j12_cost_axes' rounding, 6 places); n_episodes is the rows kept. Also the labels that have no
+    per-episode rows, whose values are left as published."""
+    gone = set(excluded)
+    arms_c = dict(_cost_arms(cost_report))
+    no_rows: list[str] = []
+    for label in labels:
+        arm = arms_c.get(label)
+        if not isinstance(arm, dict):
+            continue
+        rows = arm.get("episodes")
+        if not isinstance(rows, list):
+            no_rows.append(label)
+            continue
+        kept = [r for r in rows if _a1_am5_row_key(r) not in gone]
+        new = dict(arm, episodes=kept, n_episodes=len(kept))
+        for field in A1_AM5_COST_FIELDS:
+            if field in arm and any(isinstance(r, dict) and field in r for r in rows):
+                values = [float(r[field]) for r in kept if isinstance(r, dict) and r.get(field) is not None]
+                new[field] = round(statistics.fmean(values), 6) if values else None
+        arms_c[label] = new
+    return dict(cost_report or {}, arms=arms_c), no_rows
+
+
+def a1_am5_cost_prediction(
+    pred: dict[str, Any],
+    cost_report: Optional[dict[str, Any]],
+    expected_n: int,
+    arms: dict[str, dict[str, Any]],
+    *,
+    n_boot: int = A1_BOOTSTRAP_N,
+    seed: int = A1_BOOTSTRAP_SEED,
+) -> dict[str, Any]:
+    """P2 under §B. With a divergent key in its arms, P2 is read on the cost report's per-episode rows without
+    the removed keys, at expected_n minus their number; above the cap, or with no per-episode rows to remove
+    them from, it is refused as incomplete. Without a divergent key: a1_evaluate_cost_prediction, unchanged."""
+    excluded, verdict = a1_am5_exclusion(arms, pred.get("left"), pred.get("right"))
+    if not excluded or cost_report is None:
+        return a1_evaluate_cost_prediction(pred, cost_report, expected_n, n_boot=n_boot, seed=seed)
+    rd = _load_replay_divergence()
+    view, no_rows = a1_am5_cost_view(cost_report, (pred["left"], pred["right"]), excluded)
+    if no_rows:
+        row = a1_evaluate_cost_prediction(pred, cost_report, expected_n, n_boot=n_boot, seed=seed)
+        why = (f"{A1_AM5} §B.2: {len(excluded)} divergent key(s) cannot be removed from {no_rows}: the cost "
+               "report has no per-episode rows (arms.<label>.episodes from j12_cost_axes)")
+    else:
+        row = a1_evaluate_cost_prediction(pred, view, expected_n - len(excluded), n_boot=n_boot, seed=seed)
+        why = (None if verdict == rd.VERDICT_OK
+               else f"{A1_AM5} §B.3: {len(excluded)} divergent keys to remove > cap {rd.DIVERGENCE_CAP}")
+    if why and row.get("decidable"):
+        row.update(decidable=False, verdict="refused_incomplete", reason=why)
+    return row
+
+
+def a1_am5_p2_arms(arms: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Amendment 4's P2 reading under §B: P2's two arms without P2's divergent keys (`arms` itself without any)."""
+    left, right = A1_AM4_P2
+    if left not in arms or right not in arms:
+        return arms
+    excluded, _verdict = a1_am5_exclusion(arms, left, right)
+    if not excluded:
+        return arms
+    gone = set(excluded)
+    out = dict(arms)
+    for label in (left, right):
+        out[label] = dict(arms[label], episodes={k: v for k, v in arms[label]["episodes"].items() if k not in gone})
+    return out
+
+
+def a1_am5_p2_cost(
+    arms: dict[str, dict[str, Any]], cost_report: Optional[dict[str, Any]]
+) -> Optional[dict[str, Any]]:
+    """The cost report Amendment 4 reads under §B: P2's two arms without P2's divergent keys (unchanged without any)."""
+    left, right = A1_AM4_P2
+    excluded, _verdict = a1_am5_exclusion(arms, left, right)
+    if not excluded or cost_report is None:
+        return cost_report
+    return a1_am5_cost_view(cost_report, (left, right), excluded)[0]
+
+
+def _a1_am5_companion(entries: dict[str, Any], name: str, labels: Iterable[str], n_pairs: Any,
+                      arms: dict[str, dict[str, Any]]) -> None:
+    """One companion row of the block, if any of its arms has a divergent key."""
+    labels = [a for a in labels if isinstance(a, str)]
+    keys = sorted({k for a in labels for k in (arms.get(a) or {}).get(A1_AM5_PRIVATE) or []})
+    if keys:
+        entries[name] = {"arms": labels, "n_excluded": len(keys), "n_pairs": n_pairs}
+
+
+def a1_am5_divergence(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    cost_report: Optional[dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """§B.5 (reported regardless of outcome): the top-level a1_am5_divergence block -- each replay arm's divergent
+    keys and their count, zero included, and each affected contrast's pairs. Also re-reads B3's cost plug-in
+    for a replay arm with divergent keys (the pairs are already without them), and drops the private per-arm
+    lists from report['arms']. Returns the report."""
+    if report.get("refused"):
+        return report
+    rd = _load_replay_divergence()
+    for blk in (report.get("arms") or {}).values():
+        if isinstance(blk, dict):
+            blk.pop(A1_AM5_PRIVATE, None)
+            blk.pop(A1_AM5_NONREPLAY, None)
+    per_arm = {}
+    for label in A1_PREFIX_ARMS:
+        if label in arms:
+            keys = arms[label].get(A1_AM5_PRIVATE) or []
+            per_arm[label] = {"n_divergent": len(keys), "keys": [rd.key_label(k) for k in keys],
+                              "n_crash_other": arms[label]["n_crash"] - len(keys),
+                              "arm_complete": arms[label]["complete"]}
+    am1 = report.get("amendment1") if isinstance(report.get("amendment1"), dict) else {}
+    contrasts: dict[str, Any] = {}
+    for row in list(report.get("predictions") or []) + list(((am1.get("cf") or {}).get("predictions")) or []):
+        left, right = row.get("left"), row.get("right")
+        if not isinstance(left, str) or not isinstance(right, str):
+            continue
+        excluded, verdict = a1_am5_exclusion(arms, left, right)
+        if not excluded:
+            continue
+        n_pairs = ((row.get("contrast") or {}).get("n_pairs") if row.get("kind") != "cost_ratio"
+                   else (row.get("ratio_interval") or {}).get("n_pairs"))
+        contrasts[row["id"]] = {"left": left, "right": right, "n_excluded": len(excluded),
+                                "excluded_keys": [rd.key_label(k) for k in excluded], "verdict": verdict,
+                                "n_pairs": n_pairs, "decision": row.get("verdict")}
+    companions: dict[str, Any] = {}
+    for rows in (report.get("supporting_contrasts") or [], report.get("exploratory_contrasts") or []):
+        for row in rows:
+            kind = row.get("kind", "paired")
+            if kind == "handoff_depth":
+                for suffix, key in (("", "goal_pass"), ("_hstar", "goal_pass_hstar")):
+                    for name, (target, base) in (row.get("receivers") or {}).items():
+                        blk = (row.get(key) or {}).get(name) or {}
+                        _a1_am5_companion(companions, f"{row['id']}.{name}{suffix}", (target, base),
+                                          blk.get("n_pairs"), arms)
+            else:
+                labels = (list(row["left"]) + list(row["right"])) if kind == "did" else (row.get("left"), row.get("right"))
+                _a1_am5_companion(companions, row["id"], labels, (row.get("goal_pass") or {}).get("n_pairs"), arms)
+    for key, suffix in (("handoff_only_ni", ""), ("handoff_only_ni_hstar", "_hstar")):
+        for row in am1.get(key) or []:
+            _a1_am5_companion(companions, f"amendment1.{row.get('id')}{suffix}", (row.get("left"), row.get("right")),
+                              (row.get("goal_pass") or {}).get("n_pairs"), arms)
+    for key, suffix in (("decomposition", ""), ("decomposition_hstar", "_hstar")):
+        for name, blk in (am1.get(key) or {}).items():
+            _a1_am5_companion(companions, f"amendment1.decomposition.{name}{suffix}",
+                              (blk.get("target"), blk.get("base")), (blk.get("goal_pass") or {}).get("n_pairs"), arms)
+    for name, blk in (am1.get("b4_extra") or {}).items():
+        _a1_am5_companion(companions, f"amendment1.b4_extra.{name}", (blk.get("target"), blk.get("base")),
+                          blk.get("n_pairs"), arms)
+    for part in ("split", "limit_as_zero"):
+        for cid, blk in ((am1.get("limits") or {}).get(part) or {}).items():
+            _a1_am5_companion(companions, f"amendment1.limits.{part}.{cid}", (blk.get("left"), blk.get("right")),
+                              blk.get("n_pairs"), arms)
+    chord = am1.get("chord") if isinstance(am1.get("chord"), dict) else None
+    floor, ref = A1_AM1_CHORD["floor"], A1_AM1_CHORD["reference"]
+    for label in A1_AM1_CHORD["arms"]:
+        divergent = (arms.get(label) or {}).get(A1_AM5_PRIVATE)
+        if not divergent or chord is None or any(a not in arms for a in (label, floor, ref)):
+            continue
+        note = "B3 cost plug-in not re-read: no cost report"
+        if cost_report is not None:
+            view, no_rows = a1_am5_cost_view(cost_report, (label, floor, ref), divergent)
+            if no_rows:
+                note = f"B3 cost plug-in not re-read: the cost report has no per-episode rows for {no_rows}"
+            else:
+                gone = set(divergent)
+                sub = {a: dict(arms[a], episodes={k: v for k, v in arms[a]["episodes"].items() if k not in gone})
+                       for a in (label, floor, ref)}
+                chord["arms"][label] = _strip_internal(am1_chord(sub, view, n_boot=n_boot, seed=seed)["arms"][label])
+                note = "B3 cost plug-in re-read on the cost report's rows without the arm's divergent keys"
+        _a1_am5_companion(companions, f"amendment1.chord.{label}", (label, floor, ref),
+                          ((chord["arms"].get(label) or {}).get("goal_pass") or {}).get("n_triples"), arms)
+        companions[f"amendment1.chord.{label}"]["cost_plug_in"] = note
+    non_replay = {label: [rd.key_label(k) for k in arm[A1_AM5_NONREPLAY]]
+                  for label, arm in arms.items() if arm.get(A1_AM5_NONREPLAY)}
+    report["a1_am5_divergence"] = {
+        "rule": f"{A1_AM5} §B",
+        "decision_bearing": "completeness only: every statistic, family, threshold and rule runs as registered",
+        "definition": rd.DEFINITION,
+        "cap": rd.DIVERGENCE_CAP,
+        "replay_arms": list(A1_PREFIX_ARMS),
+        "per_arm": per_arm,
+        "n_divergent_total": sum(v["n_divergent"] for v in per_arm.values()),
+        "contrasts": contrasts,
+        "companions": companions,
+        "non_replay_divergent": {
+            "keys": non_replay,
+            "treated_as": "an ordinary crash (impossible by construction: only arms 4-7 replay the environment)",
+        },
+        "notes": list(A1_AM5_NOTES),
+    }
     return report
 
 
