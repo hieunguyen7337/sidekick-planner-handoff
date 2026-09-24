@@ -27,7 +27,7 @@ All evidence is paired and from the dev split; nothing has touched held-out data
 - **What a prefix conveys depends on depth and receiver.** At m = 9 narration and execution are not distinguishable at n = 114 (registered; NARR-01). Elsewhere the pattern is exploratory (NARR-03, NARR-04, DID-01).
 - **What did not hold (registered).** Learned selective escalation is a null on dev (ESC-01); gate G1 (QUAL-06), chord test C2 (UF-07) and threshold test S3 (F1-RESULT-01) failed.
 
-**Held-out tests (none has run).** **J10** is A1 with Amendment 1 (`docs/prereg_j10_amendment_20260924.md`; frozen at 142e947 and 138c285): P1–P6, content family CF1, and handoff-only, chord and step-limit companions. **J11** (`docs/prereg_j11_lp2_test_20260924.md`, [[FREEZE: J11]]) tests L1–L5 with the open-weight LP-2 planner (`Qwen/Qwen3.8-27B-FP8`). **J12** (`docs/prereg_j12_depth_test_20260924.md`, [[FREEZE: J12]]) tests the m = 6 → 11 span over all and over handoff episodes (D1–D4). All three run on `test_normal`; until they do, every number below is a dev estimate.
+**Held-out tests (none has run).** **J10** is A1 with Amendments 1 and 2 (`docs/prereg_j10_amendment_20260924.md`; frozen at 142e947 and 138c285; Amendment 2, 3a97543, confines P3 to non-inferiority to the medium-effort planner): P1–P6, content family CF1, and handoff-only, chord and step-limit companions. **J11** (`docs/prereg_j11_lp2_test_20260924.md`, frozen at 6f40fec) tests L1–L5 with the open-weight LP-2 planner (`Qwen/Qwen3.8-27B-FP8`). **J12** (`docs/prereg_j12_depth_test_20260924.md`, frozen at 6f40fec) tests the m = 6 → 11 span over all and over handoff episodes (D1–D4). All three run on `test_normal`; until they do, every number below is a dev estimate.
 
 **What is new, and what is not.** The depth effect is not new: Ganz et al. report that a later downshift improves quality and retains less of the saving [@handoff_tax_ganz_2026]. New here, with a local 8B receiver tailored and untailored, are (i) a matched-trigger decomposition of act, show, neutral advice and correction advice, with every intervention's content measured; (ii) a narrated control that keeps a prefix's information and removes its execution; (iii) a handoff-only companion beside every depth number, and a chord test; and (iv) registered nulls for learned escalation gates.
 
@@ -399,8 +399,8 @@ The campaign index lists 70 campaigns; 47 are dev campaigns, and they form 39 di
 - H2 P1–P4: `docs/prereg_h2_advice_at_price_20260923.md` §4–§5.
 - B2: `docs/prereg_c1_decomposition_20260923.md`.
 - J10: `docs/prereg_j10_amendment_20260924.md` (A1 at 142e947, Amendment 1 at 138c285).
-- J11: `docs/prereg_j11_lp2_test_20260924.md`, [[FREEZE: J11]].
-- J12: `docs/prereg_j12_depth_test_20260924.md`, [[FREEZE: J12]].
+- J11: `docs/prereg_j11_lp2_test_20260924.md`, frozen at 6f40fec.
+- J12: `docs/prereg_j12_depth_test_20260924.md`, frozen at 6f40fec.
 
 ---
 
