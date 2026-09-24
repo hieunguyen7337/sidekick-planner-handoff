@@ -3,10 +3,16 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from sidekick.protocols.prompts import EXECUTOR_SYSTEM_PROMPT
 from sidekick.protocols.schemas import ExecutorAction, Observation
 
 
 class BaseEnv(ABC):
+    # True: a COMPLETE action ends the episode, whatever `done` says (AppWorld, Mock). False: an
+    # env with scripted multi-turn users, where COMPLETE can end one turn and the next user
+    # message arrives with done=False; the loop then stops on `Observation.done` alone.
+    complete_ends_episode: bool = True
+
     @abstractmethod
     def reset(self, task_id: str, seed: int) -> Observation: ...
 
@@ -40,3 +46,8 @@ class BaseEnv(ABC):
         is what every arm did before 2026-09-15 and why they all scored zero.
         """
         return ""
+
+    @property
+    def executor_system_prompt(self) -> str:
+        """The executor's system prompt. AppWorld's, byte for byte, unless an env overrides it."""
+        return EXECUTOR_SYSTEM_PROMPT

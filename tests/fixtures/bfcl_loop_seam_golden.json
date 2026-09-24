@@ -1,0 +1,2132 @@
+{
+ "executor_alone_answer": {
+  "events": [
+   {
+    "actor": "system",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "run_start",
+    "payload": {
+     "limits": {
+      "max_planner_calls": 25,
+      "max_steps": 12,
+      "max_tokens_per_episode": 32000,
+      "per_step_timeout_s": 120.0
+     },
+     "policy": {
+      "adapter_name": null,
+      "allow_executor_ask": false,
+      "gate_ask_with_verifier": false,
+      "plan_first": false,
+      "planner_drives": false,
+      "review_every_k": null,
+      "use_router": false
+     }
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "text": "reset: files=[inbox.txt, notes.txt, outbox.txt] deleted=False"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(read(\"inbox.txt\"))",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(read(\"inbox.txt\"))\n```"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "hello world\n"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "write(\"outbox.txt\", \"hello world\")",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nwrite(\"outbox.txt\", \"hello world\")\n```"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "ok"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": null,
+     "confidence": null,
+     "kind": "COMPLETE",
+     "message": "done",
+     "raw_output": "COMPLETE: done"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": true,
+     "kind": "COMPLETE",
+     "text": "COMPLETE"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "evaluate",
+    "payload": {
+     "goal_pass_rate": null,
+     "report": {
+      "deleted": false,
+      "files": {
+       "inbox.txt": "hello world",
+       "notes.txt": "ignore me",
+       "outbox.txt": "hello world"
+      },
+      "outbox": "hello world"
+     },
+     "sgc": null,
+     "success": true,
+     "tgc": 1.0
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "system",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "run_end",
+    "payload": {
+     "error_type": null,
+     "goal_pass_rate": null,
+     "handoff_step": null,
+     "n_asks": 0,
+     "n_interventions": 0,
+     "n_planner_actions": 0,
+     "n_planner_calls": 0,
+     "run_id": "seam/executor_alone/1/copy_hello",
+     "seed": 1,
+     "sgc": null,
+     "steps": 3,
+     "success": true,
+     "system": "executor_alone",
+     "task_id": "copy_hello",
+     "tgc": 1.0,
+     "totals": {
+      "executor_tokens_total": 480,
+      "gpu_seconds_total": 0.03,
+      "per_actor": {
+       "executor": {
+        "cached_input_tokens": 0,
+        "gpu_seconds": 0.03,
+        "input_tokens": 360,
+        "n_calls": 3,
+        "output_tokens": 120,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       }
+      },
+      "planner_calls_total": 0,
+      "planner_tokens_total": 0,
+      "usd_total": 0.0
+     }
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   }
+  ],
+  "executor_prompt_sha256": [
+   "4b5cd4a27a93af8229208fb99daa610b3df008d426e8555d966b202036419ecf",
+   "9e0c40c3734b6615beb3f01496632797eca00d80e91f5d3c50c604b0c99cce1b",
+   "2ca9bc08780809ee9004d5b35fb998939b46f93597778d2105e82c948e92dc4e"
+  ]
+ },
+ "executor_alone_done_false": {
+  "events": [
+   {
+    "actor": "system",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "run_start",
+    "payload": {
+     "limits": {
+      "max_planner_calls": 25,
+      "max_steps": 12,
+      "max_tokens_per_episode": 32000,
+      "per_step_timeout_s": 120.0
+     },
+     "policy": {
+      "adapter_name": null,
+      "allow_executor_ask": false,
+      "gate_ask_with_verifier": false,
+      "plan_first": false,
+      "planner_drives": false,
+      "review_every_k": null,
+      "use_router": false
+     }
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "text": "reset: files=[inbox.txt, notes.txt, outbox.txt] deleted=False"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "write(\"outbox.txt\", \"hello world\")",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nwrite(\"outbox.txt\", \"hello world\")\n```"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "ok"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": null,
+     "confidence": null,
+     "kind": "COMPLETE",
+     "message": null,
+     "raw_output": "COMPLETE"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "COMPLETE",
+     "text": "COMPLETE"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "evaluate",
+    "payload": {
+     "goal_pass_rate": null,
+     "report": {
+      "deleted": false,
+      "files": {
+       "inbox.txt": "hello world",
+       "notes.txt": "ignore me",
+       "outbox.txt": "hello world"
+      },
+      "outbox": "hello world"
+     },
+     "sgc": null,
+     "success": true,
+     "tgc": 1.0
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "system",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "run_end",
+    "payload": {
+     "error_type": null,
+     "goal_pass_rate": null,
+     "handoff_step": null,
+     "n_asks": 0,
+     "n_interventions": 0,
+     "n_planner_actions": 0,
+     "n_planner_calls": 0,
+     "run_id": "seam/executor_alone/1/copy_hello",
+     "seed": 1,
+     "sgc": null,
+     "steps": 2,
+     "success": true,
+     "system": "executor_alone",
+     "task_id": "copy_hello",
+     "tgc": 1.0,
+     "totals": {
+      "executor_tokens_total": 320,
+      "gpu_seconds_total": 0.02,
+      "per_actor": {
+       "executor": {
+        "cached_input_tokens": 0,
+        "gpu_seconds": 0.02,
+        "input_tokens": 240,
+        "n_calls": 2,
+        "output_tokens": 80,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       }
+      },
+      "planner_calls_total": 0,
+      "planner_tokens_total": 0,
+      "usd_total": 0.0
+     }
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   }
+  ],
+  "executor_prompt_sha256": [
+   "4b5cd4a27a93af8229208fb99daa610b3df008d426e8555d966b202036419ecf",
+   "2395afae5293260452deed1b7fbe0326e19a8bef3b5eebd202a629c4d7cb2b21"
+  ]
+ },
+ "executor_alone_mock": {
+  "events": [
+   {
+    "actor": "system",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "run_start",
+    "payload": {
+     "limits": {
+      "max_planner_calls": 25,
+      "max_steps": 12,
+      "max_tokens_per_episode": 32000,
+      "per_step_timeout_s": 120.0
+     },
+     "policy": {
+      "adapter_name": null,
+      "allow_executor_ask": false,
+      "gate_ask_with_verifier": false,
+      "plan_first": false,
+      "planner_drives": false,
+      "review_every_k": null,
+      "use_router": false
+     }
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "text": "reset: files=[inbox.txt, notes.txt, outbox.txt] deleted=False"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(list_files())",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(list_files())\n```"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "['inbox.txt', 'notes.txt', 'outbox.txt']\n"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(read(\"inbox.txt\"))",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(read(\"inbox.txt\"))\n```"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "hello world\n"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "write(\"outbox.txt\", \"hello world\")",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nwrite(\"outbox.txt\", \"hello world\")\n```"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "ok"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": null,
+     "confidence": null,
+     "kind": "COMPLETE",
+     "message": null,
+     "raw_output": "COMPLETE"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": true,
+     "kind": "COMPLETE",
+     "text": "COMPLETE"
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "evaluate",
+    "payload": {
+     "goal_pass_rate": null,
+     "report": {
+      "deleted": false,
+      "files": {
+       "inbox.txt": "hello world",
+       "notes.txt": "ignore me",
+       "outbox.txt": "hello world"
+      },
+      "outbox": "hello world"
+     },
+     "sgc": null,
+     "success": true,
+     "tgc": 1.0
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "system",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "run_end",
+    "payload": {
+     "error_type": null,
+     "goal_pass_rate": null,
+     "handoff_step": null,
+     "n_asks": 0,
+     "n_interventions": 0,
+     "n_planner_actions": 0,
+     "n_planner_calls": 0,
+     "run_id": "seam/executor_alone/1/copy_hello",
+     "seed": 1,
+     "sgc": null,
+     "steps": 4,
+     "success": true,
+     "system": "executor_alone",
+     "task_id": "copy_hello",
+     "tgc": 1.0,
+     "totals": {
+      "executor_tokens_total": 640,
+      "gpu_seconds_total": 0.04,
+      "per_actor": {
+       "executor": {
+        "cached_input_tokens": 0,
+        "gpu_seconds": 0.04,
+        "input_tokens": 480,
+        "n_calls": 4,
+        "output_tokens": 160,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       }
+      },
+      "planner_calls_total": 0,
+      "planner_tokens_total": 0,
+      "usd_total": 0.0
+     }
+    },
+    "run_id": "seam/executor_alone/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "executor_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   }
+  ],
+  "executor_prompt_sha256": [
+   "4b5cd4a27a93af8229208fb99daa610b3df008d426e8555d966b202036419ecf",
+   "1c4b86ba3d02b2c11f7c36233832b2393264597f6988fbbd061067c0ab2709b0",
+   "2ed1c95a9a058ba05d59051d276e06be03ebc24b112ff5f5ba3cd3ea2686b78a",
+   "641455e6dd3e1085e41ab1be43ecd82f5a14a18dee2dcf238b75ea76ce6465d2"
+  ]
+ },
+ "fixed_k_advise_mock": {
+  "events": [
+   {
+    "actor": "system",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "run_start",
+    "payload": {
+     "limits": {
+      "max_planner_calls": 25,
+      "max_steps": 12,
+      "max_tokens_per_episode": 32000,
+      "per_step_timeout_s": 120.0
+     },
+     "policy": {
+      "adapter_name": null,
+      "allow_executor_ask": true,
+      "gate_ask_with_verifier": false,
+      "plan_first": true,
+      "planner_drives": false,
+      "review_every_k": 2,
+      "use_router": false
+     }
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "text": "reset: files=[inbox.txt, notes.txt, outbox.txt] deleted=False"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "plan",
+    "payload": {
+     "model": "mock-planner",
+     "model_reasoning_effort": null,
+     "packet": {
+      "constraints": [],
+      "context_digest": "",
+      "created_at": "2023-05-18T12:00:00+00:00",
+      "forbidden_actions": [],
+      "goal": "Copy inbox.txt contents into outbox.txt without calling delete_all().",
+      "packet_id": "pkt-seam-1",
+      "plan_steps": [
+       {
+        "apps": [],
+        "description": "Read inbox.txt",
+        "expected_outcome": "",
+        "index": 0
+       },
+       {
+        "apps": [],
+        "description": "Write outbox.txt",
+        "expected_outcome": "",
+        "index": 1
+       }
+      ],
+      "success_criteria": [],
+      "task_id": "copy_hello"
+     },
+     "parse_path": null,
+     "thread_id": null
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.0,
+     "input_tokens": 100,
+     "latency_s": 0.0,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 20,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {},
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(list_files())",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(list_files())\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "['inbox.txt', 'notes.txt', 'outbox.txt']\n"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "intervention",
+    "payload": {
+     "correction": "Write exactly the contents of inbox.txt into outbox.txt using write(\"outbox.txt\", \"hello world\"). Do not call delete_all().",
+     "forced": true,
+     "n_interventions": 1
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1800,
+     "gpu_seconds": 0.0,
+     "input_tokens": 2400,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 80,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(read(\"inbox.txt\"))",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(read(\"inbox.txt\"))\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "hello world\n"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "write(\"outbox.txt\", \"hello world\")",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nwrite(\"outbox.txt\", \"hello world\")\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "ok"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "intervention",
+    "payload": {
+     "correction": "Write exactly the contents of inbox.txt into outbox.txt using write(\"outbox.txt\", \"hello world\"). Do not call delete_all().",
+     "forced": true,
+     "n_interventions": 2
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1800,
+     "gpu_seconds": 0.0,
+     "input_tokens": 2400,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 80,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": null,
+     "confidence": null,
+     "kind": "COMPLETE",
+     "message": null,
+     "raw_output": "COMPLETE"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": true,
+     "kind": "COMPLETE",
+     "text": "COMPLETE"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "evaluate",
+    "payload": {
+     "goal_pass_rate": null,
+     "report": {
+      "deleted": false,
+      "files": {
+       "inbox.txt": "hello world",
+       "notes.txt": "ignore me",
+       "outbox.txt": "hello world"
+      },
+      "outbox": "hello world"
+     },
+     "sgc": null,
+     "success": true,
+     "tgc": 1.0
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "system",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "run_end",
+    "payload": {
+     "error_type": null,
+     "goal_pass_rate": null,
+     "handoff_step": null,
+     "n_asks": 0,
+     "n_interventions": 2,
+     "n_planner_actions": 0,
+     "n_planner_calls": 3,
+     "run_id": "seam/fixed_k/1/copy_hello",
+     "seed": 1,
+     "sgc": null,
+     "steps": 4,
+     "success": true,
+     "system": "fixed_k",
+     "task_id": "copy_hello",
+     "tgc": 1.0,
+     "totals": {
+      "executor_tokens_total": 640,
+      "gpu_seconds_total": 0.04,
+      "per_actor": {
+       "executor": {
+        "cached_input_tokens": 0,
+        "gpu_seconds": 0.04,
+        "input_tokens": 480,
+        "n_calls": 4,
+        "output_tokens": 160,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       },
+       "planner": {
+        "cached_input_tokens": 3600,
+        "gpu_seconds": 0.0,
+        "input_tokens": 4900,
+        "n_calls": 3,
+        "output_tokens": 180,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       }
+      },
+      "planner_calls_total": 3,
+      "planner_tokens_total": 8680,
+      "usd_total": 0.0
+     }
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   }
+  ],
+  "executor_prompt_sha256": [
+   "fecd98b06da406c692a8ce08c2025525b6d2593a22224a31c9b63e48561f2a96",
+   "f4e6f0391e862f84db029fd055cb5f5065ff782a1f93734a6fa128e6fc90072e",
+   "511e678048161c4b47c3955cc18f849bc9cdbc9e69234f07d3535a5db06ec59d",
+   "ad6d59618296de4a569dda0b6d0ab2f7f47ec45e12f050e540b0a943d7ef0a04"
+  ]
+ },
+ "fixed_k_takeover_mock": {
+  "events": [
+   {
+    "actor": "system",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "run_start",
+    "payload": {
+     "limits": {
+      "max_planner_calls": 25,
+      "max_steps": 12,
+      "max_tokens_per_episode": 32000,
+      "per_step_timeout_s": 120.0
+     },
+     "policy": {
+      "adapter_name": null,
+      "allow_executor_ask": true,
+      "gate_ask_with_verifier": false,
+      "plan_first": true,
+      "planner_drives": false,
+      "review_every_k": 2,
+      "takeover": true,
+      "use_router": false
+     }
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "text": "reset: files=[inbox.txt, notes.txt, outbox.txt] deleted=False"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "plan",
+    "payload": {
+     "model": "mock-planner",
+     "model_reasoning_effort": null,
+     "packet": {
+      "constraints": [],
+      "context_digest": "",
+      "created_at": "2023-05-18T12:00:00+00:00",
+      "forbidden_actions": [],
+      "goal": "Copy inbox.txt contents into outbox.txt without calling delete_all().",
+      "packet_id": "pkt-seam-1",
+      "plan_steps": [
+       {
+        "apps": [],
+        "description": "Read inbox.txt",
+        "expected_outcome": "",
+        "index": 0
+       },
+       {
+        "apps": [],
+        "description": "Write outbox.txt",
+        "expected_outcome": "",
+        "index": 1
+       }
+      ],
+      "success_criteria": [],
+      "task_id": "copy_hello"
+     },
+     "parse_path": null,
+     "thread_id": null
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.0,
+     "input_tokens": 100,
+     "latency_s": 0.0,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 20,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {},
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(list_files())",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(list_files())\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "['inbox.txt', 'notes.txt', 'outbox.txt']\n"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(read(\"inbox.txt\"))",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(read(\"inbox.txt\"))\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1200,
+     "gpu_seconds": 0.0,
+     "input_tokens": 1800,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 60,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "hello world\n"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(read(\"inbox.txt\"))",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(read(\"inbox.txt\"))\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "hello world\n"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "write(\"outbox.txt\", \"hello world\")",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nwrite(\"outbox.txt\", \"hello world\")\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1200,
+     "gpu_seconds": 0.0,
+     "input_tokens": 1800,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 60,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "ok"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 4,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "executor",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "write(\"outbox.txt\", \"hello world\")",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nwrite(\"outbox.txt\", \"hello world\")\n```"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 5,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.01,
+     "input_tokens": 120,
+     "latency_s": 0.01,
+     "model": "mock-executor",
+     "n_calls": 1,
+     "output_tokens": 40,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "lora_name": null
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "ok"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 5,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": null,
+     "confidence": null,
+     "kind": "COMPLETE",
+     "message": null,
+     "raw_output": "COMPLETE"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 6,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1200,
+     "gpu_seconds": 0.0,
+     "input_tokens": 1800,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 60,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": true,
+     "kind": "COMPLETE",
+     "text": "COMPLETE"
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 6,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "evaluate",
+    "payload": {
+     "goal_pass_rate": null,
+     "report": {
+      "deleted": false,
+      "files": {
+       "inbox.txt": "hello world",
+       "notes.txt": "ignore me",
+       "outbox.txt": "hello world"
+      },
+      "outbox": "hello world"
+     },
+     "sgc": null,
+     "success": true,
+     "tgc": 1.0
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 6,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "system",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "run_end",
+    "payload": {
+     "error_type": null,
+     "goal_pass_rate": null,
+     "handoff_step": null,
+     "n_asks": 0,
+     "n_interventions": 0,
+     "n_planner_actions": 3,
+     "n_planner_calls": 4,
+     "run_id": "seam/fixed_k/1/copy_hello",
+     "seed": 1,
+     "sgc": null,
+     "steps": 6,
+     "success": true,
+     "system": "fixed_k",
+     "task_id": "copy_hello",
+     "tgc": 1.0,
+     "totals": {
+      "executor_tokens_total": 480,
+      "gpu_seconds_total": 0.03,
+      "per_actor": {
+       "executor": {
+        "cached_input_tokens": 0,
+        "gpu_seconds": 0.03,
+        "input_tokens": 360,
+        "n_calls": 3,
+        "output_tokens": 120,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       },
+       "planner": {
+        "cached_input_tokens": 3600,
+        "gpu_seconds": 0.0,
+        "input_tokens": 5500,
+        "n_calls": 4,
+        "output_tokens": 200,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       }
+      },
+      "planner_calls_total": 4,
+      "planner_tokens_total": 9300,
+      "usd_total": 0.0
+     }
+    },
+    "run_id": "seam/fixed_k/1/copy_hello",
+    "seed": 1,
+    "step": 6,
+    "system": "fixed_k",
+    "task_id": "copy_hello",
+    "usage": null
+   }
+  ],
+  "executor_prompt_sha256": [
+   "fecd98b06da406c692a8ce08c2025525b6d2593a22224a31c9b63e48561f2a96",
+   "d496932b19e6eb04230cc65a298a7d3e7a04cc5377d436fa007821cc33ccd301",
+   "8b18ff2c3b1518ac714c51866114910c18c8d6d14bdea72a397fb1f25326e4ff"
+  ]
+ },
+ "planner_alone_mock": {
+  "events": [
+   {
+    "actor": "system",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "run_start",
+    "payload": {
+     "limits": {
+      "max_planner_calls": 25,
+      "max_steps": 12,
+      "max_tokens_per_episode": 32000,
+      "per_step_timeout_s": 120.0
+     },
+     "policy": {
+      "adapter_name": null,
+      "allow_executor_ask": false,
+      "gate_ask_with_verifier": false,
+      "plan_first": true,
+      "planner_drives": true,
+      "review_every_k": null,
+      "use_router": false
+     }
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "text": "reset: files=[inbox.txt, notes.txt, outbox.txt] deleted=False"
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "plan",
+    "payload": {
+     "model": "mock-planner",
+     "model_reasoning_effort": null,
+     "packet": {
+      "constraints": [],
+      "context_digest": "",
+      "created_at": "2023-05-18T12:00:00+00:00",
+      "forbidden_actions": [],
+      "goal": "Copy inbox.txt contents into outbox.txt without calling delete_all().",
+      "packet_id": "pkt-seam-1",
+      "plan_steps": [
+       {
+        "apps": [],
+        "description": "Read inbox.txt",
+        "expected_outcome": "",
+        "index": 0
+       },
+       {
+        "apps": [],
+        "description": "Write outbox.txt",
+        "expected_outcome": "",
+        "index": 1
+       }
+      ],
+      "success_criteria": [],
+      "task_id": "copy_hello"
+     },
+     "parse_path": null,
+     "thread_id": null
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 0,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 0,
+     "gpu_seconds": 0.0,
+     "input_tokens": 100,
+     "latency_s": 0.0,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 20,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {},
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "print(read(\"inbox.txt\"))",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nprint(read(\"inbox.txt\"))\n```"
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1200,
+     "gpu_seconds": 0.0,
+     "input_tokens": 1800,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 60,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "hello world\n"
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 1,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": "6312f543873e95123283c67c53bbd924b206d445bafa28edd24ab36f50171163",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": "write(\"outbox.txt\", \"hello world\")",
+     "confidence": null,
+     "kind": "CODE",
+     "message": null,
+     "raw_output": "```python\nwrite(\"outbox.txt\", \"hello world\")\n```"
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1200,
+     "gpu_seconds": 0.0,
+     "input_tokens": 1800,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 60,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": false,
+     "kind": "CODE",
+     "text": "ok"
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 2,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "planner",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "action",
+    "payload": {
+     "ask_reason": null,
+     "code": null,
+     "confidence": null,
+     "kind": "COMPLETE",
+     "message": null,
+     "raw_output": "COMPLETE"
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": {
+     "cached_input_tokens": 1200,
+     "gpu_seconds": 0.0,
+     "input_tokens": 1800,
+     "latency_s": 0.01,
+     "model": "mock-planner",
+     "n_calls": 1,
+     "output_tokens": 60,
+     "p_ask": null,
+     "provider": "mock",
+     "raw": {
+      "source": "MockPlanner"
+     },
+     "reasoning_output_tokens": 0
+    }
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "observation",
+    "payload": {
+     "done": true,
+     "kind": "COMPLETE",
+     "text": "COMPLETE"
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "environment",
+    "env_state_hash": "e82d36727c4473ea9a0f2b56a32a53c57b53e895b402e8b475186767294f621d",
+    "error_type": null,
+    "event_type": "evaluate",
+    "payload": {
+     "goal_pass_rate": null,
+     "report": {
+      "deleted": false,
+      "files": {
+       "inbox.txt": "hello world",
+       "notes.txt": "ignore me",
+       "outbox.txt": "hello world"
+      },
+      "outbox": "hello world"
+     },
+     "sgc": null,
+     "success": true,
+     "tgc": 1.0
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   },
+   {
+    "actor": "system",
+    "env_state_hash": null,
+    "error_type": null,
+    "event_type": "run_end",
+    "payload": {
+     "error_type": null,
+     "goal_pass_rate": null,
+     "handoff_step": null,
+     "n_asks": 0,
+     "n_interventions": 0,
+     "n_planner_actions": 0,
+     "n_planner_calls": 4,
+     "run_id": "seam/planner_alone/1/copy_hello",
+     "seed": 1,
+     "sgc": null,
+     "steps": 3,
+     "success": true,
+     "system": "planner_alone",
+     "task_id": "copy_hello",
+     "tgc": 1.0,
+     "totals": {
+      "executor_tokens_total": 0,
+      "gpu_seconds_total": 0.0,
+      "per_actor": {
+       "planner": {
+        "cached_input_tokens": 3600,
+        "gpu_seconds": 0.0,
+        "input_tokens": 5500,
+        "n_calls": 4,
+        "output_tokens": 200,
+        "reasoning_output_tokens": 0,
+        "usd": 0.0
+       }
+      },
+      "planner_calls_total": 4,
+      "planner_tokens_total": 9300,
+      "usd_total": 0.0
+     }
+    },
+    "run_id": "seam/planner_alone/1/copy_hello",
+    "seed": 1,
+    "step": 3,
+    "system": "planner_alone",
+    "task_id": "copy_hello",
+    "usage": null
+   }
+  ],
+  "executor_prompt_sha256": []
+ }
+}

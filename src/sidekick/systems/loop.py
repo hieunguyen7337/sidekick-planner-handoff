@@ -14,7 +14,11 @@ from sidekick.agents.planner import (
 from sidekick.agents.verifier import ConstantVerifier, SelfVerifier, ThresholdRouter, Verifier
 from sidekick.systems.action_review_gate import run_action_review
 from sidekick.environments.base import BaseEnv
-from sidekick.protocols.prompts import format_executor_action, render_executor_messages
+from sidekick.protocols.prompts import (
+    EXECUTOR_SYSTEM_PROMPT,
+    format_executor_action,
+    render_executor_messages,
+)
 from sidekick.protocols.schemas import (
     ActionParseError,
     DelegationPacket,
@@ -169,10 +173,19 @@ def last_observation_from_events(events: list[Event]) -> Observation:
     return Observation(text="", step=0)
 
 
-def prefix_is_terminal(events: list[Event], last_obs: Observation) -> bool:
-    """True when a replayed prefix already ended the source episode."""
+def prefix_is_terminal(
+    events: list[Event], last_obs: Observation, complete_ends_episode: bool = True
+) -> bool:
+    """True when a replayed prefix already ended the source episode.
+
+    A trailing COMPLETE counts as terminal only for an env whose COMPLETE ends the episode
+    (``BaseEnv.complete_ends_episode``). On a multi-turn env it may have ended one user turn,
+    and then only ``done`` says whether the episode is over.
+    """
     if last_obs.done:
         return True
+    if not complete_ends_episode:
+        return False
     for ev in reversed(events):
         if ev.event_type != "action":
             continue
@@ -298,6 +311,10 @@ def run_episode(
     exec_turns: list[dict] = []
     exec_instruction = ""
     exec_api_docs = ""
+    # Environment-owned protocol facts (BaseEnv). AppWorld and Mock keep the defaults, which
+    # reproduce the loop's earlier behaviour exactly (tests/unit/test_bfcl_loop_seam.py).
+    complete_ends_episode = bool(getattr(env, "complete_ends_episode", True))
+    exec_system_prompt = str(getattr(env, "executor_system_prompt", EXECUTOR_SYSTEM_PROMPT))
     steps_taken = 0
     start_step = 1
     eval_result: dict[str, Any] = {
@@ -508,6 +525,7 @@ def run_episode(
             api_docs=exec_api_docs,
             packet=packet,
             history=exec_turns,
+            system_prompt=exec_system_prompt,
         )
         # One unparseable generation used to end the episode outright. That makes the
         # score a measure of output-format luck rather than task ability: Granite 4.2
@@ -743,7 +761,9 @@ def run_episode(
         prefix_terminal = False
         skip_live_loop = False
         if prefix is not None:
-            prefix_terminal = prefix_is_terminal(list(prefix.events), last_obs)
+            prefix_terminal = prefix_is_terminal(
+                list(prefix.events), last_obs, complete_ends_episode=complete_ends_episode
+            )
             skip_live_loop = (
                 policy.post_prefix_terminal == "stop" and prefix_terminal
             )
@@ -1166,7 +1186,9 @@ def run_episode(
                 exec_turns.append({"role": "assistant", "content": format_executor_action(action)})
                 transcript.append(f"OBS: {last_obs.text}")
                 exec_turns.append({"role": "user", "content": f"OBS: {last_obs.text}"})
-                if action.kind == "COMPLETE" or last_obs.done:
+                # `done` ends the episode. COMPLETE also ends it unless the env says COMPLETE can
+                # end one scripted user turn (BFCL), where the next turn arrives with done=False.
+                if last_obs.done or (action.kind == "COMPLETE" and complete_ends_episode):
                     break
             else:
                 transcript.append(f"ACTION: {action.kind}")

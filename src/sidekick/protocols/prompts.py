@@ -208,6 +208,7 @@ def render_executor_messages(
     api_docs: str = "",
     packet: DelegationPacket | None = None,
     history: list[dict],
+    system_prompt: str = EXECUTOR_SYSTEM_PROMPT,
 ) -> list[dict]:
     """Build the executor prompt as a multi-turn conversation.
 
@@ -216,6 +217,9 @@ def render_executor_messages(
     is impossible -- observed 2026-09-15, where planner_alone answered a Spotify
     task with "the Spotify plugin is not installed" and every arm scored 0.0 TGC.
     The environment computes the digest for exactly this purpose.
+
+    ``system_prompt`` is the environment's (``BaseEnv.executor_system_prompt``); it
+    defaults to AppWorld's so every existing caller renders the same bytes.
     """
     user = f"Task: {instruction}\n"
     if api_docs:
@@ -232,7 +236,7 @@ def render_executor_messages(
                 f"history[{i}] role must be 'assistant' or 'user', got {role!r}"
             )
     return [
-        {"role": "system", "content": EXECUTOR_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user},
         *history,
     ]

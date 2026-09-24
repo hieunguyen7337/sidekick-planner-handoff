@@ -29,6 +29,7 @@ from sidekick.cost.ledger import CostLedger
 from sidekick.cost.prices import PriceSchedule
 from sidekick.environments.appworld_env import AppWorldEnv
 from sidekick.environments.base import BaseEnv
+from sidekick.environments.bfcl_env import BfclEnv, bfcl_task_ids
 from sidekick.environments.mock_env import MockEnv
 from sidekick.provenance import run_provenance
 from sidekick.systems import SYSTEM_NAMES, get_system
@@ -268,7 +269,7 @@ def make_verifier(cfg: dict[str, Any]) -> Any:
     return ConstantVerifier(float(vcfg.get("value", 0.5)))
 
 
-ENV_KINDS = ("appworld", "mock")
+ENV_KINDS = ("appworld", "mock", "bfcl")
 
 
 def make_env(kind: str, experiment_name: str, cfg: dict[str, Any]) -> BaseEnv:
@@ -281,6 +282,9 @@ def make_env(kind: str, experiment_name: str, cfg: dict[str, Any]) -> BaseEnv:
         return AppWorldEnv(experiment_name=experiment_name, extra_kwargs=extra, root=root)
     if kind == "mock":
         return MockEnv()
+    if kind == "bfcl":
+        # BFCL multi_turn_base (plan Wave E). `bfcl.root` overrides the vendored data dir.
+        return BfclEnv(root=(cfg.get("bfcl") or {}).get("root"))
     # An unknown kind used to fall through to MockEnv, so a misspelt `env:` (or a second
     # environment whose adapter is not wired yet) would run a whole campaign on the mock and
     # report believable numbers. Refuse instead.
@@ -444,6 +448,9 @@ def run_campaign(
     prices_path = str(cfg.get("prices") or DEFAULT_PRICES)
     if kind == "appworld":
         task_ids = appworld_task_ids(split, tasks)
+    elif kind == "bfcl":
+        # Only "dev" and "test" exist (data/bfcl_split_20260924.json); anything else raises.
+        task_ids = bfcl_task_ids(split, tasks)
     else:
         task_ids = mock_task_ids(tasks)
     jobs: list[dict[str, Any]] = []
@@ -502,7 +509,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", required=True)
     parser.add_argument("--config")
     parser.add_argument("--workers", type=int, default=8)
-    parser.add_argument("--env", choices=["mock", "appworld"])
+    parser.add_argument("--env", choices=["mock", "appworld", "bfcl"])
     parser.add_argument("--campaign-id")
     return parser
 

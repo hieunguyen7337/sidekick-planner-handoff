@@ -27,14 +27,15 @@ def test_make_env_refuses_an_unknown_kind() -> None:
 def test_run_campaign_refuses_before_writing_anything(tmp_path: Path) -> None:
     out = tmp_path / "results"
 
-    with pytest.raises(ValueError, match="unknown env kind 'bfcl'"):
+    # 'bfcl' was the example here until its adapter was wired in (bfcl-env, 2026-09-24).
+    with pytest.raises(ValueError, match="unknown env kind 'tau2'"):
         run_campaign(
             system="planner_alone",
             split="dev",
             tasks=1,
             seeds=[1],
             out=out,
-            config={"env": "bfcl"},
+            config={"env": "tau2"},
             workers=1,
             campaign_id="c_refuse",
         )
@@ -43,4 +44,4 @@ def test_run_campaign_refuses_before_writing_anything(tmp_path: Path) -> None:
 
 
 def test_the_known_kinds_are_the_ones_make_env_builds() -> None:
-    assert set(ENV_KINDS) == {"appworld", "mock"}
+    assert set(ENV_KINDS) == {"appworld", "mock", "bfcl"}
