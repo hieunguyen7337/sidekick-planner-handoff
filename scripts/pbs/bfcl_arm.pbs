@@ -1,0 +1,308 @@
+#!/bin/bash
+#PBS -N bfcl-arm
+#PBS -q gpu_inter
+#PBS -l select=1:ncpus=12:ngpus=1:gpu_id=H100:mem=64gb
+#PBS -l walltime=05:00:00
+#PBS -j oe
+#PBS -o /scratch/n12194778/sidekick/logs/
+#
+# BFCL multi_turn_base, spike (b) of unit bfcl-env (plan Wave E, E1): ONE dev-split
+# executor_alone arm of zero-shot granite-4.2-8b. Zero hosted calls. Modelled on
+# scripts/pbs/j10_arm.pbs: a vLLM executor server, a 2-entry smoke, the arm, a jq tally.
+# Resubmitting the same arm skips episodes that already have a result.json
+# (src/sidekick/runner.py result_path check); there is no crash purge here.
+#
+#   qsub -v BFCL_REPO=<checkout>,CFG=configs/bfcl_executor_alone_zs.yaml scripts/pbs/bfcl_arm.pbs
+#
+# Job variables (qsub -v):
+#   BFCL_REPO   the checkout whose code runs (default: the plan worktree)
+#   CFG         default configs/bfcl_executor_alone_zs.yaml (relative to BFCL_REPO or absolute)
+#   SPLIT       dev only; anything else is refused (this unit may not touch test)
+#   TASKS       0 = the whole dev split (50 entries)
+#   SEEDS       default 1,2
+#   CID         default: the config's campaign_id
+#   WORKERS (6), RUN_TIMEOUT (12600 s), SMOKE_TASKS (2)
+# Refusals (exit 2), before a model is loaded: SPLIT other than dev; config env not bfcl;
+#   planner.type other than mock; executor.model other than ibm-granite/granite-4.2-8b; a
+#   non-null executor.lora_name; a `split:` key in the config; CID without a _dev_ marker.
+# Exit codes: 0 arm complete (target non-crashed episodes) | 2 refused | 3 crashes or missing
+#   episodes remain | 1 smoke or infrastructure failure.
+#
+# Do NOT add reasoning-parser flags to vLLM (G3).
+
+set -uo pipefail
+
+REPO="${BFCL_REPO:-/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15}"
+SELFTEST="${BFCL_SELFTEST:-0}"
+JOBTAG="${PBS_JOBID:-nopbs$$}"
+JOBNUM="${JOBTAG%%.*}"; JOBNUM="${JOBNUM//[^0-9A-Za-z]/}"
+PBS_LOGDIR="${REPO}/campaign/workers/logs"
+
+CFG="${CFG:-configs/bfcl_executor_alone_zs.yaml}"
+SYSTEM=executor_alone
+SPLIT="${SPLIT:-dev}"
+TASKS="${TASKS:-0}"
+SEEDS="${SEEDS:-1,2}"
+CID="${CID:-}"
+WORKERS="${WORKERS:-6}"
+RUN_TIMEOUT="${RUN_TIMEOUT:-12600}"
+SMOKE_TASKS="${SMOKE_TASKS:-2}"
+OUT=/scratch/n12194778/sidekick/results
+LOGDIR=/scratch/n12194778/sidekick/logs
+if [[ "${SELFTEST}" == "1" ]]; then
+  # Self-test seams only: never honoured by a real submission.
+  OUT="${BFCL_OUT:-${OUT}}"
+  LOGDIR="${BFCL_LOGDIR:-${LOGDIR}}"
+fi
+
+if [[ "${SELFTEST}" != "1" ]]; then
+  mkdir -p "${PBS_LOGDIR}"
+  exec >> "${PBS_LOGDIR}/bfcl_arm.$(basename "${CFG}" .yaml).${JOBTAG}.out" 2>&1
+fi
+
+fatal () { echo "[bfcl] FATAL: $*"; exit 2; }
+echo "[bfcl] start=$(date -Iseconds) job=${JOBTAG} host=$(hostname) repo=${REPO} cfg=${CFG} split=${SPLIT} tasks=${TASKS} seeds=${SEEDS} selftest=${SELFTEST}"
+
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export HF_HOME=/scratch/n12194778/hf
+export SIDEKICK_VENV=/scratch/n12194778/sidekick/env
+export PATH="${SIDEKICK_VENV}/bin:${HOME}/.local/bin:${PATH}"
+export PYTHONPATH="${REPO}/src:${REPO}:${PYTHONPATH:-}"
+CU13="${SIDEKICK_VENV}/lib/python3.12/site-packages/nvidia/cu13"
+if [[ -x "${CU13}/bin/nvcc" ]]; then
+  export CUDA_HOME="${CU13}"; export CUDA_PATH="${CU13}"
+  export PATH="${CU13}/bin:${PATH}"
+  export LD_LIBRARY_PATH="${CU13}/lib:${CU13}/lib64:${LD_LIBRARY_PATH:-}"
+fi
+export VLLM_USE_FLASHINFER_SAMPLER=0
+export FLASHINFER_CACHE_DIR=/scratch/n12194778/sidekick/logs/flashinfer_cache_u9
+export TORCHINDUCTOR_CACHE_DIR=/scratch/n12194778/sidekick/cache/inductor
+export TRITON_CACHE_DIR=/scratch/n12194778/sidekick/cache/triton
+ulimit -n 65536 2>/dev/null || ulimit -n 16384 2>/dev/null || ulimit -n 8192 2>/dev/null || true
+PY="${PY:-${SIDEKICK_VENV}/bin/python}"
+MODEL_GRANITE=ibm-granite/granite-4.2-8b
+cd "${REPO}" || exit 1
+
+# ---- config -------------------------------------------------------------------------------
+[[ "${CFG}" == /* ]] || CFG="${REPO}/${CFG}"
+[[ -f "${CFG}" ]] || fatal "config not found: ${CFG}"
+echo "[bfcl] config ${CFG} sha256=$(sha256sum "${CFG}" | cut -d' ' -f1)"
+FACTS="$(timeout 60 "${PY}" - "${CFG}" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+
+data = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+if not isinstance(data, dict):
+    sys.exit("config is not a mapping")
+planner = data.get("planner") if isinstance(data.get("planner"), dict) else {}
+executor = data.get("executor") if isinstance(data.get("executor"), dict) else {}
+lora = executor.get("lora_name")
+lora = "" if lora is None or str(lora).strip() in ("", "null", "None") else str(lora).strip()
+
+
+def clean(value):
+    return "" if value is None else str(value).strip().replace("\n", " ")
+
+
+facts = {
+    "CFG_ENV": clean(data.get("env")),
+    "CFG_CAMPAIGN_ID": clean(data.get("campaign_id")),
+    "PLANNER_TYPE": clean(planner.get("type") or data.get("planner_type") or "mock"),
+    "EXECUTOR_TYPE": clean(executor.get("type") or data.get("executor_type") or "mock"),
+    "EXECUTOR_MODEL": clean(executor.get("model")),
+    "LORA_NAME": lora,
+    "HAS_SPLIT_KEY": "1" if "split" in data else "0",
+}
+for key, value in facts.items():
+    print(f"{key}={value}")
+PY
+)" || fatal "could not read ${CFG} (PyYAML / syntax)"
+CFG_ENV=""; CFG_CAMPAIGN_ID=""; PLANNER_TYPE=""; EXECUTOR_TYPE=""; EXECUTOR_MODEL=""; LORA_NAME=""; HAS_SPLIT_KEY=""
+while IFS='=' read -r key value; do
+  case "${key}" in
+    CFG_ENV) CFG_ENV="${value}";;
+    CFG_CAMPAIGN_ID) CFG_CAMPAIGN_ID="${value}";;
+    PLANNER_TYPE) PLANNER_TYPE="${value}";;
+    EXECUTOR_TYPE) EXECUTOR_TYPE="${value}";;
+    EXECUTOR_MODEL) EXECUTOR_MODEL="${value}";;
+    LORA_NAME) LORA_NAME="${value}";;
+    HAS_SPLIT_KEY) HAS_SPLIT_KEY="${value}";;
+  esac
+done <<< "${FACTS}"
+echo "[bfcl] config env=${CFG_ENV} campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} executor=${EXECUTOR_TYPE}:${EXECUTOR_MODEL} lora_name=${LORA_NAME:-<none>}"
+
+# ---- refusals -----------------------------------------------------------------------------
+[[ "${SPLIT}" == "dev" ]] || fatal "SPLIT=${SPLIT}: this arm runs on the BFCL dev split only"
+[[ "${CFG_ENV}" == "bfcl" ]] || fatal "config env is ${CFG_ENV:-<unset>}, not bfcl"
+[[ "${HAS_SPLIT_KEY}" == "0" ]] || fatal "${CFG} carries a split: key; the split is a CLI argument"
+[[ "${PLANNER_TYPE}" == "mock" ]] || fatal "planner.type=${PLANNER_TYPE}: executor_alone must make zero hosted calls"
+[[ "${EXECUTOR_TYPE}" == "vllm" ]] || fatal "executor.type=${EXECUTOR_TYPE}, expected vllm"
+[[ "${EXECUTOR_MODEL}" == "${MODEL_GRANITE}" ]] || fatal "executor.model=${EXECUTOR_MODEL}, expected ${MODEL_GRANITE}"
+[[ -z "${LORA_NAME}" ]] || fatal "executor.lora_name=${LORA_NAME}: this arm is zero-shot (null)"
+CID="${CID:-${CFG_CAMPAIGN_ID}}"
+[[ -n "${CID}" ]] || fatal "no campaign id"
+[[ "${CID}" == *_dev_* ]] || fatal "CID=${CID} does not say _dev_; a dev run must not look like a test campaign"
+TARGET_TASKS="${TASKS}"
+if [[ "${TASKS}" -eq 0 ]]; then TARGET_TASKS=50; fi
+N_SEEDS=$(awk -F, '{print NF}' <<< "${SEEDS}")
+TARGET=$(( TARGET_TASKS * N_SEEDS ))
+echo "[bfcl] cid=${CID} target=${TARGET} (${TARGET_TASKS} tasks x ${N_SEEDS} seeds)"
+
+# ---- tally: count and error_type distribution over result.json, via jq --------------------
+tally_campaign () {
+  local cid="$1" target="$2"
+  local root="${OUT}/${cid}"
+  echo "[bfcl] ---- tally (${cid}) ----"
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "[bfcl] WARN: jq not on PATH; no tally"
+    return 1
+  fi
+  local files
+  files="$(find "${root}" -type f -name result.json 2>/dev/null | sort)"
+  local n=0
+  [[ -n "${files}" ]] && n=$(wc -l <<< "${files}")
+  if (( n == 0 )); then
+    echo "[bfcl] tally cid=${cid} result_files=0 target=${target}"
+    return 3
+  fi
+  # shellcheck disable=SC2086
+  jq -s -r '
+    (map(.error_type // "none") | group_by(.) | map("\(length)\t\(.[0])") | .[]),
+    "n=\(length) success=\(map(select(.success == true)) | length) tgc_mean=\((map(.tgc // 0) | add) / length) goal_pass_rate_mean=\((map(.goal_pass_rate // 0) | add) / length) crashed=\(map(select(.error_type == "crash")) | length)"
+  ' ${files} | sed 's/^/[bfcl]   /'
+  local n_crash
+  # shellcheck disable=SC2086
+  n_crash=$(jq -s '[.[] | select(.error_type == "crash")] | length' ${files})
+  local n_ok=$(( n - n_crash ))
+  echo "[bfcl] tally cid=${cid} result_files=${n} non_crashed=${n_ok} crashed=${n_crash} target=${target}"
+  if (( n_crash > 0 || n_ok < target )); then
+    echo "[bfcl] INCOMPLETE: ${n_ok}/${target} non-crashed"
+    return 3
+  fi
+  echo "[bfcl] COMPLETE: ${n_ok}/${target} non-crashed, 0 crashed"
+  return 0
+}
+
+if [[ "${SELFTEST}" == "1" ]]; then
+  case "${BFCL_SELFTEST_STAGE:-preflight}" in
+    tally) tally_campaign "${CID}" "${TARGET}"; exit $?;;
+    *) echo "[bfcl] selftest preflight ok"; exit 0;;
+  esac
+fi
+
+# ---- vLLM: the base model only (copied from scripts/pbs/j10_arm.pbs) ----------------------
+VLLM_PID=""
+kill_vllm () {
+  if [[ -n "${VLLM_PID}" ]]; then
+    kill -TERM -- -"${VLLM_PID}" 2>/dev/null || true
+    local _
+    for _ in $(seq 1 12); do
+      kill -0 "${VLLM_PID}" 2>/dev/null || break
+      sleep 5
+    done
+    kill -KILL -- -"${VLLM_PID}" 2>/dev/null || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+    VLLM_PID=""
+  fi
+}
+trap kill_vllm EXIT
+trap 'echo "[bfcl] caught TERM"; exit 143' TERM
+
+bfcl_vllm_fatal () {
+  echo "[bfcl] FATAL: $*"
+  if [[ -n "${VLOG:-}" && -f "${VLOG}" ]]; then
+    echo "[bfcl] vllm log tail:"
+    tail -n 60 "${VLOG}" || true
+  fi
+  exit 1
+}
+
+bfcl_port_listening () {
+  ss -ltn 2>/dev/null | awk -v want="$1" '
+    $1 == "LISTEN" { n = split($4, a, ":"); if (n > 0 && a[n] == want) found = 1 }
+    END { exit found ? 0 : 1 }
+  '
+}
+
+jobnum="${JOBNUM//[^0-9]/}"
+[[ -n "${jobnum}" ]] || jobnum="$$"
+VLLM_PORT=$(( 20000 + jobnum % 20000 ))
+if command -v ss >/dev/null 2>&1; then
+  tries=0
+  while bfcl_port_listening "${VLLM_PORT}"; do
+    tries=$((tries + 1))
+    (( tries < 50 )) || bfcl_vllm_fatal "no free vLLM port after 50 tries"
+    VLLM_PORT=$((VLLM_PORT + 1))
+    (( VLLM_PORT < 40000 )) || VLLM_PORT=20000
+  done
+fi
+export VLLM_PORT
+export SIDEKICK_VLLM_BASE_URL="http://127.0.0.1:${VLLM_PORT}"
+MODEL="${EXECUTOR_MODEL}"
+mkdir -p "${LOGDIR}" "${OUT}/results" "${TORCHINDUCTOR_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}"
+VLOG="${LOGDIR}/bfcl_arm.${CID}.${JOBNUM}_vllm.log"
+setsid "${SIDEKICK_VENV}/bin/vllm" serve "${MODEL}" \
+  --served-model-name "${MODEL}" \
+  --dtype bfloat16 \
+  --max-model-len 32768 \
+  --host 127.0.0.1 --port "${VLLM_PORT}" \
+  --gpu-memory-utilization 0.85 \
+  > "${VLOG}" 2>&1 &
+VLLM_PID=$!
+echo "[bfcl] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} vlog=${VLOG}"
+t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
+while (( $(date +%s) < deadline )); do
+  kill -0 "${VLLM_PID}" 2>/dev/null || bfcl_vllm_fatal "vllm died before healthy"
+  if curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" >/dev/null 2>&1; then
+    echo "[bfcl] vllm healthy after $(( $(date +%s) - t0 ))s"; healthy=1; break
+  fi
+  sleep 5
+done
+[[ "${healthy}" -eq 1 ]] || bfcl_vllm_fatal "vllm not healthy within 300s"
+curl -sf "http://127.0.0.1:${VLLM_PORT}/v1/models" | grep -Fq "\"${MODEL}\"" \
+  || bfcl_vllm_fatal "vLLM /v1/models does not list ${MODEL}"
+echo "[bfcl] vllm identity: ${MODEL} listed"
+
+# ---- smoke: first submission only ---------------------------------------------------------
+N_EXISTING=$(find "${OUT}/${CID}" -type f -name result.json 2>/dev/null | wc -l | tr -d ' ')
+if [[ "${N_EXISTING}" -eq 0 ]]; then
+  SCID="${CID}_smoke_${JOBNUM}"
+  echo "[bfcl] ---- smoke (${SCID}, ${SMOKE_TASKS} entries, seed 1) ----"
+  timeout 1800 "${PY}" -m sidekick.runner \
+    --system "${SYSTEM}" --split "${SPLIT}" --tasks "${SMOKE_TASKS}" --seeds 1 \
+    --env bfcl --workers 2 \
+    --config "${CFG}" --campaign-id "${SCID}" --out "${OUT}"
+  SMOKE_RC=$?
+  [[ "${SMOKE_RC}" -eq 0 ]] || { echo "[bfcl] FATAL: smoke runner exited ${SMOKE_RC}"; exit 1; }
+  tally_campaign "${SCID}" "${SMOKE_TASKS}"
+  SMOKE_TALLY=$?
+  [[ "${SMOKE_TALLY}" -eq 0 ]] || { echo "[bfcl] FATAL: smoke incomplete or crashed; ${SCID} kept"; exit 1; }
+  N_ACT=$(find "${OUT}/${SCID}" -name events.jsonl -exec cat {} + 2>/dev/null \
+    | jq -c 'select(.event_type == "action" and .actor == "executor")' | wc -l | tr -d ' ')
+  echo "[bfcl] smoke executor actions=${N_ACT}"
+  (( N_ACT > 0 )) || { echo "[bfcl] FATAL: smoke produced no executor action; the executor is not being read"; exit 1; }
+else
+  echo "[bfcl] resume: ${CID} has ${N_EXISTING} result.json; smoke skipped"
+fi
+
+# ---- the arm -------------------------------------------------------------------------------
+echo "[bfcl] ---- runner (${CID}) ----"
+timeout "${RUN_TIMEOUT}" "${PY}" -m sidekick.runner \
+  --system "${SYSTEM}" --split "${SPLIT}" --tasks "${TASKS}" --seeds "${SEEDS}" \
+  --env bfcl --workers "${WORKERS}" \
+  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
+CAMP_RC=$?
+echo "[bfcl] runner rc=${CAMP_RC}"
+
+tally_campaign "${CID}" "${TARGET}"
+TALLY_RC=$?
+kill_vllm
+JOB_RC=0
+if [[ "${TALLY_RC}" -ne 0 ]]; then
+  JOB_RC="${TALLY_RC}"
+elif [[ "${CAMP_RC}" -ne 0 ]]; then
+  JOB_RC="${CAMP_RC}"
+fi
+echo "[bfcl] done=$(date -Iseconds) cid=${CID} runner_rc=${CAMP_RC} tally_rc=${TALLY_RC} job_rc=${JOB_RC}"
+exit "${JOB_RC}"
