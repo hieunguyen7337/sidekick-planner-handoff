@@ -52,7 +52,7 @@
 
 set -uo pipefail
 
-REPO=/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15
+REPO="${J10_REPO:-/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15}"  # J10_REPO: a pinned run checkout
 SELFTEST="${J10_SELFTEST:-0}"
 JOBTAG="${PBS_JOBID:-nopbs$$}"
 JOBNUM="${JOBTAG%%.*}"; JOBNUM="${JOBNUM//[^0-9A-Za-z]/}"
@@ -253,6 +253,10 @@ if [[ "${SPLIT}" == "test_normal" ]]; then
       || fatal "${PREREG} is not committed; FROZEN means committed"
     git -C "${REPO}" diff --quiet HEAD -- "${PREREG}" \
       || fatal "${PREREG} has uncommitted changes; the frozen text is the committed text"
+    # Every test episode must run code a commit names: the manifest stamps HEAD, so a dirty
+    # src/, scripts/ or configs/ would run code no commit records. Run from a pinned checkout.
+    [[ -z "$(git -C "${REPO}" status --porcelain -- src scripts configs 2>/dev/null)" ]] \
+      || fatal "${REPO} has uncommitted changes under src/, scripts/ or configs/; test_normal runs only committed code"
   fi
   [[ "${TASKS}" -eq 168 ]] || fatal "test_normal is registered at all 168 tasks (TASKS=${TASKS})"
   [[ "${SEEDS}" == "1,2" ]] || fatal "test_normal is registered at seeds 1,2 (SEEDS=${SEEDS})"
