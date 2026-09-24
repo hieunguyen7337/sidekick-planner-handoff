@@ -23,7 +23,12 @@ both receivers, scenario and task clusterings, 10,000 draws, seed 20260924 -- an
 * the per-arm count table (h_flag true / live but unflagged / terminal);
 * the rescued episodes at m = 11 (h* = 1, flag false): the arm's goal_pass against the source
   planner's on the same key, per receiver;
-* every HO-row number that moves, old (the committed flag report) against new.
+* every HO-row number that moves, old (the committed flag report) against new;
+* ``cap25_counts`` (added 2026-09-24, unit V2INT): counts only, for the cap-25 prefix family behind
+  SHAPE-06 and ROB-12 (hj12_prefix_m{2..11}_20260923, hj13_prefix_zs_m{6,9,11}_20260923, source
+  hj1b_planner_20260915): per depth h_flag true / live but unflagged / terminal, SHAPE-06's
+  executor-never-acted count, and h* against the source's own prefix_is_terminal. It is computed after
+  every other block and changes none of their keys.
 
 Reuse, not re-implementation
 ----------------------------
@@ -89,6 +94,15 @@ EXPECTED_FLAG_FALSE = {11: {"terminal": 83, "live": 17}, 9: {"terminal": 43, "li
 # ---- the held-out guard, copied from j17_channel_fixes.refuse_path / _refuse_out ----------------------
 REFUSED_MARKERS = ("test_normal", "test_challenge", "j10_", "j11_", "j12_")
 FORBIDDEN_OUT_ROOTS = (Path("/scratch"),)  # b2_decomposition.FORBIDDEN_OUT_ROOTS
+# Dev campaigns whose names hold a refused marker as a substring ("hj12_" contains "j12_"): the cap-25
+# family's tailored arms, dev runs of the hj12 series (57 dev tasks, seeds 1-2; SHAPE-06, j16_robustness
+# "t_m*"), not J12 data. Exempt only as an exact path component, so every other path is checked as before.
+DEV_NAMES_HOLDING_A_MARKER = frozenset(f"hj12_prefix_m{m}_20260923" for m in (2, 4, 6, 7, 8, 9, 10, 11))
+
+
+def _marker_text(text: str) -> str:
+    """The path text with each exempt dev campaign component blanked; every other component unchanged."""
+    return "/".join("<dev>" if part in DEV_NAMES_HOLDING_A_MARKER else part for part in Path(text).parts)
 
 
 def refuse_path(path: Path) -> Optional[str]:
@@ -99,8 +113,9 @@ def refuse_path(path: Path) -> Optional[str]:
     except OSError:
         pass
     for text in sorted(texts):
+        scan = _marker_text(text)
         for marker in REFUSED_MARKERS:
-            if marker in text:
+            if marker in scan:
                 return f"refusing {path}: contains {marker!r} (dev only; held-out and J10-J12 data are not read here)"
     return None
 
@@ -419,6 +434,104 @@ def _sum_kinds(dicts) -> dict[str, int]:
     return dict(sorted(out.items()))
 
 
+# ---- the cap-25 prefix family: counts only (SHAPE-06, ROB-12) ------------------------------------------------
+# The published cap-25 depth curve (SHAPE-06) and ROB-12's explanation of its flag / never-acted gap rest
+# on the same `handoff_occurred` flag. These are the arms behind them (j16_robustness._arm_dirs "t_m*" and
+# "zs_m*", FC_FAMILIES["cap25_source"]); they replay the cap-25 planner sample hj1b_planner_20260915, seeds 1-2.
+CAP25_SOURCE = "hj1b_planner_20260915"
+CAP25_SEEDS = (1, 2)
+CAP25_ARMS: dict[str, dict[int, str]] = {
+    "tailored": {m: f"hj12_prefix_m{m}_20260923" for m in (2, 4, 6, 7, 8, 9, 10, 11)},
+    "untailored": {m: f"hj13_prefix_zs_m{m}_20260923" for m in (6, 9, 11)},
+}
+# SHAPE-06's "silenced" counts, tailored m = 2..11: result.json totals.per_actor.executor.n_calls == 0
+# (GUARD-01's definition; j16_robustness.executor_calls). ROB-12's flag-false counts are in the j16 report.
+SHAPE06_NEVER_ACTED = {2: 0, 4: 0, 6: 3, 7: 8, 8: 20, 9: 31, 10: 41, 11: 56}
+
+
+def cap25_sources(results_root: Path | str) -> dict[str, dict[str, Any]]:
+    r = Path(results_root)
+    return {f"{rx}_m{m}": j17d._source(r, campaign, "prefix_handoff", CAP25_SEEDS, CAP25_SOURCE)
+            for rx, arms in CAP25_ARMS.items() for m, campaign in arms.items()}
+
+
+def cap25_counts(results_root: Path | str) -> dict[str, Any]:
+    """Per cap-25 prefix arm: h_flag true / live but unflagged / terminal (h* = 0), the executor-never-acted
+    count SHAPE-06 uses, and h* against the SOURCE episode's own prefix_is_terminal (sidekick's code, as in
+    validation 2). Counts only: no bootstrap, no quality values. Crashed episodes are dropped and counted."""
+    sources = cap25_sources(results_root)
+    for src in sources.values():
+        _check(src["root"])
+        _check(src["packet_source"])
+    cache: dict[tuple, dict[str, Any]] = {}
+    arms: dict[str, Any] = {}
+    for label, src in sources.items():
+        m = int(label.rsplit("_m", 1)[1])
+        print(f"[j17-hstar] cap-25 counts {label} ...", flush=True)
+        rows, _diag = j16.load_campaign_dir(src["root"], src["seeds"])
+        scored = j17d.drop_crashed(rows)
+        ctl = hc.arm_control(src["root"], src["seeds"])
+        counts = hc.control_counts(ctl, keys=scored.keys())
+        never = {k for k, row in scored.items() if j16.executor_calls(row) == 0}
+        terminal = {k for k in scored if (ctl.get(k) or {}).get(hc.HSTAR_NAME) is False}
+        flag_not_true = {k for k in scored if (ctl.get(k) or {}).get(hc.HFLAG_NAME) is not True}
+        n_src_term = n_src_live = n_src_undef = 0
+        disagree: list[list[Any]] = []
+        flag_false_acted: list[dict[str, Any]] = []
+        for k in sorted(scored):
+            ck = (str(src["packet_source"]), k[0], int(k[1]), m)
+            if ck not in cache:
+                cache[ck] = source_prefix_facts(Path(src["packet_source"]), k[0], int(k[1]), m)
+            term = cache[ck].get("terminal")
+            hs = (ctl.get(k) or {}).get(hc.HSTAR_NAME)
+            if term is None or hs is None:
+                n_src_undef += 1
+                continue
+            n_src_term += int(term)
+            n_src_live += int(not term)
+            if hs is term:  # h* must equal NOT terminal
+                disagree.append([k[0], k[1], hs, term])
+            if k in flag_not_true and k not in never:
+                flag_false_acted.append({"task_id": k[0], "seed": k[1], "h_star": hs, "source_prefix_terminal": term,
+                                         "effective_m": (ctl.get(k) or {}).get("effective_m"),
+                                         "n_source_actions": (ctl.get(k) or {}).get("n_source_actions"),
+                                         "source_last_action_kind": cache[ck].get("last_action_kind"),
+                                         "source_last_obs_done": cache[ck].get("last_obs_done"),
+                                         "executor_n_calls": j16.executor_calls(scored[k])})
+        shape06 = SHAPE06_NEVER_ACTED.get(m) if label.startswith("tailored_") else None
+        arms[label] = {
+            "campaign": src["campaign"], "depth": m, "n_scored": len(scored), "n_crash": len(rows) - len(scored),
+            "n_h_flag_true": counts["n_h_flag_true"],
+            "n_live_but_unflagged": counts["n_live_but_unflagged"],
+            "n_terminal": counts["n_terminal"],
+            "n_hstar_true": counts["n_hstar_true"],
+            "n_hstar_undefined": counts["n_hstar_undefined"],
+            "n_h_flag_true_but_terminal": counts["n_h_flag_true_but_terminal"],
+            "n_h_flag_not_true": len(flag_not_true),
+            "n_executor_never_acted": len(never),
+            "n_terminal_but_executor_acted": len(terminal - never),
+            "n_hstar_true_but_executor_never_acted": len((set(scored) - terminal) & never),
+            "terminal_equals_executor_never_acted": terminal == never,
+            "n_source_prefix_terminal": n_src_term, "n_source_prefix_live": n_src_live,
+            "n_source_undefined": n_src_undef,
+            "hstar_equals_not_source_terminal": {"n_disagree": len(disagree), "disagreements": disagree,
+                                                  "holds": not disagree and n_src_undef == 0},
+            "flag_not_true_but_executor_acted": flag_false_acted,
+            "shape06_never_acted": shape06,
+            "matches_shape06_never_acted": None if shape06 is None else shape06 == len(never),
+        }
+    return {
+        "source": CAP25_SOURCE, "seeds": list(CAP25_SEEDS),
+        "arms_behind": "SHAPE-06 (tailored post-guard curve, m = 2..11) and ROB-12 (j16_robustness F_c cap25_source)",
+        "definitions": {"h_star": hc.DEFINITION, "h_flag": hc.FLAG_DEFINITION,
+                        "executor_never_acted": "result.json totals.per_actor.executor.n_calls == 0 (SHAPE-06, GUARD-01)",
+                        "source_prefix_terminal": ("sidekick.systems.loop.prefix_is_terminal of the SOURCE episode's "
+                                                   "m-prefix via build_handoff_prefix (as validation 2)")},
+        "arms": arms,
+        "all_hstar_equal_not_source_terminal": all(a["hstar_equals_not_source_terminal"]["holds"] for a in arms.values()),
+    }
+
+
 # ---- old against new -------------------------------------------------------------------------------------
 def _ho_row(path: tuple[str, ...]) -> Optional[str]:
     """Which ledger row a leaf of the flag report's handoff blocks belongs to."""
@@ -572,6 +685,8 @@ def build_report(results_root: Path | str, n_boot: int = N_BOOT, seed: int = SEE
                    "n_crash_total": sum(e["n_crash"] for e in dirs.values())},
         "settings": {"n_boot": int(n_boot), "seed": int(seed), "results_root": str(results_root)},
     }
+    # Counts only, computed after every existing block so nothing above can depend on it.
+    report["cap25_counts"] = cap25_counts(results_root)
     return j16.round_floats(report)
 
 
@@ -596,6 +711,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     sources = j17d.family_sources(args.results_root)
     named = [args.out, args.results_root, args.flag_report]
     named += [p for label in ("ceiling",) + PREFIX_LABELS for s in sources[label] for p in (s["root"], s["packet_source"])]
+    named += [p for s in cap25_sources(args.results_root).values() for p in (s["root"], s["packet_source"])]
     for path in named:
         if path is not None and (reason := refuse_path(path)):
             return _refused(reason)
@@ -618,7 +734,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(json.dumps({"protocol": PROTOCOL, "json": str(args.out), "validation_all_hold": ok,
                       "counts": {rx: {m: {k: v for k, v in c.items() if k.startswith("n_")}
                                       for m, c in report["handoff_control_counts"][rx].items()}
-                                 for rx in RECEIVERS}}, indent=1))
+                                 for rx in RECEIVERS},
+                      "cap25_counts": {label: {k: a[k] for k in ("n_h_flag_true", "n_live_but_unflagged", "n_terminal",
+                                                                  "n_executor_never_acted")}
+                                       for label, a in report["cap25_counts"]["arms"].items()},
+                      "cap25_all_hstar_equal_not_source_terminal":
+                          report["cap25_counts"]["all_hstar_equal_not_source_terminal"]}, indent=1))
     return 0 if ok else 1
 
 

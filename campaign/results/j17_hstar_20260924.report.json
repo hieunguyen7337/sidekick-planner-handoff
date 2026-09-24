@@ -1,7 +1,7 @@
 {
   "protocol": "J17-HSTAR",
   "generated_by": "scripts/analysis/j17_hstar.py",
-  "generated_at": "2026-09-24T20:48:36+10:00",
+  "generated_at": "2026-09-24T21:51:20+10:00",
   "split": "dev",
   "purpose": "HO-01..HO-09 and HO-NI-01..03 recomputed with h* (the executor took control after the replayed prefix) in place of handoff_occurred, on the pooled cap-81 prefix family (seeds 1-3), with the validation of h* and the rescued episodes at m = 11.",
   "definition": {
@@ -6600,5 +6600,479 @@
     "n_boot": 10000,
     "seed": 20260924,
     "results_root": "/scratch/n12194778/sidekick/results"
+  },
+  "cap25_counts": {
+    "source": "hj1b_planner_20260915",
+    "seeds": [
+      1,
+      2
+    ],
+    "arms_behind": "SHAPE-06 (tailored post-guard curve, m = 2..11) and ROB-12 (j16_robustness F_c cap25_source)",
+    "definitions": {
+      "h_star": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+      "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)",
+      "executor_never_acted": "result.json totals.per_actor.executor.n_calls == 0 (SHAPE-06, GUARD-01)",
+      "source_prefix_terminal": "sidekick.systems.loop.prefix_is_terminal of the SOURCE episode's m-prefix via build_handoff_prefix (as validation 2)"
+    },
+    "arms": {
+      "tailored_m2": {
+        "campaign": "hj12_prefix_m2_20260923",
+        "depth": 2,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 114,
+        "n_live_but_unflagged": 0,
+        "n_terminal": 0,
+        "n_hstar_true": 114,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 0,
+        "n_executor_never_acted": 0,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 0,
+        "n_source_prefix_live": 114,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [],
+        "shape06_never_acted": 0,
+        "matches_shape06_never_acted": true
+      },
+      "tailored_m4": {
+        "campaign": "hj12_prefix_m4_20260923",
+        "depth": 4,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 114,
+        "n_live_but_unflagged": 0,
+        "n_terminal": 0,
+        "n_hstar_true": 114,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 0,
+        "n_executor_never_acted": 0,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 0,
+        "n_source_prefix_live": 114,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [],
+        "shape06_never_acted": 0,
+        "matches_shape06_never_acted": true
+      },
+      "tailored_m6": {
+        "campaign": "hj12_prefix_m6_20260923",
+        "depth": 6,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 111,
+        "n_live_but_unflagged": 0,
+        "n_terminal": 3,
+        "n_hstar_true": 111,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 3,
+        "n_executor_never_acted": 3,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 3,
+        "n_source_prefix_live": 111,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [],
+        "shape06_never_acted": 3,
+        "matches_shape06_never_acted": true
+      },
+      "tailored_m7": {
+        "campaign": "hj12_prefix_m7_20260923",
+        "depth": 7,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 106,
+        "n_live_but_unflagged": 0,
+        "n_terminal": 8,
+        "n_hstar_true": 106,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 8,
+        "n_executor_never_acted": 8,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 8,
+        "n_source_prefix_live": 106,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [],
+        "shape06_never_acted": 8,
+        "matches_shape06_never_acted": true
+      },
+      "tailored_m8": {
+        "campaign": "hj12_prefix_m8_20260923",
+        "depth": 8,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 93,
+        "n_live_but_unflagged": 1,
+        "n_terminal": 20,
+        "n_hstar_true": 94,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 21,
+        "n_executor_never_acted": 20,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 20,
+        "n_source_prefix_live": 94,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [
+          {
+            "task_id": "383cbac_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 8,
+            "n_source_actions": 8,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 16
+          }
+        ],
+        "shape06_never_acted": 20,
+        "matches_shape06_never_acted": true
+      },
+      "tailored_m9": {
+        "campaign": "hj12_prefix_m9_20260923",
+        "depth": 9,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 82,
+        "n_live_but_unflagged": 1,
+        "n_terminal": 31,
+        "n_hstar_true": 83,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 32,
+        "n_executor_never_acted": 31,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 31,
+        "n_source_prefix_live": 83,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [
+          {
+            "task_id": "383cbac_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 8,
+            "n_source_actions": 8,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 19
+          }
+        ],
+        "shape06_never_acted": 31,
+        "matches_shape06_never_acted": true
+      },
+      "tailored_m10": {
+        "campaign": "hj12_prefix_m10_20260923",
+        "depth": 10,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 71,
+        "n_live_but_unflagged": 2,
+        "n_terminal": 41,
+        "n_hstar_true": 73,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 43,
+        "n_executor_never_acted": 41,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 41,
+        "n_source_prefix_live": 73,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [
+          {
+            "task_id": "37a8675_1",
+            "seed": 2,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 10,
+            "n_source_actions": 10,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 2
+          },
+          {
+            "task_id": "383cbac_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 8,
+            "n_source_actions": 8,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 32
+          }
+        ],
+        "shape06_never_acted": 41,
+        "matches_shape06_never_acted": true
+      },
+      "tailored_m11": {
+        "campaign": "hj12_prefix_m11_20260923",
+        "depth": 11,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 54,
+        "n_live_but_unflagged": 4,
+        "n_terminal": 56,
+        "n_hstar_true": 58,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 60,
+        "n_executor_never_acted": 56,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 56,
+        "n_source_prefix_live": 58,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [
+          {
+            "task_id": "37a8675_1",
+            "seed": 2,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 10,
+            "n_source_actions": 10,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 5
+          },
+          {
+            "task_id": "383cbac_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 8,
+            "n_source_actions": 8,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 18
+          },
+          {
+            "task_id": "530b157_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 11,
+            "n_source_actions": 11,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 15
+          },
+          {
+            "task_id": "68ee2c9_1",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 11,
+            "n_source_actions": 11,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 29
+          }
+        ],
+        "shape06_never_acted": 56,
+        "matches_shape06_never_acted": true
+      },
+      "untailored_m6": {
+        "campaign": "hj13_prefix_zs_m6_20260923",
+        "depth": 6,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 111,
+        "n_live_but_unflagged": 0,
+        "n_terminal": 3,
+        "n_hstar_true": 111,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 3,
+        "n_executor_never_acted": 3,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 3,
+        "n_source_prefix_live": 111,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [],
+        "shape06_never_acted": null,
+        "matches_shape06_never_acted": null
+      },
+      "untailored_m9": {
+        "campaign": "hj13_prefix_zs_m9_20260923",
+        "depth": 9,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 82,
+        "n_live_but_unflagged": 1,
+        "n_terminal": 31,
+        "n_hstar_true": 83,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 32,
+        "n_executor_never_acted": 31,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 31,
+        "n_source_prefix_live": 83,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [
+          {
+            "task_id": "383cbac_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 8,
+            "n_source_actions": 8,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 30
+          }
+        ],
+        "shape06_never_acted": null,
+        "matches_shape06_never_acted": null
+      },
+      "untailored_m11": {
+        "campaign": "hj13_prefix_zs_m11_20260923",
+        "depth": 11,
+        "n_scored": 114,
+        "n_crash": 0,
+        "n_h_flag_true": 54,
+        "n_live_but_unflagged": 4,
+        "n_terminal": 56,
+        "n_hstar_true": 58,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_not_true": 60,
+        "n_executor_never_acted": 56,
+        "n_terminal_but_executor_acted": 0,
+        "n_hstar_true_but_executor_never_acted": 0,
+        "terminal_equals_executor_never_acted": true,
+        "n_source_prefix_terminal": 56,
+        "n_source_prefix_live": 58,
+        "n_source_undefined": 0,
+        "hstar_equals_not_source_terminal": {
+          "n_disagree": 0,
+          "disagreements": [],
+          "holds": true
+        },
+        "flag_not_true_but_executor_acted": [
+          {
+            "task_id": "37a8675_1",
+            "seed": 2,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 10,
+            "n_source_actions": 10,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 12
+          },
+          {
+            "task_id": "383cbac_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 8,
+            "n_source_actions": 8,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 22
+          },
+          {
+            "task_id": "530b157_2",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 11,
+            "n_source_actions": 11,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 22
+          },
+          {
+            "task_id": "68ee2c9_1",
+            "seed": 1,
+            "h_star": true,
+            "source_prefix_terminal": false,
+            "effective_m": 11,
+            "n_source_actions": 11,
+            "source_last_action_kind": "CODE",
+            "source_last_obs_done": false,
+            "executor_n_calls": 5
+          }
+        ],
+        "shape06_never_acted": null,
+        "matches_shape06_never_acted": null
+      }
+    },
+    "all_hstar_equal_not_source_terminal": true
   }
 }

@@ -71,7 +71,8 @@ def prefix_episode(system_dir: Path, task: str, seed: int, m: int, source_campai
     sfx = task[-2:]
     n_src = N_SRC[sfx]
     eff = min(m, n_src)
-    live = sfx != "_3"  # _3's prefix always ends the source episode
+    # The prefix ends the episode only when it replays the source's COMPLETE: _3 at m >= 6, never _1 or _2.
+    live = not (PLANS[sfx][-1] == "COMPLETE" and eff == n_src)
     e = [_event(task, seed, "prefix_handoff", 0, "system", "run_start", {"prefix": {"start_step": eff + 1}}),
          _event(task, seed, "prefix_handoff", eff, "system", "report",
                 {"effective_m": eff, "n_source_actions": n_src, "handoff_occurred": eff < n_src,
@@ -86,7 +87,7 @@ def prefix_episode(system_dir: Path, task: str, seed: int, m: int, source_campai
         last = eff + 2
     e += [_event(task, seed, "prefix_handoff", last, "environment", "evaluate", {}),
           _event(task, seed, "prefix_handoff", last, "system", "run_end", {})]
-    gp = ARM_GP[m][sfx]
+    gp = ARM_GP.get(m, ARM_GP[6])[sfx]  # cap-25-only depths (2, 4, 7, 8, 10): counts only, quality unread
     result = {"task_id": task, "seed": seed, "system": "prefix_handoff", "goal_pass_rate": gp,
               "tgc": 1.0 if gp == 1.0 else 0.0, "success": gp == 1.0, "n_planner_calls": 0, "steps": last,
               "error_type": None, "totals": {"per_actor": {"executor": {"n_calls": 2 if live else 0}}}}
@@ -105,6 +106,17 @@ def build_tree(root: Path) -> None:
                 for seed in s["seeds"]:
                     for t in TASKS:
                         prefix_episode(s["root"], t, seed, m, s["packet_source"])
+    # The cap-25 family (SHAPE-06 / ROB-12): its own source sample, the same synthetic plans.
+    cap25 = jh.cap25_sources(root)
+    for s in {str(c["packet_source"]): c for c in cap25.values()}.values():
+        for seed in s["seeds"]:
+            for t in TASKS:
+                source_episode(s["packet_source"] / j17d.PACKET_SYSTEM, t, seed)
+    for label, s in cap25.items():
+        m = int(label.rsplit("_m", 1)[1])
+        for seed in s["seeds"]:
+            for t in TASKS:
+                prefix_episode(s["root"], t, seed, m, s["packet_source"])
 
 
 @pytest.fixture
@@ -166,6 +178,41 @@ def test_rescued_episodes_against_the_source_planner(report: dict):
     assert {e["task_id"][-2:] for e in r["episodes"]} == {"_2"}
 
 
+def test_cap25_counts_by_hand(report: dict):
+    """12 keys per arm (6 tasks x seeds 1-2). _1 is flagged at every depth; _2 (8 executed, no COMPLETE)
+    loses the flag at m >= 8 but stays live; _3 (6 executed ending COMPLETE) is flagged below 6 and
+    terminal from 6 on. So the flag / live-unflagged / terminal split is 12/0/0 at m = 2, 4; 8/0/4 at
+    m = 6, 7; and 4/4/4 at m = 8..11 -- and only the terminal episodes have executor n_calls == 0."""
+    c = report["cap25_counts"]
+    assert set(c["arms"]) == {f"tailored_m{m}" for m in (2, 4, 6, 7, 8, 9, 10, 11)} | {
+        f"untailored_m{m}" for m in (6, 9, 11)}
+    expected = {2: (12, 0, 0), 4: (12, 0, 0), 6: (8, 0, 4), 7: (8, 0, 4),
+                8: (4, 4, 4), 9: (4, 4, 4), 10: (4, 4, 4), 11: (4, 4, 4)}
+    for label, a in c["arms"].items():
+        m = a["depth"]
+        assert (a["n_h_flag_true"], a["n_live_but_unflagged"], a["n_terminal"]) == expected[m], label
+        assert (a["n_scored"], a["n_crash"], a["n_hstar_undefined"]) == (12, 0, 0)
+        assert a["n_executor_never_acted"] == a["n_terminal"]
+        assert a["terminal_equals_executor_never_acted"] is True
+        assert a["n_source_prefix_terminal"] == a["n_terminal"]
+        assert a["hstar_equals_not_source_terminal"]["holds"] is True
+        # The flag-false episodes in which the executor acted are exactly the live-but-unflagged ones,
+        # and their source prefix is NOT terminal (the opposite of "the prefix exhausted them").
+        acted = a["flag_not_true_but_executor_acted"]
+        assert len(acted) == a["n_live_but_unflagged"]
+        assert all(e["source_prefix_terminal"] is False and e["h_star"] is True for e in acted)
+    # The synthetic tree is not SHAPE-06's data: the comparison is reported, tailored arms only.
+    assert c["arms"]["tailored_m2"]["matches_shape06_never_acted"] is True  # 0 == 0
+    assert c["arms"]["tailored_m11"]["matches_shape06_never_acted"] is False  # 4 != 56
+    assert c["arms"]["untailored_m11"]["shape06_never_acted"] is None
+    assert c["all_hstar_equal_not_source_terminal"] is True
+
+
+def test_cap25_block_leaves_the_other_keys_alone(report: dict):
+    assert list(report)[-1] == "cap25_counts"
+    assert "cap25_counts" not in report["inputs"] and "cap25" not in json.dumps(report["validation"])
+
+
 def test_with_hstar_swaps_the_indicator_and_keeps_the_flag():
     rows = {("a_1", 1): {"goal_pass_rate": 1.0, "_facts": {"handoff_occurred": False, "executor_n_calls": 3}}}
     out = jh.with_hstar(rows, {("a_1", 1): {"h_star": True}})
@@ -199,6 +246,15 @@ def test_changes_vs_flag_groups_moves_by_ledger_row_and_checks_all_episode_value
 def test_refuse_path_names_each_marker(marker: str):
     assert jh.refuse_path(Path(f"/x/{marker}thing")) is not None
     assert jh.refuse_path(Path("/x/hj17_prefix_c81_bplus_m11_20260923")) is None
+
+
+def test_the_cap25_dev_exemption_is_an_exact_component_only():
+    # hj12_prefix_m*_20260923 are dev arms whose names hold "j12_"; they alone are exempt.
+    assert jh.refuse_path(Path("/r/hj12_prefix_m11_20260923/prefix_handoff/1/t/events.jsonl")) is None
+    assert jh.refuse_path(Path("/r/hj12_prefix_m11_20260922/prefix_handoff")) is not None  # not in the set
+    assert jh.refuse_path(Path("/r/hj12_prefix_m11_20260923_x/prefix_handoff")) is not None
+    assert jh.refuse_path(Path("/r/hj12_prefix_m11_20260923/j12_d3/prefix_handoff")) is not None
+    assert jh.refuse_path(Path("/r/test_normal/hj12_prefix_m11_20260923")) is not None
 
 
 def test_main_refuses_heldout_roots_and_an_out_under_the_raw_results(tmp_path: Path, monkeypatch, capsys):
