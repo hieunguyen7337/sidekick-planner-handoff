@@ -1,0 +1,70 @@
+{
+  "label": "R7.1 no-op floor (dev, exploratory)",
+  "source": "noop_floor block of scripts/analysis/j17_channel_fixes.py --noop-campaign, rerun 2026-09-24 (hpc job log ~/.hpc-spool/20260924-184440-3500342.out); every other block of that rerun is identical to campaign/results/j17_channel_fixes_20260924.report.json except census.ledger counts, which moved because the ledger gained the A10 rows",
+  "command": "scripts/analysis/j17_channel_fixes.py --out <tmp> --depth-report campaign/results/j17_depth_fixes_20260924.report.json --noop-campaign /scratch/n12194778/sidekick/results/dev_noop_complete_20260924 --n-boot 10000 --seed 20260924",
+  "config": "configs/dev_noop_complete.yaml",
+  "settings": {
+    "n_boot": 10000,
+    "seed": 20260924,
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "alpha": 0.05,
+    "expected_pairs": 171,
+    "clustering": "scenario (primary: every p and ci95_pp_scenario) and task (ci95_pp_task)",
+    "interval": "95% percentile, j10.cluster_bootstrap_means / percentile_ci",
+    "p_value": "j10.bootstrap_pvalue(scenario means, threshold, 'two-sided'): 2 x the smaller tail",
+    "crash_convention": "error_type == 'crash' is dropped from every pair and counted in inputs",
+    "definitions": {
+      "limit": "error_type == 'limit' (the 40-step limit), scored; only error_type == 'crash' is dropped",
+      "tgc": "j10.a1_arm_episodes' tgc (j10.score_tgc: a scored failure is 0), per-task binary",
+      "sgc": "j10.a1_sgc_units [j10_report.py:2379-2400]: a (scenario, seed) unit passes iff every task of the scenario succeeded, scored only when all its tasks are non-crashed episodes; the rule of hj1_gate.scenario_goal_completion. Paired on shared units; scenario clusters",
+      "fenced_code": "the intervention text contains an opening ``` line, text and a closing ``` (FENCED_BLOCK_RE)",
+      "chars": "len() of the intervention text (payload.correction), in characters",
+      "interventions": "every event_type == 'intervention' in the episode's last run_start segment (b2.read_events), over the arm's non-crashed episodes",
+      "copy_rate_show": "b2_decomposition.copy_rate, the registered S definition, unchanged",
+      "copy_rate_advice": "b2's next-action rule, renderer and whitespace normalisation, with the shown text widened to the advice text OR any ```python block inside it; denominator every intervention",
+      "per_episode_wall_s": "manifest.json created_at (written just before system.run, src/sidekick/runner.py:369-388) to the run_end event's ts. Every other event ts is AppWorld's freezegun clock (src/sidekick/replay.py:76)",
+      "planner_call_latency_s": "usage.latency_s of live planner events (provider not 'cache', n_calls >= 1); perf_counter runs under the same freezegun clock"
+    }
+  },
+  "label_of_source": "EXPLORATORY dev analyses for review F2/F4/F7; nothing here decides a registered verdict",
+  "noop_floor": {
+    "campaign": "/scratch/n12194778/sidekick/results/dev_noop_complete_20260924",
+    "present": true,
+    "seeds": [
+      1,
+      2
+    ],
+    "n_tasks": 57,
+    "n_scored": 114,
+    "n_crash": 0,
+    "goal_pass": {
+      "n": 114,
+      "mean": 0.356947,
+      "ci95_scenario": [
+        0.300263,
+        0.412895
+      ]
+    },
+    "tgc": {
+      "n": 114,
+      "mean": 0.0,
+      "ci95_scenario": [
+        0.0,
+        0.0
+      ]
+    },
+    "sgc": {
+      "n": 38,
+      "mean": 0.0,
+      "ci95_scenario": [
+        0.0,
+        0.0
+      ],
+      "n_units_unscored": 0
+    }
+  }
+}
