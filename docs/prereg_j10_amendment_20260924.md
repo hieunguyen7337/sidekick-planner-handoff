@@ -894,3 +894,27 @@ PROV-02).
   - No verdict changes.
 
 *Amendment 1 ends.*
+
+## Amendment 2 — disclosure of a dev result bearing on P3's reference (2026-09-24, appended before any `test_normal` episode; information and one reporting constraint only: no arm, prediction, rule, threshold, Holm family, margin, seed, order, budget or abort rule above either end marker changes)
+
+**Why.** A dev arm finished after Amendment 1 froze. Its result bears on how P3 must be described, so it is
+recorded here before any J10 `test_normal` episode exists. Check at commit: `/scratch/n12194778/sidekick/results`
+holds 13 `j10_*` campaigns, all ending `_dryrun`.
+
+**What was seen (dev, exploratory).**
+- Arm `dev_planner_alone_cap81_high_20260924` (`configs/dev_planner_alone_cap81_high.yaml`): arm 3's design with
+  `planner.reasoning_effort: high` in place of `medium` and `limits.per_step_timeout_s: 300`. 57 dev tasks × seeds
+  1, 2: 114 episodes, 0 crashed, 4 at the step limit.
+- Mean `goal_pass` 0.8834 and mean TGC 0.7632 (Claude's count over the campaign's `result.json` files).
+- The medium-effort cap-81 planner alone (`hj13_planner_alone_cap81_20260923`, the same 114 dev keys) scores
+  0.7637 `goal_pass` and 0.5702 TGC (ledger CEIL-07). The difference is not a registered contrast.
+- The paired contrast, its cost, and a re-reading of dev non-inferiority against this arm are exploratory ledger rows
+  (CEILHI-*). They change nothing here.
+
+**Reporting constraint (added, like Amendment 1 §E).**
+- P3's reference is arm 3, the planner alone at `medium` effort, as §4 registers. That stays.
+- A P3 non-inferiority verdict is described only as non-inferiority to the medium-effort planner in this harness.
+  It is never described as non-inferiority to the planner at its best effort.
+- Wherever P3 is reported, the dev high-effort result is cited beside it.
+
+*Amendment 2 ends.*
