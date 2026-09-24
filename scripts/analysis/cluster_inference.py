@@ -315,7 +315,34 @@ def wild_cluster_bootstrap_ci(
     return float(draws[lo_idx]), float(draws[hi_idx])
 
 
+def by_fdr(pvalues: Sequence[float]) -> list[float]:
+    """Benjamini-Yekutieli step-up adjusted p-values, returned in input order.
+
+    ``p_(i) * m * c(m) / i`` with ``c(m) = sum_{j=1..m} 1/j``, made monotone from the
+    largest rank down (the minimum over ranks >= i) and capped at 1. Valid under arbitrary
+    dependence between the tests, which is why it -- not Benjamini-Hochberg -- is the
+    paper-wide sensitivity: the contrasts share arms and so are correlated by construction.
+    A sensitivity reading only; no registered verdict is decided by it.
+    """
+    m = len(pvalues)
+    if m == 0:
+        return []
+    for p in pvalues:
+        if not 0.0 <= float(p) <= 1.0:
+            raise ValueError(f"p-value out of [0, 1]: {p!r}")
+    c_m = sum(1.0 / j for j in range(1, m + 1))
+    order = sorted(range(m), key=lambda i: (float(pvalues[i]), i))
+    adjusted = [0.0] * m
+    running = 1.0
+    for rank in range(m, 0, -1):
+        idx = order[rank - 1]
+        running = min(running, min(1.0, float(pvalues[idx]) * m * c_m / rank))
+        adjusted[idx] = running
+    return adjusted
+
+
 __all__ = [
+    "by_fdr",
     "cluster_signflip_pvalue",
     "registered_signflip",
     "REGISTERED_EXACT_MAX_PATTERNS",

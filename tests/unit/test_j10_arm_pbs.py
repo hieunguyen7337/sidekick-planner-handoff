@@ -147,6 +147,35 @@ def test_frozen_prereg_still_needs_the_confirmation_token(tmp_path: Path):
     assert "planner model from config: gpt-5.6-luna" in text
 
 
+A1_PATH = REPO / "docs" / "prereg_j10_amendment_20260924.md"
+AM1_DRAFT = REPO / "docs" / "prereg_j10_amendment1_draft_20260923.md"
+
+
+def _a1_with_amendment1() -> str:
+    """A1 as the Amendment 1 freeze commit leaves it: the draft's body appended after one blank
+    line below A1's end marker -- or A1 itself, once that body is already in it."""
+    a1 = A1_PATH.read_text(encoding="utf-8")
+    draft = AM1_DRAFT.read_text(encoding="utf-8")
+    body = draft.split("<!-- BEGIN APPENDED TEXT -->\n", 1)[1].split("<!-- END APPENDED TEXT -->", 1)[0]
+    return a1 if body.strip() in a1 else a1 + "\n" + body
+
+
+def test_amendment1_keeps_one_status_line_and_passes_the_gate(tmp_path: Path):
+    text = _a1_with_amendment1()
+    status = [line for line in text.splitlines() if line.startswith("**Status**")]
+    assert len(status) == 1 and status[0].startswith("**Status**: **FROZEN**")
+    assert "*Amendment A1 ends. J9 remains frozen and unedited.*\n\n## Amendment 1 " in text
+    assert text.rstrip().endswith("*Amendment 1 ends.*")
+    prereg = tmp_path / "a1_with_amendment1.md"
+    prereg.write_text(text, encoding="utf-8")
+    cfg, src = _replay_variant(tmp_path, "j10_advise_k1_fullctx.yaml")
+    _complete(src, 168)
+    proc = run_pbs(tmp_path, CFG=str(cfg), SPLIT="test_normal", J10_PREREG=str(prereg),
+                   J10_CONFIRM="A1_FROZEN")
+    assert proc.returncode == 0, _out(proc)
+    assert "selftest: preflight passed system=fixed_k cid=j10_advise_k1_fullctx_20260924 split=test_normal" in _out(proc)
+
+
 def test_test_normal_refuses_a_partial_or_renamed_read(tmp_path: Path):
     common = dict(CFG="configs/j10_advise_k1_fullctx.yaml", SPLIT="test_normal",
                   J10_PREREG=str(_prereg(tmp_path, FROZEN_LINE)), J10_CONFIRM="A1_FROZEN")

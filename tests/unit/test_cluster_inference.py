@@ -292,3 +292,27 @@ def test_registered_one_sided_non_inferiority_direction():
     assert got["p"] == pytest.approx(1 / 2 ** 6)
     # The same data tested at the margin in the other direction is no evidence at all.
     assert registered_signflip(diffs, clusters, threshold=-0.07, alternative="less")["p"] == 1.0
+
+
+def test_by_fdr_by_hand():
+    # m = 4, c(4) = 1 + 1/2 + 1/3 + 1/4 = 25/12, so m * c(m) = 25/3.
+    # sorted p: 0.001 (rank 1), 0.01 (2), 0.02 (3), 0.5 (4)
+    #   raw BY:  0.001*25/3/1 = 0.008333;  0.01*25/3/2 = 0.041667;
+    #            0.02*25/3/3  = 0.055556;  0.5*25/3/4  = 1.041667 -> capped 1
+    # step-up minimum from the top: 1, 0.055556, 0.041667, 0.008333 (already monotone).
+    from scripts.analysis.cluster_inference import by_fdr
+
+    got = by_fdr([0.02, 0.5, 0.001, 0.01])
+    assert got == pytest.approx([0.02 * 25 / 9, 1.0, 0.001 * 25 / 3, 0.01 * 25 / 6])
+
+
+def test_by_fdr_step_up_takes_the_minimum_over_higher_ranks():
+    # m = 2, c(2) = 1.5, m * c(m) = 3. sorted: 0.04 (rank 1) -> 0.12; 0.041 (rank 2) -> 0.0615.
+    # Step-up: rank 1 takes min(0.12, 0.0615) = 0.0615, so a larger p can pull a smaller one down.
+    from scripts.analysis.cluster_inference import by_fdr
+
+    assert by_fdr([0.041, 0.04]) == pytest.approx([0.0615, 0.0615])
+    assert by_fdr([]) == []
+    assert by_fdr([0.3]) == pytest.approx([0.3])  # m = 1: c(1) = 1, no adjustment
+    with pytest.raises(ValueError):
+        by_fdr([0.2, 1.5])

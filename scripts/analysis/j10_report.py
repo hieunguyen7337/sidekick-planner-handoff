@@ -2139,6 +2139,12 @@ def _public(block: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in block.items() if not k.startswith("_")}
 
 
+def _p_two_sided(interval: dict[str, Any], threshold: float) -> Optional[float]:
+    """Two-sided bootstrap p at `threshold` from an a1_interval block (None without pairs)."""
+    means = interval.get("_means")
+    return bootstrap_pvalue(means, threshold, "two-sided") if means else None
+
+
 def a1_contrast(
     left: dict[tuple[str, int], dict[str, Any]],
     right: dict[tuple[str, int], dict[str, Any]],
@@ -2253,31 +2259,39 @@ def _load_j16() -> Any:
 
 def a1_ratio_bootstrap(
     comps: dict[tuple[str, int], tuple[float, ...]],
-    stats: dict[str, tuple[int, int]],
+    stats: dict[str, tuple[Any, ...]],
     units: tuple[str, ...],
     *,
     n_boot: int,
     seed: int,
+    keep_samples: bool = False,
 ) -> dict[str, Any]:
     """Cluster percentile bootstrap of Σ comps[i] / Σ comps[j], via j16_robustness.bootstrap_multi.
 
-    `stats` maps a name to its (numerator, denominator) component indices. Whole
-    clusters are resampled, so a ratio restricted to a subset (Σ d·h / Σ h) keeps the
-    clusters that contribute nothing to it -- F-c's estimand, not a mean over a subset.
+    `stats` maps a name to its (numerator, denominator) component indices, with an optional
+    third element True for a ratio defined only when the denominator is positive (a share of
+    a rise). Whole clusters are resampled, so a ratio restricted to a subset (Σ d·h / Σ h)
+    keeps the clusters that contribute nothing to it -- F-c's estimand, not a mean over a
+    subset. keep_samples adds each statistic's sorted scenario resamples as `_samples_scenario`
+    (internal; the caller strips it), from which a bootstrap p is read.
     """
     try:
         j16 = _load_j16()
     except Exception as exc:  # information only: never fatal
         return {"status": "import_error", "error": f"{type(exc).__name__}: {exc}"}
-    fns = {name: j16.ratio(i, j) for name, (i, j) in stats.items()}
+    fns = {name: j16.ratio(spec[0], spec[1], positive_denominator=bool(spec[2]) if len(spec) > 2 else False)
+           for name, spec in stats.items()}
     out: dict[str, Any] = {"status": "ok", "n_boot": n_boot, "seed": seed, "n_units": len(comps)}
     for unit in units:
-        b = j16.bootstrap_multi(comps, fns, unit, seed, n_boot)
+        keep = keep_samples and unit == "scenario"
+        b = j16.bootstrap_multi(comps, fns, unit, seed, n_boot, keep_samples=keep)
         out[f"n_clusters_{unit}"] = b["n_clusters"]
         for name, st in b["stats"].items():
             blk = out.setdefault(name, {"point": st["point"]})
             blk[f"ci95_{unit}"] = st["ci95"]
             blk[f"n_undefined_{unit}"] = st["n_undefined"]
+            if keep:
+                blk["_samples_scenario"] = st.get("_samples")
     return out
 
 
@@ -2521,22 +2535,25 @@ def a1_evaluate_supporting(
             row.update(goal_pass=None, reason=f"arm absent: {absent}")
             return row
         series = a1_did_series([arms[a]["episodes"] for a in labels], field)
+        scen = a1_interval(series, "scenario", n_boot=n_boot, seed=seed)
         row["goal_pass"] = {
             "field": field,
             "n_pairs": len(series["diffs"]),
             "n_shared": series["n_shared"],
             "n_dropped_missing_field": series["n_dropped_missing_field"],
-            "scenario": _public(a1_interval(series, "scenario", n_boot=n_boot, seed=seed)),
+            "scenario": _public(scen),
             "task": _public(a1_interval(series, "task", n_boot=n_boot, seed=seed)),
+            "p_value_two_sided_at_0": _p_two_sided(scen, 0.0),
         }
         return row
     if kind != "paired":
         row.update(goal_pass=None, reason=f"unknown supporting kind {kind!r}")
         return row
     if spec["left"] in arms and spec["right"] in arms:
-        row["goal_pass"] = _public_contrast(a1_contrast(
-            arms[spec["left"]]["episodes"], arms[spec["right"]]["episodes"], field,
-            n_boot=n_boot, seed=seed))
+        cmp = a1_contrast(arms[spec["left"]]["episodes"], arms[spec["right"]]["episodes"], field,
+                          n_boot=n_boot, seed=seed)
+        row["goal_pass"] = _public_contrast(cmp) | {
+            "p_value_two_sided_at_0": _p_two_sided(cmp["scenario"], 0.0)}
     else:
         row.update(goal_pass=None, reason="arm absent")
     return row
@@ -2700,6 +2717,8 @@ def a1_evaluate_contrast_prediction(
     out["events_unadjusted"] = {"lo_above_threshold": lo_above, "hi_below_threshold": hi_below}
     out["verdict_unadjusted"] = rule["decide"](primary["point"], lo_above, hi_below)
     out["p_value"] = bootstrap_pvalue(primary["_means"], t, rule["direction"])
+    # Amendment 1 §F: the BY-FDR sensitivity uses every contrast's two-sided p at its threshold.
+    out["p_value_two_sided"] = bootstrap_pvalue(primary["_means"], t, "two-sided")
     if stability:
         out["pool04"] = a1_pool04(pred, cmp["_series"], primary, n_boot=n_boot, seed=seed)
         out["permutation_sensitivity"] = a1_permutation(
@@ -2891,6 +2910,638 @@ def a1_apply_key_exclusion(results: list[dict[str, Any]], differs: list[str]) ->
             r["on_boundary_reason"] = "A1 §4.2 key-exclusion sensitivity: the verdict differs without the planless keys"
 
 
+# ---- Amendment 1: pre-data additions after the adversarial review ----------------------
+# Appended below A1's end marker before any test_normal episode. Cited by section, never by
+# line: nothing here depends on where the appended text falls in the file.
+A1_AM1 = f"{A1_PREREG} Amendment 1"
+A1_AM1_POWER = "campaign/results/am1_power_dev_20260923.report.json"
+A1_AM1_B2_REPORT = "campaign/results/b2_decomposition_20260923.report.json"
+A1_AM1_NI_MARGIN_PP = -7.00  # P3's margin; B1 reads the handoff-only estimand against it
+A1_LIMIT_ERROR = "limit"  # j16_robustness.LIMIT: the 40-step limit, a scored outcome
+
+# §C. CF1 is family CF's only decision-bearing member: a Holm family of one (a1_decide_family
+# is run on CF's own list), outside P1-P6's family, so their α is unchanged. §4.2 (key
+# exclusion), §5.4 (POOL-04) and §5.5 (sign-flip) apply to it as they apply to P6.
+A1_AM1_CF: list[dict[str, Any]] = [
+    {
+        "id": "CF1",
+        "role": "primary",
+        "kind": "paired_contrast",
+        "metric": "goal_pass",
+        "left": "advise_k10_neutral",
+        "right": "advise_k10_fullctx",
+        "rule": "positive_excludes_zero_with_reversal",
+        "threshold_pp": 0.0,
+        "holm_family": True,
+        "family": "CF",
+        "same_contrast_as": "E4",
+        "statement": ("advise_k10_neutral − advise_k10_fullctx on goal_pass is positive, "
+                      "95% scenario CI excluding zero"),
+        "citation": f"{A1_AM1} §C",
+        "dev_reference": {"diff_pp": 3.73, "ci95_pp_scenario": [-0.06, 8.24], "n_pairs": 171,
+                          "source": A1_AM1_B2_REPORT, "key": "contrasts.D3",
+                          "bootstrap_seed": A1_BOOTSTRAP_SEED},
+        "power": {"at_dev_effect": 0.722, "at_half_effect": 0.213, "source": A1_AM1_POWER},
+        "readings": {
+            "supported": ("advice written under a neutral prompt beats advice written under the "
+                          "registered correction prompt; P6 is reported only as 'actions beat "
+                          "correction-prompt advice', never as a channel effect"),
+            "not_supported": ("the prompt effect is reported as not replicating at 336 pairs; P6 "
+                              "is reported as built, with §6's qualification"),
+            "reversed": "reported as a primary finding",
+        },
+    },
+]
+
+# §C secondaries: pre-specified, not decision-bearing, unadjusted, fixed readings. Each is an
+# exploratory E-row's contrast, so the BY-FDR table (§F) counts it once, as that E-row.
+A1_AM1_CF_SECONDARY: list[dict[str, Any]] = [
+    {
+        "id": "CF2", "left": "show_k10", "right": "advise_k10_fullctx", "same_contrast_as": "E3",
+        "citation": f"{A1_AM1} §C",
+        "dev_reference": {"diff_pp": 2.30, "ci95_pp_scenario": [-2.43, 7.31], "n_pairs": 171,
+                          "source": A1_AM1_B2_REPORT, "key": "contrasts.D2"},
+        "power_exclude_zero": {"at_dev_effect": 0.285, "source": A1_AM1_POWER},
+        "readings": {
+            "above": "the planner's action shown as text beats correction-prompt advice",
+            "below": "correction-prompt advice beats the planner's action shown as text",
+            "not_resolved": "not resolved",
+        },
+    },
+    {
+        "id": "CF3", "left": "takeover_k10", "right": "advise_k10_neutral", "same_contrast_as": "E5",
+        "citation": f"{A1_AM1} §C",
+        "dev_reference": {"diff_pp": 2.40, "ci95_pp_scenario": [-2.94, 8.89], "n_pairs": 171,
+                          "source": A1_AM1_B2_REPORT, "key": "contrasts.D4"},
+        "power_exclude_zero": {"at_dev_effect": 0.25, "source": A1_AM1_POWER},
+        "readings": {
+            "above": "executing the action adds to advice written under a neutral prompt",
+            "below": "neutral-prompt advice beats takeover",
+            "not_resolved": "the added effect of execution is not resolved at 336 pairs",
+        },
+        "never": "the paper never writes that execution adds nothing",
+    },
+]
+
+# §B1: handoff-only non-inferiority, h from the PREFIX arm's report event.
+A1_AM1_HANDOFF_NI: list[dict[str, Any]] = [
+    {"id": "B1a", "left": "prefix_m11", "right": "planner_alone_cap81", "flags_from": "prefix_m11",
+     "companion_of": "P3",
+     "dev_reference": {"diff_pp": -0.94, "ci95_pp_scenario": [-9.51, 7.26], "n_handoff": 71,
+                       "n_pairs": 171, "source": A1_AM1_POWER, "key": "dev.P3_handoff_only"}},
+    {"id": "B1b", "left": "prefix_zs_m11", "right": "planner_alone_cap81", "flags_from": "prefix_zs_m11",
+     "companion_of": "E1 (E1 is this contrast's all-episode value, negated)", "dev_reference": None},
+]
+
+# §B2: S6's receivers, split into handoff and silenced contributions.
+A1_AM1_DECOMPOSITION = {"tailored": ("prefix_m11", "prefix_m9"),
+                        "untailored": ("prefix_zs_m11", "prefix_zs_m9")}
+
+# §B3: the chord test (dev prereg claim C2) for the four prefix arms.
+A1_AM1_CHORD = {
+    "arms": ("prefix_m9", "prefix_m11", "prefix_zs_m9", "prefix_zs_m11"),
+    "floor": "sft_plan",
+    "reference": "planner_alone_cap81",
+    "cost_field": "noncached_tokens_per_episode",
+}
+
+# §B4: where each all-episode depth or NI number's handoff-only companion is printed.
+A1_AM1_B4_COMPANIONS = {
+    "P3": "amendment1.handoff_only_ni[B1a]",
+    "P4": "supporting_contrasts[S6].goal_pass.untailored.handoff_only",
+    "S3": "supporting_contrasts[S6].goal_pass.tailored.handoff_only",
+    "S4": "amendment1.decomposition (both receivers)",
+    "S5": "amendment1.b4_extra.S5_handoff_only",
+    "E1": "amendment1.handoff_only_ni[B1b] (negated)",
+}
+
+# §D2 / §D3: the contrasts split by the step limit, and read with limit-as-0.
+A1_AM1_LIMIT_IDS = ("P1", "P6", "CF1", "CF3")
+
+# §E. H2's frozen rule for a failed P4 [docs/prereg_h2_advice_at_price_20260923.md §5]; P4 failed
+# on dev (1,414,410 non-cached tokens per episode against the registered [300k, 700k]).
+A1_AM1_P1_CONSTRAINT = {
+    "applies_to": "P1",
+    "citation": f"{A1_AM1} §E",
+    "rule_quoted": ("If P4 fails: report the arm as a higher-frequency advice result only, and state "
+                    "explicitly that advice remains unpriced at the action channel's budget."),
+    "rule_source": "docs/prereg_h2_advice_at_price_20260923.md §5",
+    "describe_as": "correction-prompt advice at every step, against the m = 11 prefix",
+    "never_as": ["advice at matched budget", "ruling out a budget effect"],
+    "decision_rule_changed": False,
+}
+
+
+def _cost_arms(cost_report: Optional[dict[str, Any]]) -> dict[str, Any]:
+    arms = (cost_report or {}).get("arms") or {}
+    if isinstance(arms, list):
+        arms = {a.get("label"): a for a in arms if isinstance(a, dict)}
+    return arms
+
+
+def am1_evaluate_cf_secondary(
+    spec: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """CF2 / CF3: an unadjusted goal_pass contrast and its fixed reading [Amendment 1 §C]."""
+    row = dict(spec, decision_bearing=False, adjusted=False)
+    missing = [a for a in (spec["left"], spec["right"]) if a not in arms]
+    if missing:
+        row.update(status="arm_absent", side=None, reading=None, reason=f"no --arm for {missing}")
+        return row
+    cmp = a1_contrast(arms[spec["left"]]["episodes"], arms[spec["right"]]["episodes"],
+                      A1_METRIC_FIELDS["goal_pass"], n_boot=n_boot, seed=seed)
+    scen = cmp["scenario"]
+    row["contrast"] = _public_contrast(cmp)
+    if scen["point"] is None:
+        row.update(status="no_pairs", side=None, reading=None)
+        return row
+    row["p_value_two_sided_at_0"] = _p_two_sided(scen, 0.0)
+    side = "above" if scen["lo"] > 0 else "below" if scen["hi"] < 0 else "not_resolved"
+    incomplete = [a for a in (spec["left"], spec["right"]) if not arms[a]["complete"]]
+    if incomplete:
+        row.update(status="refused_incomplete", side=side, reading=None,
+                   reason=f"arm(s) below the registered non-crashed matrix: {incomplete}")
+        return row
+    row.update(status="ok", side=side, reading=spec["readings"][side])
+    return row
+
+
+def am1_handoff_comps(
+    target: dict[tuple[str, int], dict[str, Any]],
+    base: dict[tuple[str, int], dict[str, Any]],
+    target_flags: dict[tuple[str, int], Optional[bool]],
+    field: str,
+) -> tuple[dict[tuple[str, int], tuple[float, ...]], int, int]:
+    """Per (task_id, seed): (d·h, h, d·(1−h), 1−h, d, 1) with d = target − base and h the
+    TARGET episode's handoff_occurred (a missing flag counts as h = 0 and is counted)."""
+    comps: dict[tuple[str, int], tuple[float, ...]] = {}
+    n_missing_field = n_flag_missing = 0
+    for key in sorted(set(target) & set(base)):
+        yt, yb = target[key].get(field), base[key].get(field)
+        if yt is None or yb is None:
+            n_missing_field += 1
+            continue
+        flag = target_flags.get(key)
+        n_flag_missing += int(flag is None)
+        h = 1.0 if flag is True else 0.0
+        d = float(yt) - float(yb)
+        comps[key] = (d * h, h, d * (1.0 - h), 1.0 - h, d, 1.0)
+    return comps, n_missing_field, n_flag_missing
+
+
+def am1_ni_reading(
+    comps: dict[tuple[str, int], tuple[float, ...]],
+    lo: float,
+    *,
+    margin_pp: float,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """holds / fails / on_boundary for a handoff-only lower bound against the margin, with
+    §5.4 (POOL-04) applied as a1_pool04 applies it: a bound within 1.00 pp of the margin is
+    recomputed at the seven seeds, and any change of reading is 'on_boundary'. The 200,000-
+    resample bound is reported, not voted. Only (d·h, h) is resampled: the draw sequence
+    depends on the cluster count and seed alone, so the bound is the one already computed."""
+    t = margin_pp / 100.0
+    base_reading = "holds" if lo > t else "fails"
+    out: dict[str, Any] = {"margin_pp": margin_pp, "window_pp": POOL04_WINDOW_PP,
+                           "lower_bound_pp": round(lo * 100, 2),
+                           "fired": abs(lo - t) * 100.0 <= POOL04_WINDOW_PP + 1e-12}
+    if not out["fired"]:
+        out.update(stable=True, reading=base_reading)
+        return out
+    pair = {k: (c[0], c[1]) for k, c in comps.items()}
+    per_seed = []
+    for s in POOL04_SEEDS:
+        if s == seed:
+            lo_s = lo
+        else:
+            b = a1_ratio_bootstrap(pair, {"h": (0, 1)}, ("scenario",), n_boot=n_boot, seed=s)
+            lo_s = b["h"]["ci95_scenario"][0]
+        per_seed.append({"seed": s, "lo_pp": round(lo_s * 100, 2),
+                         "reading": "holds" if lo_s > t else "fails"})
+    big = a1_ratio_bootstrap(pair, {"h": (0, 1)}, ("scenario",), n_boot=POOL04_BIG_N, seed=POOL04_BIG_SEED)
+    big_lo = big["h"]["ci95_scenario"][0]
+    stable = all(r["reading"] == base_reading for r in per_seed)
+    out.update(
+        bounds_by_seed=per_seed,
+        stable=stable,
+        bound_200k={"n_boot": POOL04_BIG_N, "seed": POOL04_BIG_SEED, "lo_pp": round(big_lo * 100, 2),
+                    "reading": "holds" if big_lo > t else "fails", "decision_bearing": False},
+        reading=base_reading if stable else "on_boundary",
+    )
+    return out
+
+
+def am1_handoff_ni(
+    spec: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    handoff_flags: dict[str, dict[tuple[str, int], Optional[bool]]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """§B1: Σd·h / Σh for left − right on both metrics, h from the prefix arm, with the NI
+    reading at −7.00 pp on goal_pass. Printed beside P3; never changes P3's verdict."""
+    row = dict(spec, decision_bearing=False, margin_pp=A1_AM1_NI_MARGIN_PP, citation=f"{A1_AM1} §B1",
+               estimand="Σ d·h / Σ h, d = left − right, h = handoff_occurred of the left (prefix) episode")
+    missing = [a for a in (spec["left"], spec["right"]) if a not in arms]
+    if missing:
+        row.update(status="arm_absent", reason=f"no --arm for {missing}")
+        return row
+    flags = handoff_flags.get(spec["flags_from"], {})
+    units = ("scenario", "task")
+    for metric in ("goal_pass", "tgc"):
+        comps, n_missing_field, n_flag_missing = am1_handoff_comps(
+            arms[spec["left"]]["episodes"], arms[spec["right"]]["episodes"], flags, A1_METRIC_FIELDS[metric])
+        blk: dict[str, Any] = {
+            "field": A1_METRIC_FIELDS[metric],
+            "n_pairs": len(comps),
+            "n_handoff": int(sum(c[1] for c in comps.values())),
+            "n_silenced": int(sum(c[3] for c in comps.values())),
+            "n_flag_missing": n_flag_missing,
+            "n_dropped_missing_field": n_missing_field,
+        }
+        boot = a1_ratio_bootstrap(comps, {"handoff_only": (0, 1), "silenced": (2, 3), "all": (4, 5)},
+                                  units, n_boot=n_boot, seed=seed, keep_samples=True)
+        blk["status"] = boot["status"]
+        if boot["status"] != "ok":
+            blk["error"] = boot.get("error")
+            row[metric] = blk
+            continue
+        for name in ("handoff_only", "silenced", "all"):
+            blk[name] = _as_pp(boot[name], units)
+        ho = boot["handoff_only"]
+        ci = ho.get("ci95_scenario")
+        if metric == "goal_pass":
+            if ho["point"] is None or ci is None:
+                blk["ni"] = {"reading": "undefined", "reason": "no handoff episodes"}
+            else:
+                blk["ni"] = am1_ni_reading(comps, ci[0], margin_pp=A1_AM1_NI_MARGIN_PP,
+                                           n_boot=n_boot, seed=seed)
+                samples = ho.get("_samples_scenario") or []
+                blk["p_value_two_sided_at_margin"] = (
+                    bootstrap_pvalue(samples, A1_AM1_NI_MARGIN_PP / 100.0, "two-sided") if samples else None)
+        row[metric] = blk
+    return row
+
+
+def am1_decomposition(
+    target: dict[tuple[str, int], dict[str, Any]],
+    base: dict[tuple[str, int], dict[str, Any]],
+    target_flags: dict[tuple[str, int], Optional[bool]],
+    field: str,
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """§B2: the all-episode rise base → target split into the part earned on episodes that hand
+    off at the target depth and the part on silenced ones -- j16_robustness.decomposition's
+    estimand (h from the target), at A1's bootstrap seed."""
+    comps, n_missing_field, n_flag_missing = am1_handoff_comps(target, base, target_flags, field)
+    units = ("scenario", "task")
+    stats = {
+        "delta_total": (4, 5),
+        "contribution_handoff": (0, 5),
+        "contribution_silenced": (2, 5),
+        "share_of_rise_from_handoff": (0, 4, True),
+        "gain_on_handoff_subset": (0, 1),
+        "gain_on_silenced_subset": (2, 3),
+    }
+    out: dict[str, Any] = {
+        "field": field,
+        "n_pairs": len(comps),
+        "n_handoff": int(sum(c[1] for c in comps.values())),
+        "n_silenced": int(sum(c[3] for c in comps.values())),
+        "n_flag_missing": n_flag_missing,
+        "n_dropped_missing_field": n_missing_field,
+    }
+    boot = a1_ratio_bootstrap(comps, stats, units, n_boot=n_boot, seed=seed)
+    out["status"] = boot["status"]
+    if boot["status"] != "ok":
+        out["error"] = boot.get("error")
+        return out
+    for name in stats:
+        if name == "share_of_rise_from_handoff":
+            st = boot[name]
+            out[name] = {
+                "point": None if st["point"] is None else round(st["point"], 4),
+                "ci95_scenario": None if st.get("ci95_scenario") is None
+                else [round(v, 4) for v in st["ci95_scenario"]],
+                "ci95_task": None if st.get("ci95_task") is None else [round(v, 4) for v in st["ci95_task"]],
+                "n_resamples_rise_not_positive_scenario": st.get("n_undefined_scenario"),
+                "n_resamples_rise_not_positive_task": st.get("n_undefined_task"),
+            }
+        else:
+            out[name] = _as_pp(boot[name], units)
+    out["share_interval_note"] = (
+        "Percentile interval over resamples whose total rise is > 0. If the count of resamples "
+        "with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share "
+        "interval is not read.")
+    return out
+
+
+def am1_chord(
+    arms: dict[str, dict[str, Any]],
+    cost_report: Optional[dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """§B3: residual q_arm − [q_floor + f·(q_ref − q_floor)] per (task_id, seed) shared by all
+    three arms; f = (c̄_arm − c̄_floor) / (c̄_ref − c̄_floor) from the P2 cost report's
+    per-arm mean non-cached planner tokens, a plug-in that is not resampled. Positive = the
+    arm lies above the straight line from the one-plan floor to the planner acting alone."""
+    floor, ref, cfield = A1_AM1_CHORD["floor"], A1_AM1_CHORD["reference"], A1_AM1_CHORD["cost_field"]
+    out: dict[str, Any] = {"decision_bearing": False, "citation": f"{A1_AM1} §B3", "floor": floor,
+                           "reference": ref, "cost_field": cfield,
+                           "dev_claim": "docs/prereg_hj12_dev_20260922.md:38-40 (C2)", "arms": {}}
+    costs = _cost_arms(cost_report)
+    for label in A1_AM1_CHORD["arms"]:
+        row: dict[str, Any] = {}
+        absent = [a for a in (label, floor, ref) if a not in arms]
+        if absent:
+            out["arms"][label] = {"status": "arm_absent", "reason": f"no --arm for {absent}"}
+            continue
+        c = {name: (costs.get(name) or {}).get(cfield) if isinstance(costs.get(name), dict) else None
+             for name in (label, floor, ref)}
+        if cost_report is None or any(v is None for v in c.values()):
+            out["arms"][label] = {"status": "not_computed",
+                                  "reason": f"the cost report lacks {cfield} for {[k for k, v in c.items() if v is None] or 'every arm'}"}
+            continue
+        c_arm, c_floor, c_ref = float(c[label]), float(c[floor]), float(c[ref])
+        if c_ref == c_floor:
+            out["arms"][label] = {"status": "fraction_undefined",
+                                  "reason": "floor and reference have the same mean cost"}
+            continue
+        f = (c_arm - c_floor) / (c_ref - c_floor)
+        row.update(status="ok", cost_fraction=round(f, 6), cost_arm=round(c_arm, 3),
+                   cost_floor=round(c_floor, 3), cost_reference=round(c_ref, 3))
+        for metric in ("goal_pass", "tgc"):
+            field = A1_METRIC_FIELDS[metric]
+            ea, ef, er = arms[label]["episodes"], arms[floor]["episodes"], arms[ref]["episodes"]
+            keys, diffs, missing = [], [], 0
+            for key in sorted(set(ea) & set(ef) & set(er)):
+                qa, qf, qr = ea[key].get(field), ef[key].get(field), er[key].get(field)
+                if qa is None or qf is None or qr is None:
+                    missing += 1
+                    continue
+                keys.append(key)
+                diffs.append(float(qa) - (float(qf) + f * (float(qr) - float(qf))))
+            series = {"keys": keys, "diffs": diffs}
+            scen = a1_interval(series, "scenario", n_boot=n_boot, seed=seed)
+            row[metric] = {
+                "n_triples": len(diffs),
+                "n_dropped_missing_field": missing,
+                "scenario": _public(scen),
+                "task": _public(a1_interval(series, "task", n_boot=n_boot, seed=seed)),
+                "positive_means_above_chord": None if scen["point"] is None else bool(scen["point"] > 0),
+            }
+        out["arms"][label] = row
+    return out
+
+
+def am1_limit_rates(arms: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """§D1: per arm, scored episodes that hit the 40-step limit."""
+    out = {}
+    for label, arm in sorted(arms.items()):
+        n = arm["n_scored"]
+        k = sum(1 for e in arm["episodes"].values() if e.get("error_type") == A1_LIMIT_ERROR)
+        out[label] = {"n_scored": n, "n_limit": k, "limit_rate": round(k / n, 6) if n else None}
+    return out
+
+
+def am1_limit_split(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+    field: str,
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """§D2: the mean paired difference split over pairs where either arm hit the limit and pairs
+    where neither did. Post-treatment -- hitting the limit is an outcome of the arm -- so it is a
+    mechanism reading, never a corrected estimate. The two contributions sum to the whole."""
+    comps: dict[tuple[str, int], tuple[float, ...]] = {}
+    for key in sorted(set(left) & set(right)):
+        a, b = left[key].get(field), right[key].get(field)
+        if a is None or b is None:
+            continue
+        lim = 1.0 if A1_LIMIT_ERROR in (left[key].get("error_type"), right[key].get("error_type")) else 0.0
+        d = float(a) - float(b)
+        comps[key] = (d * lim, lim, d * (1.0 - lim), 1.0 - lim, d, 1.0)
+    units = ("scenario", "task")
+    stats = {"all": (4, 5), "contribution_limit_pairs": (0, 5), "contribution_neither": (2, 5),
+             "mean_on_limit_pairs": (0, 1), "mean_on_neither": (2, 3)}
+    out: dict[str, Any] = {
+        "post_treatment": True,
+        "not_a_corrected_estimate": True,
+        "n_pairs": len(comps),
+        "n_limit_pairs": int(sum(c[1] for c in comps.values())),
+        "n_neither": int(sum(c[3] for c in comps.values())),
+        "n_limit_left": sum(1 for k in comps if left[k].get("error_type") == A1_LIMIT_ERROR),
+        "n_limit_right": sum(1 for k in comps if right[k].get("error_type") == A1_LIMIT_ERROR),
+    }
+    boot = a1_ratio_bootstrap(comps, stats, units, n_boot=n_boot, seed=seed)
+    out["status"] = boot["status"]
+    if boot["status"] != "ok":
+        out["error"] = boot.get("error")
+        return out
+    for name in stats:
+        out[name] = _as_pp(boot[name], units)
+    return out
+
+
+def am1_limit_as_zero(
+    left: dict[tuple[str, int], dict[str, Any]],
+    right: dict[tuple[str, int], dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """§D3: goal_pass of every `limit` episode set to 0 in both arms; the paired contrast again."""
+    field = A1_METRIC_FIELDS["goal_pass"]
+
+    def zeroed(eps: dict[tuple[str, int], dict[str, Any]]) -> dict[tuple[str, int], dict[str, Any]]:
+        return {k: (dict(e, **{field: 0.0}) if e.get("error_type") == A1_LIMIT_ERROR else e)
+                for k, e in eps.items()}
+
+    return {"sensitivity": True, "decision_bearing": False} | _public_contrast(
+        a1_contrast(zeroed(left), zeroed(right), field, n_boot=n_boot, seed=seed))
+
+
+def _load_by_fdr():
+    """Lazy import of cluster_inference.by_fdr (Amendment 1 §F). None if absent."""
+    if not CLUSTER_INFERENCE_PATH.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("cluster_inference", CLUSTER_INFERENCE_PATH)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return getattr(module, "by_fdr", None)
+
+
+def am1_by_fdr(entries: list[dict[str, Any]], alpha: float = A1_ALPHA) -> dict[str, Any]:
+    """§F: Benjamini-Yekutieli over every printed goal_pass contrast's two-sided p at its
+    threshold. A registered verdict carried by a rejection (supported or reversed) that the
+    adjustment would withdraw is flagged in the same sentence; no verdict changes."""
+    base = {"method": "Benjamini-Yekutieli", "alpha": alpha, "decision_bearing": False,
+            "citation": f"{A1_AM1} §F"}
+    usable = [e for e in entries if e.get("p") is not None]
+    base["not_in_family"] = [e["id"] for e in entries if e.get("p") is None]
+    try:
+        fn = _load_by_fdr()
+    except Exception as exc:  # a sensitivity: never fatal
+        return {**base, "status": "import_error", "error": f"{type(exc).__name__}: {exc}"}
+    if fn is None:
+        return {**base, "status": "unavailable"}
+    adjusted = fn([float(e["p"]) for e in usable])
+    rows, flags = [], []
+    for e, p_by in zip(usable, adjusted):
+        row = {k: e[k] for k in ("id", "p", "threshold_pp", "source") if k in e} | {"p_by": p_by}
+        verdict = e.get("verdict")
+        if verdict is not None:
+            row["registered_verdict"] = verdict
+        if e.get("flaggable") and verdict in ("supported", "reversed"):
+            survives = bool(p_by <= alpha)
+            row["survives_by"] = survives
+            flags.append({
+                "id": e["id"],
+                "survives_by": survives,
+                "sentence": (f"{e['id']} {verdict}; "
+                             + ("survives" if survives else "does NOT survive")
+                             + f" Benjamini-Yekutieli across {len(usable)} contrasts (adjusted p = {p_by:.4f})."),
+            })
+        rows.append(row)
+    return {**base, "status": "ok", "m": len(usable), "rows": rows, "flags": flags}
+
+
+def am1_by_entries(
+    results: list[dict[str, Any]],
+    cf_results: list[dict[str, Any]],
+    supporting_out: list[dict[str, Any]],
+    exploratory_out: list[dict[str, Any]],
+    handoff_ni: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """§F's family: P1, P3-P6 (and any other contrast prediction given), CF1, S1-S5, E1-E5 with
+    each CF contrast counted once as its E-row, and the B1 contrasts at the −7.00 pp margin."""
+    entries: list[dict[str, Any]] = []
+    for r in results + cf_results:
+        if r.get("kind") != "paired_contrast":
+            continue
+        entries.append({"id": r["id"], "p": r.get("p_value_two_sided"), "threshold_pp": r["threshold_pp"],
+                        "verdict": r.get("verdict"), "source": "predictions",
+                        # P5 is supported by a NON-rejection, so an adjusted p cannot withdraw it.
+                        "flaggable": r.get("rule") != "not_positive_excluding_zero"})
+    counted = {r.get("same_contrast_as") for r in cf_results}
+    for rows, source in ((supporting_out, "supporting_contrasts"), (exploratory_out, "exploratory_contrasts")):
+        for r in rows:
+            if r.get("kind", "paired") == "handoff_depth" or r["id"] in counted:
+                continue
+            gp = r.get("goal_pass") if isinstance(r.get("goal_pass"), dict) else {}
+            entries.append({"id": r["id"], "p": gp.get("p_value_two_sided_at_0"), "threshold_pp": 0.0,
+                            "source": source})
+    for r in handoff_ni:
+        gp = r.get("goal_pass") if isinstance(r.get("goal_pass"), dict) else {}
+        entries.append({"id": r["id"], "p": gp.get("p_value_two_sided_at_margin"),
+                        "threshold_pp": A1_AM1_NI_MARGIN_PP, "source": "amendment1.handoff_only_ni"})
+    return entries
+
+
+def am1_block(
+    *,
+    preds: list[dict[str, Any]],
+    results: list[dict[str, Any]],
+    cf_results: list[dict[str, Any]],
+    cf_multiplicity: dict[str, Any],
+    cf_key_exclusion: Optional[dict[str, Any]],
+    arms: dict[str, dict[str, Any]],
+    handoff_flags: dict[str, dict[tuple[str, int], Optional[bool]]],
+    supporting_out: list[dict[str, Any]],
+    exploratory_out: list[dict[str, Any]],
+    cost_report: Optional[dict[str, Any]],
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """Everything Amendment 1 adds, in one report key. Only CF1 is decision-bearing."""
+    secondary = [am1_evaluate_cf_secondary(s, arms, n_boot=n_boot, seed=seed) for s in A1_AM1_CF_SECONDARY]
+    cf1 = cf_results[0] if cf_results else {}
+    cf_arms = (cf1.get("left"), cf1.get("right"))
+    not_run = any(a not in arms for a in cf_arms)
+    for r in cf_results:
+        r["reading"] = r.get("readings", {}).get(r.get("verdict"))
+    cf = {
+        "family": "CF",
+        "citation": f"{A1_AM1} §C",
+        "status": "not_run" if not_run else "run",
+        "not_run_rule": "if arms 11 and 12 cannot complete (A1 §9 abort rule), CF is reported as not run",
+        "multiplicity": cf_multiplicity,
+        "key_exclusion": cf_key_exclusion,
+        "predictions": cf_results,
+        "verdicts": {r["id"]: r.get("verdict") for r in cf_results},
+        "secondary": secondary,
+    }
+    handoff_ni = [am1_handoff_ni(s, arms, handoff_flags, n_boot=n_boot, seed=seed) for s in A1_AM1_HANDOFF_NI]
+    decomposition = {}
+    for receiver, (target, base) in A1_AM1_DECOMPOSITION.items():
+        if target not in arms or base not in arms:
+            decomposition[receiver] = {"target": target, "base": base, "status": "arm_absent"}
+            continue
+        decomposition[receiver] = {"target": target, "base": base} | {
+            metric: am1_decomposition(arms[target]["episodes"], arms[base]["episodes"],
+                                      handoff_flags.get(target, {}), A1_METRIC_FIELDS[metric],
+                                      n_boot=n_boot, seed=seed)
+            for metric in ("goal_pass", "tgc")}
+    b4_extra: dict[str, Any] = {}
+    s5 = next((s for s in A1_SUPPORTING if s["id"] == "S5"), None)
+    if s5 and s5["left"] in arms and s5["right"] in arms:
+        b4_extra["S5_handoff_only"] = {"target": s5["left"], "base": s5["right"]} | a1_handoff_depth(
+            arms[s5["left"]]["episodes"], arms[s5["right"]]["episodes"], handoff_flags.get(s5["left"], {}),
+            A1_METRIC_FIELDS["goal_pass"], n_boot=n_boot, seed=seed)
+    specs = {p["id"]: p for p in preds} | {p["id"]: p for p in A1_AM1_CF} | {
+        s["id"]: s for s in A1_AM1_CF_SECONDARY}
+    split, as_zero = {}, {}
+    for cid in A1_AM1_LIMIT_IDS:
+        spec = specs.get(cid)
+        if spec is None or spec["left"] not in arms or spec["right"] not in arms:
+            split[cid] = as_zero[cid] = {"status": "arm_absent"}
+            continue
+        le, re_ = arms[spec["left"]]["episodes"], arms[spec["right"]]["episodes"]
+        split[cid] = {"left": spec["left"], "right": spec["right"]} | am1_limit_split(
+            le, re_, A1_METRIC_FIELDS["goal_pass"], n_boot=n_boot, seed=seed)
+        as_zero[cid] = {"left": spec["left"], "right": spec["right"]} | am1_limit_as_zero(
+            le, re_, n_boot=n_boot, seed=seed)
+    return {
+        "citation": A1_AM1,
+        "what": "pre-data additions after the adversarial review; only CF1 is decision-bearing",
+        "cf": cf,
+        "handoff_only_ni": handoff_ni,
+        "decomposition": decomposition,
+        "chord": am1_chord(arms, cost_report, n_boot=n_boot, seed=seed),
+        "b4_companions": A1_AM1_B4_COMPANIONS,
+        "b4_extra": b4_extra,
+        "limits": {"citation": f"{A1_AM1} §D", "rates": am1_limit_rates(arms),
+                   "split": split, "limit_as_zero": as_zero},
+        "p1_reporting_constraint": A1_AM1_P1_CONSTRAINT,
+        "multiplicity_sensitivity": am1_by_fdr(
+            am1_by_entries(results, cf_results, supporting_out, exploratory_out, handoff_ni)),
+    }
+
+
+def _strip_internal(obj: Any) -> Any:
+    """Drop every key starting with '_' at any depth (bootstrap samples kept for p values)."""
+    if isinstance(obj, dict):
+        return {k: _strip_internal(v) for k, v in obj.items() if not str(k).startswith("_")}
+    if isinstance(obj, list):
+        return [_strip_internal(v) for v in obj]
+    return obj
+
+
 # ---- report -----------------------------------------------------------------
 def a1_protocol_guard(
     split: str,
@@ -3041,6 +3692,13 @@ def build_report_a1(
         else:
             results.append(a1_evaluate_contrast_prediction(pred, arms, n_boot=n_boot, seed=bootstrap_seed))
     multiplicity = a1_decide_family(results)
+    # Amendment 1 §C: family CF is decided on its own list, so CF1 is a Holm family of one and
+    # P1-P6's family (and `multiplicity`) is untouched.
+    cf_preds = [dict(p) for p in A1_AM1_CF]
+    cf_results = [a1_evaluate_contrast_prediction(p, arms, n_boot=n_boot, seed=bootstrap_seed)
+                  for p in cf_preds]
+    cf_multiplicity = a1_decide_family(cf_results)
+    cf_key_exclusion: Optional[dict[str, Any]] = None
 
     # A1 §4.2: the primary keeps every pair; the planless keys are dropped in a sensitivity, and
     # a verdict that changes is on the boundary.
@@ -3060,7 +3718,11 @@ def build_report_a1(
         contingency["sensitivity"] = a1_key_exclusion_sensitivity(
             preds, results, arms, planless, n_boot=n_boot, seed=bootstrap_seed)
         a1_apply_key_exclusion(results, contingency["sensitivity"]["differs"])
-    for r in results:
+        # Amendment 1 §C: §4.2 applies to CF1 as it applies to P6.
+        cf_key_exclusion = a1_key_exclusion_sensitivity(
+            cf_preds, cf_results, arms, planless, n_boot=n_boot, seed=bootstrap_seed)
+        a1_apply_key_exclusion(cf_results, cf_key_exclusion["differs"])
+    for r in results + cf_results:
         for key in [k for k in r if k.startswith("_")]:
             r.pop(key)
 
@@ -3085,6 +3747,11 @@ def build_report_a1(
         for p in preds
         if p["id"] in A1_SGC_PREDICTIONS and p["left"] in arms and p["right"] in arms
     }
+    amendment1 = _strip_internal(am1_block(
+        preds=preds, results=results, cf_results=cf_results, cf_multiplicity=cf_multiplicity,
+        cf_key_exclusion=cf_key_exclusion, arms=arms, handoff_flags=handoff_flags,
+        supporting_out=supporting_out, exploratory_out=exploratory_out, cost_report=cost_report,
+        n_boot=n_boot, seed=bootstrap_seed))
 
     decided = [r for r in results if r.get("decidable")]
     all_decided = len(decided) == len(results)
@@ -3101,6 +3768,11 @@ def build_report_a1(
         if all_decided and not reasons
         else "INCOMPLETE: " + "; ".join(reasons or ["some predictions not decidable"])
     )
+    # Amendment 1 §C: CF1 is decision-bearing but its own family; its verdict is stated beside the
+    # headline and does not move the exit code (arms 11-12 may abort under §9: CF is then not run).
+    headline += ("" if headline.endswith(".") else ".") + " Amendment 1 CF1: " + (
+        "not run" if amendment1["cf"]["status"] == "not_run"
+        else str(amendment1["cf"]["verdicts"].get("CF1"))) + "."
     report: dict[str, Any] = {
         "protocol": "A1",
         "prereg": A1_PREREG,
@@ -3145,6 +3817,9 @@ def build_report_a1(
         "no_handoff_counts": no_handoff,
         # §7 item 7 [A1:481]: SGC for P1 and P6, descriptive.
         "sgc": sgc_out,
+        # Amendment 1 (pre-data): family CF, handoff-only NI, decomposition, chord, limits,
+        # the P1 reporting constraint and the BY-FDR sensitivity.
+        "amendment1": amendment1,
         "ambiguities": A1_AMBIGUITIES,
         "crash_convention": (
             "error_type == 'crash' is not an outcome (dropped, counted, arm incomplete); "

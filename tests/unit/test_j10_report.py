@@ -956,7 +956,10 @@ def test_permutation_p_is_reported_beside_the_verdict_not_decision_bearing(tmp_p
         assert perm["decision_bearing"] is False
         assert (perm["method"], perm["n_patterns"]) == ("exact", 16)
     assert p["P1"]["verdict"] == "supported"
-    assert len(calls) == 5
+    # P1, P3, P4, P5, P6, then Amendment 1's CF1 (§C applies §5.5 to it).
+    assert len(calls) == 6
+    cf1 = report["amendment1"]["cf"]["predictions"][0]["permutation_sensitivity"]
+    assert cf1["decision_bearing"] is False and cf1["p_value"] == 0.5
     # P3 (A1:270): one-sided at its −7 pp threshold; the routine does the shift.
     diffs, clusters, threshold, alternative, seed = calls[1]
     assert diffs == pytest.approx([0.0] * 24)
@@ -1342,4 +1345,229 @@ def test_regression_p6_dev_reference_upper_bound_is_13_49_not_13_48():
     rev = j10.a1_contrast(advise10["episodes"], takeover["episodes"], "goal_pass_rate",
                           seed=j10.DEV_BASIS_BOOTSTRAP_SEED)
     assert [-v for v in reversed(rev["scenario"]["ci95_pp"])] == [1.29, 13.48]
+
+
+# ===========================================================================
+# Amendment 1 (pre-data additions after the adversarial review): family CF, handoff-only NI,
+# decomposition, chord, limits, the P1 constraint and BY-FDR. Every expected value is by hand.
+# ===========================================================================
+
+# Overrides that keep every registered bound away from its threshold, so POOL-04 never fires
+# (and never draws 200,000 resamples) in these tests: P1 −50, P4 +12.5, P5 −25, CF1 +25 pp.
+AM1_GP = {"advise_k1_fullctx": 0.25, "prefix_zs_m11": 0.625, "advise_k10_neutral": 0.75}
+HANDOFF_KEYS = [(t, s) for t in A1_TASKS if t.endswith("_1") for s in A1_SEEDS]  # 8 of 24, every scenario
+GRID = [(t, s) for t in A1_TASKS for s in A1_SEEDS]
+
+
+def test_am1_registry_keeps_the_frozen_family_and_adds_cf_alone():
+    [cf1] = j10.A1_AM1_CF
+    assert (cf1["id"], cf1["left"], cf1["right"], cf1["family"]) == (
+        "CF1", "advise_k10_neutral", "advise_k10_fullctx", "CF")
+    assert cf1["rule"] == "positive_excludes_zero_with_reversal" and cf1["threshold_pp"] == 0.0
+    assert cf1["dev_reference"]["diff_pp"] == 3.73 and cf1["dev_reference"]["ci95_pp_scenario"] == [-0.06, 8.24]
+    assert "CF1" not in {p["id"] for p in j10.A1_PREDICTIONS}
+    assert [s["id"] for s in j10.A1_AM1_CF_SECONDARY] == ["CF2", "CF3"]
+    assert [s["same_contrast_as"] for s in j10.A1_AM1_CF_SECONDARY] == ["E3", "E5"]
+    assert j10.A1_AM1_NI_MARGIN_PP == -7.00
+    assert j10.A1_AM1.endswith("Amendment 1")
+
+
+def test_am1_cf_is_its_own_family_and_p1_p6_are_untouched(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 0, report["headline"]
+    assert report["multiplicity"]["family"] == ["P1", "P3", "P4", "P6"]
+    assert set(report["verdicts"]) == {"P1", "P2", "P3", "P4", "P5", "P6"}
+    cf = report["amendment1"]["cf"]
+    assert cf["status"] == "run"
+    assert (cf["multiplicity"]["family"], cf["multiplicity"]["m"]) == (["CF1"], 1)
+    [cf1] = cf["predictions"]
+    # 0.75 − 0.5 = +25 pp on every pair → CI [25, 25], p = 0; Holm with m = 1 leaves p alone.
+    assert cf1["contrast"]["scenario"]["ci95_pp"] == [25.0, 25.0]
+    assert cf1["holm"]["m"] == 1 and cf1["holm"]["p_adjusted"] == 0.0
+    assert cf1["verdict"] == "supported" and cf1["reading"].startswith("advice written under a neutral prompt")
+    assert cf1["pool04"]["fired"] is False and "permutation_sensitivity" in cf1
+    assert report["headline"].endswith("Amendment 1 CF1: supported.")
+    sec = {s["id"]: s for s in cf["secondary"]}
+    # CF2: show 0.625 − advice 0.5 = +12.5 → above. CF3: takeover 0.75 − neutral 0.75 = 0 → not resolved.
+    assert (sec["CF2"]["side"], sec["CF2"]["status"]) == ("above", "ok")
+    assert sec["CF2"]["reading"] == "the planner's action shown as text beats correction-prompt advice"
+    assert sec["CF3"]["side"] == "not_resolved"
+    assert sec["CF3"]["reading"] == "the added effect of execution is not resolved at 336 pairs"
+    assert sec["CF2"]["decision_bearing"] is False and sec["CF3"]["adjusted"] is False
+    assert report["amendment1"]["p1_reporting_constraint"]["never_as"] == [
+        "advice at matched budget", "ruling out a budget effect"]
+
+
+def test_am1_cf_not_run_when_arms_11_12_are_absent(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    dirs.pop("advise_k10_neutral")
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    cf = report["amendment1"]["cf"]
+    assert cf["status"] == "not_run" and cf["verdicts"] == {"CF1": "arm_absent"}
+    assert report["headline"].endswith("Amendment 1 CF1: not run.")
+    assert {s["id"]: s["status"] for s in cf["secondary"]} == {"CF2": "ok", "CF3": "arm_absent"}
+
+
+def test_am1_cf1_goes_on_the_boundary_when_the_planless_keys_move_it(tmp_path: Path):
+    # test_a1_a_verdict_that_changes_without_the_planless_keys_is_on_the_boundary, for CF1.
+    keys = [("sc0_1", 1), ("sc0_2", 1), ("sc0_3", 2)]
+    dirs = {
+        "advise_k10_neutral": write_a1_arm(tmp_path, "advise_k10_neutral",
+                                           {k: 0.0 if k in keys else 0.75 for k in GRID}),
+        "advise_k10_fullctx": write_a1_arm(tmp_path, "advise_k10_fullctx",
+                                           {k: 1.0 if k in keys else 0.5 for k in GRID}),
+        "planner_alone_cap81": write_a1_arm(tmp_path, "planner_alone_cap81", 0.75),
+    }
+    _planless_arm3(dirs["planner_alone_cap81"], keys)
+    p6 = [dict(p) for p in j10.A1_PREDICTIONS if p["id"] == "P6"]
+    report, _ = a1_report(dirs, predictions=p6, supporting=[])
+    cf = report["amendment1"]["cf"]
+    [sens] = cf["key_exclusion"]["rows"]
+    assert sens["id"] == "CF1" and sens["verdict_holm_without_keys"] == "supported"
+    assert sens["differs"] is True
+    [cf1] = cf["predictions"]
+    assert cf1["verdict"] == "on_boundary" and cf1["reading"] is None
+    assert report["verdicts"]["P6"] == "arm_absent"  # P1-P6's own contingency is unaffected
+
+
+def test_am1_handoff_only_ni_by_hand(tmp_path: Path):
+    # prefix_m11 hands off on 8 keys (one task per scenario) and scores 0.25 there, 0.75 elsewhere;
+    # planner_alone_cap81 scores 0.75. d = −0.5 on handoff pairs, 0 on silenced ones.
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    write_a1_arm(tmp_path, "prefix_m11", {k: 0.25 if k in HANDOFF_KEYS else 0.75 for k in GRID},
+                 handoff={k: k in HANDOFF_KEYS for k in GRID})
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    b1 = {r["id"]: r for r in report["amendment1"]["handoff_only_ni"]}
+    gp = b1["B1a"]["goal_pass"]
+    assert (gp["n_pairs"], gp["n_handoff"], gp["n_silenced"], gp["n_flag_missing"]) == (24, 8, 16, 0)
+    # Every scenario holds 2 handoff pairs, so Σd·h/Σh = −0.5 in every resample.
+    assert gp["handoff_only"]["diff_pp"] == -50.0
+    assert gp["handoff_only"]["ci95_pp_scenario"] == [-50.0, -50.0]
+    assert gp["silenced"]["diff_pp"] == 0.0
+    assert gp["all"]["diff_pp"] == round(-0.5 * 8 / 24 * 100, 2)  # −16.67
+    assert gp["ni"]["reading"] == "fails" and gp["ni"]["fired"] is False
+    assert gp["p_value_two_sided_at_margin"] == 0.0  # every resample sits below −7
+    assert b1["B1a"]["decision_bearing"] is False
+    # P3's all-episode verdict is decided on its own contrast (−16.67 < −7 → not supported).
+    assert report["verdicts"]["P3"] == "not_supported"
+    # prefix_zs_m11 wrote no report events: every flag is missing, so no handoff-only estimand.
+    zs = b1["B1b"]["goal_pass"]
+    assert (zs["n_handoff"], zs["n_flag_missing"]) == (0, 24)
+    assert zs["ni"]["reading"] == "undefined"
+
+
+def test_am1_handoff_only_ni_holds_when_handoff_pairs_match(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    write_a1_arm(tmp_path, "prefix_m11", 0.75, handoff={k: k in HANDOFF_KEYS for k in GRID})
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    gp = report["amendment1"]["handoff_only_ni"][0]["goal_pass"]
+    assert gp["handoff_only"]["diff_pp"] == 0.0 and gp["ni"]["reading"] == "holds"
+
+
+def test_am1_decomposition_by_hand(tmp_path: Path):
+    # m9 scores 0.25 everywhere; m11 scores 0.25 on its 8 handoff keys and 0.75 on the 16 silenced
+    # ones. The whole rise, 0.5 × 16/24 = 33.33 pp, is earned where m11 did NOT hand off.
+    dirs = write_a1_matrix(tmp_path, dict(AM1_GP, prefix_m9=0.25))
+    write_a1_arm(tmp_path, "prefix_m11", {k: 0.25 if k in HANDOFF_KEYS else 0.75 for k in GRID},
+                 handoff={k: k in HANDOFF_KEYS for k in GRID})
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    dec = report["amendment1"]["decomposition"]["tailored"]
+    assert (dec["target"], dec["base"]) == ("prefix_m11", "prefix_m9")
+    gp = dec["goal_pass"]
+    assert (gp["n_handoff"], gp["n_silenced"]) == (8, 16)
+    assert gp["delta_total"]["diff_pp"] == 33.33
+    assert gp["contribution_handoff"]["diff_pp"] == 0.0
+    assert gp["contribution_silenced"]["diff_pp"] == 33.33
+    assert gp["share_of_rise_from_handoff"]["point"] == 0.0
+    assert gp["share_of_rise_from_handoff"]["n_resamples_rise_not_positive_scenario"] == 0
+    assert gp["gain_on_handoff_subset"]["diff_pp"] == 0.0
+    assert gp["gain_on_silenced_subset"]["diff_pp"] == 50.0
+    assert report["amendment1"]["b4_companions"]["P3"] == "amendment1.handoff_only_ni[B1a]"
+
+
+def test_am1_chord_by_hand(tmp_path: Path):
+    # Costs: floor sft_plan 100, reference planner 500, m11 300 (f = 0.5), m9 200 (f = 0.25).
+    # Quality: floor 0.5, reference 0.75. m11 0.75 → 0.75 − (0.5 + 0.5 × 0.25) = +12.5 pp;
+    # m9 0.625 → 0.625 − (0.5 + 0.25 × 0.25) = +6.25 pp. The zs arms have no cost row.
+    cost = {"arms": {
+        "sft_plan": {"noncached_tokens_per_episode": 100.0},
+        "planner_alone_cap81": {"noncached_tokens_per_episode": 500.0},
+        "prefix_m11": {"noncached_tokens_per_episode": 300.0, "hosted_calls_per_episode": 11.0,
+                       "n_episodes": 24},
+        "prefix_m9": {"noncached_tokens_per_episode": 200.0},
+        "advise_k1_fullctx": {"noncached_tokens_per_episode": 1000.0, "hosted_calls_per_episode": 19.0,
+                              "n_episodes": 24},
+    }}
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    report, _ = a1_report(dirs, cost_report=cost)
+    chord = report["amendment1"]["chord"]["arms"]
+    assert chord["prefix_m11"]["cost_fraction"] == 0.5
+    assert chord["prefix_m11"]["goal_pass"]["scenario"]["ci95_pp"] == [12.5, 12.5]
+    assert chord["prefix_m11"]["goal_pass"]["n_triples"] == 24
+    assert chord["prefix_m11"]["goal_pass"]["positive_means_above_chord"] is True
+    assert chord["prefix_m9"]["cost_fraction"] == 0.25
+    assert chord["prefix_m9"]["goal_pass"]["scenario"]["diff_pp"] == 6.25
+    assert chord["prefix_m9"]["goal_pass"]["task"]["ci95_pp"] == [6.25, 6.25]
+    assert chord["prefix_zs_m9"]["status"] == "not_computed"
+    # Without a cost report nothing is plugged in.
+    report2, _ = a1_report(dirs)
+    assert {a["status"] for a in report2["amendment1"]["chord"]["arms"].values()} == {"not_computed"}
+
+
+def test_am1_limit_split_and_limit_as_zero_by_hand(tmp_path: Path):
+    # P6: takeover 0.75 vs advice, which hits the limit on the 8 HANDOFF_KEYS scoring 0.25 there and
+    # 0.5 elsewhere. d = 0.5 on the 8 limit pairs, 0.25 on the 16 others; whole = 8/24 = 33.33 pp,
+    # split 16.67 + 16.67. Limit-as-0 sets those 0.25s to 0: (8 × 0.75 + 16 × 0.25) / 24 = 41.67 pp.
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    write_a1_arm(tmp_path, "advise_k10_fullctx", {k: 0.25 if k in HANDOFF_KEYS else 0.5 for k in GRID},
+                 error_types={k: "limit" for k in HANDOFF_KEYS})
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    lim = report["amendment1"]["limits"]
+    assert lim["rates"]["advise_k10_fullctx"] == {"n_scored": 24, "n_limit": 8, "limit_rate": round(8 / 24, 6)}
+    assert lim["rates"]["takeover_k10"]["n_limit"] == 0
+    p6 = lim["split"]["P6"]
+    assert (p6["left"], p6["right"]) == ("takeover_k10", "advise_k10_fullctx")
+    assert (p6["n_limit_pairs"], p6["n_neither"], p6["n_limit_left"], p6["n_limit_right"]) == (8, 16, 0, 8)
+    assert p6["all"]["diff_pp"] == 33.33
+    assert p6["contribution_limit_pairs"]["diff_pp"] == 16.67
+    assert p6["contribution_neither"]["diff_pp"] == 16.67
+    assert p6["mean_on_limit_pairs"]["diff_pp"] == 50.0 and p6["mean_on_neither"]["diff_pp"] == 25.0
+    assert p6["post_treatment"] is True and p6["not_a_corrected_estimate"] is True
+    assert lim["limit_as_zero"]["P6"]["scenario"]["diff_pp"] == 41.67
+    # CF1 shares the advice arm, so its split has the same 8 limit pairs.
+    assert lim["split"]["CF1"]["n_limit_pairs"] == 8
+    assert set(lim["split"]) == {"P1", "P6", "CF1", "CF3"}
+
+
+def test_am1_by_fdr_flags_a_verdict_it_would_withdraw():
+    # m = 4, m·c(m) = 25/3. sorted: 0.004 → 0.0333; 0.03 → 0.125; 0.2 → 0.5556; 0.5 → 1 (capped).
+    entries = [
+        {"id": "P1", "p": 0.004, "verdict": "supported", "flaggable": True},
+        {"id": "P6", "p": 0.03, "verdict": "supported", "flaggable": True},
+        {"id": "P5", "p": 0.5, "verdict": "supported", "flaggable": False},
+        {"id": "S1", "p": 0.2},
+        {"id": "E9", "p": None},
+    ]
+    out = j10.am1_by_fdr(entries)
+    assert out["status"] == "ok" and out["m"] == 4 and out["not_in_family"] == ["E9"]
+    p_by = {r["id"]: r["p_by"] for r in out["rows"]}
+    assert p_by == pytest.approx({"P1": 0.004 * 25 / 3, "P6": 0.125, "P5": 1.0, "S1": 0.2 * 25 / 9})
+    flags = {f["id"]: f for f in out["flags"]}
+    assert set(flags) == {"P1", "P6"}  # P5 is supported by a non-rejection: nothing to withdraw
+    assert flags["P1"]["survives_by"] is True
+    assert flags["P6"]["survives_by"] is False and "does NOT survive" in flags["P6"]["sentence"]
+
+
+def test_am1_by_fdr_family_counts_each_contrast_once(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    ms = report["amendment1"]["multiplicity_sensitivity"]
+    ids = [r["id"] for r in ms["rows"]] + ms["not_in_family"]
+    # E4 is CF1 and is counted once, as CF1; S6 is a ratio row outside §F's list.
+    assert ids[:6] == ["P1", "P3", "P4", "P5", "P6", "CF1"]
+    assert sorted(ids[6:]) == sorted(["S1", "S2", "S3", "S4", "S5", "E1", "E2", "E3", "E5", "B1a", "B1b"])
+    assert "E4" not in ids and "S6" not in ids
+    # No prefix arm wrote report events, so B1 has no handoff-only p and sits outside the family.
+    assert ms["not_in_family"] == ["B1a", "B1b"] and ms["m"] == 15
 
