@@ -24,6 +24,9 @@ from scripts.analysis.figures import (
     generate_f6_narrated_vs_executed,
     generate_f7_narrated_minus_executed,
     generate_f8_advice_cost_quality,
+    generate_f9_channel_limit,
+    generate_f10_depth_hstar,
+    generate_f11_ni_forest,
     get_nested_key,
     load_report_json,
     run_figures,
@@ -217,6 +220,125 @@ def _make_minimal_advice_at_price_cost_report() -> dict:
     }
 
 
+def _make_minimal_b2_decomposition_report() -> dict:
+    means = {"T": 0.7899, "S": 0.7516, "N": 0.7658, "A": 0.7285}
+    return {
+        "arms": {arm: {"goal_pass_mean": mean, "n_scored": 171} for arm, mean in means.items()},
+        "contrasts": {"D0": {"scenario": {"diff_pp": 6.13, "ci95_pp": [0.75, 12.71]}}},
+    }
+
+
+def _make_minimal_channel_fixes_report() -> dict:
+    return {
+        "limits": {
+            "per_arm": {
+                "takeover_k10": {"n": 171, "n_limit": 2, "rate": 0.011696},
+                "show_k10": {"n": 171, "n_limit": 11, "rate": 0.064327},
+                "advise_k10_neutral": {"n": 171, "n_limit": 14, "rate": 0.081871},
+                "advise_k10": {"n": 171, "n_limit": 20, "rate": 0.116959},
+            },
+            "split": {
+                "D0": {
+                    "either_limit": {"n": 22, "contribution_pp": 4.07, "contribution_ci95_pp_scenario": [0.93, 7.72]},
+                    "neither": {"n": 149, "contribution_pp": 2.06, "contribution_ci95_pp_scenario": [-0.53, 5.22]},
+                }
+            },
+        }
+    }
+
+
+def _ni_cell(diff_pp: float, ci: list[float], n_pairs: int) -> dict:
+    return {"diff_pp": diff_pp, "ci95_pp_scenario": ci, "n_pairs": n_pairs}
+
+
+def _make_minimal_hstar_report() -> dict:
+    counts = {6: (167, 4), 9: (128, 43), 11: (88, 83)}
+    means = {
+        "bplus": {6: (0.729942, 0.723473, 1.0), 9: (0.771357, 0.727844, 0.900884), 11: (0.813854, 0.7745, 0.855578)},
+        "zs": {6: (0.712175, 0.705281, 1.0), 9: (0.774731, 0.732352, 0.900884), 11: (0.789164, 0.726523, 0.855578)},
+    }
+    handoff_only = {
+        receiver: {
+            f"m{m}": {
+                "n": 171, "n_handoff": counts[m][0], "n_silenced": counts[m][1],
+                "goal_pass": {"mean_all": all_, "mean_handoff": handoff, "mean_silenced": silenced},
+            }
+            for m, (all_, handoff, silenced) in by_m.items()
+        }
+        for receiver, by_m in means.items()
+    }
+    control_counts = {
+        receiver: {f"m{m}": {"n_hstar_true": counts[m][0]} for m in counts} for receiver in means
+    }
+    ni = {
+        "bplus": {
+            "m9": {"goal_pass": {"all": _ni_cell(0.16, [-4.05, 4.65], 171),
+                                 "handoff_only": _ni_cell(0.21, [-5.28, 6.31], 128)}},
+            "m11": {"goal_pass": {"all": _ni_cell(4.410526, [-0.74, 10.67], 171),
+                                  "handoff_only": _ni_cell(8.570455, [-1.63, 18.25], 88)}},
+        },
+        "zs": {
+            "m9": {"goal_pass": {"all": _ni_cell(0.50, [-3.02, 5.36], 171),
+                                 "handoff_only": _ni_cell(0.67, [-4.14, 6.93], 128)}},
+            "m11": {"goal_pass": {"all": _ni_cell(1.94, [-2.17, 6.40], 171),
+                                  "handoff_only": _ni_cell(3.77, [-4.78, 10.98], 88)}},
+        },
+    }
+    return {
+        "handoff_only": handoff_only,
+        "handoff_control_counts": control_counts,
+        "ni": ni,
+        "rescued_m11": {"bplus": {"summary": {"goal_pass": _ni_cell(48.294118, [34.15, 66.41], 17)}}},
+    }
+
+
+def _make_minimal_depth_fixes_report() -> dict:
+    return {"ni": {"bplus": {"m11": {"goal_pass": {"handoff_only": _ni_cell(-0.940845, [-9.53, 7.45], 71)}}}}}
+
+
+def _make_minimal_robustness_report() -> dict:
+    return {
+        "F_e_ni_both_ceilings": {
+            "ni_table": {
+                "t_m11": {
+                    "cap25_goal_pass_rate": {"diff_pp": -1.857018, "n_pairs": 114, "scenario": {"ci95_pp": [-8.51, 6.09]}}
+                }
+            }
+        }
+    }
+
+
+def _make_minimal_planning_lit_report() -> dict:
+    # Stored as planner minus arm, as CEILHI-03 is.
+    return {
+        "ceilhi": {
+            "ni_reread": {
+                "high_minus_prefix_c81_bplus_m11": {"goal_pass": _ni_cell(7.22193, [3.21, 11.47], 114)}
+            }
+        }
+    }
+
+
+def _populate_v2_fixtures(results_dir: Path) -> None:
+    results_dir.mkdir(parents=True, exist_ok=True)
+    for name, payload in [
+        ("b2_decomposition_20260923", _make_minimal_b2_decomposition_report()),
+        ("j17_channel_fixes_20260924", _make_minimal_channel_fixes_report()),
+        ("j17_hstar_20260924", _make_minimal_hstar_report()),
+        ("j17_depth_fixes_20260924", _make_minimal_depth_fixes_report()),
+        ("j16_robustness_20260923", _make_minimal_robustness_report()),
+        ("j17_planning_lit_20260924", _make_minimal_planning_lit_report()),
+    ]:
+        (results_dir / f"{name}.report.json").write_text(json.dumps(payload))
+
+
+def _edit_fixture(results_dir: Path, name: str, edit) -> None:
+    path = results_dir / f"{name}.report.json"
+    data = json.loads(path.read_text())
+    edit(data)
+    path.write_text(json.dumps(data))
+
+
 def _populate_all_standard_fixtures(results_dir: Path) -> None:
     results_dir.mkdir(parents=True, exist_ok=True)
     with open(results_dir / "hj13_shape_post_guard_bands_20260923.report.json", "w") as f:
@@ -250,6 +372,7 @@ def _populate_all_standard_fixtures(results_dir: Path) -> None:
         json.dump(_make_minimal_advice_at_price_report(), f)
     with open(results_dir / "hj13_advice_at_price_cost_20260923.report.json", "w") as f:
         json.dump(_make_minimal_advice_at_price_cost_report(), f)
+    _populate_v2_fixtures(results_dir)
 
 
 def test_missing_report_file_is_fatal(tmp_path: Path) -> None:
@@ -591,3 +714,169 @@ def test_f6_legend_placed_outside_axes(tmp_path: Path) -> None:
     _, kwargs = legend_calls[0]
     assert "bbox_to_anchor" in kwargs
     assert kwargs["bbox_to_anchor"][0] > 1.0
+
+
+def _spy(method_name: str):
+    """Record the positional arguments of every call to one Axes method."""
+    calls: list[tuple] = []
+    original = getattr(plt.Axes, method_name)
+
+    def spy(self, *args, **kwargs):
+        calls.append((args, kwargs))
+        return original(self, *args, **kwargs)
+
+    return calls, patch.object(plt.Axes, method_name, spy)
+
+
+def test_f9_channel_limit_points_and_split(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_v2_fixtures(results_dir)
+
+    scatter_calls, scatter_patch = _spy("scatter")
+    errorbar_calls, errorbar_patch = _spy("errorbar")
+    with scatter_patch, errorbar_patch:
+        entry = generate_f9_channel_limit(results_dir, out_dir)
+
+    assert entry["figure_id"] == "F9"
+    assert Path(entry["file_pdf"]).is_file() and Path(entry["file_png"]).is_file()
+    # Left panel, in T, S, N, A order: x is the step-limit rate, y the arm mean.
+    points = [(args[0][0], args[1][0]) for args, _ in scatter_calls]
+    assert points == [(0.011696, 0.7899), (0.064327, 0.7516), (0.081871, 0.7658), (0.116959, 0.7285)]
+    # Right panel: D0 whole, then its two parts; 4.07 + 2.06 = 6.13 by hand.
+    assert [args[0][0] for args, _ in errorbar_calls] == [6.13, 4.07, 2.06]
+    assert "(n = 22)" in entry["caption"] and "(n = 149)" in entry["caption"]
+    keys = [k for s in entry["series"] for k in s["json_keys"]]
+    assert "j17_channel_fixes_20260924.report.json:limits.per_arm.takeover_k10.rate" in keys
+    assert "b2_decomposition_20260923.report.json:contrasts.D0.scenario.ci95_pp" in keys
+
+
+def test_f9_refuses_missing_key_mismatched_population_and_parts_that_do_not_sum(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+
+    _populate_v2_fixtures(results_dir)
+    _edit_fixture(results_dir, "j17_channel_fixes_20260924", lambda d: d["limits"]["split"]["D0"].pop("neither"))
+    with pytest.raises(SystemExit) as exc_info:
+        generate_f9_channel_limit(results_dir, out_dir)
+    assert "Fatal [F9]" in str(exc_info.value)
+    assert "limits.split.D0.neither.n" in str(exc_info.value)
+
+    _populate_v2_fixtures(results_dir)
+    _edit_fixture(results_dir, "j17_channel_fixes_20260924",
+                  lambda d: d["limits"]["per_arm"]["show_k10"].update({"n": 114}))
+    with pytest.raises(SystemExit, match="over 114"):
+        generate_f9_channel_limit(results_dir, out_dir)
+
+    _populate_v2_fixtures(results_dir)
+    _edit_fixture(results_dir, "j17_channel_fixes_20260924",
+                  lambda d: d["limits"]["split"]["D0"]["neither"].update({"contribution_pp": 3.06}))
+    with pytest.raises(SystemExit, match="sum to 7.13 pp but D0 is 6.13 pp"):
+        generate_f9_channel_limit(results_dir, out_dir)
+
+
+def test_f10_lines_and_population_counts(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_v2_fixtures(results_dir)
+
+    plot_calls, plot_patch = _spy("plot")
+    annotate_calls, annotate_patch = _spy("annotate")
+    with plot_patch, annotate_patch:
+        entry = generate_f10_depth_hstar(results_dir, out_dir)
+
+    assert entry["figure_id"] == "F10"
+    assert Path(entry["file_pdf"]).is_file() and Path(entry["file_png"]).is_file()
+    lines = [(list(args[0]), list(args[1])) for args, _ in plot_calls]
+    # Tailored panel first: all, h* handoff, silenced.
+    assert lines[:3] == [
+        ([6, 9, 11], [0.729942, 0.771357, 0.813854]),
+        ([6, 9, 11], [0.723473, 0.727844, 0.7745]),
+        ([6, 9, 11], [1.0, 0.900884, 0.855578]),
+    ]
+    assert len(lines) == 6
+    labels = [args[0] for args, _ in annotate_calls]
+    # Handoff and silenced sizes at each m, both panels; 167 + 4 = 128 + 43 = 88 + 83 = 171.
+    assert labels == ["n = 167", "n = 128", "n = 88", "n = 4", "n = 43", "n = 83"] * 2
+    assert "(171 pairs)" in entry["caption"]
+    assert entry["fallback"].startswith("not taken")
+
+
+def test_f10_refuses_missing_key_and_disagreeing_populations(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+
+    _populate_v2_fixtures(results_dir)
+    _edit_fixture(results_dir, "j17_hstar_20260924",
+                  lambda d: d["handoff_only"]["zs"]["m9"]["goal_pass"].pop("mean_silenced"))
+    with pytest.raises(SystemExit) as exc_info:
+        generate_f10_depth_hstar(results_dir, out_dir)
+    assert "Fatal [F10]" in str(exc_info.value)
+    assert "handoff_only.zs.m9.goal_pass.mean_silenced" in str(exc_info.value)
+
+    _populate_v2_fixtures(results_dir)
+    _edit_fixture(results_dir, "j17_hstar_20260924",
+                  lambda d: d["handoff_control_counts"]["bplus"]["m11"].update({"n_hstar_true": 71}))
+    with pytest.raises(SystemExit, match="bplus m=11 populations disagree"):
+        generate_f10_depth_hstar(results_dir, out_dir)
+
+
+def test_f11_rows_margin_negation_and_identity(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_v2_fixtures(results_dir)
+
+    errorbar_calls, errorbar_patch = _spy("errorbar")
+    axvline_calls, axvline_patch = _spy("axvline")
+    annotate_calls, annotate_patch = _spy("annotate")
+    with errorbar_patch, axvline_patch, annotate_patch:
+        entry = generate_f11_ni_forest(results_dir, out_dir)
+
+    assert entry["figure_id"] == "F11"
+    assert Path(entry["file_pdf"]).is_file() and Path(entry["file_png"]).is_file()
+    # Every row but the off-scale rescue is an error bar; CEILHI-03's stored +7.22193 is drawn negated.
+    drawn = [args[0][0] for args, _ in errorbar_calls]
+    assert drawn == [0.16, 0.21, 4.410526, 8.570455, -0.940845, 0.50, 0.67, 1.94, 3.77, -1.857018, -7.22193]
+    assert [args[0] for args, _ in axvline_calls] == [-7.0, 0.0]
+    assert "+48.29 [+34.15, +66.41]" in [args[0] for args, _ in annotate_calls]
+    rescued = next(s for s in entry["series"] if s["ledger_ids"] == ["HSTAR-14"])
+    assert rescued["drawn_offscale"] is True
+    ceilhi = next(s for s in entry["series"] if s["ledger_ids"] == ["CEILHI-03"])
+    assert ceilhi["negated"] is True
+    # HSTAR-18 by hand: (71 x -0.940845 + 17 x 48.294118) / 88 = 754.200011 / 88 = 8.570455.
+    assert entry["identity_check"]["weighted_pp"] == pytest.approx(8.570455, abs=1e-6)
+    assert "flag-true (n = 71" in entry["caption"] and "rescued (n = 17" in entry["caption"]
+
+
+def test_f11_refuses_missing_key_and_broken_identity(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+
+    _populate_v2_fixtures(results_dir)
+    _edit_fixture(results_dir, "j17_planning_lit_20260924", lambda d: d["ceilhi"].pop("ni_reread"))
+    with pytest.raises(SystemExit) as exc_info:
+        generate_f11_ni_forest(results_dir, out_dir)
+    assert "Fatal [F11]" in str(exc_info.value)
+    assert "ceilhi.ni_reread.high_minus_prefix_c81_bplus_m11.goal_pass.diff_pp" in str(exc_info.value)
+
+    _populate_v2_fixtures(results_dir)
+    _edit_fixture(results_dir, "j17_hstar_20260924",
+                  lambda d: d["rescued_m11"]["bplus"]["summary"]["goal_pass"].update({"diff_pp": 40.0}))
+    with pytest.raises(SystemExit, match="HSTAR-18 identity fails"):
+        generate_f11_ni_forest(results_dir, out_dir)
+
+
+def test_run_figures_subset_keeps_other_manifest_entries(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    manifest_path = out_dir / "figures_manifest.json"
+    _populate_all_standard_fixtures(results_dir)
+
+    run_figures(results_dir, out_dir, manifest_path)
+    first = json.loads(manifest_path.read_text())
+    assert [e["figure_id"] for e in first] == [f"F{i}" for i in range(1, 12)]
+
+    run_figures(results_dir, out_dir, manifest_path, only_fig="F9, f11")
+    second = json.loads(manifest_path.read_text())
+    assert [e["figure_id"] for e in second] == [f"F{i}" for i in range(1, 12)]
+    assert second[0] == first[0]

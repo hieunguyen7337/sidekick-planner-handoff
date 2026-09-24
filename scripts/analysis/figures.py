@@ -14,6 +14,9 @@ Figures:
   F6: Mechanism two-panel (Narrated vs executed prefix actions across receivers).
   F7: Narrated-minus-executed goal-pass contrast across receivers.
   F8: Advice and action-prefix cost/quality scatter.
+  F9: The k = 10 channel arms against their step-limit rates, and D0 split by the step limit (v2 §3).
+  F10: goal_pass at m = 6, 9, 11 by h* population, both receivers (v2 §4.2).
+  F11: Arm minus the planner alone, forest with the 7.00 pp margin and the h* rescue split (v2 §4.6).
 """
 from __future__ import annotations
 
@@ -65,7 +68,22 @@ PALETTE = {
     "narrated": {"color": "#E69F00", "marker": "D", "linestyle": "", "label": "Narrated prefix (m=9)"},
     "executed": {"color": "#0072B2", "marker": "o", "linestyle": "", "label": "Executed prefix (m=9)"},
     "one_plan": {"color": "#56B4E9", "marker": "^", "linestyle": "", "label": "One-plan floor"},
+    "arm_T": {"color": "#0072B2", "marker": "o", "label": "T, takeover"},
+    "arm_S": {"color": "#009E73", "marker": "^", "label": "S, action shown"},
+    "arm_N": {"color": "#CC79A7", "marker": "D", "label": "N, neutral advice"},
+    "arm_A": {"color": "#D55E00", "marker": "s", "label": "A, correction-prompt advice"},
+    "hstar_all": {"color": "#333333", "marker": "o", "linestyle": "-", "label": "All episodes"},
+    "hstar_handoff": {"color": "#0072B2", "marker": "s", "linestyle": "--", "label": "$h^*$ handoff"},
+    "hstar_silenced": {"color": "#E69F00", "marker": "^", "linestyle": ":", "label": "Prefix-finished (silenced)"},
+    "ni_split": {"color": "#777777", "marker": "s"},
+    "ni_reference": {"color": "#222222", "marker": "D"},
 }
+
+# F11 draws rows whose interval runs past this bound as an arrow at the axis edge with the value
+# printed beside it: the 17 rescues sit near +48 pp, and a scale wide enough to hold them would
+# squeeze every other row, and its distance to the margin, into a third of the axis.
+F11_X_MAX_PP = 22.0
+NI_MARGIN_PP = -7.00
 
 
 def apply_style() -> None:
@@ -1441,6 +1459,484 @@ def generate_f8_advice_cost_quality(
     }
 
 
+def generate_f9_channel_limit(
+    results_dir: Path,
+    out_dir: Path,
+    dpi: int = 200,
+) -> dict[str, Any]:
+    """F9 · The matched-trigger channel arms and where their gap sits (v2 §3.2-§3.3).
+
+    Left panel: the four k = 10 arms at 171 pairs, `goal_pass` against each arm's step-limit
+    rate (DEC-01, LIM-01). Right panel: D0 = T − A split into the pairs where either arm hit the
+    step limit and those where neither did, each part's contribution with its scenario interval
+    (LIM-02). The split conditions on an outcome of treatment, so it describes where the gap
+    sits and is not a corrected estimate.
+
+    Guards: every arm's step-limit count must be over the same pairs as its mean, and the two
+    contributions must sum to the D0 the B2 report stores (DEC-02).
+    """
+    fig_id = "F9"
+    apply_style()
+
+    b2_path = results_dir / "b2_decomposition_20260923.report.json"
+    lim_path = results_dir / "j17_channel_fixes_20260924.report.json"
+    b2_data = load_report_json(b2_path, fig_id)
+    lim_data = load_report_json(lim_path, fig_id)
+
+    # (B2 arm label, limits.per_arm name, palette key); the points are labelled directly, not by legend.
+    arm_specs = [
+        ("T", "takeover_k10", "arm_T"),
+        ("S", "show_k10", "arm_S"),
+        ("N", "advise_k10_neutral", "arm_N"),
+        ("A", "advise_k10", "arm_A"),
+    ]
+    label_offsets = {
+        "T": ((7, 4), "left", "bottom"), "S": ((7, -5), "left", "top"),
+        "N": ((7, 4), "left", "bottom"), "A": ((-7, 6), "right", "bottom"),
+    }
+    arm_points: list[tuple[str, float, float, int, int, str]] = []
+    arm_keys: list[str] = []
+    for arm, lim_name, style_key in arm_specs:
+        mean_key = f"arms.{arm}.goal_pass_mean"
+        n_key = f"arms.{arm}.n_scored"
+        rate_key = f"limits.per_arm.{lim_name}.rate"
+        n_limit_key = f"limits.per_arm.{lim_name}.n_limit"
+        n_lim_key = f"limits.per_arm.{lim_name}.n"
+        goal_pass = float(get_nested_key(b2_data, mean_key, b2_path, fig_id))
+        n_scored = int(get_nested_key(b2_data, n_key, b2_path, fig_id))
+        rate = float(get_nested_key(lim_data, rate_key, lim_path, fig_id))
+        n_limit = int(get_nested_key(lim_data, n_limit_key, lim_path, fig_id))
+        n_lim = int(get_nested_key(lim_data, n_lim_key, lim_path, fig_id))
+        if n_lim != n_scored:
+            raise SystemExit(
+                f"Fatal [{fig_id}]: arm {arm} mean is over {n_scored} episodes but its step-limit "
+                f"rate over {n_lim} ({b2_path.name}:{n_key}, {lim_path.name}:{n_lim_key})"
+            )
+        arm_points.append((arm, rate, goal_pass, n_limit, n_lim, style_key))
+        arm_keys.extend([
+            f"{b2_path.name}:{mean_key}", f"{b2_path.name}:{n_key}",
+            f"{lim_path.name}:{rate_key}", f"{lim_path.name}:{n_limit_key}", f"{lim_path.name}:{n_lim_key}",
+        ])
+
+    if not arm_points:
+        raise SystemExit(f"Fatal [{fig_id}]: empty series for the channel arms")
+
+    # Right panel: D0 whole from the B2 report, its two parts from the step-limit split.
+    d0_diff_key = "contrasts.D0.scenario.diff_pp"
+    d0_ci_key = "contrasts.D0.scenario.ci95_pp"
+    d0_diff = float(get_nested_key(b2_data, d0_diff_key, b2_path, fig_id))
+    d0_ci = get_nested_key(b2_data, d0_ci_key, b2_path, fig_id)
+    split_rows: list[tuple[str, float, float, float]] = [
+        (f"D0 = T $-$ A\n(all {arm_points[0][4]} pairs)", d0_diff, float(d0_ci[0]), float(d0_ci[1])),
+    ]
+    split_keys = [f"{b2_path.name}:{d0_diff_key}", f"{b2_path.name}:{d0_ci_key}"]
+    part_sum = 0.0
+    for part, part_label in (("either_limit", "Either arm at the limit"), ("neither", "Neither at the limit")):
+        base = f"limits.split.D0.{part}"
+        n_part = int(get_nested_key(lim_data, f"{base}.n", lim_path, fig_id))
+        contribution = float(get_nested_key(lim_data, f"{base}.contribution_pp", lim_path, fig_id))
+        ci = get_nested_key(lim_data, f"{base}.contribution_ci95_pp_scenario", lim_path, fig_id)
+        split_rows.append((f"{part_label}\n(n = {n_part})", contribution, float(ci[0]), float(ci[1])))
+        split_keys.extend([
+            f"{lim_path.name}:{base}.n",
+            f"{lim_path.name}:{base}.contribution_pp",
+            f"{lim_path.name}:{base}.contribution_ci95_pp_scenario",
+        ])
+        part_sum += contribution
+    if abs(part_sum - d0_diff) > 0.02:
+        raise SystemExit(
+            f"Fatal [{fig_id}]: the step-limit parts sum to {part_sum:.2f} pp but D0 is {d0_diff:.2f} pp "
+            f"({lim_path.name}:limits.split.D0, {b2_path.name}:{d0_diff_key})"
+        )
+
+    fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(7.2, 3.4), gridspec_kw={"width_ratios": [1.0, 1.15]})
+
+    # --- Left panel: goal_pass against step-limit rate ---
+    for arm, rate, goal_pass, n_limit, n_lim, style_key in arm_points:
+        style = PALETTE[style_key]
+        ax_left.scatter(
+            [rate], [goal_pass],
+            color=style["color"], marker=style["marker"], s=58,
+            edgecolor="#333333", linewidth=0.8, label=style["label"], zorder=5,
+        )
+        xytext, ha, va = label_offsets[arm]
+        ax_left.annotate(
+            f"{style['label']}: {n_limit}/{n_lim}", (rate, goal_pass),
+            textcoords="offset points", xytext=xytext, ha=ha, va=va,
+            fontsize=7.5, color=style["color"],
+        )
+    rates = [p[1] for p in arm_points]
+    quals = [p[2] for p in arm_points]
+    ax_left.set_xlim(min(0.0, min(rates)) - 0.005, max(rates) * 1.35)
+    ax_left.set_ylim(min(quals) - 0.02, max(quals) + 0.02)
+    ax_left.set_xlabel("Step-limit rate (episodes at 40 steps)")
+    ax_left.set_ylabel("Goal pass rate")
+    ax_left.set_title("(a) Arms at $k=10$ (label: at the limit)", loc="left")
+
+    # --- Right panel: D0 and its two parts ---
+    y_positions = list(range(len(split_rows) - 1, -1, -1))
+    for y_pos, (label, value, lower, upper) in zip(y_positions, split_rows):
+        is_whole = y_pos == y_positions[0]
+        color = "#222222" if is_whole else PALETTE["arm_T"]["color"]
+        ax_right.errorbar(
+            [value], [y_pos], xerr=[[value - lower], [upper - value]],
+            fmt="D" if is_whole else "o", color=color, ecolor=color,
+            elinewidth=1.5, capsize=4, capthick=1.2, markersize=6, zorder=4,
+        )
+        ax_right.annotate(
+            f"{value:+.2f}", (value, y_pos),
+            textcoords="offset points", xytext=(0, 7), ha="center", va="bottom", fontsize=8, color=color,
+        )
+    ax_right.axvline(0.0, color="#444444", linestyle="--", linewidth=1.0, zorder=2)
+    ax_right.set_yticks(y_positions)
+    ax_right.set_yticklabels([row[0] for row in split_rows], fontsize=8)
+    ax_right.set_ylim(-0.6, len(split_rows) - 0.4)
+    ax_right.set_xlabel("Contribution to D0 (pp), scenario 95% CI")
+    ax_right.set_title("(b) D0 split by the step limit", loc="left")
+
+    plt.tight_layout()
+    pdf_path, png_path = save_figure(fig, out_dir, "f9_channel_limit", dpi=dpi)
+
+    n_either = int(get_nested_key(lim_data, "limits.split.D0.either_limit.n", lim_path, fig_id))
+    n_neither = int(get_nested_key(lim_data, "limits.split.D0.neither.n", lim_path, fig_id))
+    caption = (
+        f"The k = 10 arms, {arm_points[0][4]} pairs. (a) `goal_pass` against step-limit rate (DEC-01, LIM-01). "
+        f"(b) D0 = T − A (DEC-02) split by whether either arm hit the limit (n = {n_either}) or neither "
+        f"(n = {n_neither}); scenario 95 % CIs, descriptive (LIM-02)."
+    )
+
+    return {
+        "figure_id": fig_id,
+        "file_pdf": str(pdf_path),
+        "file_png": str(png_path),
+        "width_in": 7.2,
+        "column": "two-column",
+        "caption": caption,
+        "series": [
+            {
+                "label": "Channel arms: goal_pass and step-limit rate",
+                "report_path": f"{b2_path}; {lim_path}",
+                "json_keys": arm_keys,
+                "n_points": len(arm_points),
+                "ledger_ids": ["DEC-01", "LIM-01"],
+            },
+            {
+                "label": "D0 split by the step limit",
+                "report_path": f"{b2_path}; {lim_path}",
+                "json_keys": split_keys,
+                "n_points": len(split_rows),
+                "ledger_ids": ["DEC-02", "LIM-02"],
+            },
+        ],
+        "skipped_reason": None,
+    }
+
+
+def generate_f10_depth_hstar(
+    results_dir: Path,
+    out_dir: Path,
+    dpi: int = 200,
+) -> dict[str, Any]:
+    """F10 · `goal_pass` at m = 6, 9, 11 by h* population, pooled cap-81 family (v2 §4.2).
+
+    One panel per receiver, one line each for all episodes, h* handoff and prefix-finished
+    (silenced) episodes, with each population's size printed at each m (HSTAR-02..04). The
+    per-m means by population are in the report, so the contrast fallback of the brief is not
+    taken. Populations are each arm's own and shrink with m, so no line is a paired contrast;
+    Table 5's spans are the paired numbers. No marginal band is drawn, for F1's reason.
+
+    Guard: at each m the handoff count must equal the h* count of handoff_control_counts, and
+    handoff plus silenced must equal all.
+    """
+    fig_id = "F10"
+    apply_style()
+
+    hstar_path = results_dir / "j17_hstar_20260924.report.json"
+    hstar_data = load_report_json(hstar_path, fig_id)
+
+    m_list = [6, 9, 11]
+    receivers = [
+        ("bplus", "Tailored receiver (sft_b_plus)"),
+        ("zs", "Untailored receiver (granite zero-shot)"),
+    ]
+    # (population, mean field, count field, palette key)
+    populations = [
+        ("all", "mean_all", "n", "hstar_all"),
+        ("handoff", "mean_handoff", "n_handoff", "hstar_handoff"),
+        ("silenced", "mean_silenced", "n_silenced", "hstar_silenced"),
+    ]
+
+    series_values: dict[tuple[str, str], tuple[list[float], list[int]]] = {}
+    manifest_series: list[dict[str, Any]] = []
+    for receiver, receiver_label in receivers:
+        receiver_keys: list[str] = []
+        for population, mean_field, count_field, _ in populations:
+            values: list[float] = []
+            counts: list[int] = []
+            for m in m_list:
+                base = f"handoff_only.{receiver}.m{m}"
+                mean_key = f"{base}.goal_pass.{mean_field}"
+                count_key = f"{base}.{count_field}"
+                values.append(float(get_nested_key(hstar_data, mean_key, hstar_path, fig_id)))
+                counts.append(int(get_nested_key(hstar_data, count_key, hstar_path, fig_id)))
+                receiver_keys.extend([mean_key, count_key])
+            if not values:
+                raise SystemExit(f"Fatal [{fig_id}]: empty series for {receiver} {population}")
+            series_values[(receiver, population)] = (values, counts)
+
+        for idx, m in enumerate(m_list):
+            n_all = series_values[(receiver, "all")][1][idx]
+            n_handoff = series_values[(receiver, "handoff")][1][idx]
+            n_silenced = series_values[(receiver, "silenced")][1][idx]
+            hstar_key = f"handoff_control_counts.{receiver}.m{m}.n_hstar_true"
+            n_hstar = int(get_nested_key(hstar_data, hstar_key, hstar_path, fig_id))
+            receiver_keys.append(hstar_key)
+            if n_handoff != n_hstar or n_handoff + n_silenced != n_all:
+                raise SystemExit(
+                    f"Fatal [{fig_id}]: {receiver} m={m} populations disagree: handoff {n_handoff}, "
+                    f"h* {n_hstar}, silenced {n_silenced}, all {n_all} ({hstar_path})"
+                )
+        manifest_series.append({
+            "label": receiver_label,
+            "report_path": str(hstar_path),
+            "json_keys": receiver_keys,
+            "n_points": len(m_list) * len(populations),
+            "ledger_ids": ["HSTAR-02", "HSTAR-03" if receiver == "bplus" else "HSTAR-04"],
+        })
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.6), sharey=True)
+    for ax, (receiver, receiver_label) in zip(axes, receivers):
+        for population, _, _, style_key in populations:
+            style = PALETTE[style_key]
+            values, counts = series_values[(receiver, population)]
+            label = style["label"]
+            if population == "all" and len(set(counts)) == 1:
+                label = f"{label} (n = {counts[0]} at each $m$)"
+            ax.plot(
+                m_list, values,
+                color=style["color"], marker=style["marker"], linestyle=style["linestyle"],
+                linewidth=1.6, markersize=5.5, label=label, zorder=4,
+            )
+            if population == "all" and len(set(counts)) == 1:
+                continue
+            # Handoff means sit below the pooled line and silenced means above it.
+            xytext = (0, -13) if population == "handoff" else (0, 7)
+            for m, value, count in zip(m_list, values, counts):
+                ax.annotate(
+                    f"n = {count}", (m, value),
+                    textcoords="offset points", xytext=xytext, ha="center",
+                    va="top" if population == "handoff" else "bottom",
+                    fontsize=7.5, color=style["color"],
+                )
+        ax.set_title(receiver_label.replace(" (", "\n("), fontsize=9.5)
+        ax.set_xlabel("Prefix depth $m$")
+        ax.set_xticks(m_list)
+        ax.set_xlim(5.2, 11.8)
+    all_values = [v for values, _ in series_values.values() for v in values]
+    axes[0].set_ylim(min(all_values) - 0.05, max(all_values) + 0.05)
+    axes[0].set_ylabel("Goal pass rate")
+    axes[1].legend(
+        loc="upper left", bbox_to_anchor=(1.02, 1.0),
+        frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8,
+    )
+
+    plt.tight_layout()
+    pdf_path, png_path = save_figure(fig, out_dir, "f10_depth_hstar", dpi=dpi)
+
+    n_pairs = series_values[("bplus", "all")][1][0]
+    caption = (
+        f"`goal_pass` at m = 6, 9 and 11, pooled cap-81 family ({n_pairs} pairs), by receiver, over all "
+        "episodes, h* handoff and prefix-finished (silenced) episodes; labels give each population's size. "
+        "Each arm has its own populations, so points are not paired contrasts (HSTAR-02..04)."
+    )
+
+    return {
+        "figure_id": fig_id,
+        "file_pdf": str(pdf_path),
+        "file_png": str(png_path),
+        "width_in": 7.2,
+        "column": "two-column",
+        "caption": caption,
+        "series": manifest_series,
+        "fallback": "not taken: per-m arm means by population are in the report (handoff_only.*.m*.goal_pass)",
+        "skipped_reason": None,
+    }
+
+
+def generate_f11_ni_forest(
+    results_dir: Path,
+    out_dir: Path,
+    dpi: int = 200,
+) -> dict[str, Any]:
+    """F11 · Arm minus the planner acting alone, `goal_pass`, pp, with the δ = −7.00 pp margin (v2 §4.6).
+
+    Rows: m = 9 and 11 on both receivers over all episodes and h* handoff (HSTAR-11, HSTAR-12);
+    under tailored m = 11 h* handoff, its split into flag-true (HO-NI-01) and rescued (HSTAR-14)
+    parts (HSTAR-18); and two reference rows, tailored m = 11 against the cap-25 planner (ROB-21)
+    and against the cap-81 planner at high effort (CEILHI-03). Scenario 95 % intervals.
+
+    CEILHI-03 is stored as planner minus arm, so its value and interval are negated here and
+    the manifest says so. A row whose interval runs past F11_X_MAX_PP is drawn as an arrow at
+    the axis edge with its value printed.
+
+    Guard: the flag-true and rescued parts, weighted by count, must reproduce the h* handoff
+    contrast (the HSTAR-18 identity) and their counts must sum to its count.
+    """
+    fig_id = "F11"
+    apply_style()
+
+    hstar_path = results_dir / "j17_hstar_20260924.report.json"
+    depth_path = results_dir / "j17_depth_fixes_20260924.report.json"
+    rob_path = results_dir / "j16_robustness_20260923.report.json"
+    ceilhi_path = results_dir / "j17_planning_lit_20260924.report.json"
+    hstar_data = load_report_json(hstar_path, fig_id)
+    depth_data = load_report_json(depth_path, fig_id)
+    rob_data = load_report_json(rob_path, fig_id)
+    ceilhi_data = load_report_json(ceilhi_path, fig_id)
+
+    # Rows are drawn top to bottom in the order they are added.
+    rows: list[dict[str, Any]] = []
+
+    def add_row(
+        label: str, group: str, kind: str, data: dict[str, Any], path: Path,
+        base: str, ci_field: str, ledger_id: str, negate: bool = False,
+    ) -> dict[str, Any]:
+        diff_key, ci_key, n_key = f"{base}.diff_pp", f"{base}.{ci_field}", f"{base}.n_pairs"
+        diff = float(get_nested_key(data, diff_key, path, fig_id))
+        ci = get_nested_key(data, ci_key, path, fig_id)
+        n_pairs = int(get_nested_key(data, n_key, path, fig_id))
+        lower, upper = float(ci[0]), float(ci[1])
+        if negate:
+            diff, lower, upper = -diff, -upper, -lower
+        row = {
+            "label": f"{label} (n = {n_pairs})", "group": group, "kind": kind, "value": diff,
+            "lower": lower, "upper": upper, "n": n_pairs, "ledger_id": ledger_id,
+            "report_path": str(path),
+            "json_keys": [f"{path.name}:{diff_key}", f"{path.name}:{ci_key}", f"{path.name}:{n_key}"],
+            "negated": negate,
+        }
+        rows.append(row)
+        return row
+
+    for receiver, receiver_label, ledger_id in (("bplus", "Tailored", "HSTAR-11"), ("zs", "Untailored", "HSTAR-12")):
+        for m in (9, 11):
+            base = f"ni.{receiver}.m{m}.goal_pass"
+            add_row(f"{receiver_label} $m={m}$, all", receiver, "all", hstar_data, hstar_path,
+                    f"{base}.all", "ci95_pp_scenario", ledger_id)
+            handoff_row = add_row(f"{receiver_label} $m={m}$, $h^*$ handoff", receiver, "handoff", hstar_data,
+                                  hstar_path, f"{base}.handoff_only", "ci95_pp_scenario", ledger_id)
+            if receiver == "bplus" and m == 11:
+                whole = handoff_row
+                flag_row = add_row("    of which flag-true", "split", "split", depth_data, depth_path,
+                                   "ni.bplus.m11.goal_pass.handoff_only", "ci95_pp_scenario", "HO-NI-01")
+                rescue_row = add_row("    of which rescued", "split", "split", hstar_data, hstar_path,
+                                     "rescued_m11.bplus.summary.goal_pass", "ci95_pp_scenario", "HSTAR-14")
+
+    weighted = (flag_row["n"] * flag_row["value"] + rescue_row["n"] * rescue_row["value"]) / whole["n"]
+    if flag_row["n"] + rescue_row["n"] != whole["n"] or abs(weighted - whole["value"]) > 0.01:
+        raise SystemExit(
+            f"Fatal [{fig_id}]: HSTAR-18 identity fails: ({flag_row['n']} x {flag_row['value']:.4f} + "
+            f"{rescue_row['n']} x {rescue_row['value']:.4f}) / {whole['n']} = {weighted:.4f}, "
+            f"but the h* handoff contrast is {whole['value']:.4f} over {whole['n']} pairs"
+        )
+
+    add_row("Tailored $m=11$ vs cap-25 planner", "reference", "reference", rob_data, rob_path,
+            "F_e_ni_both_ceilings.ni_table.t_m11.cap25_goal_pass_rate", "scenario.ci95_pp", "ROB-21")
+    # Stored as planner minus arm (the one exception named in Appendix D.1), so negated.
+    add_row("Tailored $m=11$ vs cap-81 planner, high effort", "reference", "reference", ceilhi_data, ceilhi_path,
+            "ceilhi.ni_reread.high_minus_prefix_c81_bplus_m11.goal_pass", "ci95_pp_scenario", "CEILHI-03",
+            negate=True)
+
+    if not rows:
+        raise SystemExit(f"Fatal [{fig_id}]: empty forest")
+    order = rows
+
+    group_colors = {
+        "bplus": PALETTE["tailored"]["color"],
+        "zs": PALETTE["zeroshot"]["color"],
+        "split": PALETTE["ni_split"]["color"],
+        "reference": PALETTE["ni_reference"]["color"],
+    }
+    fig, ax = plt.subplots(figsize=(7.0, 4.9))
+    y_positions = list(range(len(order) - 1, -1, -1))
+    x_min = min(-14.0, min(r["lower"] for r in order if r["upper"] <= F11_X_MAX_PP) - 1.0)
+    offscale: list[dict[str, Any]] = []
+    for y_pos, row in zip(y_positions, order):
+        color = group_colors[row["group"]]
+        if row["kind"] in ("split", "reference"):
+            marker = PALETTE["ni_split" if row["kind"] == "split" else "ni_reference"]["marker"]
+        else:
+            marker = "o"
+        # h* handoff rows are open markers; every other row is filled.
+        face = "white" if row["kind"] == "handoff" else color
+        if row["upper"] <= F11_X_MAX_PP:
+            ax.errorbar(
+                [row["value"]], [y_pos],
+                xerr=[[row["value"] - row["lower"]], [row["upper"] - row["value"]]],
+                fmt=marker, color=color, ecolor=color, markerfacecolor=face,
+                elinewidth=1.4, capsize=3, capthick=1.1, markersize=5.5, zorder=4,
+            )
+        else:
+            # Off-scale: an arrow into the right edge, and the value with its interval printed.
+            ax.annotate(
+                "", xy=(F11_X_MAX_PP, y_pos), xytext=(F11_X_MAX_PP - 4.0, y_pos),
+                arrowprops={"arrowstyle": "->", "color": color, "linewidth": 1.4}, zorder=4,
+            )
+            ax.annotate(
+                f"{row['value']:+.2f} [{row['lower']:+.2f}, {row['upper']:+.2f}]",
+                (F11_X_MAX_PP - 4.3, y_pos), ha="right", va="center", fontsize=7.5, color=color,
+            )
+            offscale.append(row)
+    ax.axvline(NI_MARGIN_PP, color="#B22222", linestyle="--", linewidth=1.2, zorder=2,
+               label=f"$\\delta = {NI_MARGIN_PP:.2f}$ pp")
+    ax.axvline(0.0, color="#444444", linestyle=":", linewidth=1.0, zorder=2)
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels([row["label"] for row in order], fontsize=8)
+    for tick, row in zip(ax.get_yticklabels(), order):
+        tick.set_color(group_colors[row["group"]])
+    ax.set_xlim(x_min, F11_X_MAX_PP + 0.5)
+    ax.set_ylim(-0.7, len(order) - 0.3)
+    ax.set_xlabel("Arm $-$ planner alone (cap 81, medium effort unless labelled), goal pass (pp), scenario 95% CI")
+    ax.legend(loc="lower right", frameon=True, facecolor="white", edgecolor="#cccccc", fontsize=8)
+
+    plt.tight_layout()
+    pdf_path, png_path = save_figure(fig, out_dir, "f11_ni_forest", dpi=dpi)
+
+    margin_text = f"{NI_MARGIN_PP:.2f}".replace("-", "−")
+    caption = (
+        f"Arm minus the planner alone, `goal_pass`, pp, scenario 95 % CIs; dashed: δ = {margin_text} pp. "
+        f"Rows: HSTAR-11, HSTAR-12; tailored m = 11 h* handoff split into flag-true (n = {flag_row['n']}; "
+        f"HO-NI-01) and rescued (n = {rescue_row['n']}; HSTAR-14) (HSTAR-18); references ROB-21, CEILHI-03."
+    )
+
+    return {
+        "figure_id": fig_id,
+        "file_pdf": str(pdf_path),
+        "file_png": str(png_path),
+        "width_in": 7.0,
+        "column": "two-column",
+        "caption": caption,
+        "series": [
+            {
+                "label": row["label"],
+                "report_path": row["report_path"],
+                "json_keys": row["json_keys"],
+                "n_points": 1,
+                "ledger_ids": [row["ledger_id"]],
+                "negated": row["negated"],
+                "drawn_offscale": row in offscale,
+            }
+            for row in order
+        ],
+        "identity_check": {
+            "rule": "HSTAR-18: (n_flag * flag + n_rescued * rescued) / n_hstar_handoff equals the h* handoff contrast",
+            "weighted_pp": round(weighted, 6),
+            "hstar_handoff_pp": whole["value"],
+        },
+        "skipped_reason": None,
+    }
+
+
 def run_figures(
     results_dir: Path,
     out_dir: Path,
@@ -1448,7 +1944,11 @@ def run_figures(
     only_fig: str | None = None,
     dpi: int = 200,
 ) -> None:
-    """Generate all figures or single figure and write manifest."""
+    """Generate all figures, or a comma-separated subset, and write the manifest.
+
+    A subset run keeps the manifest entries of the figures it did not regenerate, so that
+    `--only F9,F10,F11` does not erase F1-F8's record; entries it regenerates are replaced in place.
+    """
     validate_output_path(out_dir)
     validate_output_path(manifest_path)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1463,15 +1963,28 @@ def run_figures(
         "F6": generate_f6_narrated_vs_executed,
         "F7": generate_f7_narrated_minus_executed,
         "F8": generate_f8_advice_cost_quality,
+        "F9": generate_f9_channel_limit,
+        "F10": generate_f10_depth_hstar,
+        "F11": generate_f11_ni_forest,
     }
+
+    selected = None
+    if only_fig is not None:
+        selected = {part.strip().upper() for part in only_fig.split(",") if part.strip()}
 
     manifest_entries = []
 
     for fig_id, gen_fn in generators.items():
-        if only_fig is not None and only_fig.upper() != fig_id:
+        if selected is not None and fig_id not in selected:
             continue
         entry = gen_fn(results_dir, out_dir, dpi=dpi)
         manifest_entries.append(entry)
+
+    if selected is not None and manifest_path.is_file():
+        previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+        fresh = {entry["figure_id"]: entry for entry in manifest_entries}
+        merged = [fresh.pop(entry["figure_id"], entry) for entry in previous]
+        manifest_entries = merged + list(fresh.values())
 
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest_entries, f, indent=2)
@@ -1484,7 +1997,7 @@ def main() -> None:
     parser.add_argument("--results-dir", type=Path, default=Path("campaign/results"), help="Directory containing report JSON files")
     parser.add_argument("--out-dir", type=Path, default=Path("paper/figures"), help="Output directory for generated figures")
     parser.add_argument("--manifest", type=Path, default=Path("paper/figures/figures_manifest.json"), help="Manifest JSON path")
-    parser.add_argument("--only", type=str, default=None, help="Generate only specified figure ID (e.g. F1, F2, F3, F4, F5, F6)")
+    parser.add_argument("--only", type=str, default=None, help="Generate only these figure IDs, comma-separated (e.g. F9 or F9,F10,F11); other manifest entries are kept")
     parser.add_argument("--dpi", type=int, default=200, help="DPI for PNG output (default 200)")
 
     args = parser.parse_args()

@@ -317,5 +317,338 @@
       }
     ],
     "skipped_reason": null
+  },
+  {
+    "figure_id": "F9",
+    "file_pdf": "paper/figures/f9_channel_limit.pdf",
+    "file_png": "paper/figures/f9_channel_limit.png",
+    "width_in": 7.2,
+    "column": "two-column",
+    "caption": "The k = 10 arms, 171 pairs. (a) `goal_pass` against step-limit rate (DEC-01, LIM-01). (b) D0 = T \u2212 A (DEC-02) split by whether either arm hit the limit (n = 22) or neither (n = 149); scenario 95 % CIs, descriptive (LIM-02).",
+    "series": [
+      {
+        "label": "Channel arms: goal_pass and step-limit rate",
+        "report_path": "campaign/results/b2_decomposition_20260923.report.json; campaign/results/j17_channel_fixes_20260924.report.json",
+        "json_keys": [
+          "b2_decomposition_20260923.report.json:arms.T.goal_pass_mean",
+          "b2_decomposition_20260923.report.json:arms.T.n_scored",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.takeover_k10.rate",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.takeover_k10.n_limit",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.takeover_k10.n",
+          "b2_decomposition_20260923.report.json:arms.S.goal_pass_mean",
+          "b2_decomposition_20260923.report.json:arms.S.n_scored",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.show_k10.rate",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.show_k10.n_limit",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.show_k10.n",
+          "b2_decomposition_20260923.report.json:arms.N.goal_pass_mean",
+          "b2_decomposition_20260923.report.json:arms.N.n_scored",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.advise_k10_neutral.rate",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.advise_k10_neutral.n_limit",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.advise_k10_neutral.n",
+          "b2_decomposition_20260923.report.json:arms.A.goal_pass_mean",
+          "b2_decomposition_20260923.report.json:arms.A.n_scored",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.advise_k10.rate",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.advise_k10.n_limit",
+          "j17_channel_fixes_20260924.report.json:limits.per_arm.advise_k10.n"
+        ],
+        "n_points": 4,
+        "ledger_ids": [
+          "DEC-01",
+          "LIM-01"
+        ]
+      },
+      {
+        "label": "D0 split by the step limit",
+        "report_path": "campaign/results/b2_decomposition_20260923.report.json; campaign/results/j17_channel_fixes_20260924.report.json",
+        "json_keys": [
+          "b2_decomposition_20260923.report.json:contrasts.D0.scenario.diff_pp",
+          "b2_decomposition_20260923.report.json:contrasts.D0.scenario.ci95_pp",
+          "j17_channel_fixes_20260924.report.json:limits.split.D0.either_limit.n",
+          "j17_channel_fixes_20260924.report.json:limits.split.D0.either_limit.contribution_pp",
+          "j17_channel_fixes_20260924.report.json:limits.split.D0.either_limit.contribution_ci95_pp_scenario",
+          "j17_channel_fixes_20260924.report.json:limits.split.D0.neither.n",
+          "j17_channel_fixes_20260924.report.json:limits.split.D0.neither.contribution_pp",
+          "j17_channel_fixes_20260924.report.json:limits.split.D0.neither.contribution_ci95_pp_scenario"
+        ],
+        "n_points": 3,
+        "ledger_ids": [
+          "DEC-02",
+          "LIM-02"
+        ]
+      }
+    ],
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F10",
+    "file_pdf": "paper/figures/f10_depth_hstar.pdf",
+    "file_png": "paper/figures/f10_depth_hstar.png",
+    "width_in": 7.2,
+    "column": "two-column",
+    "caption": "`goal_pass` at m = 6, 9 and 11, pooled cap-81 family (171 pairs), by receiver, over all episodes, h* handoff and prefix-finished (silenced) episodes; labels give each population's size. Each arm has its own populations, so points are not paired contrasts (HSTAR-02..04).",
+    "series": [
+      {
+        "label": "Tailored receiver (sft_b_plus)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "handoff_only.bplus.m6.goal_pass.mean_all",
+          "handoff_only.bplus.m6.n",
+          "handoff_only.bplus.m9.goal_pass.mean_all",
+          "handoff_only.bplus.m9.n",
+          "handoff_only.bplus.m11.goal_pass.mean_all",
+          "handoff_only.bplus.m11.n",
+          "handoff_only.bplus.m6.goal_pass.mean_handoff",
+          "handoff_only.bplus.m6.n_handoff",
+          "handoff_only.bplus.m9.goal_pass.mean_handoff",
+          "handoff_only.bplus.m9.n_handoff",
+          "handoff_only.bplus.m11.goal_pass.mean_handoff",
+          "handoff_only.bplus.m11.n_handoff",
+          "handoff_only.bplus.m6.goal_pass.mean_silenced",
+          "handoff_only.bplus.m6.n_silenced",
+          "handoff_only.bplus.m9.goal_pass.mean_silenced",
+          "handoff_only.bplus.m9.n_silenced",
+          "handoff_only.bplus.m11.goal_pass.mean_silenced",
+          "handoff_only.bplus.m11.n_silenced",
+          "handoff_control_counts.bplus.m6.n_hstar_true",
+          "handoff_control_counts.bplus.m9.n_hstar_true",
+          "handoff_control_counts.bplus.m11.n_hstar_true"
+        ],
+        "n_points": 9,
+        "ledger_ids": [
+          "HSTAR-02",
+          "HSTAR-03"
+        ]
+      },
+      {
+        "label": "Untailored receiver (granite zero-shot)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "handoff_only.zs.m6.goal_pass.mean_all",
+          "handoff_only.zs.m6.n",
+          "handoff_only.zs.m9.goal_pass.mean_all",
+          "handoff_only.zs.m9.n",
+          "handoff_only.zs.m11.goal_pass.mean_all",
+          "handoff_only.zs.m11.n",
+          "handoff_only.zs.m6.goal_pass.mean_handoff",
+          "handoff_only.zs.m6.n_handoff",
+          "handoff_only.zs.m9.goal_pass.mean_handoff",
+          "handoff_only.zs.m9.n_handoff",
+          "handoff_only.zs.m11.goal_pass.mean_handoff",
+          "handoff_only.zs.m11.n_handoff",
+          "handoff_only.zs.m6.goal_pass.mean_silenced",
+          "handoff_only.zs.m6.n_silenced",
+          "handoff_only.zs.m9.goal_pass.mean_silenced",
+          "handoff_only.zs.m9.n_silenced",
+          "handoff_only.zs.m11.goal_pass.mean_silenced",
+          "handoff_only.zs.m11.n_silenced",
+          "handoff_control_counts.zs.m6.n_hstar_true",
+          "handoff_control_counts.zs.m9.n_hstar_true",
+          "handoff_control_counts.zs.m11.n_hstar_true"
+        ],
+        "n_points": 9,
+        "ledger_ids": [
+          "HSTAR-02",
+          "HSTAR-04"
+        ]
+      }
+    ],
+    "fallback": "not taken: per-m arm means by population are in the report (handoff_only.*.m*.goal_pass)",
+    "skipped_reason": null
+  },
+  {
+    "figure_id": "F11",
+    "file_pdf": "paper/figures/f11_ni_forest.pdf",
+    "file_png": "paper/figures/f11_ni_forest.png",
+    "width_in": 7.0,
+    "column": "two-column",
+    "caption": "Arm minus the planner alone, `goal_pass`, pp, scenario 95 % CIs; dashed: \u03b4 = \u22127.00 pp. Rows: HSTAR-11, HSTAR-12; tailored m = 11 h* handoff split into flag-true (n = 71; HO-NI-01) and rescued (n = 17; HSTAR-14) (HSTAR-18); references ROB-21, CEILHI-03.",
+    "series": [
+      {
+        "label": "Tailored $m=9$, all (n = 171)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.bplus.m9.goal_pass.all.diff_pp",
+          "j17_hstar_20260924.report.json:ni.bplus.m9.goal_pass.all.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.bplus.m9.goal_pass.all.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-11"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Tailored $m=9$, $h^*$ handoff (n = 128)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.bplus.m9.goal_pass.handoff_only.diff_pp",
+          "j17_hstar_20260924.report.json:ni.bplus.m9.goal_pass.handoff_only.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.bplus.m9.goal_pass.handoff_only.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-11"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Tailored $m=11$, all (n = 171)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.bplus.m11.goal_pass.all.diff_pp",
+          "j17_hstar_20260924.report.json:ni.bplus.m11.goal_pass.all.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.bplus.m11.goal_pass.all.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-11"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Tailored $m=11$, $h^*$ handoff (n = 88)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.bplus.m11.goal_pass.handoff_only.diff_pp",
+          "j17_hstar_20260924.report.json:ni.bplus.m11.goal_pass.handoff_only.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.bplus.m11.goal_pass.handoff_only.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-11"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "    of which flag-true (n = 71)",
+        "report_path": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "json_keys": [
+          "j17_depth_fixes_20260924.report.json:ni.bplus.m11.goal_pass.handoff_only.diff_pp",
+          "j17_depth_fixes_20260924.report.json:ni.bplus.m11.goal_pass.handoff_only.ci95_pp_scenario",
+          "j17_depth_fixes_20260924.report.json:ni.bplus.m11.goal_pass.handoff_only.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HO-NI-01"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "    of which rescued (n = 17)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:rescued_m11.bplus.summary.goal_pass.diff_pp",
+          "j17_hstar_20260924.report.json:rescued_m11.bplus.summary.goal_pass.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:rescued_m11.bplus.summary.goal_pass.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-14"
+        ],
+        "negated": false,
+        "drawn_offscale": true
+      },
+      {
+        "label": "Untailored $m=9$, all (n = 171)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.zs.m9.goal_pass.all.diff_pp",
+          "j17_hstar_20260924.report.json:ni.zs.m9.goal_pass.all.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.zs.m9.goal_pass.all.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-12"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Untailored $m=9$, $h^*$ handoff (n = 128)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.zs.m9.goal_pass.handoff_only.diff_pp",
+          "j17_hstar_20260924.report.json:ni.zs.m9.goal_pass.handoff_only.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.zs.m9.goal_pass.handoff_only.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-12"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Untailored $m=11$, all (n = 171)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.zs.m11.goal_pass.all.diff_pp",
+          "j17_hstar_20260924.report.json:ni.zs.m11.goal_pass.all.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.zs.m11.goal_pass.all.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-12"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Untailored $m=11$, $h^*$ handoff (n = 88)",
+        "report_path": "campaign/results/j17_hstar_20260924.report.json",
+        "json_keys": [
+          "j17_hstar_20260924.report.json:ni.zs.m11.goal_pass.handoff_only.diff_pp",
+          "j17_hstar_20260924.report.json:ni.zs.m11.goal_pass.handoff_only.ci95_pp_scenario",
+          "j17_hstar_20260924.report.json:ni.zs.m11.goal_pass.handoff_only.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "HSTAR-12"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Tailored $m=11$ vs cap-25 planner (n = 114)",
+        "report_path": "campaign/results/j16_robustness_20260923.report.json",
+        "json_keys": [
+          "j16_robustness_20260923.report.json:F_e_ni_both_ceilings.ni_table.t_m11.cap25_goal_pass_rate.diff_pp",
+          "j16_robustness_20260923.report.json:F_e_ni_both_ceilings.ni_table.t_m11.cap25_goal_pass_rate.scenario.ci95_pp",
+          "j16_robustness_20260923.report.json:F_e_ni_both_ceilings.ni_table.t_m11.cap25_goal_pass_rate.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "ROB-21"
+        ],
+        "negated": false,
+        "drawn_offscale": false
+      },
+      {
+        "label": "Tailored $m=11$ vs cap-81 planner, high effort (n = 114)",
+        "report_path": "campaign/results/j17_planning_lit_20260924.report.json",
+        "json_keys": [
+          "j17_planning_lit_20260924.report.json:ceilhi.ni_reread.high_minus_prefix_c81_bplus_m11.goal_pass.diff_pp",
+          "j17_planning_lit_20260924.report.json:ceilhi.ni_reread.high_minus_prefix_c81_bplus_m11.goal_pass.ci95_pp_scenario",
+          "j17_planning_lit_20260924.report.json:ceilhi.ni_reread.high_minus_prefix_c81_bplus_m11.goal_pass.n_pairs"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "CEILHI-03"
+        ],
+        "negated": true,
+        "drawn_offscale": false
+      }
+    ],
+    "identity_check": {
+      "rule": "HSTAR-18: (n_flag * flag + n_rescued * rescued) / n_hstar_handoff equals the h* handoff contrast",
+      "weighted_pp": 8.570455,
+      "hstar_handoff_pp": 8.570455
+    },
+    "skipped_reason": null
   }
 ]
