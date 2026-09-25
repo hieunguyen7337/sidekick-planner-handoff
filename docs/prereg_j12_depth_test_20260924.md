@@ -261,3 +261,21 @@ handoff-only column and §4's dev values for D3 and D4.
   `test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete`.
 
 *Amendment 2 ends.*
+
+## Pointer update after Amendment 2 (2026-09-25, before any J12 read; pointers only, no rule changes)
+
+The pre-read audit of `scripts/analysis/j12_report.py` against this document found every registered statistic,
+rule and family implemented as written. The fixes it led to added report-level checks and printed text only,
+and moved code lines. Amendment 2's line pointers now read:
+- `j12_apply_pair_rule`: `:311` (was `:274`);
+- `j12_am2_block`: `:705` (was `:510`);
+- the report key `j12_am2_divergence`: `:1003` (was `:739`).
+
+Names, rules and tests are unchanged. §6's read command (line 164) lists the J12 arms and J10's two m = 11
+arms. The key-exclusion sensitivity of §3, which follows A1 §4.2, also needs J10 arm 3 (`planner_alone_cap81`)
+as the plan source. The report now refuses a registered read without that arm, and prints the full command. It
+also refuses a registered read without seeds {1, 2} and 168 tasks, or with an arm directory that is not the
+arm's registered campaign. As in J11, `--divergent-refill-confirmed` records the Amendment 2 §B.1 resumption
+condition.
+
+*Pointer update ends.*

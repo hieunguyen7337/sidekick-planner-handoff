@@ -254,3 +254,18 @@ runner records is `handoff_occurred`.
   `test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete`.
 
 *Amendment 2 ends.*
+
+## Pointer update after Amendment 2 (2026-09-25, before any J11 read; pointers only, no rule changes)
+
+The pre-read audit of `scripts/analysis/j11_report.py` against this document found every registered rule
+implemented as written. The fixes it led to added report-level checks and printed text only, and moved code
+lines. Amendment 2 §C's line pointers now read:
+- `am2_evaluate_contrast`: `:400` (was `:356-381`);
+- `am2_block`: `:428` (was `:384-430`);
+- the report key `j11_am2_divergence`: `:887` (was `:630`).
+
+Names, rules and tests are unchanged. The fixes also add `--divergent-refill-confirmed`. A registered read that
+finds a divergent key and does not carry that flag is INCOMPLETE until an operator has confirmed the §B.1
+condition from the wrapper's tally lines: at least one crash-only resumption run after the crash.
+
+*Pointer update ends.*
