@@ -269,3 +269,22 @@ finds a divergent key and does not carry that flag is INCOMPLETE until an operat
 condition from the wrapper's tally lines: at least one crash-only resumption run after the crash.
 
 *Pointer update ends.*
+
+## Read log: a premature invocation (2026-09-25, disclosed before the registered read)
+
+- **What happened.** At 18:33 AEST on 2026-09-25 (HEAD 2accc53), `j11_report.py --split test_normal
+  --confirm-heldout-test-split` was invoked before J10's arm 1b (`j10_executor_alone_bplus_20260924`, this
+  document's E) existed. §6 (:167-168) runs the read only once all arms are complete. At the time C, T, A, A1 and
+  the four prefix arms were each complete at 336/336 non-crashed.
+- **What the report did.** It stopped with status `MISSING_CAMPAIGNS`, exit 3. The gate and L1 were not
+  evaluable. It still computed the contrast rows that do not involve E and wrote them to the default output path.
+- **What was seen.** Only the status and the headline line. No contrast value was viewed.
+- **What was done.**
+  - The two output files were moved, unread, out of `campaign/results/` into the gitignored
+    `campaign/workers/logs/quarantine_j11_premature_20260925/`, with a note.
+  - The report is being changed so that a registered read with a missing campaign stops before computing anything.
+- **Effect.** The registered read runs once, after J10 arm 1b is complete, with the analysis as frozen here. The
+  contrasts that do not involve E are deterministic functions of complete arms at fixed seeds. The premature run
+  therefore offered no choice to make, and its unseen numbers will be reproduced exactly.
+
+*Read log ends.*
