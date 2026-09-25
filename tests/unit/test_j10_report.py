@@ -627,6 +627,11 @@ DEV_RESULTS = Path("/scratch/n12194778/sidekick/results")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+# Unit R2 (A4): P2's calls clause needs advise_k1 to make strictly more hosted calls than prefix_m11 under both of
+# Amendment 4's conventions, so the constructed matrix charges them 19 and 11 (the dev means, A1 §6 P2).
+A1_N_PLANNER_CALLS = {"advise_k1_fullctx": 19, "prefix_m11": 11}
+
+
 def write_a1_arm(
     root: Path,
     label: str,
@@ -637,14 +642,21 @@ def write_a1_arm(
     manifest_split: str | None = "dev",
     success=False,
     handoff: dict | None = None,
+    dirname: str | None = None,
+    manifest: dict | None = None,
 ) -> Path:
     """One arm tree in runner layout. goal_pass / success: a value or a {(task, seed): value}
-    map. handoff: {(task, seed): bool} written as the prefix arm's `report` event."""
-    arm_root = root / label
+    map. handoff: {(task, seed): bool} written as the prefix arm's `report` event. Arm 3 is written
+    under planner_alone/, the system directory A1 §4.2's planless keys are read from (unit R2, A1).
+    manifest: extra manifest keys (a 'provenance' dict is merged into the split's)."""
+    arm_root = root / (dirname or label)
+    system = "planner_alone" if label == j10.A1_PLAN_SOURCE_ARM else "sys"
+    extra = dict(manifest or {})
+    extra_prov = extra.pop("provenance", {})
     for task_id in A1_TASKS:
         for seed in A1_SEEDS:
             key = (task_id, seed)
-            dest = arm_root / "sys" / str(seed) / task_id
+            dest = arm_root / system / str(seed) / task_id
             dest.mkdir(parents=True, exist_ok=True)
             gp = goal_pass[key] if isinstance(goal_pass, dict) else goal_pass
             if handoff is not None and key in handoff:
@@ -655,19 +667,19 @@ def write_a1_arm(
             row = {
                 "run_id": f"synth/{label}/{seed}/{task_id}",
                 "task_id": task_id,
-                "system": "sys",
+                "system": system,
                 "seed": seed,
                 "success": success[key] if isinstance(success, dict) else success,
-                "tgc": tgc,
+                "tgc": tgc[key] if isinstance(tgc, dict) else tgc,
                 "goal_pass_rate": gp,
                 "steps": 5,
-                "n_planner_calls": 1,
+                "n_planner_calls": A1_N_PLANNER_CALLS.get(label, 1),
                 "error_type": (error_types or {}).get(key),
             }
             (dest / "result.json").write_text(json.dumps(row) + "\n", encoding="utf-8")
             if manifest_split is not None:
                 (dest / "manifest.json").write_text(
-                    json.dumps({"provenance": {"split": manifest_split}}), encoding="utf-8"
+                    json.dumps({**extra, "provenance": {"split": manifest_split, **extra_prov}}), encoding="utf-8"
                 )
     return arm_root
 
@@ -691,12 +703,22 @@ A1_CONSTANT_GP = {
     "show_k10": 0.625,
     "advise_k10_neutral": 0.5,
 }
-A1_COST_REPORT = {
+A1_COST_MEANS = {
     "arms": {
         "advise_k1_fullctx": {"noncached_tokens_per_episode": 1414410.0,
                               "hosted_calls_per_episode": 19.0, "n_episodes": 24},
         "prefix_m11": {"noncached_tokens_per_episode": 443361.0,
                        "hosted_calls_per_episode": 11.25, "n_episodes": 24},
+    }
+}
+# Unit R2 (A4): the same means with j12_cost_axes' per-episode rows, one constant per arm, so that Amendment 4's
+# tokens clause can be read (it needs arms.<arm>.episodes) and the P2 cost report's rows can be checked (A3).
+A1_COST_REPORT = {
+    "arms": {
+        label: dict(arm, episodes=[
+            {"task_id": t, "seed": s, "noncached_tokens_per_episode": arm["noncached_tokens_per_episode"],
+             "hosted_calls_per_episode": arm["hosted_calls_per_episode"]} for t in A1_TASKS for s in A1_SEEDS])
+        for label, arm in A1_COST_MEANS["arms"].items()
     }
 }
 
@@ -710,11 +732,34 @@ def a1_report(arm_dirs, **kw):
     kw.setdefault("split", "dev")
     kw.setdefault("seeds", list(A1_SEEDS))
     kw.setdefault("expected_n_tasks", len(A1_TASKS))
+    # Unit R2 (B6): A1 §7 item 2's 78 pairwise contrasts cost ~10 s a report; tests that do not read them skip
+    # them on dev (test_r2_b6_* reads them; the registered read and main compute them always).
+    kw.setdefault("pairwise", False)
     return j10.build_report_a1(arm_dirs=arm_dirs, **kw)
 
 
 def by_id(report: dict) -> dict:
     return {p["id"]: p for p in report["predictions"]}
+
+
+def _registered_matrix(tmp_path: Path, monkeypatch, gp: dict | None = None, *, manifest_split: str = "test_normal",
+                       stamp: dict | None = None) -> dict[str, Path]:
+    """Unit R2 (A2): the registered read on the 12-task fixture -- every A1 arm, each in the directory its
+    config's campaign_id names, each manifest stamping what that config registers (stamp[label] overrides
+    fields). The fixture's 12 tasks stand in for test_normal's 168."""
+    monkeypatch.setitem(j10.A1_SPLIT_N_TASKS, "test_normal", len(A1_TASKS))
+    values = dict(A1_CONSTANT_GP, **(gp or {}))
+    dirs = {}
+    for label in A1_ALL_ARMS:
+        cid = j10._a1_r2_config(label)["campaign_id"]
+        prov = dict(j10.a1_r2_expected_provenance(label), **(stamp or {}).get(label, {}))
+        dirs[label] = write_a1_arm(tmp_path, label, values[label], manifest_split=manifest_split, dirname=cid,
+                                   manifest={"campaign_id": cid, "provenance": prov})
+    return dirs
+
+
+def registered_report(dirs, **kw):
+    return a1_report(dirs, split="test_normal", confirm_heldout_test_split=True, **kw)
 
 
 def test_a1_registry_is_data_and_matches_the_registration():
@@ -840,7 +885,8 @@ def test_pool04_flip_across_seeds_is_on_boundary_never_supported(tmp_path: Path,
 def _planless_arm3(arm_root: Path, keys: list[tuple[str, int]]) -> None:
     """Arm 3 in its runner layout (planner_alone/<seed>/<task>), with these episodes' last
     attempt writing no plan -- the keys A1 §4.2 plans live and the sensitivity drops."""
-    (arm_root / "sys").rename(arm_root / "planner_alone")
+    if (arm_root / "sys").is_dir():  # write_a1_arm already writes arm 3 under planner_alone/ (unit R2, A1)
+        (arm_root / "sys").rename(arm_root / "planner_alone")
     for task_id, seed in keys:
         (arm_root / "planner_alone" / str(seed) / task_id / "events.jsonl").write_text(
             json.dumps({"event_type": "run_start", "payload": {}}) + "\n"
@@ -865,12 +911,15 @@ def test_a1_planless_keys_are_listed_and_a_stable_verdict_stands(tmp_path: Path)
 
 
 def test_a1_a_verdict_that_changes_without_the_planless_keys_is_on_the_boundary(tmp_path: Path):
-    # +25 pp on every pair but three planless ones in scenario sc0, where takeover fails and
-    # advice passes. With them the scenario CI reaches below zero; without them it is +25 pp.
-    keys = [("sc0_1", 1), ("sc0_2", 1), ("sc0_3", 2)]
+    # Unit R2 (A5): rewritten with ONE planless key, the cap at 24 pairs (int(24 x 0.05) = 1); three keys now
+    # make J10 not run (next test). +6.25 pp on every pair but the planless one in scenario sc0, where takeover
+    # fails and advice passes (d = −1). Cluster means: sc0 (−1 + 5 x 0.0625) / 6 = −0.1146, the others
+    # +0.0625, so any resample drawing sc0 twice is negative: P(k >= 2 of 4 draws) = 0.26 > 2.5 %, the
+    # scenario CI reaches below zero. Without the key every d is +0.0625: [+6.25, +6.25].
+    keys = [("sc0_1", 1)]
     grid = [(t, s) for t in A1_TASKS for s in A1_SEEDS]
     dirs = {
-        "takeover_k10": write_a1_arm(tmp_path, "takeover_k10", {k: 0.0 if k in keys else 0.75 for k in grid}),
+        "takeover_k10": write_a1_arm(tmp_path, "takeover_k10", {k: 0.0 if k in keys else 0.5625 for k in grid}),
         "advise_k10_fullctx": write_a1_arm(tmp_path, "advise_k10_fullctx",
                                            {k: 1.0 if k in keys else 0.5 for k in grid}),
         "planner_alone_cap81": write_a1_arm(tmp_path, "planner_alone_cap81", 0.75),
@@ -881,12 +930,38 @@ def test_a1_a_verdict_that_changes_without_the_planless_keys_is_on_the_boundary(
     row = by_id(report)["P6"]
     [sens] = report["planless_contingency"]["sensitivity"]["rows"]
     assert sens["verdict_holm_without_keys"] == "supported"
+    assert sens["contrast_without_keys"]["scenario"]["ci95_pp"] == [6.25, 6.25]
     assert sens["verdict_holm_all_pairs"] != "supported" and sens["differs"] is True
+    assert row["contrast"]["scenario"]["diff_pp"] == round((-1 + 23 * 0.0625) / 24 * 100, 2)  # +1.82
     assert row["verdict"] == "on_boundary"
     assert row["verdict_before_key_exclusion"] == row["verdict_holm"]
     assert report["verdicts"]["P6"] == "on_boundary"
-    # 3 of 24 is above the 5 % cap (1): the wrapper would have refused, and the report says so.
-    assert rc == 1 and "planless_keys_above_cap:3>1" in report["incomplete_reasons"]
+    # 1 of 24 is within the cap: the read goes ahead, and P6 is decided (on the boundary).
+    assert rc == 0 and report["planless_contingency"]["n_keys"] == 1, report["headline"]
+
+
+def test_r2_a5_planless_keys_above_the_cap_mean_j10_is_not_run(tmp_path: Path):
+    # A1 §4.2 item 5 (:234-236) and §9 (:574-576): 3 planless keys of 24 is above the cap of int(24 x 0.05) = 1.
+    # J10 is reported as not run: arm completeness counts only, no verdict and no contrast value.
+    keys = [("sc0_1", 1), ("sc0_2", 1), ("sc0_3", 2)]
+    dirs = {label: write_a1_arm(tmp_path, label, 0.5)
+            for label in ("takeover_k10", "advise_k10_fullctx", "planner_alone_cap81")}
+    _planless_arm3(dirs["planner_alone_cap81"], keys)
+    report, rc = a1_report(dirs)
+    assert rc == 1 and report["status"] == "NOT_RUN"
+    assert report["headline"] == (
+        f"J10 not run: 3 of arm 3's episodes are planless, above the cap of 1 [{j10.A1_PREREG}:234-236].")
+    assert report["planless_contingency"]["keys"] == ["1/sc0_1", "1/sc0_2", "2/sc0_3"]
+    # The seam j11_report --j10-report reads: status, split and a verdicts dict, every value "not_run".
+    assert (report["split"], report["verdicts"]) == ("dev", {f"P{i}": "not_run" for i in range(1, 7)})
+    for key in ("predictions", "supporting_contrasts", "exploratory_contrasts", "amendment1",
+                "multiplicity", "sgc", "a1_am4_calls"):
+        assert key not in report, key
+    arm = report["arms"]["takeover_k10"]
+    assert (arm["n_expected"], arm["n_scored"], arm["complete"]) == (24, 24, True)
+    assert "goal_pass_mean" not in arm and "error_types" not in arm
+    blob = json.dumps(report)
+    assert "diff_pp" not in blob and "ci95" not in blob and "p_value" not in blob
 
 
 def test_a1_planless_contingency_without_arm_3(tmp_path: Path):
@@ -917,13 +992,17 @@ def test_crash_is_not_an_outcome_limit_is(tmp_path: Path):
     assert row["contrast"]["n_pairs"] == 23  # the crashed pair is dropped, not scored 0
 
 
-def test_split_provenance_mismatch_refuses_every_prediction(tmp_path: Path):
-    dirs = write_a1_matrix(tmp_path, manifest_split="dev")
-    report, rc = a1_report(dirs, split="test_normal", confirm_heldout_test_split=True,
-                           cost_report=A1_COST_REPORT)
+def test_split_provenance_mismatch_refuses_every_prediction(tmp_path: Path, monkeypatch):
+    # Unit R2 (A2): the registered read now refuses arm directories that are not the registered campaigns, so the
+    # fixture is the registered one (_registered_matrix) with manifests that say dev.
+    dirs = _registered_matrix(tmp_path, monkeypatch, manifest_split="dev")
+    report, rc = registered_report(dirs, cost_report=A1_COST_REPORT)
     assert rc == 1
     assert any(r.startswith("split_provenance_mismatch") for r in report["incomplete_reasons"])
     assert set(report["verdicts"].values()) == {"refused_incomplete"}
+    # A9: a refused row carries no reading.
+    for row in report["predictions"]:
+        assert not {"verdict_unadjusted", "p_value", "pool04"} & set(row), row["id"]
 
 
 def test_a1_protocol_refusals(tmp_path: Path):
@@ -960,7 +1039,7 @@ def test_permutation_p_is_reported_beside_the_verdict_not_decision_bearing(tmp_p
     assert len(calls) == 6
     cf1 = report["amendment1"]["cf"]["predictions"][0]["permutation_sensitivity"]
     assert cf1["decision_bearing"] is False and cf1["p_value"] == 0.5
-    # P3 (A1:270): one-sided at its −7 pp threshold; the routine does the shift.
+    # P3 (A1:315): one-sided at its −7 pp threshold; the routine does the shift.
     diffs, clusters, threshold, alternative, seed = calls[1]
     assert diffs == pytest.approx([0.0] * 24)
     assert sorted(set(clusters)) == ["sc0", "sc1", "sc2", "sc3"]
@@ -992,7 +1071,7 @@ def test_p6_reversed_mirrors_p1_unadjusted_ci_and_holm_adjusted_two_sided_p():
     assert p1_rule["direction"] == p6_rule["direction"] == "two-sided"
     p6 = next(p for p in j10.A1_PREDICTIONS if p["id"] == "P6")
     assert p6["rule"] == "positive_excludes_zero_with_reversal"
-    # A1:377-378 (F4): the registered-orientation upper bound.
+    # A1:422-423 (F4): the registered-orientation upper bound.
     assert p6["dev_reference"]["ci95_pp_scenario"] == [1.29, 13.49]
 
     def family(p6_point, p6_lo, p6_hi, p6_p):
@@ -1162,9 +1241,7 @@ def test_sgc_for_p1_and_p6_is_descriptive(tmp_path: Path):
     dirs = write_a1_matrix(tmp_path)
     dirs["prefix_m11"] = write_a1_arm(tmp_path / "x", "prefix_m11", 0.75, success=ok)
     dirs["advise_k1_fullctx"] = write_a1_arm(tmp_path / "x", "advise_k1_fullctx", 0.5, success=one_fail)
-    # A crash leaves its unit unscored, not failed (A1 F6).
-    dirs["takeover_k10"] = write_a1_arm(tmp_path / "x", "takeover_k10", 0.75, success=ok,
-                                        error_types={("sc3_1", 2): "crash"})
+    dirs["takeover_k10"] = write_a1_arm(tmp_path / "x", "takeover_k10", 0.75, success=ok)
     report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
     sgc = report["sgc"]
     assert set(sgc) == {"P1", "P6"}
@@ -1173,9 +1250,25 @@ def test_sgc_for_p1_and_p6_is_descriptive(tmp_path: Path):
         "advise_k1_fullctx", "prefix_m11", True, False)
     assert (p1["n_units_registered"], p1["n_units_shared"]) == (8, 8)
     assert (p1["n_passed_left"], p1["n_passed_right"], p1["diff_pp"]) == (7, 8, -12.5)
-    p6 = sgc["P6"]
+    assert (sgc["P6"]["n_units_unscored_left"], sgc["P6"]["n_units_shared"]) == (0, 8)
+    # A crash leaves its unit unscored, not failed (A1 F6). Unit R2 (A5): a crash in arm 10 now makes J10 not
+    # run, so the unit rule is checked on a1_sgc itself.
+    crashed = write_a1_arm(tmp_path / "y", "takeover_k10", 0.75, success=ok, error_types={("sc3_1", 2): "crash"})
+    eps = {label: j10.a1_arm_episodes(label, j10.load_arm_tree(root), A1_TASKS, list(A1_SEEDS))["episodes"]
+           for label, root in (("takeover_k10", crashed), ("advise_k10_fullctx", dirs["advise_k10_fullctx"]))}
+    p6 = j10.a1_sgc(eps["takeover_k10"], eps["advise_k10_fullctx"], A1_TASKS, list(A1_SEEDS))
     assert (p6["n_units_unscored_left"], p6["n_units_shared"]) == (1, 7)
     assert (p6["sgc_left"], p6["sgc_right"]) == (1.0, 0.0)
+    # The same rule at report level, on P1's right-hand arm (prefix_m11, arm 5, not one of §9's abort arms): unit
+    # (sc3, 2) is unscored, so 7 units are shared; advice passes 6 of them (it failed (sc0, 1)), the prefix 7.
+    dirs_p1 = dict(dirs, prefix_m11=write_a1_arm(tmp_path / "z", "prefix_m11", 0.75, success=ok,
+                                                 error_types={("sc3_1", 2): "crash"}))
+    p1 = a1_report(dirs_p1, cost_report=A1_COST_REPORT)[0]["sgc"]["P1"]
+    assert (p1["n_units_unscored_right"], p1["n_units_shared"]) == (1, 7)
+    assert (p1["n_passed_left"], p1["n_passed_right"], p1["diff_pp"]) == (6, 7, round(-100 / 7, 2))
+    dirs["takeover_k10"] = crashed
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert (rc, report["status"]) == (1, "NOT_RUN") and "sgc" not in report
 
 
 def test_p2_ratio_interval_is_information_only_and_is_f_f_draw_for_draw():
@@ -1194,7 +1287,7 @@ def test_p2_ratio_interval_is_information_only_and_is_f_f_draw_for_draw():
     cost["arms"]["advise_k1_fullctx"]["episodes"] = left_rows
     cost["arms"]["prefix_m11"]["episodes"] = right_rows
     row = j10.a1_evaluate_cost_prediction(p2, cost, expected_n=24)
-    # The verdict stays on the arm means (A1:296), whatever the interval says.
+    # The verdict stays on the arm means (A1:341), whatever the interval says.
     assert row["verdict"] == "supported" and row["ratio"] == round(1414410.0 / 443361.0, 4)
     iv = row["ratio_interval"]
     assert iv["status"] == "ok" and iv["information_only"] is True and iv["decision_bearing"] is False
@@ -1208,7 +1301,7 @@ def test_p2_ratio_interval_is_information_only_and_is_f_f_draw_for_draw():
     assert iv["ci95"] == [round(ff_ci[0], 4), round(ff_ci[1], 4)]
     assert iv["point"] == round(ff["mean_left"] / ff["mean_right"], 4)
     # A cost report without per-episode rows still gives the point verdict.
-    bare = j10.a1_evaluate_cost_prediction(p2, A1_COST_REPORT, expected_n=24)
+    bare = j10.a1_evaluate_cost_prediction(p2, A1_COST_MEANS, expected_n=24)  # unit R2: the rows-free means
     assert bare["verdict"] == "supported" and bare["ratio_interval"]["status"] == "not_computed"
 
 
@@ -1400,24 +1493,63 @@ def test_am1_cf_is_its_own_family_and_p1_p6_are_untouched(tmp_path: Path):
 
 
 def test_am1_cf_not_run_when_arms_11_12_are_absent(tmp_path: Path):
+    # Unit R2 (A6): arms 11 and 12 are abandoned and reported as not run as a pair (A1:575-576), so with arm 12
+    # absent CF1-CF3 are all "not_run" -- CF2 (show − advice) included -- and P1-P6 stand: exit 0.
     dirs = write_a1_matrix(tmp_path, AM1_GP)
     dirs.pop("advise_k10_neutral")
-    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
     cf = report["amendment1"]["cf"]
-    assert cf["status"] == "not_run" and cf["verdicts"] == {"CF1": "arm_absent"}
+    assert cf["status"] == "not_run" and cf["verdicts"] == {"CF1": "not_run"}
     assert report["headline"].endswith("Amendment 1 CF1: not run.")
-    assert {s["id"]: s["status"] for s in cf["secondary"]} == {"CF2": "ok", "CF3": "arm_absent"}
+    assert {s["id"]: s["status"] for s in cf["secondary"]} == {"CF2": "not_run", "CF3": "not_run"}
+    assert (rc, report["status"]) == (0, "COMPLETE"), report["headline"]
+    assert report["headline"].startswith("COMPLETE: every registered prediction decided.")
+
+
+def test_r2_a6_an_incomplete_arm_12_makes_cf_and_arm_11_rows_not_run_and_p1_p6_stand(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    dirs["advise_k10_neutral"] = write_a1_arm(tmp_path / "x", "advise_k10_neutral", 0.75,
+                                              error_types={("sc1_1", 2): "crash"})
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert (rc, report["status"]) == (0, "COMPLETE"), report["headline"]
+    assert report["verdicts"] == {"P1": "supported", "P2": "supported", "P3": "supported",
+                                  "P4": "supported", "P5": "supported", "P6": "supported"}
+    cf = report["amendment1"]["cf"]
+    assert cf["status"] == "not_run" and cf["verdicts"] == {"CF1": "not_run"}
+    [cf1] = cf["predictions"]
+    assert cf1["verdict"] == "not_run" and "contrast" not in cf1 and "p_value" not in cf1
+    assert "advise_k10_neutral incomplete (scored=23/24, crash=1)" in cf1["reason"]
+    assert {s["id"]: s["status"] for s in cf["secondary"]} == {"CF2": "not_run", "CF3": "not_run"}
+    # Every row that uses arm 11 or 12 is printed without values, never at reduced power.
+    e = {r["id"]: r for r in report["exploratory_contrasts"]}
+    assert {k: e[k]["status"] for k in e} == {"E1": "ok", "E2": "not_run", "E3": "not_run", "E4": "not_run",
+                                              "E5": "not_run"}
+    assert all(e[k]["goal_pass"] is None for k in ("E2", "E3", "E4", "E5"))
+    for label in ("show_k10", "advise_k10_neutral"):
+        arm = report["arms"][label]
+        assert arm["not_run"] is True and "goal_pass_mean" not in arm and "error_types" not in arm
+    assert report["arms"]["advise_k10_neutral"]["n_crash"] == 1  # completeness counts stay
+    lim = report["amendment1"]["limits"]
+    assert lim["split"]["CF1"]["status"] == lim["split"]["CF3"]["status"] == "not_run"
+    assert "diff_pp" not in json.dumps(lim["split"]["CF1"])
+    # The supporting-arms sentence names the arm; CF1 stays last.
+    assert "Incomplete arms no prediction uses: advise_k10_neutral (P1-P6 stand)." in report["headline"]
+    assert report["headline"].endswith("Amendment 1 CF1: not run.")
+    ms = report["amendment1"]["multiplicity_sensitivity"]
+    assert not {"CF1", "E2", "E3", "E5"} & {r["id"] for r in ms["rows"]}
 
 
 def test_am1_cf1_goes_on_the_boundary_when_the_planless_keys_move_it(tmp_path: Path):
-    # test_a1_a_verdict_that_changes_without_the_planless_keys_is_on_the_boundary, for CF1.
-    keys = [("sc0_1", 1), ("sc0_2", 1), ("sc0_3", 2)]
+    # test_a1_a_verdict_that_changes_without_the_planless_keys_is_on_the_boundary, for CF1 (unit R2: one
+    # planless key, within the cap; arm 11 is given, since CF runs only with arms 11 and 12 as a pair, A6).
+    keys = [("sc0_1", 1)]
     dirs = {
         "advise_k10_neutral": write_a1_arm(tmp_path, "advise_k10_neutral",
-                                           {k: 0.0 if k in keys else 0.75 for k in GRID}),
+                                           {k: 0.0 if k in keys else 0.5625 for k in GRID}),
         "advise_k10_fullctx": write_a1_arm(tmp_path, "advise_k10_fullctx",
                                            {k: 1.0 if k in keys else 0.5 for k in GRID}),
         "planner_alone_cap81": write_a1_arm(tmp_path, "planner_alone_cap81", 0.75),
+        "show_k10": write_a1_arm(tmp_path, "show_k10", 0.625),
     }
     _planless_arm3(dirs["planner_alone_cap81"], keys)
     p6 = [dict(p) for p in j10.A1_PREDICTIONS if p["id"] == "P6"]
@@ -1483,7 +1615,9 @@ def test_am1_decomposition_by_hand(tmp_path: Path):
     assert gp["share_of_rise_from_handoff"]["n_resamples_rise_not_positive_scenario"] == 0
     assert gp["gain_on_handoff_subset"]["diff_pp"] == 0.0
     assert gp["gain_on_silenced_subset"]["diff_pp"] == 50.0
-    assert report["amendment1"]["b4_companions"]["P3"] == "amendment1.handoff_only_ni[B1a]"
+    # Unit R2 (B3): Amendment 3 registers h*, so P3's B4 entry points at the h* row; the flag map is kept beside it.
+    assert report["amendment1"]["b4_companions"]["P3"] == "amendment1.handoff_only_ni_hstar[B1a]"
+    assert report["amendment1"]["b4_companions_flag"]["P3"] == "amendment1.handoff_only_ni[B1a]"
 
 
 def _write_control(arm_root: Path, flag: dict, live: set, eff: int = 11) -> None:
@@ -1534,7 +1668,9 @@ def test_am1_hstar_companions_sit_beside_the_flag_ones_by_hand(tmp_path: Path):
     assert s6["goal_pass"]["tailored"]["n_handoff"] == 8 and s6["goal_pass_hstar"]["tailored"]["n_handoff"] == 16
     assert s6["goal_pass_hstar"]["tailored"]["handoff_only"]["diff_pp"] == 12.5  # (0 x 8 + 0.25 x 8) / 16
     assert am1["b4_companions_hstar"]["P3"] == "amendment1.handoff_only_ni_hstar[B1a]"
-    assert am1["b4_companions"]["P3"] == "amendment1.handoff_only_ni[B1a]"
+    # Unit R2 (B3): b4_companions now points at the registered (h*) rows; the flag map is b4_companions_flag.
+    assert am1["b4_companions"]["P3"] == "amendment1.handoff_only_ni_hstar[B1a]"
+    assert am1["b4_companions_flag"]["P3"] == "amendment1.handoff_only_ni[B1a]"
     assert "multiplicity_sensitivity_hstar" in am1
 
 
@@ -1737,11 +1873,26 @@ def test_am4_calls_live_and_attributed_by_hand(tmp_path: Path, monkeypatch):
     assert tk["live"] == {"advise_k1": 1414410.0, "prefix_m11": 443361.0,
                           "ratio": round(1414410.0 / 443361.0, 6), "holds": True}  # 3.190196
     assert (tk["holds_both"], tk["min_ratio"], tk["note"]) == (True, 2.0, j10.A1_AM4_TOKENS_NOTE)
-    # No other key or value moves: the same report without the companion.
+    # Unit R2 (A4), Amendment 4 §C: P2 is supported only if its rule holds AND both clauses hold under both
+    # conventions. Its rule holds on the cost report's means (19 > 11.25 calls; 1,414,410 / 443,361 = 3.19 >= 2),
+    # but live the advice arm makes 2.0 calls to prefix_m11's 2.0: the live convention turns a supported P2 into
+    # not supported. (This replaces the check that the companion moved no other key: it now moves P2.)
+    p2row = by_id(report)["P2"]
+    assert (p2row["verdict_before_amendment4"], p2row["verdict"]) == ("supported", "not_supported")
+    assert (p2row["amendment4"]["calls_holds_both"], p2row["amendment4"]["tokens_holds_both"]) == (False, True)
+    assert p2row["amendment4"]["why"] == "calls clause fails under one convention"
+    assert report["verdicts"]["P2"] == "not_supported"
+    # Without the companion neither clause can be read under both conventions: P2 is incomplete, not supported.
     monkeypatch.setattr(j10, "a1_am4_calls", lambda rep, *_a, **_k: rep)
-    base, _ = a1_report(dirs, cost_report=cost)
-    rest = {k: v for k, v in report.items() if k != "a1_am4_calls"}
-    assert json.dumps(rest, sort_keys=True, default=str) == json.dumps(base, sort_keys=True, default=str)
+    base, rc = a1_report(dirs, cost_report=cost)
+    assert by_id(base)["P2"]["verdict"] == "refused_incomplete" and rc == 1
+    assert "p2_amendment4_clause_not_read:calls,tokens" in base["incomplete_reasons"]
+    assert base["status"] == "INCOMPLETE"
+    # Everything but P2's row, the verdicts and the lines that quote them (headline, reasons, P1's sentence).
+    rest = {k: v for k, v in report.items() if k not in ("a1_am4_calls", "predictions", "verdicts", "headline",
+                                                          "incomplete_reasons", "status", "verdict_sentences")}
+    rest_base = {k: v for k, v in base.items() if k in rest}
+    assert json.dumps(rest, sort_keys=True, default=str) == json.dumps(rest_base, sort_keys=True, default=str)
 
 
 def test_am4_sft_plan_is_not_charged_twice_and_both_conventions_can_hold(tmp_path: Path):
@@ -1777,7 +1928,35 @@ def test_am4_failure_is_recorded_and_never_fatal(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(j10, "_load_j12", boom)
     report, _ = a1_report(write_a1_matrix(tmp_path), cost_report=A1_COST_REPORT)
     assert report["a1_am4_calls"] == {"status": "error", "error": "ImportError: j12_cost_axes unavailable"}
-    assert report["verdicts"]["P2"] == "supported"
+    # Unit R2 (A4): an unreadable companion no longer leaves P2 supported -- Amendment 4 §C cannot be read, so
+    # P2 is incomplete (holds_both None), and says why.
+    p2 = by_id(report)["P2"]
+    assert p2["verdict"] == "refused_incomplete" and p2["decidable"] is False
+    assert "a1_am4_calls cannot read it (error)" in p2["reason"]
+    assert p2["amendment4"]["a1_am4_calls_status"] == "error"
+
+
+def test_r2_a4_p2_is_supported_only_when_both_clauses_hold_under_both_conventions(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    # Holds: 19 > 11 calls both ways (no cached plan), tokens 3.19 both ways.
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    p2 = by_id(report)["P2"]
+    assert (rc, p2["verdict"], p2["amendment4"]["calls_holds_both"], p2["amendment4"]["tokens_holds_both"]) == (
+        0, "supported", True, True)
+    assert "verdict_before_amendment4" not in p2
+    # A cost report without per-episode rows: the tokens clause is None -> P2 incomplete, with its reason.
+    report, rc = a1_report(dirs, cost_report=A1_COST_MEANS)
+    p2 = by_id(report)["P2"]
+    assert (rc, p2["verdict"], p2["amendment4"]["tokens_holds_both"]) == (1, "refused_incomplete", None)
+    assert "p2_amendment4_clause_not_read:tokens" in report["incomplete_reasons"]
+    assert report["headline"].startswith("INCOMPLETE: p2_amendment4_clause_not_read:tokens")
+    # A9: an incomplete P2 carries no reading.
+    assert "pool04" not in p2 and "verdict_unadjusted" not in p2
+    # The rule itself fails: Amendment 4 never turns a not-supported P2 into supported.
+    cheap = json.loads(json.dumps(A1_COST_REPORT))
+    cheap["arms"]["advise_k1_fullctx"]["noncached_tokens_per_episode"] = 1.5 * 443361.0
+    p2 = by_id(a1_report(dirs, cost_report=cheap)[0])["P2"]
+    assert p2["verdict"] == "not_supported" and "verdict_before_amendment4" not in p2
 
 
 # ---- Amendment 5: a replay that cannot pass its own check (unit DIVRULE, 2026-09-25) -----------------------
@@ -1974,14 +2153,24 @@ def test_am5_a_divergent_key_plus_an_ordinary_crash_is_incomplete(tmp_path: Path
 
 def test_am5_a_divergent_key_in_a_non_replay_arm_is_an_ordinary_crash(tmp_path: Path):
     """Constraint 3: impossible by construction; if seen, the arm stays incomplete and the block names it."""
+    # Unit R2 (A5): the divergent key moves from arm 8 (advise_k1_fullctx) to arm 2 (sft_plan), which replays the plan
+    # but not the environment and is not one of §9's abort arms, so the report still reads and P5 is refused;
+    # arms 3, 8, 9 and 10 stay complete. In arm 8 the same crash now means J10 is not run (checked at the end).
     dirs = write_a1_matrix(tmp_path)
+    _am5_crash(dirs["sft_plan"], [AM5_KEY])
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 1 and report["arms"]["sft_plan"]["complete"] is False
+    assert by_id(report)["P5"]["verdict"] == "refused_incomplete"
+    blk = report["a1_am5_divergence"]
+    assert blk["non_replay_divergent"]["keys"] == {"sft_plan": ["1/sc0_1"]}
+    assert blk["contrasts"] == {} and blk["n_divergent_total"] == 0
+    dirs = write_a1_matrix(tmp_path / "arm8")
     _am5_crash(dirs["advise_k1_fullctx"], [AM5_KEY])
     report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
-    assert rc == 1 and report["arms"]["advise_k1_fullctx"]["complete"] is False
-    assert by_id(report)["P1"]["verdict"] == "refused_incomplete"
-    blk = report["a1_am5_divergence"]
-    assert blk["non_replay_divergent"]["keys"] == {"advise_k1_fullctx": ["1/sc0_1"]}
-    assert blk["contrasts"] == {} and blk["n_divergent_total"] == 0
+    assert (rc, report["status"]) == (1, "NOT_RUN") and "predictions" not in report
+    assert report["headline"] == ("J10 not run: arm advise_k1_fullctx did not complete 24 non-crashed pairs "
+                                  "(scored=23, crash=1, missing=0).")
+    assert report["a1_am5_divergence"]["non_replay_divergent"]["keys"] == {"advise_k1_fullctx": ["1/sc0_1"]}
 
 
 def test_am5_b3_chord_cost_plug_in_is_read_without_the_divergent_key(tmp_path: Path):
@@ -2005,3 +2194,529 @@ def test_am5_b3_chord_cost_plug_in_is_read_without_the_divergent_key(tmp_path: P
     # prefix_m9 has no divergent key: its chord is as published.
     assert report["amendment1"]["chord"]["arms"]["prefix_m9"]["status"] == "not_computed"
 
+
+# ---- Unit R2: the J10 pre-read audit, Phase A (2026-09-25) ---------------------------------------------------------
+def test_r2_a1_arm_3_without_planner_alone_is_refused_not_read_as_zero_keys(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    root = dirs["planner_alone_cap81"]
+    (root / "planner_alone").rename(root / "sys")  # the episodes are there, under another system name
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 2 and report["refused"] is True and "predictions" not in report
+    assert "holds no planner_alone/ subdirectory" in report["reason"]
+    assert "<arm-3 campaign>/planner_alone/<seed>/<task_id>/" in report["reason"]
+    # Its system subdirectory given in place of the campaign, and a directory that does not exist: refused.
+    for bad in (root / "sys", tmp_path / "nowhere"):
+        assert a1_report(dict(dirs, planner_alone_cap81=bad))[1] == 2
+    # With planner_alone/ the same matrix reads: zero planless keys, and a sensitivity with nothing to drop.
+    (root / "sys").rename(root / "planner_alone")
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 0 and report["planless_contingency"]["n_keys"] == 0
+
+
+def test_r2_a2_expected_provenance_is_the_configs_by_hand():
+    # What configs/j10_prefix_m11.yaml registers, as config_provenance / planner_provenance stamp it.
+    assert j10.a1_r2_expected_provenance("prefix_m11") == {
+        "config_campaign_id": "j10_prefix_m11_20260924",
+        "handoff_source_campaign": "/scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924",
+        "handoff_m": 11, "executor_model": "ibm-granite/granite-4.2-8b", "lora_name": "sft_b_plus",
+        "takeover": None, "planner_type": "codex", "planner_model_requested": "gpt-5.6-luna",
+        "planner_reasoning_effort": "medium", "correct_prompt": "correction", "advice_from_act": None}
+    # takeover_k10 sets `takeover: true` at the top level, which the runner reads and the manifest never stamps.
+    assert j10.a1_r2_expected_provenance("takeover_k10")["takeover"] is None
+    assert j10._a1_r2_config("takeover_k10")["takeover"] is True
+    # Every registered config names its own campaign.
+    for label, rel in j10.A1_ARMS.items():
+        assert j10._a1_r2_config(label)["campaign_id"].startswith(f"j10_{Path(rel).stem[len('j10_'):]}_"), label
+
+
+def test_r2_a2_the_registered_read_checks_every_manifest_and_says_what_it_cannot(tmp_path: Path, monkeypatch):
+    dirs = _registered_matrix(tmp_path, monkeypatch)
+    report, rc = registered_report(dirs, cost_report=A1_COST_REPORT)
+    assert (rc, report["status"]) == (0, "COMPLETE"), report["headline"]
+    assert report["not_the_j10_result"] is False
+    assert report["verdicts"] == {"P1": "supported", "P2": "supported", "P3": "supported",
+                                  "P4": "not_supported", "P5": "supported", "P6": "supported"}
+    m = report["registered_read_checks"]["manifests"]
+    assert m["status"] == "ok" and list(m["per_arm"]) == list(j10.A1_ARMS)
+    assert {a: (c["n_manifests"], c["mismatches"], c["unstamped"]) for a, c in m["per_arm"].items()} == {
+        a: (24, {}, {}) for a in j10.A1_ARMS}
+    shown = m["not_shown_by_the_manifest"]
+    assert "adapter_directory" in shown and "served_model" in shown
+    assert shown["channel_config_keys"]["per_arm"]["takeover_k10"] == {"takeover": True, "fixed_k": 10}
+    assert shown["channel_config_keys"]["per_arm"]["show_k10"] == {"advice_from_act": True, "fixed_k": 10}
+    cost = report["registered_read_checks"]["cost_report"]
+    assert cost["status"] == "ok" and cost["p2_rows"] == {
+        "advise_k1_fullctx": {"n_rows": 24, "n_not_episodes_of_the_arm_given": 0},
+        "prefix_m11": {"n_rows": 24, "n_not_episodes_of_the_arm_given": 0}}
+    assert cost["not_recorded_by_j12_cost_axes"] == ["split", "arm directories", "packet_source"]
+
+
+def test_r2_a2_registered_read_pins_refuse(tmp_path: Path, monkeypatch):
+    dirs = _registered_matrix(tmp_path, monkeypatch)
+
+    def refused(**kw) -> str:
+        report, rc = registered_report(kw.pop("dirs", dirs), cost_report=A1_COST_REPORT, **kw)
+        assert rc == 2 and report["refused"] is True and "predictions" not in report
+        return report["reason"]
+
+    assert "seeds [1, 2, 3] are not exactly {1, 2}" in refused(seeds=[1, 2, 3])
+    assert "seeds [1] are not exactly {1, 2}" in refused(seeds=[1])
+    assert "expected task count 11 is not 12" in refused(expected_n_tasks=11)
+    p3_easier = [dict(p, threshold_pp=-10.0) if p["id"] == "P3" else dict(p) for p in j10.A1_PREDICTIONS]
+    assert "the predictions differ from A1_PREDICTIONS" in refused(predictions=p3_easier)
+    assert "the supporting rows differ" in refused(supporting=[])
+    # A directory that is not the registered campaign (the basename is the config's campaign_id).
+    moved = tmp_path / "elsewhere" / "prefix_m11_rerun"
+    moved.parent.mkdir()
+    dirs["prefix_m11"].rename(moved)
+    reason = refused(dirs=dict(dirs, prefix_m11=moved))
+    assert "the directory is not the registered campaign j10_prefix_m11_20260924" in reason
+    moved.rename(dirs["prefix_m11"])
+    # A10: arms 1, 1b, prefix_m9, 11 and 12 are required on the registered read.
+    a10 = ("executor_alone", "executor_alone_bplus", "prefix_m9", "show_k10", "advise_k10_neutral")
+    reason = refused(dirs={k: v for k, v in dirs.items() if k not in a10})
+    assert f"registered arms not given as --arm: {list(a10)}" in reason
+    # 168 on the real split: the pin is the registered count, not whatever the fixture has.
+    monkeypatch.setitem(j10.A1_SPLIT_N_TASKS, "test_normal", 168)
+    assert "expected task count 12 is not 168" in refused()
+
+
+def test_r2_a2_a_manifest_that_disagrees_with_its_config_is_refused(tmp_path: Path, monkeypatch):
+    # The adapter alias and the replay source, each on one arm.
+    stamp = {"prefix_m11": {"lora_name": "sft_b"},
+             "prefix_m9": {"handoff_source_campaign": "/scratch/n12194778/sidekick/results/hj17_planner_alone_x"}}
+    dirs = _registered_matrix(tmp_path, monkeypatch, stamp=stamp)
+    report, rc = registered_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 2 and "predictions" not in report
+    assert ("prefix_m11: 24 manifest(s) stamp lora_name='sft_b' but configs/j10_prefix_m11.yaml registers "
+            "'sft_b_plus'") in report["reason"]
+    assert "prefix_m9: 24 manifest(s) stamp handoff_source_campaign=" in report["reason"]
+    # The campaign id at the top of the manifest is compared too.
+    dirs = _registered_matrix(tmp_path / "b", monkeypatch)
+    for path in (dirs["sft_plan"] / "sys").rglob("manifest.json"):
+        man = json.loads(path.read_text(encoding="utf-8"))
+        path.write_text(json.dumps(dict(man, campaign_id="hj17_sft_plan_x")), encoding="utf-8")
+    reason = registered_report(dirs, cost_report=A1_COST_REPORT)[0]["reason"]
+    assert "sft_plan: 24 manifest(s) stamp campaign_id='hj17_sft_plan_x'" in reason
+
+
+def test_r2_a2_main_refuses_predictions_json_on_test_normal(tmp_path: Path, capsys):
+    path = tmp_path / "registry.json"
+    path.write_text(json.dumps(list(j10.A1_PREDICTIONS)), encoding="utf-8")
+    rc = j10.main(["--split", "test_normal", "--confirm-heldout-test-split", "--predictions-json", str(path),
+                   "--arm", f"prefix_m11={tmp_path / 'x'}"])
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 2 and out["refused"] is True and "refusing --predictions-json on test_normal" in out["reason"]
+
+
+def test_r2_a3_the_p2_cost_report_must_be_over_the_arms_given(tmp_path: Path, monkeypatch):
+    dirs = _registered_matrix(tmp_path, monkeypatch)
+
+    def reason(cost) -> str:
+        report, rc = registered_report(dirs, cost_report=cost)
+        assert rc == 2 and "predictions" not in report
+        return report["reason"]
+
+    # Rows from another split (dev task ids): no row is an episode of the arm given.
+    dev_rows = json.loads(json.dumps(A1_COST_REPORT))
+    for arm in dev_rows["arms"].values():
+        for r in arm["episodes"]:
+            r["task_id"] = "dev_" + r["task_id"]
+    assert "advise_k1_fullctx: 24 of 24 per-episode rows are not episodes of --arm" in reason(dev_rows)
+    # No per-episode rows: nothing to check the report against.
+    assert "prefix_m11 has no per-episode rows" in reason(A1_COST_MEANS)
+    # Where the report does record its split, arm directory or packet source, they must match.
+    assert "its split is 'dev'" in reason(dict(A1_COST_REPORT, split="dev"))
+    assert "its packet_source" in reason(dict(A1_COST_REPORT, packet_source=str(tmp_path / "other")))
+    moved = json.loads(json.dumps(A1_COST_REPORT))
+    moved["arms"]["prefix_m11"]["root"] = str(tmp_path / "hj17_prefix_m11")
+    assert "its arm 'prefix_m11' was read from" in reason(moved)
+    ok = dict(A1_COST_REPORT, split="test_normal", packet_source=str(dirs["planner_alone_cap81"]))
+    assert registered_report(dirs, cost_report=ok)[1] == 0
+    # On dev the cost report is not checked (A3 is the registered read's).
+    assert a1_report(write_a1_matrix(tmp_path / "dev"), cost_report=dev_rows)[1] in (0, 1)
+
+
+def test_r2_a5_an_incomplete_abort_arm_means_j10_is_not_run(tmp_path: Path, monkeypatch):
+    # Arm 9 is missing one episode: A1 §9, reported as not run, never at reduced power.
+    dirs = write_a1_matrix(tmp_path)
+    (dirs["advise_k10_fullctx"] / "sys" / "2" / "sc3_3" / "result.json").unlink()
+
+    def boom(*_a, **_k):
+        raise AssertionError("a contrast was computed on a not-run read")
+
+    monkeypatch.setattr(j10, "a1_contrast", boom)
+    monkeypatch.setattr(j10, "cluster_bootstrap_means", boom)
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert (rc, report["status"]) == (1, "NOT_RUN")
+    assert report["headline"] == ("J10 not run: arm advise_k10_fullctx did not complete 24 non-crashed pairs "
+                                  "(scored=23, crash=0, missing=1).")
+    assert report["abort_rule"]["citation"] == f"{j10.A1_PREREG}:574-576"
+    assert report["abort_rule"]["arms"] == ["planner_alone_cap81", "advise_k1_fullctx", "advise_k10_fullctx",
+                                            "takeover_k10"]
+    assert report["arms"]["advise_k10_fullctx"]["n_missing"] == 1
+    assert set(report["arms"]) == set(j10.A1_ARMS)
+    assert all("goal_pass_mean" not in a and "tgc_mean" not in a for a in report["arms"].values())
+    # An incomplete arm that is not 3, 8, 9 or 10 does not stop the read (P1/P3 are refused instead).
+    monkeypatch.undo()
+    dirs = write_a1_matrix(tmp_path / "b")
+    (dirs["prefix_m11"] / "sys" / "2" / "sc3_3" / "result.json").unlink()
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert report["status"] == "INCOMPLETE" and by_id(report)["P1"]["verdict"] == "refused_incomplete"
+
+
+def test_r2_a7_b1_draws_no_reading_above_the_cap_or_with_an_incomplete_arm(tmp_path: Path):
+    for n, incomplete in ((17, True), (16, False)):
+        dirs = write_a1_matrix(tmp_path / str(n))
+        _am5_crash(dirs["prefix_m11"], GRID[:n])
+        am1 = a1_report(dirs, cost_report=_am5_rows_cost(AM5_P2_COST))[0]["amendment1"]
+        assert am1["hstar"]["status"] == "ok"
+        for key in ("handoff_only_ni", "handoff_only_ni_hstar"):
+            b1a = {r["id"]: r for r in am1[key]}["B1a"]
+            if incomplete:
+                assert b1a["status"] == "incomplete" and b1a["draws_no_reading"] is True, key
+                assert "17 divergent keys to remove > cap 16" in b1a["reason"]
+                assert b1a["goal_pass"]["ni"]["reading"] == "incomplete"
+                assert "p_value_two_sided_at_margin" not in b1a["goal_pass"]
+            else:
+                assert b1a.get("status") != "incomplete" and b1a["goal_pass"]["ni"]["reading"] != "incomplete"
+    # An ordinary crash in prefix_zs_m11: B1b (prefix_zs_m11 − arm 3) is incomplete, B1a is read.
+    dirs = write_a1_matrix(tmp_path / "zs")
+    _am5_crash(dirs["prefix_zs_m11"], [AM5_KEY], reason="replay_error")
+    am1 = a1_report(dirs, cost_report=A1_COST_REPORT)[0]["amendment1"]
+    b1 = {r["id"]: r for r in am1["handoff_only_ni"]}
+    assert b1["B1b"]["status"] == "incomplete" and b1["B1b"]["goal_pass"]["ni"]["reading"] == "incomplete"
+    assert "arm(s) incomplete: ['prefix_zs_m11']" in b1["B1b"]["reason"]
+    assert b1["B1a"].get("status") != "incomplete"
+
+
+def test_r2_a8_a_held_out_manifest_under_split_dev_is_refused_before_anything_is_read(tmp_path: Path, monkeypatch):
+    dirs = write_a1_matrix(tmp_path)
+    write_a1_arm(tmp_path, "prefix_m9", 0.625, manifest_split="test_normal")
+
+    def boom(*_a, **_k):
+        raise AssertionError("an arm was loaded before the held-out guard")
+
+    monkeypatch.setattr(j10, "load_arm_tree", boom)
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 2 and report["refused"] is True and "predictions" not in report
+    assert "refusing --arm prefix_m9=" in report["reason"]
+    assert "{'test_normal': 24} episode manifest(s) record a held-out split and this is --split dev" in (
+        report["reason"])
+    # test_challenge is never read, not even by the confirmed registered read.
+    monkeypatch.undo()
+    dirs = _registered_matrix(tmp_path / "reg", monkeypatch)
+    write_a1_arm(tmp_path / "reg", "prefix_m9", 0.625, manifest_split="test_challenge",
+                 dirname=dirs["prefix_m9"].name)
+    report, rc = registered_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 2 and "{'test_challenge': 24}" in report["reason"]
+
+
+def test_r2_a9_a_refused_row_carries_no_reading(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    _am5_crash(dirs["prefix_m11"], [("sc2_1", 2)], reason="replay_error")  # an ordinary crash: arm 5 incomplete
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 1
+    p = by_id(report)
+    for pid in ("P1", "P3"):
+        assert p[pid]["verdict"] == "refused_incomplete", pid
+        assert not {"verdict_unadjusted", "events_unadjusted", "p_value", "p_value_two_sided", "pool04",
+                    "permutation_sensitivity"} & set(p[pid]), pid
+        assert p[pid]["draws_no_reading"] is True
+    assert p["P1"]["contrast"]["n_pairs"] == 23  # the descriptive contrast and its pair count stay
+    for pid in ("P4", "P5", "P6"):
+        assert "verdict_unadjusted" in p[pid] and "pool04" in p[pid] and "p_value" in p[pid]
+    ms = report["amendment1"]["multiplicity_sensitivity"]
+    assert {"P1", "P3"} <= set(ms["not_in_family"])
+
+
+def test_r2_a10_an_incomplete_supporting_arm_marks_its_rows_and_p1_p6_stand(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    dirs["executor_alone_bplus"] = write_a1_arm(tmp_path / "x", "executor_alone_bplus", 0.375,
+                                                error_types={("sc0_2", 1): "crash"})
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert (rc, report["status"]) == (0, "COMPLETE"), report["headline"]
+    assert report["headline"] == (
+        "COMPLETE: every registered prediction decided. Incomplete arms no prediction uses: executor_alone_bplus "
+        "(P1-P6 stand). Supporting / exploratory rows incomplete, drawing no reading: S5. "
+        "Amendment 1 CF1: not_supported.")  # CF1: neutral 0.5 − advice 0.5 = 0 in A1_CONSTANT_GP
+    s = {r["id"]: r for r in report["supporting_contrasts"]}
+    assert s["S5"]["status"] == "incomplete" and s["S5"]["incomplete_arms"] == ["executor_alone_bplus"]
+    assert "p_value_two_sided_at_0" not in s["S5"]["goal_pass"]
+    assert s["S5"]["goal_pass"]["n_pairs"] == 23  # printed, labelled incomplete
+    assert {k: v["status"] for k, v in s.items() if k != "S5"} == {k: "ok" for k in ("S1", "S2", "S3", "S4", "S6")}
+    assert report["supporting_incomplete_reasons"] == [
+        "incomplete_arm:executor_alone_bplus scored=23/24 crash=1 missing=0"]
+    assert report["incomplete_reasons"] == []
+    assert "S5" in report["amendment1"]["multiplicity_sensitivity"]["not_in_family"]
+
+
+def test_r2_a11_the_hstar_b1a_row_carries_the_hstar_dev_reference(tmp_path: Path):
+    report, _ = a1_report(write_a1_matrix(tmp_path, AM1_GP), cost_report=A1_COST_REPORT)
+    am1 = report["amendment1"]
+    hstar = {r["id"]: r for r in am1["handoff_only_ni_hstar"]}["B1a"]
+    ref = hstar["dev_reference"]
+    assert (ref["diff_pp"], ref["ci95_pp_scenario"], ref["n_handoff"]) == (8.57, [-1.63, 18.25], 88)
+    assert ref["ci95_pp_task"] == [0.67, 16.30] and ref["key"] == "ni.bplus.m11.goal_pass.handoff_only"
+    # The prereg line it cites says the same.
+    lines = (REPO_ROOT / j10.A1_PREREG).read_text(encoding="utf-8").splitlines()
+    assert "**+8.57 pp** over 88 episodes (scenario [−1.63, +18.25], task [+0.67, +16.30])" in lines[946]
+    # The flag row keeps the flag's dev value.
+    flag = {r["id"]: r for r in am1["handoff_only_ni"]}["B1a"]
+    assert (flag["dev_reference"]["diff_pp"], flag["dev_reference"]["n_handoff"]) == (-0.94, 71)
+
+
+
+# ---- Unit R2: the J10 pre-read audit, Phase B (2026-09-25) ---------------------------------------------------------
+def test_r2_b7_a_scored_failure_keeps_its_recorded_tgc(tmp_path: Path):
+    # advise_k1 hits the step limit on two keys and records TGC 1.0 there (0 elsewhere), and on a third records no
+    # TGC at all. v1's score_tgc drops the first two from every TGC contrast (None); A1 §5.1 scores them as recorded.
+    lim = [("sc0_1", 1), ("sc1_1", 2), ("sc2_1", 1)]
+    tgc = {k: (1.0 if k in lim[:2] else None if k == lim[2] else 0.0) for k in GRID}
+    dirs = write_a1_matrix(tmp_path)
+    dirs["advise_k1_fullctx"] = write_a1_arm(tmp_path / "x", "advise_k1_fullctx", 0.5, tgc=tgc,
+                                             error_types={k: "limit" for k in lim})
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    arm = report["arms"]["advise_k1_fullctx"]
+    assert arm["tgc_scored_as_recorded"]["n_changed"] == 2
+    assert arm["tgc_scored_as_recorded"]["changed"] == ["1/sc0_1", "2/sc1_1"]
+    assert arm["tgc_scored_as_recorded"]["n_failure_without_recorded_tgc_scored_0"] == 1
+    assert arm["tgc_mean"] == round(2 / 24, 6)  # 0.083333: 2 of 24 at 1.0, the unrecorded one scored 0
+    # P1's TGC secondary: advise 2/24 − prefix 0 = +8.33 pp over all 24 pairs (22 before).
+    tg = by_id(report)["P1"]["tgc_secondary"]
+    assert (tg["n_pairs"], tg["scenario"]["diff_pp"]) == (24, round(100 * 2 / 24, 2))
+    # j11 and j12 import a1_arm_episodes, which is unchanged: there the two keys still read None.
+    blob = j10.load_arm_tree(dirs["advise_k1_fullctx"])
+    eps = j10.a1_arm_episodes("advise_k1_fullctx", blob, A1_TASKS, list(A1_SEEDS))["episodes"]
+    assert eps[("sc0_1", 1)]["tgc"] is None and eps[("sc2_1", 1)]["tgc"] == 0.0
+    # Every other fixture writes TGC 0 on its scored failures, so no other test's rows move.
+    assert report["tgc_scored_as_recorded"]["prefix_m11"]["n_changed"] == 0
+
+
+def test_r2_b1_signflip_disagreement_and_the_tgc_atom_are_in_the_sentence(tmp_path: Path, monkeypatch):
+    dirs = write_a1_matrix(tmp_path)
+
+    def stub(diffs, clusters, *, threshold, alternative, seed):
+        return {"p": 0.5, "method": "exact", "n_patterns": 16, "n_clusters": 4}
+
+    monkeypatch.setattr(j10, "_load_cluster_signflip", lambda: stub)
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    s = report["verdict_sentences"]
+    # P1 supported, sign-flip p 0.5 does not reject: disagreement, said in the verdict's sentence (A1 §5.5).
+    assert s["P1"].startswith("P1 (advise_k1_fullctx − prefix_m11, goal_pass): supported, -25.00 pp")
+    assert "the cluster sign-flip p (exact, two-sided) is 0.5000, which does not reject at 0.05 and so disagrees" \
+        in s["P1"]
+    # P4 not supported (point 0), p 0.5 does not reject either: they agree, nothing is said.
+    assert "sign-flip" not in s["P4"]
+    # TGC is 0 everywhere: P1's TGC interval is [0, 0], on threshold 0's atom (0/24); P3's threshold −7 pp has
+    # its nearest atom at round(−0.07 x 24) / 24 = −2/24 = −8.33 pp, which [0, 0] is not on.
+    assert "TGC's lower and upper bound sits on the threshold's nearest atom (0/24 = +0.00 pp)" in s["P1"]
+    assert by_id(report)["P1"]["tgc_secondary"]["atom_note"].startswith("TGC's lower and upper bound")
+    assert "atom" not in s["P3"]
+
+
+def test_r2_b2_p1_p3_p6_are_worded_as_registered(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    s = report["verdict_sentences"]
+    assert "never as advice at matched budget or as ruling out a budget effect (Amendment 1 §E" in s["P1"]
+    assert "uninterpretable" not in s["P1"]  # P2 is supported
+    assert "non-inferiority to the medium-effort planner in this harness, never to the planner at its best effort" \
+        in s["P3"]
+    assert "+11.97 pp goal_pass above the medium one on 114 keys [+6.14, +18.43]" in s["P3"]
+    assert "(ceiling − arm +7.22 [+3.21, +11.47]; CEILHI-01, CEILHI-03)" in s["P3"]
+    assert "handoff-only (h*, registered, Amendment 3) B1a:" in s["P3"] and "flag companion B1a:" in s["P3"]
+    # P6 supported; E5 = takeover 0.75 − neutral 0.5 = +25.00 pp and CF1 (0.5 − 0.5) is not supported.
+    assert '"actions beat the registered advice prompt"' in s["P6"]
+    assert "E5 (takeover − neutral-prompt advice, exploratory): +25.00 pp [+25.00, +25.00]; CF1: not_supported" \
+        in s["P6"]
+    assert "correction-prompt advice" not in s["P6"]
+    assert by_id(report)["P6"]["verdict_sentence"] == s["P6"]
+    # P2 not supported: P1 is flagged, in its sentence, as uninterpretable as a channel result (A1:358-359).
+    cheap = json.loads(json.dumps(A1_COST_REPORT))
+    cheap["arms"]["advise_k1_fullctx"]["noncached_tokens_per_episode"] = 1.5 * 443361.0
+    s = a1_report(dirs, cost_report=cheap)[0]["verdict_sentences"]
+    assert ("P2 is not supported, so P1 is uninterpretable as a channel result and is reported as a "
+            "budget-confounded comparison, whatever its sign") in s["P1"]
+    # CF1 supported (neutral 0.75): P6 only as "actions beat correction-prompt advice"; E5 = 0.75 − 0.75.
+    s = a1_report(write_a1_matrix(tmp_path / "am1", AM1_GP), cost_report=A1_COST_REPORT)[0]["verdict_sentences"]
+    assert "E5 (takeover − neutral-prompt advice, exploratory): +0.00 pp [+0.00, +0.00]; CF1: supported" in s["P6"]
+    assert 'P6 is reported only as "actions beat correction-prompt advice"' in s["P6"]
+    assert s["CF1"].startswith("CF1 (advise_k10_neutral − advise_k10_fullctx, goal_pass): supported, +25.00 pp")
+
+
+def test_r2_b3_hstar_rows_are_the_registered_version(tmp_path: Path):
+    live_unflagged = [k for k in GRID if k[0].endswith("_2")]
+    gp11 = {k: 0.25 if k in HANDOFF_KEYS else 0.5 if k in live_unflagged else 0.75 for k in GRID}
+    dirs = write_a1_matrix(tmp_path, dict(AM1_GP, prefix_m9=0.25))
+    write_a1_arm(tmp_path, "prefix_m11", gp11)
+    _write_control(dirs["prefix_m11"], {k: k in HANDOFF_KEYS for k in GRID}, set(HANDOFF_KEYS) | set(live_unflagged))
+    report, _ = a1_report(dirs, cost_report=A1_COST_REPORT)
+    am1 = report["amendment1"]
+    assert am1["registered_h"] == "hstar"
+    assert am1["b4_companions"]["P3"] == "amendment1.handoff_only_ni_hstar[B1a]"
+    assert am1["b4_companions_flag"]["P3"] == "amendment1.handoff_only_ni[B1a]"
+    assert am1["multiplicity_sensitivity_registered"] == "amendment1.multiplicity_sensitivity_hstar"
+    hstar = {r["id"]: r for r in am1["handoff_only_ni_hstar"]}["B1a"]
+    flag = {r["id"]: r for r in am1["handoff_only_ni"]}["B1a"]
+    assert hstar["version"].startswith("registered") and flag["version"].startswith("companion")
+    assert am1["multiplicity_sensitivity_hstar"]["version"].startswith("registered")
+    # P3's B4 companion, beside it: h* B1a, −37.5 pp over 16 handoff pairs (test_am1_hstar_companions_...).
+    comp = by_id(report)["P3"]["b4_companion"]
+    assert comp["key"] == "amendment1.handoff_only_ni_hstar[B1a]" and comp["h"] == "hstar"
+    assert (comp["handoff_only"]["diff_pp"], comp["handoff_only"]["n_handoff"]) == (-37.5, 16)
+    assert comp["flag_key"] == "amendment1.handoff_only_ni[B1a]"
+    s3 = next(r for r in report["supporting_contrasts"] if r["id"] == "S3")
+    assert s3["b4_companion"]["handoff_only"]["diff_pp"] == 12.5  # S6 tailored h*: (0 x 8 + 0.25 x 8) / 16
+    assert "(h*, registered, Amendment 3) B1a: fails, -37.50 pp over 16 handoff pairs" in report[
+        "verdict_sentences"]["P3"]
+
+
+def _asks(arm_root: Path, keys: list, forced_too: bool = False) -> None:
+    """Live-answered executor asks: an intervention from the planner with forced False, in the last attempt."""
+    for i, (task_id, seed) in enumerate(keys):
+        events = [{"event_type": "run_start", "actor": "system", "payload": {}},
+                  {"event_type": "intervention", "actor": "planner", "payload": {"forced": False}},
+                  {"event_type": "intervention", "actor": "planner", "payload": {"forced": False}}][: 2 + (i == 0)]
+        if forced_too:
+            events.append({"event_type": "intervention", "actor": "planner", "payload": {"forced": True}})
+        (arm_root / "sys" / str(seed) / task_id / "events.jsonl").write_text(
+            "".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+
+
+def test_r2_b4_live_asks_are_counted_and_a_bound_of_1pp_is_in_the_sentence(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    keys = [("sc0_1", 1), ("sc1_2", 2), ("sc2_3", 1), ("sc3_1", 2)]
+    _asks(dirs["prefix_m11"], keys, forced_too=True)
+    # An ask in an EARLIER attempt of sft_plan's sc0_1 does not count; the last attempt made none.
+    (dirs["sft_plan"] / "sys" / "1" / "sc0_1" / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in [
+        {"event_type": "run_start", "payload": {}},
+        {"event_type": "intervention", "actor": "planner", "payload": {"forced": False}},
+        {"event_type": "run_start", "payload": {}}]), encoding="utf-8")
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    asks = report["executor_asks"]
+    m11 = asks["per_arm"]["prefix_m11"]
+    # 4 episodes, 5 answered calls (the first episode asked twice); the forced interventions are not asks.
+    assert (m11["n_episodes_with_answered_ask"], m11["n_answered_ask_calls"], m11["bound_pp"]) == (4, 5, 16.67)
+    assert asks["per_arm"]["sft_plan"]["n_episodes_with_answered_ask"] == 0
+    assert asks["per_arm"]["sft_plan"]["n_episodes_without_event_log"] == 23
+    assert asks["n_answered_ask_calls_total"] == 5 and asks["registered_total"]["hosted_calls"] == "<= 15,627"
+    assert asks["per_contrast"]["P1"] == {"bound_pp": {"advise_k1_fullctx": 0.0, "prefix_m11": 16.67},
+                                          "max_bound_pp": 16.67, "bound_reaches_1pp": True}
+    assert "P6" not in asks["per_contrast"]  # no replaying arm
+    assert "live-answered executor asks bound the arm means at advise_k1_fullctx 0.00 pp, prefix_m11 16.67 pp" \
+        in report["verdict_sentences"]["P1"]
+    assert "asks" not in report["verdict_sentences"]["P5"]  # sft_plan's bound is 0
+    assert rc == 0 and report["verdicts"]["P1"] == "supported"  # no verdict changes
+
+
+def test_r2_b5_content_descriptives_for_arms_9_to_12(tmp_path: Path):
+    dirs = write_a1_matrix(tmp_path)
+    advice = "Try this:\n```python\nprint(1)\n```\nthen check."  # 44 characters, one fenced block
+    ev = [{"event_type": "run_start", "actor": "system", "payload": {}},
+          {"event_type": "intervention", "actor": "planner", "payload": {"correction": advice, "forced": True}},
+          {"event_type": "action", "actor": "executor", "payload": {"kind": "CODE", "code": "print(1)"}},
+          {"event_type": "intervention", "actor": "planner", "payload": {"correction": "look again", "forced": True}},
+          {"event_type": "action", "actor": "executor", "payload": {"kind": "CODE", "code": "x = 2"}}]
+    (dirs["advise_k10_fullctx"] / "sys" / "1" / "sc0_1" / "events.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in ev), encoding="utf-8")
+    shown = "```python\nprint(2)\n```"
+    ev = [{"event_type": "run_start", "actor": "system", "payload": {}},
+          {"event_type": "intervention", "actor": "planner",
+           "payload": {"correction": shown, "source": "shown_action", "shown_kind": "CODE", "forced": True}},
+          {"event_type": "action", "actor": "executor", "payload": {"kind": "CODE", "code": "print(2)"}}]
+    (dirs["show_k10"] / "sys" / "2" / "sc1_1" / "events.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in ev), encoding="utf-8")
+    c = a1_report(dirs, cost_report=A1_COST_REPORT)[0]["content_descriptives"]
+    assert c["status"] == "ok" and set(c["arms"]) == set(j10.A1_R2_CONTENT_ARMS)
+    adv = c["arms"]["advise_k10_fullctx"]
+    assert (adv["n_interventions"], adv["n_fenced_code"], adv["share_fenced_code"]) == (2, 1, 0.5)
+    assert adv["median_chars"] == (44 + 10) / 2 and adv["copy_rate"] == 0.5  # the python block was copied
+    assert adv["n_episodes_without_events"] == 23
+    show = c["arms"]["show_k10"]
+    assert (show["n_interventions"], show["share_fenced_code"], show["copy_rate"]) == (1, 1.0, 1.0)
+    assert show["copy"] == {"definition": "copy_rate_show", "n_shown": 1, "n_copied": 1}
+    assert c["arms"]["takeover_k10"]["copy_rate"] is None
+    assert c["arms"]["advise_k10_neutral"]["n_interventions"] == 0
+
+
+def test_r2_b6_pairwise_limit_rates_and_p3_limit_excluded(tmp_path: Path):
+    lim = HANDOFF_KEYS[:6]  # arm 3 hits its call cap on 6 keys and scores 0.25 there
+    dirs = write_a1_matrix(tmp_path)
+    dirs["planner_alone_cap81"] = write_a1_arm(tmp_path / "x", "planner_alone_cap81",
+                                               {k: 0.25 if k in lim else 0.75 for k in GRID},
+                                               error_types={k: "limit" for k in lim})
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT, pairwise=True)
+    assert rc == 0, report["headline"]
+    pw = report["pairwise_contrasts"]
+    assert pw["n_pairs_of_arms"] == 78 == len(pw["rows"])  # 13 arms, 13 x 12 / 2
+    rows = {(r["left"], r["right"]): r for r in pw["rows"]}
+    p1 = rows[("advise_k1_fullctx", "prefix_m11")]
+    assert (p1["registered_row"], p1["goal_pass"]["scenario"]["diff_pp"]) == ("P1", -25.0)
+    assert p1["holm_p_adjusted_at_registered_threshold"] == by_id(report)["P1"]["holm"]["p_adjusted"]
+    # No registered row names arms 1 and 1b: later arm − earlier, exploratory, 0.375 − 0.25.
+    x = rows[("executor_alone_bplus", "executor_alone")]
+    assert x["label"] == "exploratory (A1 §7 item 2): unadjusted" and x["registered_row"] is None
+    assert (x["goal_pass"]["scenario"]["diff_pp"], x["goal_pass"]["task"]["ci95_pp"]) == (12.5, [12.5, 12.5])
+    assert x["goal_pass"]["p_value_two_sided_at_0"] == 0.0 and x["status"] == "ok"
+    # Limit rates beside the arm mean and the contrast (Amendment 1 §D1): 6 / 24 for arm 3.
+    assert report["arms"]["planner_alone_cap81"]["limit_rate"] == 0.25
+    assert by_id(report)["P3"]["limit_rates"] == {"prefix_m11": 0.0, "planner_alone_cap81": 0.25}
+    assert rows[("prefix_m11", "planner_alone_cap81")]["limit_rates"]["planner_alone_cap81"] == 0.25
+    # P3 over all pairs: 0.75 − (18 x 0.75 + 6 x 0.25) / 24 = +12.5 pp. Limit-excluded: the 6 pairs go, +0 pp.
+    assert by_id(report)["P3"]["contrast"]["scenario"]["diff_pp"] == 12.5
+    le = report["p3_limit_excluded"]
+    assert (le["n_reference_dropped_limit"], le["goal_pass"]["n_pairs"], le["goal_pass"]["scenario"]["diff_pp"]) == (
+        6, 18, 0.0)
+    assert le["reading_at_minus_7"] == "holds" and le["decision_bearing"] is False
+    assert "selects on the reference arm's own failures" in le["caveat"]
+    # Not computed unless asked (the tests' default): the registered read and main compute it.
+    assert a1_report(dirs, cost_report=A1_COST_REPORT)[0]["pairwise_contrasts"]["status"] == "not_computed"
+
+
+def test_r2_b7_j9_negative_and_the_provenance_statement(tmp_path: Path, monkeypatch):
+    lines = (REPO_ROOT / j10.A1_PREREG).read_text(encoding="utf-8").splitlines()
+    assert "(scored AUROC 0.3867–0.5082)" in lines[54] and "0.0347" in lines[55]
+    dirs = _registered_matrix(tmp_path, monkeypatch)
+    report, rc = registered_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 0, report["headline"]
+    assert report["j9_claim_f1"]["auroc_range"] == [0.3867, 0.5082] and report["j9_claim_f1"]["dev_only"] is True
+    prov = report["provenance_statement"]
+    assert prov["per_arm"]["takeover_k10"] == {"planner_model_requested": {"gpt-5.6-luna": 24},
+                                               "planner_cli_version": {"None": 24}}
+    assert "served a call is not observable" in prov["statement"] and "gpt-5.6-luna (" in prov["statement"]
+    # The registered read computes the pairwise rows.
+    assert report["pairwise_contrasts"]["n_pairs_of_arms"] == 78
+
+
+def test_r2_b8_the_json_citations_point_at_the_prereg_text():
+    lines = (REPO_ROOT / j10.A1_PREREG).read_text(encoding="utf-8").splitlines()
+    preds = {p["id"]: p for p in j10.A1_PREDICTIONS}
+    assert "result [A1:358-359]." in preds["P2"]["notes"]
+    assert "uninterpretable as a channel result" in lines[357] and "budget-confounded" in lines[358]
+    assert preds["P3"]["dev_reference"]["key"].endswith("−4.75 [−11.75, +1.16], A1:367-368)")
+    assert "−4.75 pp, [−11.75, +1.16]" in lines[367]
+    assert preds["P4"]["dev_reference"]["key"].endswith("A1 r2 quotes it stored, A1:391-392)")
+    assert "−2.82 pp, [−7.16, +1.55]" in lines[390]
+
+
+def test_r2_every_report_carries_status_split_and_verdicts(tmp_path: Path, capsys):
+    """The seam scripts/analysis/j11_report.py --j10-report reads: whatever the status, a top-level `status`, `split`
+    and `verdicts` keyed by the P rows; under NOT_RUN every verdict is "not_run" and no contrast is printed."""
+    p_ids = {f"P{i}" for i in range(1, 7)}
+    dirs = write_a1_matrix(tmp_path)
+    ok, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert (rc, ok["status"], ok["split"], set(ok["verdicts"])) == (0, "COMPLETE", "dev", p_ids)
+    (dirs["takeover_k10"] / "sys" / "1" / "sc2_2" / "result.json").unlink()  # arm 10 incomplete: §9
+    not_run, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert (rc, not_run["status"], not_run["split"]) == (1, "NOT_RUN", "dev")
+    assert not_run["verdicts"] == {p: "not_run" for p in p_ids}
+    assert not_run["protocol"] == "A1" and not_run["not_the_j10_result"] is True
+    assert not any(k in json.dumps(not_run) for k in ("diff_pp", "ci95", "p_value"))
+    assert "predictions" not in not_run and "supporting_contrasts" not in not_run
+    refused, rc = a1_report(dirs, split="test_challenge", confirm_heldout_test_split=True)
+    assert (rc, refused["status"], refused["split"]) == (2, "REFUSED", "test_challenge")
+    assert refused["verdicts"] == {p: "refused" for p in p_ids}
+    rc = j10.main(["--split", "dev", "--seeds", "1,x", "--arm", f"prefix_m11={tmp_path}"])
+    out = json.loads(capsys.readouterr().out)
+    assert (rc, out["status"], out["split"], set(out["verdicts"])) == (2, "REFUSED", "dev", p_ids)

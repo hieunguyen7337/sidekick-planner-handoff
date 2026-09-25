@@ -1475,7 +1475,7 @@ A1_SPLIT_N_TASKS = {"dev": 57, "test_normal": 168}
 A1_DEFAULT_SEEDS = "1,2"
 POOL04_WINDOW_PP = 1.00
 POOL04_SEEDS = (20260924, 1, 2, 3, 7, 101, 999)
-POOL04_BIG_N = 200_000  # A1:256-257, "and at 200,000 resamples at 20260924"
+POOL04_BIG_N = 200_000  # A1:301-302, "and at 200,000 resamples at 20260924"
 POOL04_BIG_SEED = 20260924
 CLUSTER_INFERENCE_PATH = Path(__file__).resolve().parent / "cluster_inference.py"
 RAW_RESULTS_ROOT = Path("/scratch/n12194778/sidekick/results")
@@ -1485,7 +1485,7 @@ RAW_RESULTS_ROOT = Path("/scratch/n12194778/sidekick/results")
 # labels are what --arm accepts, so an arm missing here cannot be reported unless a
 # prediction names it -- which executor_alone_bplus (1b) does not. show_k10 (11) and
 # advise_k10_neutral (12) carry no prediction either: A1 r3 completed P7 from an
-# unresolved B2, so they appear only in the exploratory rows E2-E5 [A1:441-444].
+# unresolved B2, so they appear only in the exploratory rows E2-E5 [A1:486-489].
 A1_ARMS: dict[str, Optional[str]] = {
     "executor_alone": "configs/j10_executor_alone.yaml",
     "executor_alone_bplus": "configs/j10_executor_alone_bplus.yaml",
@@ -1515,7 +1515,7 @@ def _rule_negative_with_reversal(point: float, lo_above: bool, hi_below: bool) -
 
 
 def _rule_positive_with_reversal(point: float, lo_above: bool, hi_below: bool) -> str:
-    # P1's rule mirrored for a positive prediction (P6, A1:387-391). The events it receives
+    # P1's rule mirrored for a positive prediction (P6, A1:432-436). The events it receives
     # are P1's: the unadjusted scenario CI bound AND, inside the Holm family, the Holm-adjusted
     # two-sided p (a1_decide_family), so "reversed" needs the same evidence as "supported".
     if lo_above:
@@ -1634,7 +1634,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
             "(--cost-report), whose prefix arms are costed at their attributed source "
             "steps. Run j12 with --packet-source pointed at the J10 arm-3 campaign, not "
             "its hj1b default. If not supported, P1 is uninterpretable as a channel "
-            "result [A1:313-314]."
+            "result [A1:358-359]."
         ),
         "dev_reference": {
             "ratio": 3.19,
@@ -1655,7 +1655,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "rule": "lower_bound_above_threshold",
         "threshold_pp": -7.00,
         "holm_family": True,
-        # A1 r2 §5.5 (A1:270): the sign-flip sensitivity is one-sided at the threshold for P3
+        # A1 r2 §5.5 (A1:315): the sign-flip sensitivity is one-sided at the threshold for P3
         # only -- 'greater' on the differences shifted by +0.07 (cluster_inference.registered_signflip).
         "permutation_alternative": "greater",
         "statement": "prefix_m11 − planner_alone_cap81 on goal_pass has CI lower bound above −7.00 pp",
@@ -1664,7 +1664,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
             "diff_pp": 4.75,
             "ci95_pp_scenario": [-1.16, 11.75],
             "source": A1_DEV_BASIS,
-            "key": "contrasts.goal_pass_all_ceiling_c81_minus_c81_bp_m11 (negated here; A1 r2 quotes it stored, −4.75 [−11.75, +1.16], A1:322-323)",
+            "key": "contrasts.goal_pass_all_ceiling_c81_minus_c81_bp_m11 (negated here; A1 r2 quotes it stored, −4.75 [−11.75, +1.16], A1:367-368)",
             "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
         },
     },
@@ -1684,7 +1684,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
             "diff_pp": 2.82,
             "ci95_pp_scenario": [-1.55, 7.16],
             "source": A1_DEV_BASIS,
-            "key": "contrasts.goal_pass_all_c81_zs_m9_minus_c81_zs_m11 (stored −2.82 [−7.16, +1.55]; negated here, as r1 did silently -- A1 r2 quotes it stored, A1:346-347)",
+            "key": "contrasts.goal_pass_all_c81_zs_m9_minus_c81_zs_m11 (stored −2.82 [−7.16, +1.55]; negated here, as r1 did silently -- A1 r2 quotes it stored, A1:391-392)",
             "bootstrap_seed": DEV_BASIS_BOOTSTRAP_SEED,
         },
     },
@@ -1717,7 +1717,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "metric": "goal_pass",
         "left": "takeover_k10",
         "right": "advise_k10_fullctx",
-        # A1:387-391 registers supported / not supported / reversed, as for P1.
+        # A1:432-436 registers supported / not supported / reversed, as for P1.
         "rule": "positive_excludes_zero_with_reversal",
         "threshold_pp": 0.0,
         "holm_family": True,
@@ -1725,7 +1725,7 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
         "citation": f"{A1_PREREG}:416-443",
         "dev_reference": {
             "diff_pp": 6.69,
-            # A1:377-378 (F4): 13.49 in the registered orientation; 13.48 was the reversed
+            # A1:422-423 (F4): 13.49 in the registered orientation; 13.48 was the reversed
             # contrast's bound negated, one order statistic away.
             "ci95_pp_scenario": [1.29, 13.49],
             "source": "campaign/results/hj13_c1_matched_trigger_20260923.report.json (CHAN-C1-02), "
@@ -1736,9 +1736,9 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
     },
 ]
 
-# A1 §6 "Supporting contrasts, registered but not decision-bearing" [A1:450-459], one
+# A1 §6 "Supporting contrasts, registered but not decision-bearing" [A1:495-504], one
 # row per line of r2's table, in its order and orientation. All on goal_pass, reported
-# unadjusted and outside the Holm family [A1:250]. `kind` picks the estimand:
+# unadjusted and outside the Holm family [A1:295-296]. `kind` picks the estimand:
 #   paired        left − right, paired on (task_id, seed), as every A1 contrast;
 #   did           (left[0] − left[1]) − (right[0] − right[1]) per (task_id, seed), over
 #                 the keys all four arms score;
@@ -1746,31 +1746,31 @@ A1_PREDICTIONS: list[dict[str, Any]] = [
 #                 episode handed off, as F-c: Σ d·h / Σ h with the whole scenario
 #                 resampled (j16_robustness.decomposition, gain_on_handoff_subset).
 A1_SUPPORTING: list[dict[str, Any]] = [
-    # A1:454 "| `advise_k1 − prefix_m9` | −9.89 pp | [−17.79, −1.99] | dev basis |"
+    # A1:499 "| `advise_k1 − prefix_m9` | −9.89 pp | [−17.79, −1.99] | dev basis |"
     {"id": "S1", "kind": "paired", "left": "advise_k1_fullctx", "right": "prefix_m9",
      "citation": f"{A1_PREREG}:499",
      "dev_reference": {"diff_pp": -9.89, "ci95_pp_scenario": [-17.79, -1.99], "source": "dev basis"}},
-    # A1:455 "| `advise_k10 − prefix_m11` | −7.73 pp | [−12.60, −3.12] | dev basis |"
+    # A1:500 "| `advise_k10 − prefix_m11` | −7.73 pp | [−12.60, −3.12] | dev basis |"
     {"id": "S2", "kind": "paired", "left": "advise_k10_fullctx", "right": "prefix_m11",
      "citation": f"{A1_PREREG}:500",
      "dev_reference": {"diff_pp": -7.73, "ci95_pp_scenario": [-12.60, -3.12], "source": "dev basis"}},
-    # A1:456 "| `prefix_m11 − prefix_m9` (tailored depth) | +4.25 pp (171) | [+0.15, +8.75],
+    # A1:501 "| `prefix_m11 − prefix_m9` (tailored depth) | +4.25 pp (171) | [+0.15, +8.75],
     # **on the boundary** (POOL-04) | j15 `t_depth_m9_m11` |"
     {"id": "S3", "kind": "paired", "left": "prefix_m11", "right": "prefix_m9",
      "label": "tailored depth", "citation": f"{A1_PREREG}:501",
      "dev_reference": {"diff_pp": 4.25, "ci95_pp_scenario": [0.15, 8.75], "n_pairs": 171,
                        "pool04": "on the boundary", "source": "j15 t_depth_m9_m11"}},
-    # A1:457 "| `(m11 − m9)_tailored − (m11 − m9)_untailored` (R2) | +2.81 pp (171) |
+    # A1:502 "| `(m11 − m9)_tailored − (m11 − m9)_untailored` (R2) | +2.81 pp (171) |
     # [−2.57, +8.96] | POOL-03 |"
     {"id": "S4", "kind": "did", "left": ["prefix_m11", "prefix_m9"],
      "right": ["prefix_zs_m11", "prefix_zs_m9"], "label": "tailoring x depth (R2)",
      "citation": f"{A1_PREREG}:502",
      "dev_reference": {"diff_pp": 2.81, "ci95_pp_scenario": [-2.57, 8.96], "n_pairs": 171,
                        "source": "POOL-03"}},
-    # A1:458 "| `prefix_m11 − executor_alone_bplus` (tailored floor → m11) | new arm | — | arm 1b |"
+    # A1:503 "| `prefix_m11 − executor_alone_bplus` (tailored floor → m11) | new arm | — | arm 1b |"
     {"id": "S5", "kind": "paired", "left": "prefix_m11", "right": "executor_alone_bplus",
      "label": "tailored floor -> m11", "citation": f"{A1_PREREG}:503", "dev_reference": None},
-    # A1:459 "| handoff-only depth: m9 → m11 restricted to episodes where a handoff occurs at
+    # A1:504 "| handoff-only depth: m9 → m11 restricted to episodes where a handoff occurs at
     # m = 11 | reported for both receivers | — | F-c |"
     {"id": "S6", "kind": "handoff_depth", "label": "handoff-only depth m9 -> m11",
      "receivers": {"tailored": ["prefix_m11", "prefix_m9"],
@@ -1778,9 +1778,9 @@ A1_SUPPORTING: list[dict[str, Any]] = [
      "citation": f"{A1_PREREG}:504", "dev_reference": None},
 ]
 
-# Not in r2's supporting table, so reported as exploratory [A1:250-251]. The ceiling −
+# Not in r2's supporting table, so reported as exploratory [A1:295-296]. The ceiling −
 # untailored m11 gap is the number behind the §4.1 sourcing correction [A1:191], which §7
-# item 6 reports whether or not it helps [A1:480].
+# item 6 reports whether or not it helps [A1:525].
 A1_EXPLORATORY: list[dict[str, Any]] = [
     {"id": "E1", "kind": "paired", "left": "planner_alone_cap81", "right": "prefix_zs_m11",
      "label": "ceiling − untailored m11 (sourcing correction)",
@@ -1789,32 +1789,32 @@ A1_EXPLORATORY: list[dict[str, Any]] = [
     # E2-E5: arms 11 and 12, exploratory because B2 was unresolved (A1 r3 §6 P7). Each is
     # B2's contrast in B2's orientation, with its dev value from
     # campaign/results/b2_decomposition_20260923.report.json `contrasts.D1`..`D4`.
-    # A1:441 "| E2 | `takeover_k10 − show_k10` (D1) | +3.83 pp | [−1.56, +10.81] | `contrasts.D1` |"
+    # A1:486 "| E2 | `takeover_k10 − show_k10` (D1) | +3.83 pp | [−1.56, +10.81] | `contrasts.D1` |"
     {"id": "E2", "kind": "paired", "left": "takeover_k10", "right": "show_k10",
      "label": "execution: takeover − show (B2 D1)", "citation": f"{A1_PREREG}:486",
      "dev_reference": {"diff_pp": 3.83, "ci95_pp_scenario": [-1.56, 10.81], "n_pairs": 171,
                        "source": "b2 contrasts.D1"}},
-    # A1:442 "| E3 | `show_k10 − advise_k10_fullctx` (D2) | +2.30 pp | [−2.43, +7.31] | `contrasts.D2` |"
+    # A1:487 "| E3 | `show_k10 − advise_k10_fullctx` (D2) | +2.30 pp | [−2.43, +7.31] | `contrasts.D2` |"
     {"id": "E3", "kind": "paired", "left": "show_k10", "right": "advise_k10_fullctx",
      "label": "prompt + content: show − advice (B2 D2)", "citation": f"{A1_PREREG}:487",
      "dev_reference": {"diff_pp": 2.30, "ci95_pp_scenario": [-2.43, 7.31], "n_pairs": 171,
                        "source": "b2 contrasts.D2"}},
-    # A1:443 "| E4 | `advise_k10_neutral − advise_k10_fullctx` (D3) | +3.73 pp | [−0.06, +8.24] | `contrasts.D3` |"
+    # A1:488 "| E4 | `advise_k10_neutral − advise_k10_fullctx` (D3) | +3.73 pp | [−0.06, +8.24] | `contrasts.D3` |"
     {"id": "E4", "kind": "paired", "left": "advise_k10_neutral", "right": "advise_k10_fullctx",
      "label": "advice prompt wording: neutral − registered (B2 D3)", "citation": f"{A1_PREREG}:488",
      "dev_reference": {"diff_pp": 3.73, "ci95_pp_scenario": [-0.06, 8.24], "n_pairs": 171,
                        "source": "b2 contrasts.D3"}},
-    # A1:444 "| E5 | `takeover_k10 − advise_k10_neutral` (D4) | +2.40 pp | [−2.94, +8.89] | `contrasts.D4` |"
+    # A1:489 "| E5 | `takeover_k10 − advise_k10_neutral` (D4) | +2.40 pp | [−2.94, +8.89] | `contrasts.D4` |"
     {"id": "E5", "kind": "paired", "left": "takeover_k10", "right": "advise_k10_neutral",
      "label": "channel vs neutral advice: takeover − neutral (B2 D4)", "citation": f"{A1_PREREG}:489",
      "dev_reference": {"diff_pp": 2.40, "ci95_pp_scenario": [-2.94, 8.89], "n_pairs": 171,
                        "source": "b2 contrasts.D4"}},
 ]
 
-# Prefix arms and their depth m, for §7 item 4's no-handoff counts [A1:475-478].
+# Prefix arms and their depth m, for §7 item 4's no-handoff counts [A1:520-523].
 A1_PREFIX_ARMS: dict[str, int] = {"prefix_m9": 9, "prefix_m11": 11, "prefix_zs_m9": 9, "prefix_zs_m11": 11}
 
-# §7 item 7: "SGC ... for P1 and P6, descriptive" [A1:481].
+# §7 item 7: "SGC ... for P1 and P6, descriptive" [A1:526].
 A1_SGC_PREDICTIONS = ("P1", "P6")
 
 # Records of where A1's text and this script had to meet. `status` is
@@ -1823,7 +1823,7 @@ A1_SGC_PREDICTIONS = ("P1", "P6")
 # was "open" and is removed once the code implements it: P6 reversed, the P2 ratio
 # interval, the POOL-04 200k bound, the §5.5 sign-flip rule and r2's supporting table
 # all are now. r1's `p6_arm_not_registered` is gone: r2 registers arm 10 and P6
-# [A1:137, 135, 364-381].
+# [A1:141, 416-436].
 A1_AMBIGUITIES: list[dict[str, Any]] = [
     {
         "id": "bootstrap_seed_of_dev_references",
@@ -2363,7 +2363,7 @@ def a1_no_handoff_counts(
     flags: dict[tuple[str, int], Optional[bool]],
     m: Optional[int],
 ) -> dict[str, Any]:
-    """§7 item 4 [A1:475-478]: over an arm's scored episodes, how many handed off at m."""
+    """§7 item 4 [A1:520-523]: over an arm's scored episodes, how many handed off at m."""
     values = [flags.get(k) for k in sorted(arm["episodes"])]
     return {
         "m": m,
@@ -2381,7 +2381,7 @@ def a1_sgc_units(
     tasks: list[str],
     seeds: list[int],
 ) -> tuple[dict[tuple[str, int], float], int]:
-    """(scenario, seed) -> 1.0 if every task of the scenario passed, else 0.0 [A1:481].
+    """(scenario, seed) -> 1.0 if every task of the scenario passed, else 0.0 [A1:526].
 
     A unit is scored only when all its registered tasks are scored episodes with a
     recorded `success` (hj1_gate.scenario_goal_completion's coverage rule); a crash is
@@ -2407,7 +2407,7 @@ def a1_sgc(
     seeds: list[int],
 ) -> dict[str, Any]:
     """SGC of both sides of a prediction on shared (scenario, seed) units. Descriptive:
-    r2 registers no interval or test for it [A1:481]."""
+    r2 registers no interval or test for it [A1:526]."""
     ul, dropped_l = a1_sgc_units(left, tasks, seeds)
     ur, dropped_r = a1_sgc_units(right, tasks, seeds)
     shared = sorted(set(ul) & set(ur))
@@ -2460,7 +2460,7 @@ def a1_handoff_depth(
     n_boot: int,
     seed: int,
 ) -> dict[str, Any]:
-    """target − base on the target depth's handoff episodes and on all episodes [A1:459, 439-440].
+    """target − base on the target depth's handoff episodes and on all episodes [A1:504, 521-523].
 
     h = 1 only when the TARGET episode's report says handoff_occurred is true (F-c,
     j16_robustness.decomposition); a missing flag counts as h = 0 and is reported.
@@ -2567,9 +2567,9 @@ def a1_cost_ratio_interval(
     n_boot: int,
     seed: int,
 ) -> dict[str, Any]:
-    """P2's token ratio with a scenario-clustered interval, as information [A1:245-246, 291].
+    """P2's token ratio with a scenario-clustered interval, as information [A1:343, 291].
 
-    The verdict stays on the arm means [A1:296]. The interval is F-f's
+    The verdict stays on the arm means [A1:341]. The interval is F-f's
     (j16_robustness.cost_contrast): Σ left / Σ right over episodes paired on
     (task_id, seed), whole scenarios resampled, from j12_cost_axes' per-episode rows.
     """
@@ -2661,7 +2661,7 @@ def a1_pool04(
     out["bounds_by_seed"] = per_seed
     out["verdicts_by_seed"] = sorted({row["verdict"] for row in per_seed})
     out["stable"] = all(row["verdict"] == base_verdict for row in per_seed)
-    # A1:255-260: the fired bound is also recomputed at 200,000 resamples at 20260924 and
+    # A1:300-302: the fired bound is also recomputed at 200,000 resamples at 20260924 and
     # reported with the seven. It is reported, not voted: "on the boundary" is decided by
     # the seven seeds alone.
     big_lo, big_hi = percentile_ci(
@@ -3624,7 +3624,7 @@ def load_predictions(path: Optional[Path]) -> tuple[list[dict[str, Any]], list[d
     return preds, support
 
 
-def build_report_a1(
+def _a1_build_report_core(  # unit R2: the former build_report_a1, renamed in place; build_report_a1 is at the end
     *,
     split: str,
     seeds: list[int],
@@ -3639,7 +3639,7 @@ def build_report_a1(
     n_boot: int = A1_BOOTSTRAP_N,
     bootstrap_seed: int = A1_BOOTSTRAP_SEED,
     out_path: Optional[Path] = None,
-) -> tuple[dict[str, Any], int]:
+) -> tuple[Any, ...]:  # (report, exit code, arms); a refusal is (report, 2)
     preds = [dict(p) for p in (predictions if predictions is not None else A1_PREDICTIONS)]
     support = [dict(s) for s in (supporting if supporting is not None else A1_SUPPORTING)]
     registered = n_boot == A1_BOOTSTRAP_N and bootstrap_seed == A1_BOOTSTRAP_SEED
@@ -3654,7 +3654,7 @@ def build_report_a1(
     reasons: list[str] = []
     if len(tasks) != expected_n_tasks:
         reasons.append(f"task_count_is_{len(tasks)}_expected_{expected_n_tasks}")
-    arms = a1_am5_arms({label: a1_arm_episodes(label, blob, tasks, seeds) for label, blob in loaded.items()}, arm_dirs, tasks, seeds, preds, reasons)
+    arms = a1_am5_arms({label: a1_r2_scored_as_recorded(a1_arm_episodes(label, blob, tasks, seeds), blob) for label, blob in loaded.items()}, arm_dirs, tasks, seeds, preds, reasons)  # unit R2 B7
     provenance = {label: a1_split_provenance(path) for label, path in arm_dirs.items()}
     split_problems = []
     for label, counts in provenance.items():
@@ -3813,9 +3813,9 @@ def build_report_a1(
         "verdicts": {r["id"]: r.get("verdict") for r in results},
         "supporting_contrasts": supporting_out,
         "exploratory_contrasts": exploratory_out,
-        # §7 item 4, second half [A1:475-478]: per prefix arm, episodes with no handoff.
+        # §7 item 4, second half [A1:520-523]: per prefix arm, episodes with no handoff.
         "no_handoff_counts": no_handoff,
-        # §7 item 7 [A1:481]: SGC for P1 and P6, descriptive.
+        # §7 item 7 [A1:526]: SGC for P1 and P6, descriptive.
         "sgc": sgc_out,
         # Amendment 1 (pre-data): family CF, handoff-only NI, decomposition, chord, limits,
         # the P1 reporting constraint and the BY-FDR sensitivity.
@@ -3826,7 +3826,7 @@ def build_report_a1(
             "limit / timeout / parse_error / api_error are scored outcomes."
         ),
     }
-    return a1_am5_divergence(a1_am4_calls(a1_hstar_companions(report, arms, arm_dirs, n_boot=n_boot, seed=bootstrap_seed), a1_am5_p2_arms(arms), arm_dirs, a1_am5_p2_cost(arms, cost_report)), arms, cost_report, n_boot=n_boot, seed=bootstrap_seed), (0 if all_decided and not reasons else 1)
+    return a1_am5_divergence(a1_am4_calls(a1_hstar_companions(report, arms, arm_dirs, n_boot=n_boot, seed=bootstrap_seed), a1_am5_p2_arms(arms), arm_dirs, a1_am5_p2_cost(arms, cost_report)), arms, cost_report, n_boot=n_boot, seed=bootstrap_seed), (0 if all_decided and not reasons else 1), arms
 
 
 def build_parser_a1() -> argparse.ArgumentParser:
@@ -3854,7 +3854,7 @@ def main_a1(argv: Optional[list[str]] = None) -> int:
     args = build_parser_a1().parse_args(argv)
     try:
         seeds = parse_seeds(args.seeds)
-        preds, support = load_predictions(args.predictions_json)
+        preds, support = load_predictions(a1_r2_predictions_path(args))  # unit R2 A2: none on test_normal
         allowed = set(A1_ARMS) | {p[k] for p in preds for k in ("left", "right")}
         arm_dirs: dict[str, Path] = {}
         for spec in args.arm:
@@ -3868,7 +3868,7 @@ def main_a1(argv: Optional[list[str]] = None) -> int:
             arm_dirs[label] = Path(directory)
         cost = json.loads(args.cost_report.read_text(encoding="utf-8")) if args.cost_report else None
     except (ValueError, OSError, json.JSONDecodeError) as exc:
-        print(json.dumps({"protocol": "A1", "refused": True, "reason": str(exc)}, indent=2))
+        print(json.dumps(_a1_r2_refused(args.split, str(exc))[0], indent=2))  # unit R2: status, split, verdicts
         return 2
     expected = args.expected_n_tasks
     if expected is None:
@@ -4198,7 +4198,7 @@ def a1_am4_p2_calls_clause(per_arm: dict[str, dict[str, Any]]) -> dict[str, Any]
 
 
 def a1_am4_p2_tokens_clause(per_arm: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    """P2's tokens clause (advise_k1 at least min_ratio x prefix_m11's non-cached planner tokens, A1:343)
+    """P2's tokens clause (advise_k1 at least min_ratio x prefix_m11's non-cached planner tokens, A1:340)
     under both conventions: attributed, and live (as published: a replayed plan at 0 tokens). The prefix
     arm is charged its replayed prefix in both."""
     left, right = A1_AM4_P2
@@ -4569,6 +4569,1370 @@ def a1_am5_divergence(
         },
         "notes": list(A1_AM5_NOTES),
     }
+    return report
+
+
+# ---- Unit R2: the J10 pre-read audit, Phase A (2026-09-25) -------------------------------------------------------
+# The audit's findings that could change or hide a verdict, or print held-out numbers. The analysis itself is
+# _a1_build_report_core, the former build_report_a1 renamed in place (:3627), so no line this file's citations name
+# moves; build_report_a1 below is the public entry point (main_a1 and the tests call it). It runs, in order:
+#   before the core -- the held-out manifest guard (A8), arm 3's layout (A1), the registered-read pins (A2, A10), the
+#     P2 cost report's provenance (A3) and A1 §9's abort rule (A5), so that a refused or not-run read computes no
+#     contrast;
+#   after it -- P2 under both of Amendment 4's conventions (A4), no reading from a refused or incomplete row (A9), CF
+#     and arms 11-12 not run as a pair (A6), supporting rows whose arms are incomplete (A10), Amendment 5's cap on B1
+#     (A7), the h* B1a dev reference (A11), §F's BY-FDR re-read over the rows that keep a p, and the headline and exit
+#     code recomputed from all of it.
+A1_R2 = "unit R2, J10 pre-read audit (2026-09-25)"
+A1_ABORT_ARMS = ("planner_alone_cap81", "advise_k1_fullctx", "advise_k10_fullctx", "takeover_k10")  # arms 3, 8, 9, 10
+A1_PAIR_ARMS = ("show_k10", "advise_k10_neutral")  # arms 11 and 12: abandoned, and reported as not run, as a pair
+A1_ABORT_CITATION = f"{A1_PREREG}:574-576"
+A1_REGISTERED_SEEDS = (1, 2)
+# What a refused or incomplete row must not carry (A1 §5.1 F6; Amendment 5 §B.3 "draws no reading").
+A1_NO_READING_KEYS = ("verdict_unadjusted", "events_unadjusted", "p_value", "p_value_two_sided", "pool04",
+                      "permutation_sensitivity")
+# An arm's outcome values in report['arms'] (arm completeness counts are everything else).
+A1_ARM_OUTCOME_KEYS = ("goal_pass_mean", "tgc_mean", "n_goal_pass_missing", "error_types")
+A1_ARM_COUNT_KEYS = ("n_expected", "n_scored", "n_crash", "n_missing", "n_extra_ignored", "n_empty_files",
+                     "n_unreadable", "n_duplicates", "root_missing", "systems_in_tree", "complete")
+# The manifest fields a registered arm's config fixes (src/sidekick/provenance.py:86-106, 131-151);
+# planner_cli_version is read from the binary at run time, not from the config, and is reported instead.
+A1_PROVENANCE_FIELDS = ("config_campaign_id", "handoff_source_campaign", "handoff_m", "executor_model", "lora_name",
+                        "takeover", "planner_type", "planner_model_requested", "planner_reasoning_effort",
+                        "correct_prompt", "advice_from_act")
+A1_R2_UNSTAMPED_TOP_LEVEL = ("takeover", "advice_from_act", "fixed_k", "correct_context")
+# A11: Amendment 3 (A1:944-947) -- under h*, P3's handoff-only dev value (ledger HSTAR-11).
+A1_HSTAR_B1A_DEV = {
+    "diff_pp": 8.57, "ci95_pp_scenario": [-1.63, 18.25], "ci95_pp_task": [0.67, 16.30], "n_handoff": 88,
+    "n_pairs": 171, "source": "campaign/results/j17_hstar_20260924.report.json",
+    "key": "ni.bplus.m11.goal_pass.handoff_only", "bootstrap_seed": A1_BOOTSTRAP_SEED,
+    "citation": f"{A1_PREREG}:944-947 (Amendment 3; ledger HSTAR-11)",
+}
+
+
+def _a1_r2_verdicts(preds: Optional[list[dict[str, Any]]], value: str) -> dict[str, str]:
+    """The seam every J10 report carries (j11_report --j10-report reads it): one verdict per P row."""
+    return {p["id"]: value for p in (preds if preds is not None else A1_PREDICTIONS) if isinstance(p, dict)}
+
+
+def _a1_r2_refused(split: str, reason: str,
+                   preds: Optional[list[dict[str, Any]]] = None) -> tuple[dict[str, Any], int]:
+    return {"protocol": "A1", "label": "REFUSED", "status": "REFUSED", "refused": True, "reason": reason,
+            "headline": reason, "split": split, "not_the_j10_result": True,
+            "verdicts": _a1_r2_verdicts(preds, "refused")}, 2
+
+
+def a1_r2_predictions_path(args: argparse.Namespace) -> Optional[Path]:
+    """A2: the registered test_normal read uses this file's registry, so --predictions-json is refused there."""
+    if args.split == "test_normal" and args.predictions_json is not None:
+        raise ValueError("refusing --predictions-json on test_normal: the registered read uses the registry in "
+                         f"{Path(__file__).name} (A1 §6; {A1_R2}, A2)")
+    return args.predictions_json
+
+
+def a1_r2_heldout_guard(split: str, registered_read: bool, arm_dirs: dict[str, Path]) -> Optional[str]:
+    """A8: an episode whose manifest records test_normal is read only by the confirmed test_normal read, and one that
+    records test_challenge never (A1 §8). Read from the manifests before anything else is loaded, so no contrast is
+    computed first. (The path-marker check of a1_protocol_guard cannot see J10's campaign names.)"""
+    for label, path in arm_dirs.items():
+        counts = a1_split_provenance(Path(path))
+        held = {k: v for k, v in counts.items()
+                if k in HELDOUT_TEST_SPLITS and (k == "test_challenge" or not registered_read)}
+        if held:
+            what = "the confirmed test_normal read" if registered_read else f"--split {split}"
+            return (f"refusing --arm {label}={path}: {held} episode manifest(s) record a held-out split and this is "
+                    f"{what}; a test_normal episode is read only by the confirmed test_normal read, and "
+                    f"test_challenge never [{A1_PREREG}:546] ({A1_R2}, A8)")
+    return None
+
+
+def a1_r2_layout_guard(arm_dirs: dict[str, Path]) -> Optional[str]:
+    """A1: arm 3 is given as its campaign root, which holds planner_alone/. Any other directory would make
+    planless_source_keys (src/sidekick/agents/planner.py:778-804) read no key at all and skip §4.2 silently."""
+    root = arm_dirs.get(A1_PLAN_SOURCE_ARM)
+    if root is None or (Path(root) / "planner_alone").is_dir():
+        return None
+    return (f"refusing --arm {A1_PLAN_SOURCE_ARM}={root}: it holds no planner_alone/ subdirectory, so A1 §4.2's "
+            "planless keys would read as none. Expected layout: <arm-3 campaign>/planner_alone/<seed>/<task_id>/"
+            "{result.json,events.jsonl}; pass the campaign directory (e.g. "
+            f"{RAW_RESULTS_ROOT}/j10_planner_alone_cap81_20260924), not its system subdirectory ({A1_R2}, A1)")
+
+
+def _a1_r2_config(label: str) -> dict[str, Any]:
+    import yaml  # noqa: E402 (lazy: only the registered read needs it)
+
+    rel = A1_ARMS.get(label)
+    if rel is None:
+        raise ValueError(f"no registered config for arm {label!r}")
+    data = yaml.safe_load((REPO_ROOT / rel).read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{rel} is not a mapping")
+    return data
+
+
+def a1_r2_expected_provenance(label: str) -> dict[str, Any]:
+    """The provenance an episode manifest of registered arm `label` must stamp: the runner passes the raw config
+    (src/sidekick/runner.py:47-57, 384-389) to run_provenance, so config_provenance on the same file gives the
+    same values; the planner fields mirror planner_provenance (src/sidekick/provenance.py:131-151) without the
+    CLI version, which comes from the binary."""
+    from sidekick.provenance import config_provenance  # noqa: E402 (lazy)
+
+    cfg = _a1_r2_config(label)
+    prov = config_provenance(cfg, A1_ARMS[label])
+    planner = cfg.get("planner") or {}
+    defaults = cfg.get("policy_defaults") or {}
+    return {
+        **{k: prov.get(k) for k in A1_PROVENANCE_FIELDS if k in prov},
+        "planner_type": str(planner.get("type") or "mock"),
+        "planner_model_requested": planner.get("model"),
+        "planner_reasoning_effort": planner.get("reasoning_effort"),
+        "correct_prompt": planner.get("correct_prompt", "correction"),
+        "advice_from_act": defaults.get("advice_from_act"),
+    }
+
+
+def _a1_r2_same(field: str, got: Any, want: Any) -> bool:
+    if field == "handoff_source_campaign" and got is not None and want is not None:
+        return os.path.normpath(str(got)) == os.path.normpath(str(want))
+    return got == want
+
+
+def a1_r2_manifest_check(root: Path, expected: dict[str, Any], campaign_id: str) -> dict[str, Any]:
+    """Every episode manifest under an arm against its config: mismatches (refused), fields not stamped (reported),
+    and the CLI versions seen (for the §9.1 provenance statement)."""
+    mismatches: dict[str, dict[str, Any]] = {}
+    unstamped: Counter[str] = Counter()
+    cli: Counter[str] = Counter()
+    n_manifests = n_without = 0
+    want_all = dict(expected, campaign_id=campaign_id)
+    for path in sorted(Path(root).rglob("result.json")):
+        man = path.parent / "manifest.json"
+        try:
+            data = json.loads(man.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            data = None
+        if not isinstance(data, dict):
+            n_without += 1
+            continue
+        n_manifests += 1
+        prov = data.get("provenance") if isinstance(data.get("provenance"), dict) else {}
+        stamped = dict(prov)
+        if "campaign_id" in data:
+            stamped["campaign_id"] = data["campaign_id"]
+        cli[str(prov.get("planner_cli_version"))] += 1
+        for field, want in want_all.items():
+            if field not in stamped:
+                unstamped[field] += 1
+                continue
+            if not _a1_r2_same(field, stamped[field], want):
+                m = mismatches.setdefault(field, {"n": 0, "registered": want, "stamped": [], "first": str(man)})
+                m["n"] += 1
+                if repr(stamped[field]) not in m["stamped"]:
+                    m["stamped"].append(repr(stamped[field]))
+    return {"n_manifests": n_manifests, "n_results_without_manifest": n_without, "mismatches": mismatches,
+            "unstamped": dict(sorted(unstamped.items())), "planner_cli_version": dict(sorted(cli.items()))}
+
+
+def _a1_r2_registry_is_registered(predictions: Any, supporting: Any, exploratory: Any) -> list[str]:
+    def same(a: Any, b: Any) -> bool:
+        return json.dumps(a, sort_keys=True, default=str) == json.dumps(b, sort_keys=True, default=str)
+
+    out = []
+    if predictions is not None and not same(list(predictions), A1_PREDICTIONS):
+        out.append("the predictions differ from A1_PREDICTIONS")
+    if supporting is not None and not same(list(supporting), A1_SUPPORTING):
+        out.append("the supporting rows differ from A1_SUPPORTING")
+    if exploratory is not None and not same(list(exploratory), A1_EXPLORATORY):
+        out.append("the exploratory rows differ from A1_EXPLORATORY")
+    return out
+
+
+def a1_r2_registered_read_guard(
+    *,
+    seeds: list[int],
+    expected_n_tasks: int,
+    arm_dirs: dict[str, Path],
+    predictions: Any,
+    supporting: Any,
+    exploratory: Any,
+) -> tuple[Optional[str], dict[str, Any]]:
+    """A2 and A10, on the confirmed test_normal read: seeds exactly {1, 2}; 168 tasks; this file's registry; every
+    registered arm given (A10's arms 1, 1b, prefix_m9, show_k10 and advise_k10_neutral included), each from the
+    directory named by its config's campaign_id; and every episode manifest stamping what that config registers
+    (adapter alias, replay source, depth, planner, prompt). Returns (refusal or None, the manifest check)."""
+    problems: list[str] = []
+    if sorted(seeds) != list(A1_REGISTERED_SEEDS):
+        problems.append(f"seeds {seeds} are not exactly {{1, 2}} [{A1_PREREG}:127]")
+    if expected_n_tasks != A1_SPLIT_N_TASKS["test_normal"]:
+        problems.append(f"expected task count {expected_n_tasks} is not {A1_SPLIT_N_TASKS['test_normal']} "
+                        f"[{A1_PREREG}:126]")
+    problems += _a1_r2_registry_is_registered(predictions, supporting, exploratory)
+    missing = [a for a in A1_ARMS if a not in arm_dirs]
+    if missing:
+        problems.append(f"registered arms not given as --arm: {missing} (every registered arm is read; A1 §4, §7 "
+                        "items 1-2; A10)")
+    unknown = sorted(a for a in arm_dirs if a not in A1_ARMS)
+    if unknown:
+        problems.append(f"arms not registered under A1: {unknown}")
+    ids: dict[str, str] = {}
+    for label in (a for a in A1_ARMS if a in arm_dirs):
+        try:
+            ids[label] = str(_a1_r2_config(label).get("campaign_id"))
+        except (OSError, ValueError) as exc:
+            problems.append(f"{label}: its config cannot be read ({exc})")
+            continue
+        if Path(arm_dirs[label]).name != ids[label]:
+            problems.append(f"--arm {label}={arm_dirs[label]}: the directory is not the registered campaign "
+                            f"{ids[label]} (configs' campaign_id, as scripts/pbs/j10_arm.pbs uses it)")
+    checks: dict[str, Any] = {}
+    if not problems:
+        for label, cid in ids.items():
+            chk = a1_r2_manifest_check(Path(arm_dirs[label]), a1_r2_expected_provenance(label), cid)
+            checks[label] = chk
+            for field, m in chk["mismatches"].items():
+                problems.append(f"{label}: {m['n']} manifest(s) stamp {field}={', '.join(m['stamped'])} but "
+                                f"{A1_ARMS[label]} registers {m['registered']!r} (first: {m['first']})")
+    if problems:
+        return ("refusing the registered test_normal read: " + "; ".join(problems) + f" ({A1_R2}, A2)"), checks
+    channel = {}
+    for label in ids:
+        cfg = _a1_r2_config(label)
+        keys = {k: cfg[k] for k in A1_R2_UNSTAMPED_TOP_LEVEL if k in cfg}
+        if keys:
+            channel[label] = keys
+    return None, {
+        "status": "ok",
+        "per_arm": checks,
+        "compared": list(A1_PROVENANCE_FIELDS) + ["campaign_id"],
+        "not_shown_by_the_manifest": {
+            "adapter_directory": ("a manifest stamps the adapter alias (lora_name) only, not the directory it is "
+                                  "served from; scripts/pbs/j10_arm.pbs pins the directory (ADAPTER_SFT_B_PLUS, "
+                                  f"A1 §4, F8) and this report cannot check it"),
+            "channel_config_keys": {
+                "per_arm": channel,
+                "why": ("top-level config keys the runner reads (src/sidekick/runner.py:307-327); a manifest stamps "
+                        "takeover and advice_from_act from policy_defaults only (src/sidekick/provenance.py:104, "
+                        ":150), so for these arms it stamps None, and fixed_k / correct_context not at all -- the "
+                        "comparison above matches None to None and cannot see the channel (the run_start event's "
+                        "policy records takeover / advice_from_act, src/sidekick/systems/loop.py:686-688)"),
+            },
+            "served_model": "not observable (A1 §9.1): planner_model_requested is the request only",
+        },
+    }
+
+
+def _a1_r2_same_dir(a: Any, b: Any) -> bool:
+    try:
+        return Path(str(a)).resolve() == Path(str(b)).resolve()
+    except (OSError, RuntimeError):
+        return os.path.normpath(str(a)) == os.path.normpath(str(b))
+
+
+def a1_r2_cost_report_guard(
+    cost_report: Optional[dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    loaded: dict[str, dict[str, Any]],
+) -> tuple[Optional[str], dict[str, Any]]:
+    """A3, on the confirmed test_normal read: the P2 cost report must be over the arms given (A1:347-349, F9).
+    scripts/analysis/j12_cost_axes.py records neither its split, nor its arm directories, nor --packet-source, so
+    they are checked where the report carries them and otherwise through what it does carry: P2's arms' per-episode
+    rows, each of which must be an episode (a result.json key) of the arm directory given -- which a report over any
+    other split or campaign cannot satisfy (test_normal and dev share no task)."""
+    info: dict[str, Any] = {
+        "rule": f"{A1_PREREG}:347-349 (F9); {A1_R2}, A3",
+        "not_recorded_by_j12_cost_axes": ["split", "arm directories", "packet_source"],
+    }
+    if cost_report is None:
+        return None, info | {"status": "no cost report: P2 is not computed"}
+    problems: list[str] = []
+    split = cost_report.get("split")
+    if split is not None and split != "test_normal":
+        problems.append(f"its split is {split!r}")
+    source = cost_report.get("packet_source")
+    arm3 = arm_dirs.get(A1_PLAN_SOURCE_ARM)
+    if source is not None and (arm3 is None or not _a1_r2_same_dir(source, arm3)):
+        problems.append(f"its packet_source {source!r} is not --arm {A1_PLAN_SOURCE_ARM}={arm3}")
+    arms_c = _cost_arms(cost_report)
+    for label, blk in arms_c.items():
+        root = next((blk.get(k) for k in ("root", "dir", "arm_dir", "path") if isinstance(blk, dict) and blk.get(k)),
+                    None)
+        if root is not None and (label not in arm_dirs or not _a1_r2_same_dir(root, arm_dirs[label])):
+            problems.append(f"its arm {label!r} was read from {root!r}, not --arm {label}={arm_dirs.get(label)}")
+    rows_checked: dict[str, Any] = {}
+    for label in A1_AM4_P2:
+        blk = arms_c.get(label)
+        if not isinstance(blk, dict):
+            continue  # P2 reports the arm as absent from the cost report
+        rows = blk.get("episodes")
+        if not isinstance(rows, list) or not rows:
+            problems.append(f"{label} has no per-episode rows, so the report's split and arm directory cannot be "
+                            "checked")
+            continue
+        present = set((loaded.get(label) or {}).get("runs") or {})
+        keys = [_a1_am5_row_key(r) for r in rows]
+        foreign = [k for k in keys if k is None or k not in present]
+        rows_checked[label] = {"n_rows": len(rows), "n_not_episodes_of_the_arm_given": len(foreign)}
+        if foreign:
+            first = next((rd_k for rd_k in foreign if rd_k is not None), None)
+            problems.append(f"{label}: {len(foreign)} of {len(rows)} per-episode rows are not episodes of --arm "
+                            f"{label}={arm_dirs.get(label)}" + (f" (first: {first[1]}/{first[0]})" if first else ""))
+    info["p2_rows"] = rows_checked
+    if problems:
+        return "refusing the P2 cost report on the registered test_normal read: " + "; ".join(problems), info
+    return None, info | {"status": "ok"}
+
+
+def _a1_r2_preload(
+    arm_dirs: dict[str, Path], seeds: list[int], preds: list[dict[str, Any]]
+) -> tuple[dict[str, Any], list[str], dict[str, dict[str, Any]]]:
+    """The arms exactly as the core builds them (:3652-3657), for the checks that must run before any contrast."""
+    loaded = {label: load_arm_tree(Path(path)) for label, path in arm_dirs.items()}
+    tasks = discover_tasks(loaded, seeds)
+    arms = a1_am5_arms({label: a1_r2_scored_as_recorded(a1_arm_episodes(label, blob, tasks, seeds), blob)
+                        for label, blob in loaded.items()}, arm_dirs, tasks, seeds, preds, [])
+    return loaded, tasks, arms
+
+
+def a1_r2_abort_reasons(
+    arms: dict[str, dict[str, Any]],
+    expected_pairs: int,
+    planless: Optional[list[tuple[str, int]]],
+    cap: int,
+) -> list[str]:
+    """A5, A1 §9 (:574-576): J10 is reported as not run if arm 3, 8, 9 or 10 cannot complete the registered
+    non-crashed matrix, and (A1 §4.2 item 5, :234) if more than the cap of arm 3's episodes are planless. An arm
+    that is not given is absent, not incomplete (a dev subset); the registered read requires every arm (A10)."""
+    why = []
+    for label in A1_ABORT_ARMS:
+        arm = arms.get(label)
+        if arm is None:
+            continue
+        if not arm["complete"] or arm["n_expected"] != expected_pairs:
+            why.append(f"arm {label} did not complete {expected_pairs} non-crashed pairs "
+                       f"(scored={arm['n_scored']}, crash={arm['n_crash']}, missing={arm['n_missing']})")
+    if planless is not None and len(planless) > cap:
+        why.append(f"{len(planless)} of arm 3's episodes are planless, above the cap of {cap} [{A1_PREREG}:234-236]")
+    return why
+
+
+def a1_r2_not_run_report(
+    *,
+    split: str,
+    seeds: list[int],
+    expected_n_tasks: int,
+    tasks: list[str],
+    arms: dict[str, dict[str, Any]],
+    planless: Optional[list[tuple[str, int]]],
+    cap: int,
+    why: list[str],
+    registered: bool,
+    plumbing_check: bool,
+    preds: Optional[list[dict[str, Any]]] = None,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """A5: status NOT_RUN. Arm completeness counts only -- no P, S, E or CF verdict and no contrast value."""
+    label = ("PLUMBING CHECK, NOT A RESULT" if plumbing_check
+             else "A1 DRY RUN ON DEV, NOT THE J10 RESULT" if split == "dev" else "J10 A1 registered analysis")
+    if not registered:
+        label += " (NON-REGISTERED bootstrap settings)"
+    report: dict[str, Any] = {
+        "protocol": "A1",
+        "prereg": A1_PREREG,
+        "label": label,
+        "status": "NOT_RUN",
+        "headline": "J10 not run: " + "; ".join(why) + ".",
+        "not_the_j10_result": plumbing_check or not registered or split != "test_normal",
+        "split": split,
+        "seeds": seeds,
+        "expected_n_tasks": expected_n_tasks,
+        "n_tasks_observed_union": len(tasks),
+        "expected_pairs_per_arm": expected_n_tasks * len(seeds),
+        "abort_rule": {"citation": A1_ABORT_CITATION, "arms": list(A1_ABORT_ARMS),
+                       "planless_cap": {"citation": f"{A1_PREREG}:234-236", "cap": cap}},
+        "not_run_reasons": why,
+        "verdicts": _a1_r2_verdicts(preds, "not_run"),
+        "printed": ("arm completeness counts only (A1 §9: J10 is reported as not run, never at reduced power): every "
+                    "P verdict is 'not_run', and no S, E or CF row and no contrast value is printed"),
+        "arms": {name: {k: arm[k] for k in A1_ARM_COUNT_KEYS if k in arm} for name, arm in arms.items()},
+        "planless_contingency": {"rule": "A1 §4.2", "source_arm": A1_PLAN_SOURCE_ARM, "cap": cap,
+                                 "keys": None if planless is None else [f"{s}/{t}" for t, s in planless],
+                                 "n_keys": None if planless is None else len(planless)},
+    }
+    return a1_am5_divergence(report, arms, None, n_boot=n_boot, seed=seed)
+
+
+def a1_r2_no_reading(row: dict[str, Any]) -> dict[str, Any]:
+    """A9: a refused or incomplete row keeps its descriptive contrast but carries no verdict_unadjusted, p, POOL-04
+    or sign-flip reading (A1 §5.1 F6; Amendment 5 §B.3)."""
+    if row.get("decidable"):
+        return row
+    dropped = [k for k in A1_NO_READING_KEYS if k in row]
+    for key in dropped:
+        row.pop(key)
+    if dropped or row.get("verdict") in ("refused_incomplete", "refused_no_pairs"):
+        row["draws_no_reading"] = True
+    return row
+
+
+def a1_r2_p2_both_conventions(results: list[dict[str, Any]], am4: Any) -> Optional[str]:
+    """A4, Amendment 4 §C (A1:1017-1024): P2 is supported only if its rule holds AND the calls clause holds under
+    both conventions AND the tokens clause holds under both. A clause that cannot be read (holds_both None) leaves a
+    supported P2 incomplete. It can only turn a supported P2 into not supported, never the reverse. Returns a reason
+    for the headline when P2 is left incomplete."""
+    am4 = am4 if isinstance(am4, dict) else {}
+    calls = am4.get("p2_calls_clause") if isinstance(am4.get("p2_calls_clause"), dict) else {}
+    tokens = am4.get("p2_tokens_clause") if isinstance(am4.get("p2_tokens_clause"), dict) else {}
+    reason = None
+    for r in results:
+        if r.get("kind") != "cost_ratio" or (r.get("left"), r.get("right")) != A1_AM4_P2:
+            continue
+        hb_c, hb_t = calls.get("holds_both"), tokens.get("holds_both")
+        blk: dict[str, Any] = {"citation": f"{A1_PREREG} Amendment 4 §C", "rule": f"{A1_AM4_NOTE}; {A1_AM4_TOKENS_NOTE}",
+                               "calls_holds_both": hb_c, "tokens_holds_both": hb_t,
+                               "a1_am4_calls_status": am4.get("status", "absent")}
+        r["amendment4"] = blk
+        if not r.get("decidable") or r.get("verdict") != "supported":
+            continue
+        if hb_c is False or hb_t is False:
+            r["verdict_before_amendment4"] = r["verdict"]
+            r["verdict"] = "not_supported"
+            blk["changed"] = True
+            blk["why"] = " and ".join(n for n, hb in (("calls", hb_c), ("tokens", hb_t)) if hb is False) + \
+                " clause fails under one convention"
+        elif hb_c is None or hb_t is None:
+            unread = [n for n, hb in (("calls", hb_c), ("tokens", hb_t)) if hb is None]
+            reason = f"p2_amendment4_clause_not_read:{','.join(unread)}"
+            r.update(decidable=False, verdict="refused_incomplete",
+                     reason=(f"Amendment 4 §C: P2 is supported only if its {' and '.join(unread)} clause holds under "
+                             "both conventions, and a1_am4_calls cannot read it "
+                             f"({calls.get('status') or tokens.get('status') or am4.get('status', 'absent')})"))
+    return reason
+
+
+def a1_r2_pair_not_run(arms: dict[str, dict[str, Any]]) -> list[str]:
+    """A6: arms 11 and 12 are abandoned, and reported as not run, as a pair (A1:491, :575-576; Amendment 1 §C)."""
+    why = []
+    for label in A1_PAIR_ARMS:
+        if label not in arms:
+            why.append(f"{label} absent")
+        elif not arms[label]["complete"]:
+            arm = arms[label]
+            why.append(f"{label} incomplete (scored={arm['n_scored']}/{arm['n_expected']}, crash={arm['n_crash']})")
+    return why
+
+
+def _a1_r2_row_arms(row: dict[str, Any]) -> list[str]:
+    kind = row.get("kind", "paired")
+    if kind == "did":
+        labels = list(row.get("left") or []) + list(row.get("right") or [])
+    elif kind == "handoff_depth":
+        labels = [a for pair in (row.get("receivers") or {}).values() for a in pair]
+    else:
+        labels = [row.get("left"), row.get("right")]
+    return [a for a in labels if isinstance(a, str)]
+
+
+def a1_r2_apply_pair_not_run(report: dict[str, Any], why: list[str]) -> None:
+    """A6: CF1-CF3 'not_run' and every row that uses arm 11 or 12 printed without values (never at reduced power).
+    P1-P6 stand, and this alone moves neither the headline's completeness nor the exit code."""
+    reason = ("arms 11-12 not run, as a pair (A1:491, :575-576; Amendment 1 §C 'CF is reported as not run'): "
+              + "; ".join(why))
+    am1 = report.get("amendment1") if isinstance(report.get("amendment1"), dict) else {}
+    cf = am1.get("cf") if isinstance(am1.get("cf"), dict) else None
+    if cf is not None:
+        keep = ("id", "role", "kind", "metric", "left", "right", "rule", "threshold_pp", "holm_family", "family",
+                "same_contrast_as", "statement", "citation", "dev_reference", "power", "readings", "rule_text",
+                "direction")
+        cf["predictions"] = [{k: r[k] for k in keep if k in r}
+                             | {"decidable": False, "verdict": "not_run", "reading": None, "reason": reason}
+                             for r in cf.get("predictions") or []]
+        keep2 = ("id", "left", "right", "same_contrast_as", "citation", "dev_reference", "power_exclude_zero",
+                 "readings", "never", "decision_bearing", "adjusted")
+        cf["secondary"] = [{k: s[k] for k in keep2 if k in s}
+                           | {"status": "not_run", "side": None, "reading": None, "reason": reason}
+                           for s in cf.get("secondary") or []]
+        cf["status"] = "not_run"
+        cf["not_run_reason"] = reason
+        cf["verdicts"] = {r["id"]: "not_run" for r in cf["predictions"]}
+        if cf.get("key_exclusion") is not None:
+            cf["key_exclusion"] = {"status": "not_run", "reason": reason}
+    limits = am1.get("limits") if isinstance(am1.get("limits"), dict) else {}
+    for part in ("split", "limit_as_zero"):
+        for cid, blk in list((limits.get(part) or {}).items()):
+            if isinstance(blk, dict) and any(blk.get(s) in A1_PAIR_ARMS for s in ("left", "right")):
+                limits[part][cid] = {"left": blk.get("left"), "right": blk.get("right"), "status": "not_run",
+                                     "reason": reason}
+    for label in A1_PAIR_ARMS:
+        if label in (limits.get("rates") or {}):
+            limits["rates"][label] = {"status": "not_run"}
+        blk = (report.get("arms") or {}).get(label)
+        if isinstance(blk, dict):
+            for key in A1_ARM_OUTCOME_KEYS:
+                blk.pop(key, None)
+            blk["not_run"] = True
+        per_arm = (report.get("a1_am4_calls") or {}).get("per_arm")
+        if isinstance(per_arm, dict) and label in per_arm:
+            per_arm[label] = {"status": "not_run"}
+    for rows in (report.get("supporting_contrasts") or [], report.get("exploratory_contrasts") or []):
+        for row in rows:
+            if any(a in A1_PAIR_ARMS for a in _a1_r2_row_arms(row)):
+                for key in ("goal_pass", "goal_pass_hstar", "hstar_mismatch_between_receivers",
+                            "handoff_flag_mismatch_between_receivers"):
+                    row.pop(key, None)
+                row.update(goal_pass=None, status="not_run", reason=reason)
+
+
+def a1_r2_supporting_status(report: dict[str, Any], arms: dict[str, dict[str, Any]]) -> list[str]:
+    """A10: an S or E row whose arm is incomplete, or whose arms' divergent keys exceed Amendment 5's cap, says
+    'incomplete' and keeps no p (so §F leaves it out); an ok row says 'ok'. Returns the incomplete rows' ids."""
+    rd = _load_replay_divergence()
+    flagged = []
+    for rows in (report.get("supporting_contrasts") or [], report.get("exploratory_contrasts") or []):
+        for row in rows:
+            if row.get("status") == "not_run":
+                continue
+            labels = _a1_r2_row_arms(row)
+            if any(a not in arms for a in labels):
+                row.setdefault("status", "arm_absent")
+                continue
+            incomplete = sorted({a for a in labels if not arms[a]["complete"]})
+            divergent = {tuple(k) for a in labels for k in (arms[a].get(A1_AM5_PRIVATE) or [])}
+            over = len(divergent) > rd.DIVERGENCE_CAP
+            if not incomplete and not over:
+                row["status"] = "ok"
+                continue
+            why = "; ".join(([f"arm(s) incomplete: {incomplete}"] if incomplete else [])
+                            + ([f"{len(divergent)} divergent keys > cap {rd.DIVERGENCE_CAP} (Amendment 5 §B.3)"]
+                               if over else []))
+            row.update(status="incomplete", incomplete_arms=incomplete, reason=why, draws_no_reading=True)
+            if isinstance(row.get("goal_pass"), dict):
+                row["goal_pass"].pop("p_value_two_sided_at_0", None)
+            if row.get("kind") == "handoff_depth":
+                for key in ("goal_pass", "goal_pass_hstar"):
+                    for name, (target, base) in (row.get("receivers") or {}).items():
+                        blk = (row.get(key) or {}).get(name)
+                        if isinstance(blk, dict) and (target in incomplete or base in incomplete or over):
+                            blk["status"] = "incomplete"
+            flagged.append(row["id"])
+    return flagged
+
+
+def a1_r2_b1_cap(row: dict[str, Any], arms: dict[str, dict[str, Any]]) -> None:
+    """A7, Amendment 5 §B.3 (A1:1118-1120) on B1a / B1b: a contrast that removes more than 16 divergent keys, or an
+    incomplete arm, draws no reading -- the NI reading becomes 'incomplete' and the p at the margin is dropped."""
+    left, right = row.get("left"), row.get("right")
+    if left not in arms or right not in arms:
+        return
+    rd = _load_replay_divergence()
+    excluded, verdict = a1_am5_exclusion(arms, left, right)
+    incomplete = [a for a in (left, right) if not arms[a]["complete"]]
+    over = verdict != rd.VERDICT_OK
+    if not incomplete and not over:
+        return
+    why = "; ".join(([f"arm(s) incomplete: {incomplete}"] if incomplete else [])
+                    + ([f"{len(excluded)} divergent keys to remove > cap {rd.DIVERGENCE_CAP} (Amendment 5 §B.3)"]
+                       if over else []))
+    row.update(status="incomplete", reason=why, draws_no_reading=True)
+    for metric in ("goal_pass", "tgc"):
+        blk = row.get(metric)
+        if isinstance(blk, dict):
+            blk.pop("p_value_two_sided_at_margin", None)
+            if "ni" in blk:
+                blk["ni"] = {"reading": "incomplete", "reason": why}
+
+
+def a1_r2_rebuild_by(report: dict[str, Any]) -> None:
+    """§F re-read over the final rows: a row that lost its p (refused, incomplete, not run) is listed and left out
+    of m, as §F says of a contrast without a p."""
+    am1 = report.get("amendment1") if isinstance(report.get("amendment1"), dict) else None
+    if am1 is None:
+        return
+    results = report.get("predictions") or []
+    cf_results = (am1.get("cf") or {}).get("predictions") or []
+    support = report.get("supporting_contrasts") or []
+    explore = report.get("exploratory_contrasts") or []
+    am1["multiplicity_sensitivity"] = am1_by_fdr(am1_by_entries(results, cf_results, support, explore,
+                                                                am1.get("handoff_only_ni") or []))
+    if "multiplicity_sensitivity_hstar" in am1:
+        am1["multiplicity_sensitivity_hstar"] = am1_by_fdr(am1_by_entries(
+            results, cf_results, support, explore, am1.get("handoff_only_ni_hstar") or []))
+
+
+def a1_r2_finalize(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    *,
+    preds: list[dict[str, Any]],
+    checks: dict[str, Any],
+    arms_as_read: Optional[dict[str, dict[str, Any]]] = None,
+) -> tuple[dict[str, Any], int]:
+    """Everything Phase A applies after the core, then the headline and exit code from the final rows."""
+    results = report.get("predictions") or []
+    am1 = report.get("amendment1") if isinstance(report.get("amendment1"), dict) else {}
+    p2_reason = a1_r2_p2_both_conventions(results, report.get("a1_am4_calls"))  # A4
+    for r in results + list((am1.get("cf") or {}).get("predictions") or []):  # A9
+        a1_r2_no_reading(r)
+    # A6 reads the arms as loaded: when the core refuses the whole matrix it marks every arm incomplete, and CF is
+    # then refused along with P1-P6, not "not run".
+    pair_why = a1_r2_pair_not_run(arms_as_read if arms_as_read is not None else arms)  # A6
+    if pair_why:
+        a1_r2_apply_pair_not_run(report, pair_why)
+        report["arms_11_12_not_run"] = {"reasons": pair_why, "citation": f"{A1_PREREG}:575-576; Amendment 1 §C"}
+    flagged = a1_r2_supporting_status(report, arms)  # A10
+    for key in ("handoff_only_ni", "handoff_only_ni_hstar"):  # A7
+        for row in am1.get(key) or []:
+            a1_r2_b1_cap(row, arms)
+    for row in am1.get("handoff_only_ni_hstar") or []:  # A11
+        if row.get("id") == "B1a":
+            row["dev_reference"] = dict(A1_HSTAR_B1A_DEV)
+    a1_r2_rebuild_by(report)
+    cf = am1.get("cf") if isinstance(am1.get("cf"), dict) else {}
+    if cf:
+        cf["verdicts"] = {r["id"]: r.get("verdict") for r in cf.get("predictions") or []}
+    report["verdicts"] = {r["id"]: r.get("verdict") for r in results}
+    final = {r["id"]: r.get("verdict") for r in results + list(cf.get("predictions") or [])}
+    for cid, blk in ((report.get("a1_am5_divergence") or {}).get("contrasts") or {}).items():
+        if cid in final:
+            blk["decision"] = final[cid]
+    # The headline and exit code: P1-P6 decide completeness. An incomplete arm that no prediction uses (1, 1b,
+    # prefix_m9, 11, 12) is listed beside it, and CF1 after it; neither moves the exit code (A6, A10).
+    p_arms = {a for p in preds for a in (p.get("left"), p.get("right")) if isinstance(a, str)}
+    p_reasons, support_reasons = [], []
+    for reason in report.get("incomplete_reasons") or []:
+        label = reason[len("incomplete_arm:"):].split(" ", 1)[0] if reason.startswith("incomplete_arm:") else None
+        (support_reasons if label is not None and label not in p_arms else p_reasons).append(reason)
+    if p2_reason:
+        p_reasons.append(p2_reason)
+    decided = all(r.get("decidable") for r in results)
+    code = 0 if decided and not p_reasons else 1
+    headline = ("COMPLETE: every registered prediction decided." if code == 0
+                else "INCOMPLETE: " + "; ".join(p_reasons or ["some predictions not decidable"]))
+    support_arms = sorted({r[len("incomplete_arm:"):].split(" ", 1)[0] for r in support_reasons})
+    if support_arms:
+        headline += ("" if headline.endswith(".") else ".") + (
+            f" Incomplete arms no prediction uses: {', '.join(support_arms)} (P1-P6 stand).")
+    if flagged:
+        headline += ("" if headline.endswith(".") else ".") + (
+            f" Supporting / exploratory rows incomplete, drawing no reading: {', '.join(flagged)}.")
+    cf1 = "not run" if cf.get("status") == "not_run" else str((cf.get("verdicts") or {}).get("CF1"))
+    headline += ("" if headline.endswith(".") else ".") + " Amendment 1 CF1: " + cf1 + "."
+    report.update(status="COMPLETE" if code == 0 else "INCOMPLETE", headline=headline,
+                  incomplete_reasons=p_reasons, supporting_incomplete_reasons=support_reasons)
+    if checks:
+        report["registered_read_checks"] = checks
+    report["unit_r2"] = {"what": A1_R2, "phase_a": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11"]}
+    return report, code
+
+
+def build_report_a1(
+    *,
+    split: str,
+    seeds: list[int],
+    arm_dirs: dict[str, Path],
+    expected_n_tasks: int,
+    confirm_heldout_test_split: bool = False,
+    plumbing_check: bool = False,
+    cost_report: Optional[dict[str, Any]] = None,
+    predictions: Optional[list[dict[str, Any]]] = None,
+    supporting: Optional[list[dict[str, Any]]] = None,
+    exploratory: Optional[list[dict[str, Any]]] = None,
+    n_boot: int = A1_BOOTSTRAP_N,
+    bootstrap_seed: int = A1_BOOTSTRAP_SEED,
+    out_path: Optional[Path] = None,
+    pairwise: bool = True,
+) -> tuple[dict[str, Any], int]:
+    """The A1 report: the guards and the §9 abort rule, then _a1_build_report_core, then unit R2's readings.
+    Exit 0 complete, 1 incomplete or not run, 2 refused. pairwise=False skips A1 §7 item 2's 78 pairwise contrasts
+    on a dev read (the unit tests' default); the registered read computes them regardless."""
+    preds = [dict(p) for p in (predictions if predictions is not None else A1_PREDICTIONS)]
+    registered = n_boot == A1_BOOTSTRAP_N and bootstrap_seed == A1_BOOTSTRAP_SEED
+    proto = a1_protocol_guard(split, confirm_heldout_test_split, plumbing_check, arm_dirs.values(), out_path,
+                              registered)
+    if proto:
+        return _a1_r2_refused(split, proto, preds)
+    registered_read = split == "test_normal"  # the guard above admits test_normal only confirmed and registered
+    checks: dict[str, Any] = {}
+    why = a1_r2_heldout_guard(split, registered_read, arm_dirs) or a1_r2_layout_guard(arm_dirs)
+    if why is None and registered_read:
+        why, checks["manifests"] = a1_r2_registered_read_guard(
+            seeds=seeds, expected_n_tasks=expected_n_tasks, arm_dirs=arm_dirs, predictions=predictions,
+            supporting=supporting, exploratory=exploratory)
+    if why:
+        return _a1_r2_refused(split, why, preds)
+    loaded, tasks, arms0 = _a1_r2_preload(arm_dirs, seeds, preds)
+    if registered_read:
+        why, checks["cost_report"] = a1_r2_cost_report_guard(cost_report, arm_dirs, loaded)
+        if why:
+            return _a1_r2_refused(split, why, preds)
+    expected_pairs = expected_n_tasks * len(seeds)
+    planless = a1_planless_keys(arm_dirs, seeds)
+    cap = int(expected_pairs * A1_PLANLESS_CAP_FRACTION)
+    abort = a1_r2_abort_reasons(arms0, expected_pairs, planless, cap)
+    if abort:
+        return a1_r2_not_run_report(split=split, seeds=seeds, expected_n_tasks=expected_n_tasks, tasks=tasks,
+                                    arms=arms0, planless=planless, cap=cap, why=abort, registered=registered,
+                                    plumbing_check=plumbing_check, n_boot=n_boot, seed=bootstrap_seed,
+                                    preds=preds), 1
+    out = _a1_build_report_core(
+        split=split, seeds=seeds, arm_dirs=arm_dirs, expected_n_tasks=expected_n_tasks,
+        confirm_heldout_test_split=confirm_heldout_test_split, plumbing_check=plumbing_check,
+        cost_report=cost_report, predictions=predictions, supporting=supporting, exploratory=exploratory,
+        n_boot=n_boot, bootstrap_seed=bootstrap_seed, out_path=out_path)
+    if len(out) == 2:
+        return out[0], out[1]
+    report, _code, arms = out
+    report, code = a1_r2_finalize(report, arms, preds=preds, checks=checks, arms_as_read=arms0)
+    # Phase B: rows and wording only. The registered read always prints A1 §7 item 2's pairwise contrasts.
+    a1_r2_phase_b(report, arms, arm_dirs, tasks, seeds, pairwise=pairwise or registered_read, n_boot=n_boot,
+                  seed=bootstrap_seed)
+    return report, code
+
+
+# ---- Unit R2: the J10 pre-read audit, Phase B (2026-09-25) -------------------------------------------------------
+# Printed rows and wording only: no verdict, family, threshold or exit code moves. a1_r2_phase_b runs after Phase A's
+# readings (build_report_a1). B7's scoring is the one in-place hook, on the core's arms line (:3657).
+A1_R2_ASK_BOUND_FLAG_PP = 1.00  # Amendment 1 §I (A1:893), as scripts/analysis/j11_report.py:114 (at 9460b06)
+A1_R2_REPLAY_ARMS = ("sft_plan", "prefix_m9", "prefix_m11", "prefix_zs_m9", "prefix_zs_m11")  # arms 2, 4-7
+A1_R2_CONTENT_ARMS = ("advise_k10_fullctx", "takeover_k10", "show_k10", "advise_k10_neutral")  # arms 9-12
+A1_R2_REGISTERED_TOTAL = {
+    "hosted_calls": "<= 15,627",
+    "breakdown": "13,828 for arms 1-10, arms 11 and 12 add <= 1,607, and §4.2 adds <= 192 only if it fires",
+    "citation": f"{A1_PREREG}:561",
+}
+# Amendment 1 §C descriptives (arms 9-12). b2_decomposition defines the copy rate of a shown action
+# (scripts/analysis/b2_decomposition.py:492-603: _normalise_ws :492, _render_action :496-504, read_events :507-530,
+# shown_action_rows :534-557, copy_rate :560-603) but neither "fenced code" nor length; those, and the copy rate of
+# advice (a ```python block inside the advice counts), are scripts/analysis/j17_channel_fixes.py:95-100 and
+# :313-356 (ledger DEC-06), ported here.
+A1_R2_FENCED_BLOCK = r"```[^`\n]*\n.*?```"  # j17_channel_fixes.py:98
+A1_R2_PYTHON_BLOCK = r"```[ \t]*python[ \t]*\r?\n.*?```"  # j17_channel_fixes.py:100
+# Amendment 2 (A1:914-918): the dev high-effort result cited beside P3 (ledger CEILHI-01, CEILHI-03).
+A1_R2_CEILHI = {
+    "source": "campaign/results/j17_planning_lit_20260924.report.json",
+    "quality": {"key": "ceilhi.quality.goal_pass", "high_minus_medium_pp": 11.97, "ci95_pp_scenario": [6.14, 18.43],
+                "high": 0.8834, "medium": 0.7637, "n_pairs": 114},
+    "ni_reread": {"key": "ceilhi.ni_reread.{high,medium}_minus_prefix_c81_bplus_m11.goal_pass",
+                  "rule": "ceiling - arm; holds iff round(scenario upper bound, 2) < +7.00",
+                  "high": {"diff_pp": 7.22, "ci95_pp_scenario": [3.21, 11.47], "reading": "fails"},
+                  "medium": {"diff_pp": -4.75, "ci95_pp_scenario": [-11.81, 1.16], "reading": "holds"}},
+    "ledger": ["CEILHI-01", "CEILHI-03"],
+    "exploratory": True,
+}
+# §7 item 5 (A1:524): the J9 Claim F1 negative, static text from A1:54-58.
+A1_R2_J9_F1 = {
+    "citation": f"{A1_PREREG}:524 (text at :54-58; docs/prereg_j9_freeze_20260920.md:143)",
+    "dev_only": True,
+    "statement": ("J9's Claim F1 (selective escalation) is reported as a dev-only negative: neither the linear verifier "
+                  "head nor the sequential router discriminates outcome-critical intervention points (scored AUROC "
+                  "0.3867-0.5082), and the executor self-gate's p_ask never exceeds 0.0347 against thresholds of "
+                  "0.3, 0.5 and 0.7."),
+    "auroc_range": [0.3867, 0.5082],
+    "p_ask_max": 0.0347,
+}
+A1_R2_PIN = {"planner_model_requested": "gpt-5.6-luna", "planner_cli_version": "0.153.4",
+             "citation": f"{A1_PREREG}:578-590 (§9.1)"}
+
+
+def a1_r2_scored_as_recorded(arm: dict[str, Any], loaded: dict[str, Any]) -> dict[str, Any]:
+    """B7, A1 §5.1 (:255-261): every error_type other than crash is an outcome of the arm and is scored as recorded.
+    score_tgc (v1 §6.1) gives such an episode TGC None when its result.json records a non-zero TGC, which drops the
+    pair from every TGC contrast; here it keeps the TGC it records. goal_pass is already read as recorded. A scored
+    failure with no recorded TGC keeps score_tgc's 0 (nothing is recorded to keep) and is counted."""
+    runs = loaded.get("runs") or {}
+    changed: list[tuple[str, int]] = []
+    unrecorded = 0
+    for key, ep in arm["episodes"].items():
+        row = runs.get(key) or {}
+        if row.get("error_type") not in SCORED_FAILURE_TYPES:
+            continue
+        rec = recorded_tgc(row)
+        if rec is None:
+            unrecorded += 1
+            continue
+        if ep.get("tgc") != rec:
+            ep["tgc"] = rec
+            changed.append(key)
+    if changed:
+        tg = [e["tgc"] for e in arm["episodes"].values() if e["tgc"] is not None]
+        arm["tgc_mean"] = round(statistics.fmean(tg), 6) if tg else None
+    arm["tgc_scored_as_recorded"] = {
+        "rule": f"{A1_PREREG}:255-261 (a non-crash failure is scored as recorded)",
+        "n_changed": len(changed),
+        "changed": [f"{s}/{t}" for t, s in sorted(changed)],
+        "n_failure_without_recorded_tgc_scored_0": unrecorded,
+    }
+    return arm
+
+
+def a1_r2_answered_asks_last_attempt(events_path: Path) -> Optional[int]:
+    """Amendment 1 §I: executor asks the planner answered live in the attempt that wrote result.json; None without a
+    log. Ported from scripts/analysis/j11_report.py:282-305 (at 9460b06): an answered ask is an `intervention` event
+    from actor planner with payload.forced False (the loop writes forced True for scheduled advice and takeovers,
+    src/sidekick/systems/loop.py:918, :962); events before the last run_start belong to an earlier attempt."""
+    try:
+        lines = events_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    events: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            ev = json.loads(line) if line.strip() else None
+        except json.JSONDecodeError:
+            continue
+        if isinstance(ev, dict):
+            events.append(ev)
+    start = max((i for i, ev in enumerate(events) if ev.get("event_type") == "run_start"), default=0)
+    return sum(1 for ev in events[start:]
+               if ev.get("event_type") == "intervention" and ev.get("actor") == "planner"
+               and isinstance(ev.get("payload"), dict) and ev["payload"].get("forced") is False)
+
+
+def _a1_r2_contrast_rows(report: dict[str, Any]) -> list[tuple[str, dict[str, Any], list[str]]]:
+    """(id, row, arms) for every P, CF, S, E and B1 row (B1 by its flag and h* ids)."""
+    am1 = report.get("amendment1") if isinstance(report.get("amendment1"), dict) else {}
+    out = []
+    for r in list(report.get("predictions") or []) + list((am1.get("cf") or {}).get("predictions") or []):
+        out.append((r["id"], r, [a for a in (r.get("left"), r.get("right")) if isinstance(a, str)]))
+    for rows in (report.get("supporting_contrasts") or [], report.get("exploratory_contrasts") or []):
+        for r in rows:
+            out.append((r["id"], r, _a1_r2_row_arms(r)))
+    for key, suffix in (("handoff_only_ni", "_flag"), ("handoff_only_ni_hstar", "")):
+        for r in am1.get(key) or []:
+            out.append((f"{r['id']}{suffix}", r, [a for a in (r.get("left"), r.get("right")) if isinstance(a, str)]))
+    return out
+
+
+def a1_r2_executor_asks(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    tasks: list[str],
+    seeds: list[int],
+) -> dict[str, Any]:
+    """B4, Amendment 1 §I (A1:867-896), as scripts/analysis/j11_report.py:308-350 (at 9460b06) implements it for J11:
+    per arm, the episodes with a live-answered ask, the answering calls, and the bound on the arm mean (episodes
+    with one or more / the registered matrix, in pp); per contrast that uses a replaying arm (2, 4-7), each side's
+    bound. A bound of 1.00 pp or more is printed in the verdict's sentence. Reporting only: no verdict changes."""
+    expected = len(tasks) * len(seeds)
+    matrix = {(t, s) for t in tasks for s in seeds}
+    per_arm: dict[str, dict[str, Any]] = {}
+    for label in (a for a in A1_ARMS if a in arms and a in arm_dirs):
+        files = a1_am4_episode_files(Path(arm_dirs[label]))
+        by_key = {k: a1_r2_answered_asks_last_attempt(f["events"]) for k, f in files.items() if k in matrix}
+        asked = {k: n for k, n in by_key.items() if n}
+        per_arm[label] = {
+            "n_episodes_with_answered_ask": len(asked),
+            "n_scored_episodes_with_answered_ask": sum(1 for k in asked if k in arms[label]["episodes"]),
+            "n_answered_ask_calls": sum(asked.values()),
+            "n_episodes_without_event_log": sum(1 for n in by_key.values() if n is None),
+            "bound_pp": round(100.0 * len(asked) / expected, 2) if expected else None,
+            "episodes": [f"{s}/{t}" for t, s in sorted(asked)],
+        }
+    per_contrast: dict[str, dict[str, Any]] = {}
+    for cid, _row, labels in _a1_r2_contrast_rows(report):
+        if not any(a in A1_R2_REPLAY_ARMS for a in labels) or any(a not in per_arm for a in labels):
+            continue
+        sides = {a: per_arm[a]["bound_pp"] for a in dict.fromkeys(labels)}
+        worst = max((b or 0.0) for b in sides.values())
+        per_contrast[cid] = {"bound_pp": sides, "max_bound_pp": worst,
+                             "bound_reaches_1pp": worst >= A1_R2_ASK_BOUND_FLAG_PP}
+    return {
+        "reporting_only": True,
+        "rule": f"{A1_PREREG} Amendment 1 §I (:867-896; the ledger PROV-02 bound)",
+        "implementation": "scripts/analysis/j11_report.py:282-350 (at 9460b06), ported",
+        "definition": ("an intervention event from actor planner with payload.forced false in the attempt that "
+                       "wrote result.json; bound = episodes with one or more / the matrix, in pp"),
+        "denominator": expected,
+        "per_arm": per_arm,
+        "per_contrast": per_contrast,
+        "n_answered_ask_calls_total": sum(v["n_answered_ask_calls"] for v in per_arm.values()),
+        "registered_total": A1_R2_REGISTERED_TOTAL,
+        "flag_pp": A1_R2_ASK_BOUND_FLAG_PP,
+    }
+
+
+def _a1_r2_next_executor_action(events: list[dict[str, Any]], i: int) -> Optional[dict[str, Any]]:
+    """b2.shown_action_rows' next action (b2_decomposition.py:543-549; j17_channel_fixes.py:313-322)."""
+    for later in events[i + 1:]:
+        if later.get("event_type") == "intervention":
+            return None
+        if later.get("event_type") == "action" and later.get("actor") == "executor":
+            return later
+    return None
+
+
+def a1_r2_content(arms: dict[str, dict[str, Any]], arm_dirs: dict[str, Path]) -> dict[str, Any]:
+    """B5, Amendment 1 §C 'Descriptive' (arms 9-12): per arm, the share of interventions carrying a fenced code
+    block, the median intervention length (characters of payload.correction) and the executor's copy rate --
+    show_k10's by b2_decomposition.copy_rate (a shown action reproduced verbatim next, whitespace-normalised), the
+    advice arms' by the same test widened to a ```python block inside the advice (j17_channel_fixes._copied,
+    :325-336). Over the scored episodes' last attempt. Descriptive: not decision-bearing."""
+    import re  # noqa: E402 (lazy: a top-level import would move cited lines)
+
+    fenced_re = re.compile(A1_R2_FENCED_BLOCK, re.DOTALL)
+    python_re = re.compile(A1_R2_PYTHON_BLOCK, re.DOTALL | re.IGNORECASE)
+    out: dict[str, Any] = {
+        "label": "DESCRIPTIVE (Amendment 1 §C; not decision-bearing)",
+        "citation": f"{A1_PREREG} Amendment 1 §C (:802-803)",
+        "definitions": {
+            "fenced_code": "an opening ``` line (any info string), text, a closing ``` (j17_channel_fixes.py:95-98)",
+            "length": "characters of the intervention's payload.correction (j17_channel_fixes.py:348)",
+            "copy_rate_show": "b2_decomposition.copy_rate (:560-603): shown actions the executor reproduces next",
+            "copy_rate_advice": ("interventions whose next executor action reproduces the advice, or a ```python "
+                                 "block inside it (j17_channel_fixes.py:325-336)"),
+            "copy_rate_takeover": "not applicable: the planner's action is executed, nothing is shown or advised",
+        },
+        "arms": {},
+    }
+    try:
+        from scripts.analysis import b2_decomposition as b2  # noqa: E402
+    except Exception as exc:  # descriptive only: never fatal
+        out["status"] = f"error: {type(exc).__name__}: {exc}"
+        return out
+    for label in (a for a in A1_R2_CONTENT_ARMS if a in arms and a in arm_dirs):
+        files = a1_am4_episode_files(Path(arm_dirs[label]))
+        paths = {k: files[k]["events"] for k in sorted(arms[label]["episodes"]) if k in files}
+        n_missing = n_bad = 0
+        rows: list[dict[str, Any]] = []
+        for key, path in paths.items():
+            if not Path(path).is_file():
+                n_missing += 1
+                continue
+            events, bad = b2.read_events(Path(path))
+            n_bad += bad
+            for i, ev in enumerate(events):
+                if ev.get("event_type") != "intervention":
+                    continue
+                payload = ev.get("payload") or {}
+                text = str(payload.get("correction") or "")
+                nxt = _a1_r2_next_executor_action(events, i)
+                rendered = b2._render_action(nxt.get("payload") or {}) if nxt is not None else None
+                target = b2._normalise_ws(rendered) if rendered is not None else None
+                candidates = [text, *(m.group(0) for m in python_re.finditer(text))]
+                rows.append({"source": str(payload.get("source") or "advice"), "chars": len(text),
+                             "fenced": fenced_re.search(text) is not None,
+                             "copied": target is not None and any(b2._normalise_ws(c) == target for c in candidates)})
+        chars = [r["chars"] for r in rows]
+        n_fenced = sum(1 for r in rows if r["fenced"])
+        blk: dict[str, Any] = {
+            "n_episodes": len(arms[label]["episodes"]),
+            "n_episodes_without_events": n_missing,
+            "n_unparseable_event_lines": n_bad,
+            "n_interventions": len(rows),
+            "n_by_source": dict(sorted(Counter(r["source"] for r in rows).items())),
+            "n_fenced_code": n_fenced,
+            "share_fenced_code": round(n_fenced / len(rows), 6) if rows else None,
+            "median_chars": statistics.median(chars) if chars else None,
+        }
+        if label == "show_k10":
+            cr = b2.copy_rate({k: Path(p) for k, p in paths.items()})
+            blk["copy_rate"] = cr["copy_rate"]
+            blk["copy"] = {"definition": "copy_rate_show", "n_shown": cr["n_shown"], "n_copied": cr["n_copied"]}
+        elif label == "takeover_k10":
+            blk["copy_rate"] = None
+            blk["copy"] = {"definition": "copy_rate_takeover"}
+        else:
+            n_copied = sum(1 for r in rows if r["copied"])
+            blk["copy_rate"] = round(n_copied / len(rows), 6) if rows else None
+            blk["copy"] = {"definition": "copy_rate_advice", "n_copied": n_copied}
+        out["arms"][label] = blk
+    out["status"] = "ok"
+    return out
+
+
+def a1_r2_limit_rates(report: dict[str, Any], arms: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """B6, Amendment 1 §D1: each arm's limit rate beside its mean and beside every contrast that uses it."""
+    rates = {a: r["limit_rate"] for a, r in am1_limit_rates(arms).items()}
+    for label, blk in (report.get("arms") or {}).items():
+        if isinstance(blk, dict) and not blk.get("not_run") and label in rates:
+            blk["limit_rate"] = rates[label]
+    for _cid, row, labels in _a1_r2_contrast_rows(report):
+        if row.get("status") == "not_run" or row.get("verdict") == "not_run":
+            continue
+        row["limit_rates"] = {a: rates.get(a) for a in dict.fromkeys(labels)}
+    return rates
+
+
+def a1_r2_pairwise(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    rates: dict[str, Any],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """B6, A1 §7 item 2 (:516-517): every pair of registered arms given, on goal_pass, both clusterings. A pair a
+    registered row names keeps that row's orientation (and the row's Holm-adjusted p is quoted for P rows); any other
+    pair is later arm − earlier arm in A1_ARMS order, unadjusted and labelled exploratory. An incomplete arm (or an
+    Amendment 5 union above the cap) prints the pair without a p; arms 11-12 not run print no value."""
+    registered: dict[tuple[str, str], dict[str, Any]] = {}
+    for _cid, row, labels in _a1_r2_contrast_rows(report):
+        if row.get("kind", "paired") in ("paired", "paired_contrast") and len(labels) == 2:
+            registered.setdefault((labels[0], labels[1]), row)
+    not_run = set(A1_PAIR_ARMS) if report.get("arms_11_12_not_run") else set()
+    rd = _load_replay_divergence()
+    labels = [a for a in A1_ARMS if a in arms]
+    rows = []
+    for i, a in enumerate(labels):
+        for b in labels[i + 1:]:
+            left, right = (a, b) if (a, b) in registered else (b, a)
+            reg = registered.get((left, right))
+            row: dict[str, Any] = {"left": left, "right": right, "metric": "goal_pass",
+                                   "registered_row": reg["id"] if reg else None,
+                                   "label": (f"registered as {reg['id']}" if reg
+                                             else "exploratory (A1 §7 item 2): unadjusted")}
+            if reg is not None and isinstance(reg.get("holm"), dict):
+                row["holm_p_adjusted_at_registered_threshold"] = reg["holm"].get("p_adjusted")
+            if {left, right} & not_run:
+                row.update(status="not_run", goal_pass=None)
+                rows.append(row)
+                continue
+            la, ra = a1_am5_pair(arms, left, right)
+            cmp = a1_contrast(la["episodes"], ra["episodes"], A1_METRIC_FIELDS["goal_pass"], n_boot=n_boot, seed=seed)
+            row["goal_pass"] = _public_contrast(cmp) | {"p_value_two_sided_at_0": _p_two_sided(cmp["scenario"], 0.0)}
+            incomplete = [x for x, arm in ((left, la), (right, ra)) if not arm["complete"]]
+            _excluded, verdict = a1_am5_exclusion(arms, left, right)
+            if incomplete or verdict != rd.VERDICT_OK:
+                row.update(status="incomplete", incomplete_arms=incomplete)
+                row["goal_pass"].pop("p_value_two_sided_at_0", None)
+            else:
+                row["status"] = "ok"
+            row["limit_rates"] = {left: rates.get(left), right: rates.get(right)}
+            rows.append(row)
+    return {"citation": f"{A1_PREREG}:516-517 (§7 item 2)", "n_pairs_of_arms": len(rows),
+            "adjustment": "Holm within the family for P1, P3, P4, P6 (quoted from their rows); unadjusted elsewhere",
+            "rows": rows}
+
+
+def a1_r2_p3_limit_excluded(arms: dict[str, dict[str, Any]], *, n_boot: int, seed: int) -> dict[str, Any]:
+    """B6, A1:378-382: P3's limit-excluded variant, reported only as a sensitivity -- the pairs whose reference
+    (arm 3) episode hit the step limit are dropped (as scripts/analysis/j16_robustness.py:1622-1629 on dev). The
+    caveat is A1's: exclusion selects on the reference arm's own failures."""
+    left, right = "prefix_m11", A1_PLAN_SOURCE_ARM
+    base = {"citation": f"{A1_PREREG}:378-382", "sensitivity_only": True, "decision_bearing": False,
+            "left": left, "right": right,
+            "caveat": ("exclusion selects on the reference arm's own failures: on dev the cap-81 ceiling's 18 dropped "
+                       "episodes scored 0.179 against 0.873 for the 96 kept (campaign/results/"
+                       "j16_robustness_20260923.report.json)")}
+    if left not in arms or right not in arms:
+        return base | {"status": "arm_absent"}
+    la, ra = a1_am5_pair(arms, left, right)
+    kept = {k for k, e in ra["episodes"].items() if e.get("error_type") != A1_LIMIT_ERROR}
+    dropped = [k for k in ra["episodes"] if k not in kept]
+    cmp = a1_contrast({k: v for k, v in la["episodes"].items() if k in kept},
+                      {k: v for k, v in ra["episodes"].items() if k in kept},
+                      A1_METRIC_FIELDS["goal_pass"], n_boot=n_boot, seed=seed)
+    lo = (cmp["scenario"].get("ci95_pp") or [None])[0]
+    out = base | {"n_reference_dropped_limit": len(dropped), "n_reference_kept": len(kept),
+                  "goal_pass": _public_contrast(cmp),
+                  "reading_at_minus_7": (None if lo is None else "holds" if lo > -7.00 else "fails"),
+                  "reading_rule": "unadjusted scenario lower bound above -7.00 pp (sensitivity; no Holm, no verdict)"}
+    if not (la["complete"] and ra["complete"]):
+        out.update(status="incomplete", reading_at_minus_7=None)
+    else:
+        out["status"] = "ok"
+    return out
+
+
+def _a1_r2_find(rows: Any, rid: str) -> Optional[dict[str, Any]]:
+    return next((r for r in rows or [] if isinstance(r, dict) and r.get("id") == rid), None)
+
+
+def _a1_r2_ho(blk: Any) -> Optional[dict[str, Any]]:
+    """The handoff-only summary of a B1 / S6 / b4_extra block."""
+    if not isinstance(blk, dict):
+        return None
+    ho = blk.get("handoff_only") if isinstance(blk.get("handoff_only"), dict) else None
+    out = {k: blk.get(k) for k in ("n_pairs", "n_handoff", "n_silenced") if k in blk}
+    if ho:
+        out |= {k: ho.get(k) for k in ("diff_pp", "ci95_pp_scenario", "ci95_pp_task") if k in ho}
+    if isinstance(blk.get("ni"), dict):
+        out["ni_reading"] = blk["ni"].get("reading")
+    if isinstance(blk.get("status"), str):
+        out["status"] = blk["status"]
+    return out or None
+
+
+def a1_r2_b4_companion(report: dict[str, Any], pointer: str) -> Optional[dict[str, Any]]:
+    """Resolve an A1_AM1_B4_COMPANIONS(_HSTAR) pointer to the handoff-only numbers it names."""
+    am1 = report.get("amendment1") or {}
+    negated = pointer.endswith("(negated)")
+    if pointer.startswith("amendment1.handoff_only_ni"):
+        key, rid = pointer.split("[", 1)[0].split(".", 1)[1], pointer.split("[", 1)[1].split("]", 1)[0]
+        out = _a1_r2_ho((_a1_r2_find(am1.get(key), rid) or {}).get("goal_pass"))
+    elif pointer.startswith("supporting_contrasts[S6]"):
+        _, key, receiver, _ho = pointer.split(".")
+        out = _a1_r2_ho(((_a1_r2_find(report.get("supporting_contrasts"), "S6") or {}).get(key) or {}).get(receiver))
+    elif pointer.startswith("amendment1.b4_extra."):
+        blk = (am1.get("b4_extra") or {}).get(pointer.rsplit(".", 1)[1]) or {}
+        out = _a1_r2_ho(blk.get("goal_pass") if isinstance(blk.get("goal_pass"), dict) else blk)
+    elif pointer.startswith("amendment1.decomposition"):
+        key = pointer.split(" ", 1)[0].split(".", 1)[1]
+        out = {}
+        for name, blk in (am1.get(key) or {}).items():
+            gp = blk.get("goal_pass") if isinstance(blk, dict) and isinstance(blk.get("goal_pass"), dict) else {}
+            out[name] = {"n_handoff": gp.get("n_handoff"),
+                         "contribution_handoff_pp": (gp.get("contribution_handoff") or {}).get("diff_pp"),
+                         "contribution_silenced_pp": (gp.get("contribution_silenced") or {}).get("diff_pp")}
+        out = out or None
+    else:
+        out = None
+    if out is not None and negated:
+        out = dict(out, orientation="the companion is the negated orientation of this row")
+    return out
+
+
+def a1_r2_hstar_labels(report: dict[str, Any]) -> None:
+    """B3, Amendment 3 (A1:951-963): h* is the registered handoff indicator. The `*_hstar` rows are marked as the
+    registered version and the unsuffixed ones as the handoff_occurred flag companion; P3's (and every) B4 entry
+    points at the h* rows, the flag map kept as b4_companions_flag; the registered BY sentences are the h* ones.
+    Key names are unchanged."""
+    am1 = report.get("amendment1") if isinstance(report.get("amendment1"), dict) else None
+    if am1 is None:
+        return
+    hstar_ok = (am1.get("hstar") or {}).get("status") == "ok"
+    reg = "registered (Amendment 3: h*, the executor took control)"
+    comp = "companion (Amendment 3: the handoff_occurred flag, printed as a sensitivity)"
+    am1["registered_h"] = "hstar"
+    am1["registered_h_note"] = (f"{A1_PREREG} Amendment 3 (:951-963): every handoff-only quantity is registered with "
+                                "h*; the *_hstar keys hold it, the unsuffixed keys the flag companion")
+    for key, label in (("handoff_only_ni_hstar", reg), ("handoff_only_ni", comp)):
+        for row in am1.get(key) or []:
+            row["version"] = label
+            row["registered_h"] = "hstar"
+    for key, label in (("decomposition_hstar", reg), ("decomposition", comp)):
+        for blk in (am1.get(key) or {}).values():
+            if isinstance(blk, dict):
+                blk["version"] = label
+    for key, label in (("multiplicity_sensitivity_hstar", reg), ("multiplicity_sensitivity", comp)):
+        if isinstance(am1.get(key), dict):
+            am1[key]["version"] = label
+    s6 = _a1_r2_find(report.get("supporting_contrasts"), "S6")
+    if s6 is not None:
+        s6["registered_h"] = "hstar"
+        s6["versions"] = {"goal_pass_hstar": reg, "goal_pass": comp}
+    flag_map = dict(am1.get("b4_companions") or A1_AM1_B4_COMPANIONS)
+    am1["b4_companions_flag"] = flag_map
+    if hstar_ok:
+        am1["b4_companions"] = dict(flag_map, **A1_AM1_B4_COMPANIONS_HSTAR)
+        am1["multiplicity_sensitivity_registered"] = "amendment1.multiplicity_sensitivity_hstar"
+    else:
+        am1["b4_companions_note"] = "h* not computed: the B4 entries stay on the flag rows"
+        am1["multiplicity_sensitivity_registered"] = "amendment1.multiplicity_sensitivity"
+    for rows in (report.get("predictions") or [], report.get("supporting_contrasts") or [],
+                 report.get("exploratory_contrasts") or []):
+        for row in rows:
+            pointer = am1["b4_companions"].get(row.get("id"))
+            if pointer:
+                row["b4_companion"] = {"key": pointer, "h": "hstar" if "hstar" in pointer else "flag",
+                                       "handoff_only": a1_r2_b4_companion(report, pointer),
+                                       "flag_key": flag_map.get(row["id"])}
+
+
+def _a1_r2_pp(v: Any) -> str:
+    return "n/a" if v is None else f"{v:+.2f}"
+
+
+def _a1_r2_ci(ci: Any) -> str:
+    return "n/a" if not ci or ci[0] is None else f"[{ci[0]:+.2f}, {ci[1]:+.2f}]"
+
+
+def a1_r2_tgc_atom(row: dict[str, Any]) -> Optional[str]:
+    """B1, A1 §5.2 (:275-277): TGC is binary, so its bounds sit on atoms (k / n); a bound on the threshold's nearest
+    atom, round(t x n) / n, is reported as such, not as a pass or fail by a hair."""
+    tgc = row.get("tgc_secondary")
+    if not isinstance(tgc, dict) or not isinstance(tgc.get("scenario"), dict) or not tgc.get("n_pairs"):
+        return None
+    n = int(tgc["n_pairs"])
+    t = float(row.get("threshold_pp") or 0.0) / 100.0
+    k = round(t * n)
+    atom_pp = round(100.0 * k / n, 2)
+    ci = tgc["scenario"].get("ci95_pp")
+    if not ci or ci[0] is None:
+        return None
+    on = [name for name, v in (("lower", ci[0]), ("upper", ci[1])) if round(v, 2) == atom_pp]
+    if not on:
+        return None
+    note = (f"TGC's {' and '.join(on)} bound sits on the threshold's nearest atom ({k}/{n} = {atom_pp:+.2f} pp): "
+            "on the atom, not a pass or fail by a hair (A1 §5.2)")
+    tgc["atom_note"] = note
+    return note
+
+
+def a1_r2_signflip_disagreement(row: dict[str, Any]) -> Optional[str]:
+    """B1, A1 §5.5 (:317-318): the cluster sign-flip p beside the bootstrap verdict; a disagreement is said in the
+    verdict's sentence. For P5 (supported by a non-rejection) the bootstrap event is 'significantly positive'."""
+    perm = row.get("permutation_sensitivity")
+    v = row.get("verdict")
+    if not row.get("decidable") or not isinstance(perm, dict) or perm.get("p_value") is None:
+        return None
+    if v not in ("supported", "not_supported", "reversed", "directionally_consistent"):
+        return None
+    p = float(perm["p_value"])
+    point = ((row.get("contrast") or {}).get("scenario") or {}).get("diff_pp")
+    if row.get("rule") == "not_positive_excluding_zero":
+        boot, sign = v == "not_supported", p <= 0.05 and (point or 0) > 0
+    else:
+        boot, sign = v in ("supported", "reversed"), p <= 0.05
+    if boot == sign:
+        return None
+    return (f"the cluster sign-flip p ({perm.get('method')}, {perm.get('alternative', 'two-sided')}) is {p:.4f}, "
+            f"which {'rejects' if sign else 'does not reject'} at 0.05 and so disagrees with the bootstrap verdict "
+            "(A1 §5.5; not decision-bearing)")
+
+
+def a1_r2_sentences(report: dict[str, Any], asks: dict[str, Any]) -> dict[str, str]:
+    """B1, B2, B4 and B3's BY: one sentence per P row and CF1 carrying what A1 says must share it."""
+    am1 = report.get("amendment1") if isinstance(report.get("amendment1"), dict) else {}
+    p = {r["id"]: r for r in report.get("predictions") or []}
+    cf = am1.get("cf") if isinstance(am1.get("cf"), dict) else {}
+    cf1 = _a1_r2_find(cf.get("predictions"), "CF1")
+    by_key = "multiplicity_sensitivity_hstar" if am1.get("registered_h") == "hstar" and isinstance(
+        am1.get("multiplicity_sensitivity_hstar"), dict) else "multiplicity_sensitivity"
+    by_flags = {f["id"]: f for f in (am1.get(by_key) or {}).get("flags") or []}
+    ask_pc = (asks or {}).get("per_contrast") or {}
+    out: dict[str, str] = {}
+    for row in list(p.values()) + ([cf1] if cf1 else []):
+        rid, v = row["id"], row.get("verdict")
+        parts: list[str] = []
+        if row.get("kind") == "cost_ratio":
+            head = (f"{rid} ({row.get('left')} vs {row.get('right')}, cost): {v}"
+                    + (f", ratio {row['ratio']}" if row.get("ratio") is not None else ""))
+            am4 = row.get("amendment4") or {}
+            if am4:
+                parts.append(f"Amendment 4: calls clause under both conventions {am4.get('calls_holds_both')}, "
+                             f"tokens clause {am4.get('tokens_holds_both')}")
+        else:
+            sc = (row.get("contrast") or {}).get("scenario") or {}
+            head = f"{rid} ({row.get('left')} − {row.get('right')}, goal_pass): {v}"
+            if row.get("decidable"):
+                holm = row.get("holm") or {}
+                head += (f", {_a1_r2_pp(sc.get('diff_pp'))} pp, scenario {_a1_r2_ci(sc.get('ci95_pp'))}"
+                         + (f", Holm-adjusted p {holm['p_adjusted']:.4f}" if holm.get("p_adjusted") is not None
+                            else ""))
+            elif row.get("reason"):
+                head += f" ({row['reason']})"
+            if row.get("decidable"):  # a refused row draws no reading (A9), so nothing is said about its bounds
+                for note in (a1_r2_signflip_disagreement(row), a1_r2_tgc_atom(row)):
+                    if note:
+                        parts.append(note)
+        if rid == "P1":
+            parts.append("described only as correction-prompt advice at every step against the m = 11 prefix, never "
+                         "as advice at matched budget or as ruling out a budget effect (Amendment 1 §E, A1:829-833)")
+            v2 = (p.get("P2") or {}).get("verdict")
+            if v2 == "not_supported":
+                parts.append("P2 is not supported, so P1 is uninterpretable as a channel result and is reported as a "
+                             f"budget-confounded comparison, whatever its sign [{A1_PREREG}:358-359]")
+            elif v2 != "supported":
+                parts.append(f"P2 is not decided ({v2}): P1 cannot be read as a channel result until it is "
+                             f"[{A1_PREREG}:358-359]")
+        if rid == "P3":
+            parts.append("non-inferiority to the medium-effort planner in this harness, never to the planner at its "
+                         "best effort (Amendment 2, A1:914-918); dev, exploratory: the high-effort planner alone "
+                         "scores +11.97 pp goal_pass above the medium one on 114 keys [+6.14, +18.43], and against it "
+                         "prefix_m11 is not non-inferior (ceiling − arm +7.22 [+3.21, +11.47]; CEILHI-01, CEILHI-03)")
+            for key, what in (("handoff_only_ni_hstar", "handoff-only (h*, registered, Amendment 3)"),
+                              ("handoff_only_ni", "flag companion")):
+                b1 = _a1_r2_find(am1.get(key), "B1a")
+                if b1 is None:
+                    continue
+                s = _a1_r2_ho(b1.get("goal_pass")) or {}
+                parts.append(f"{what} B1a: {s.get('ni_reading', b1.get('status'))}, {_a1_r2_pp(s.get('diff_pp'))} pp "
+                             f"over {s.get('n_handoff')} handoff pairs, scenario {_a1_r2_ci(s.get('ci95_pp_scenario'))} "
+                             "(Amendment 1 §B1, A1:735; never changes P3's verdict)")
+        if rid == "P6":
+            e5 = _a1_r2_find(report.get("exploratory_contrasts"), "E5") or {}
+            e5sc = (e5.get("goal_pass") or {}).get("scenario") if isinstance(e5.get("goal_pass"), dict) else None
+            e5txt = ("not run" if e5.get("status") == "not_run" or e5sc is None
+                     else f"{_a1_r2_pp(e5sc.get('diff_pp'))} pp {_a1_r2_ci(e5sc.get('ci95_pp'))}")
+            cf1v = (cf1 or {}).get("verdict") if cf.get("status") != "not_run" else "not run"
+            if v == "supported":
+                parts.append(f'reported as "actions beat the registered advice prompt" [{A1_PREREG}:441-443], never '
+                             "as a channel effect without that qualification")
+            parts.append(f"E5 (takeover − neutral-prompt advice, exploratory): {e5txt}; CF1: {cf1v}")
+            if cf1v == "supported":
+                parts.append('CF1 is supported, so P6 is reported only as "actions beat correction-prompt advice", '
+                             "never as a channel effect (Amendment 1 §C)")
+        pc = ask_pc.get(rid)
+        if pc and pc.get("bound_reaches_1pp"):
+            sides = ", ".join(f"{a} {b:.2f} pp" for a, b in pc["bound_pp"].items() if b is not None)
+            parts.append(f"live-answered executor asks bound the arm means at {sides} (Amendment 1 §I; no verdict "
+                         "changes)")
+        flag = by_flags.get(rid)
+        if flag and flag.get("sentence"):
+            parts.append(f"{flag['sentence']} ({'h*' if by_key.endswith('hstar') else 'flag'} BY family, "
+                         "Amendment 1 §F)")
+        out[rid] = head + ("; " + "; ".join(parts) if parts else "") + "."
+        row["verdict_sentence"] = out[rid]
+    return out
+
+
+def a1_r2_provenance_statement(arm_dirs: dict[str, Path]) -> dict[str, Any]:
+    """B7, §7 item 8 (A1:527-528) from the episode manifests: the model requested, the CLI version, and that the
+    served model is not observable (A1 §9.1)."""
+    per_arm: dict[str, Any] = {}
+    models: Counter[str] = Counter()
+    cli: Counter[str] = Counter()
+    for label, root in arm_dirs.items():
+        m_c: Counter[str] = Counter()
+        c_c: Counter[str] = Counter()
+        for path in sorted(Path(root).rglob("result.json")) if Path(root).exists() else []:
+            try:
+                prov = (json.loads((path.parent / "manifest.json").read_text(encoding="utf-8")) or {}).get("provenance")
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+                continue
+            if not isinstance(prov, dict) or prov.get("planner_type") != "codex":
+                continue
+            m_c[str(prov.get("planner_model_requested"))] += 1
+            c_c[str(prov.get("planner_cli_version"))] += 1
+        if m_c:
+            per_arm[label] = {"planner_model_requested": dict(m_c), "planner_cli_version": dict(c_c)}
+        models.update(m_c)
+        cli.update(c_c)
+    seen_m = ", ".join(f"{m} ({n})" for m, n in sorted(models.items())) or "no hosted episode manifest"
+    seen_c = ", ".join(f"{c} ({n})" for c, n in sorted(cli.items())) or "none"
+    return {
+        "citation": f"{A1_PREREG}:527-528 (§7 item 8), §9.1",
+        "pinned": A1_R2_PIN,
+        "per_arm": per_arm,
+        "statement": (f"Hosted episodes requested {seen_m}, through codex CLI {seen_c} (pinned: gpt-5.6-luna at "
+                      "0.153.4). The model that actually served a call is not observable: neither the codex exec "
+                      "--json stream nor the session transcript carries a server-reported model id, so the "
+                      "no-substitution rule is enforced on the request side only."),
+    }
+
+
+def a1_r2_phase_b(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    tasks: list[str],
+    seeds: list[int],
+    *,
+    pairwise: bool,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """Phase B: rows and wording only; no verdict, family, threshold or exit code moves."""
+    a1_r2_hstar_labels(report)  # B3 (before the sentences, which read the registered BY family)
+    asks = a1_r2_executor_asks(report, arms, arm_dirs, tasks, seeds)  # B4
+    report["executor_asks"] = asks
+    rates = a1_r2_limit_rates(report, arms)  # B6 (§D1)
+    report["p3_limit_excluded"] = a1_r2_p3_limit_excluded(arms, n_boot=n_boot, seed=seed)  # B6 (A1:378-382)
+    if pairwise:
+        report["pairwise_contrasts"] = a1_r2_pairwise(report, arms, rates, n_boot=n_boot, seed=seed)  # B6
+    else:
+        report["pairwise_contrasts"] = {"status": "not_computed", "reason": "pairwise=False (build_report_a1)"}
+    report["content_descriptives"] = a1_r2_content(  # B5
+        {a: arm for a, arm in arms.items() if not (report.get("arms_11_12_not_run") and a in A1_PAIR_ARMS)},
+        arm_dirs)
+    report["verdict_sentences"] = a1_r2_sentences(report, asks)  # B1, B2, B4, B3's BY
+    report["j9_claim_f1"] = A1_R2_J9_F1  # B7 (§7 item 5)
+    report["provenance_statement"] = a1_r2_provenance_statement(arm_dirs)  # B7 (§7 item 8)
+    report["tgc_scored_as_recorded"] = {  # B7
+        a: arm.get("tgc_scored_as_recorded") for a, arm in arms.items() if arm.get("tgc_scored_as_recorded")}
+    report.setdefault("unit_r2", {})["phase_b"] = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"]
     return report
 
 

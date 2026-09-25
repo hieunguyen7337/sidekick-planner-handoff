@@ -66,6 +66,44 @@ def write_family(root: Path, gp: dict, **kw) -> dict[str, Path]:
 
 CONSTANT = {"prefix_m11": 0.75, "prefix_m6": 0.625, "prefix_zs_m11": 0.625, "prefix_zs_m6": 0.5}
 ALL_H = {k: True for k in KEYS}
+PLAN = j12.J12_PLAN_SOURCE_ARM
+REG = j12.j12_registered_campaigns()  # label -> the campaign id its config declares
+
+
+def write_plan_source(root: Path, name: str, *, planless=(), crash=(), manifest_split: str = "dev") -> Path:
+    """J10 arm 3 in runner layout (system planner_alone): a scored episode per key whose last attempt wrote a
+    plan, except `planless` keys (no plan event) and `crash` keys (error_type crash)."""
+    arm_root = root / name
+    for task_id, seed in KEYS:
+        key = (task_id, seed)
+        dest = arm_root / "planner_alone" / str(seed) / task_id
+        dest.mkdir(parents=True, exist_ok=True)
+        events = [{"event_type": "run_start", "payload": {}}]
+        if key not in planless:
+            events.append({"event_type": "plan", "actor": "planner", "payload": {"packet": {"steps": ["x"]}}})
+        (dest / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), encoding="utf-8")
+        row = {"run_id": f"synth/{name}/{seed}/{task_id}", "task_id": task_id, "system": "planner_alone",
+               "seed": seed, "success": False, "tgc": 0.0, "goal_pass_rate": 0.5, "steps": 5,
+               "error_type": "crash" if key in crash else None}
+        (dest / "result.json").write_text(json.dumps(row) + "\n", encoding="utf-8")
+        (dest / "manifest.json").write_text(json.dumps({"provenance": {"split": manifest_split}}), encoding="utf-8")
+    return arm_root
+
+
+def registered_family(root: Path, gp: dict = CONSTANT, *, arm3: bool = True, arm3_kw: dict | None = None,
+                      **kw) -> dict[str, Path]:
+    """The four contrast arms and arm 3 under their registered campaign ids, test_normal manifests; the m = 11
+    arms hand off everywhere unless kw says otherwise."""
+    per = {"prefix_m11": {"handoff": ALL_H}, "prefix_zs_m11": {"handoff": ALL_H}}
+    dirs = {label: write_arm(root, REG[label], gp[label], manifest_split="test_normal",
+                             **(per.get(label, {}) | kw.get(label, {}))) for label in j12.J12_ARMS}
+    if arm3:
+        dirs[PLAN] = write_plan_source(root, REG[PLAN], manifest_split="test_normal", **(arm3_kw or {}))
+    return dirs
+
+
+def registered_read(dirs: dict[str, Path], **kw):
+    return report_for(dirs, split="test_normal", confirm_heldout_test_split=True, n_boot=j10.A1_BOOTSTRAP_N, **kw)
 
 
 def report_for(dirs: dict[str, Path], **kw):
@@ -409,11 +447,11 @@ def test_other_a1_refusals_hold(tmp_path: Path):
     assert j12.main(["--split", "dev", "--arm", f"prefix_m9={tmp_path}"]) == 2  # unknown label
 
 
-def test_confirmed_test_normal_read_writes_the_json_and_the_md(tmp_path: Path, capsys):
-    kw = {a: {"manifest_split": "test_normal"} for a in j12.J12_ARMS}
-    kw["prefix_m11"]["handoff"] = ALL_H
-    kw["prefix_zs_m11"]["handoff"] = ALL_H
-    dirs = write_family(tmp_path / "t", CONSTANT, **kw)
+def test_confirmed_test_normal_read_writes_the_json_and_the_md(tmp_path: Path, capsys, monkeypatch):
+    # R1 (2026-09-25): the registered read now needs arm 3 and each arm under its registered campaign id, at the
+    # registered 168 tasks; the fixture's 12 tasks stand in for 168 (the guard itself: test_n4_*).
+    monkeypatch.setattr(j12, "J12_TEST_N_TASKS", len(TASKS))
+    dirs = registered_family(tmp_path / "t")
     out = tmp_path / "j12_depth_test_normal.report.json"
     code = j12.main(["--split", "test_normal", "--confirm-heldout-test-split", *_argv(dirs), "--out", str(out)])
     capsys.readouterr()
@@ -546,3 +584,209 @@ def test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete(tmp_path: Path
     d = by_id(report)
     assert d["D1"]["verdict"] == d["D3"]["verdict"] == "refused_incomplete"
     assert report["j12_am2_divergence"]["per_arm"]["prefix_m6"]["n_crash_other"] == 1
+
+
+# ---- R1 (2026-09-25): the J12 pre-read audit's findings ------------------------------------------------------
+# REVERSED: d = +0.125 on sc0 and -0.5 on sc1-sc3. A scenario resample has a mean >= 0 only if all four draws are
+# sc0 (1 / 256), so the 97.5th percentile is negative: the upper bound is below 0, a reversal, p (less) ~ 0.008.
+REVERSED = dict(CONSTANT, prefix_m11={k: (0.75 if k[0].startswith("sc0") else 0.125) for k in KEYS})
+
+
+def test_n1_a_reversal_carries_its_one_sided_less_p_unadjusted(tmp_path: Path):
+    dirs = write_family(tmp_path, REVERSED, prefix_m11={"handoff": ALL_H}, prefix_zs_m11={"handoff": ALL_H})
+    report, _ = report_for(dirs)
+    d1, d3 = by_id(report)["D1"], by_id(report)["D3"]
+    assert d1["decidable"] and d1["reversal_unadjusted"] is True and d1["contrast"]["scenario"]["ci95_pp"][1] < 0
+    # Computed as j10_report.bootstrap_pvalue(..., direction="less") at 0 on the D's own scenario resamples.
+    arms = {a: j10.a1_arm_episodes(a, j10.load_arm_tree(p), TASKS, list(SEEDS)) for a, p in dirs.items()}
+    means = j10.a1_contrast(arms["prefix_m11"]["episodes"], arms["prefix_m6"]["episodes"], "goal_pass_rate",
+                            n_boot=N_BOOT, seed=j10.A1_BOOTSTRAP_SEED)["scenario"]["_means"]
+    assert d1["p_value_less_unadjusted"] == j10.bootstrap_pvalue(means, 0.0, "less")
+    assert 0.0 < d1["p_value_less_unadjusted"] < 0.05
+    assert d3["reversal_unadjusted"] is True and 0.0 < d3["p_value_less_unadjusted"] < 0.05
+    assert "one-sided p (less)" in d1["verdict_sentence"] and d1["verdict_sentence"] in report["headline"]
+    md = j12.render_markdown(report, "x.json")
+    assert f"one-sided p (less), unadjusted: D1 {d1['p_value_less_unadjusted']}" in md
+    assert "reported as a primary finding" in md
+    # No reversal, no p (less): D2 is supported.
+    assert "p_value_less_unadjusted" not in by_id(report)["D2"]
+
+
+def test_n2_an_incomplete_d_draws_no_reversal_and_no_primary_finding(tmp_path: Path):
+    dirs = write_family(tmp_path, REVERSED, prefix_m11={"handoff": ALL_H}, prefix_zs_m11={"handoff": ALL_H},
+                        prefix_m6={"error_types": {("sc1_2", 2): "crash"}})
+    report, code = report_for(dirs)
+    d1 = by_id(report)["D1"]
+    assert code == 1 and d1["verdict"] == "refused_incomplete"
+    assert d1["contrast"]["scenario"]["ci95_pp"][1] < 0  # the interval would read a reversal ...
+    assert d1["reversal_unadjusted"] is None and "p_value_less_unadjusted" not in d1  # ... but none is drawn
+    assert report["readings"]["bplus"]["reversals_unadjusted"] == []
+    assert "primary finding" not in j12.render_markdown(report, "x.json")
+
+
+def test_n6_not_supported_is_printed_as_not_replicated(tmp_path: Path):
+    # d = 0 everywhere on the tailored receiver: D1 and D3 are not supported (and no reversal).
+    dirs = write_family(tmp_path, dict(CONSTANT, prefix_m11=0.625), prefix_m11={"handoff": ALL_H},
+                        prefix_zs_m11={"handoff": ALL_H})
+    report, _ = report_for(dirs)
+    assert report["verdicts"]["D1"] == "not_supported"  # the JSON value is unchanged
+    assert "D1 not replicated" in report["headline"] and "not_supported" not in report["headline"]
+    md = j12.render_markdown(report, "x.json")
+    d1_row = next(x for x in md.splitlines() if x.startswith("| D1 |"))
+    assert d1_row.endswith("| not replicated |") and "not_supported" not in md.split("## Readings")[0]
+
+
+def test_n8_both_silenced_counts_are_printed_and_labelled(tmp_path: Path):
+    # As test_d3_reads_h_star_*: m11's flag is true on 12 keys, h* on 18 (sc3's prefix was terminal).
+    flag = {k: k[0].startswith(("sc0", "sc1")) for k in KEYS}
+    live = {k for k in KEYS if not k[0].startswith("sc3")}
+    dirs = write_family(tmp_path, CONSTANT, prefix_m11={"handoff": flag, "live": live},
+                        prefix_zs_m11={"handoff": ALL_H})
+    report, _ = report_for(dirs)
+    hs = report["beside"]["silenced_counts_h_star"]["prefix_m11"]
+    assert (hs["n_handoff"], hs["n_no_handoff"], hs["h"]) == (18, 6, "h_star")
+    assert report["beside"]["silenced_counts"]["prefix_m11"]["n_no_handoff"] == 12  # h_flag, as before
+    md = j12.render_markdown(report, "x.json")
+    assert ("- silenced count prefix_m11 (m = 11), by handoff_occurred: handoff 12, no handoff 12, flag missing 0; "
+            "by h*: handoff 18, no handoff 6, h* undefined 0") in md
+
+
+def test_n9_a_d3_on_the_boundary_prints_one_explicit_line():
+    results = [{"id": "D1", "verdict": "supported"}, {"id": "D2", "verdict": "refused_incomplete"},
+               {"id": "D3", "verdict": "on_boundary"}, {"id": "D4", "verdict": "supported"}]
+    rd = j12.j12_readings(results)
+    assert rd["bplus"]["reading"] is None
+    assert rd["bplus"]["no_reading_reason"] == (
+        "D1 supported, but the D1 / D3 pattern reading cannot apply: D3 is on_boundary, and J12 §4 fixes readings "
+        "only for D3 supported or not replicated")
+    assert rd["zs"]["no_reading_reason"].startswith("no fixed reading: D2 is refused_incomplete")
+    results[2]["verdict"] = "refused_incomplete"
+    assert "D3 is refused_incomplete" in j12.j12_readings(results)["bplus"]["no_reading_reason"]
+
+
+def test_n10_a_disagreeing_sign_flip_is_in_the_verdicts_sentence_and_tgc_atoms_are_noted(tmp_path: Path):
+    dirs = write_family(tmp_path, CONSTANT, prefix_m11={"handoff": ALL_H}, prefix_zs_m11={"handoff": ALL_H})
+    report, _ = report_for(dirs)
+    d1 = by_id(report)["D1"]
+    # Four equal positive scenario sums: the exact two-sided sign-flip p is 2 / 16 = 0.125 > 0.05, while the
+    # bootstrap interval [12.5, 12.5] excludes 0: they disagree, and the sentence says so beside "supported".
+    assert d1["permutation_sensitivity"]["p_value"] == 0.125 and d1["verdict"] == "supported"
+    sf = d1["signflip_disagreement"]
+    assert (sf["agrees"], sf["bootstrap_side"], sf["signflip_side"], sf["level"]) == (False, "above", None, 0.05)
+    assert d1["verdict_sentence"] == (
+        "D1 supported; the scenario sign-flip p = 0.125 (two-sided) does not reject at 0.05 while the bootstrap "
+        "interval excludes +0.00 pp (A1 §5.5; not decision-bearing)")
+    assert d1["verdict_sentence"] in report["headline"]
+    assert f"- {d1['verdict_sentence']}" in j12.render_markdown(report, "x.json")
+    # An agreeing pair adds nothing; a rejecting sign-flip against an interval that includes 0 is a disagreement.
+    agree = {"id": "D2", "decidable": True, "threshold_pp": 0.0, "verdict": "supported",
+             "events_unadjusted": {"lo_above_threshold": True, "hi_below_threshold": False},
+             "permutation_sensitivity": {"p_value": 0.01, "alternative": "two-sided"},
+             "contrast": {"scenario": {"diff_pp": 3.0}}}
+    assert j12.j12_signflip_disagreement(agree)["sentence"] is None
+    assert j12.j12_verdict_sentence(dict(agree, signflip_disagreement=j12.j12_signflip_disagreement(agree))) == \
+        "D2 supported"
+    wide = dict(agree, events_unadjusted={"lo_above_threshold": False, "hi_below_threshold": False})
+    assert "rejects at 0.05 while the bootstrap interval includes" in j12.j12_signflip_disagreement(wide)["sentence"]
+    # TGC is 0.0 in every fixture episode: every TGC bound is 0.00 pp, the atom at the threshold. One note per D's
+    # TGC row, naming every bound on the atom.
+    notes = report["beside"]["tgc_atom_notes"]
+    assert notes["D1"] == ("D1 TGC: the scenario lower and upper and the task lower and upper bounds sit on the atom "
+                           "at the threshold 0 (A1 §5.2)")
+    assert notes["D3"] == ("D3 TGC: the handoff-only scenario lower and upper, the handoff-only task lower and upper, "
+                           "the all-episode scenario lower and upper and the all-episode task lower and upper bounds "
+                           "sit on the atom at the threshold 0 (A1 §5.2)")
+    md = j12.render_markdown(report, "x.json")
+    assert all(md.count(notes[d]) == 1 for d in ("D1", "D2", "D3", "D4")) and md.count("(A1 §5.2)") == 4
+    # Only the bounds on the atom are named; none on it, no note; a threshold other than 0 is not checked here.
+    tgc = lambda s, t: {"scenario": {"ci95_pp": s}, "task": {"ci95_pp": t}}  # noqa: E731
+    one = {"id": "D2", "threshold_pp": 0.0}
+    assert j12.j12_tgc_atom_notes(one | {"tgc_secondary": tgc([0.004, 12.5], [-3.0, 5.0])}) == \
+        "D2 TGC: the scenario lower bound sits on the atom at the threshold 0 (A1 §5.2)"
+    assert j12.j12_tgc_atom_notes(one | {"tgc_secondary": tgc([-6.25, 0.0], [-0.001, 0.0])}) == \
+        "D2 TGC: the scenario upper and the task lower and upper bounds sit on the atom at the threshold 0 (A1 §5.2)"
+    assert j12.j12_tgc_atom_notes(one | {"tgc_secondary": tgc([0.01, 12.5], [-3.0, 5.0])}) is None
+    assert j12.j12_tgc_atom_notes(one | {"threshold_pp": 7.0, "tgc_secondary": tgc([0.0, 0.0], [0.0, 0.0])}) is None
+
+
+def test_n13_citations_name_the_committed_amendment_and_the_pin():
+    assert not any("pending" in p["citation"] for p in j12.J12_PREDICTIONS)
+    assert [p["citation"] for p in j12.J12_PREDICTIONS[2:]] == [f"{j12.J12_PREREG} §3-§4; h* per J12 Amendment 1"] * 2
+    doc = j12.__doc__
+    assert "pending" not in doc and "loop.py:743-756 at the arms' pin 6f40fec" in doc
+    assert "j17_depth_fixes.py:329-346" in doc and "their own Holm" in doc
+
+
+def test_n3_a_registered_read_without_arm3_is_refused_with_the_full_read_command(tmp_path: Path, capsys,
+                                                                               monkeypatch):
+    monkeypatch.setattr(j12, "J12_TEST_N_TASKS", len(TASKS))
+    dirs = registered_family(tmp_path / "r", arm3=False)
+    out = tmp_path / "r.report.json"
+    code = j12.main(["--split", "test_normal", "--confirm-heldout-test-split", *_argv(dirs), "--out", str(out)])
+    text = capsys.readouterr().out
+    assert code == 2 and not out.exists()
+    command = j12.j12_read_command(REG)
+    assert command in json.loads(text)["reason"]
+    assert command.startswith("python scripts/analysis/j12_report.py --split test_normal --confirm-heldout-test-split")
+    for label in (*j12.J12_ARMS, PLAN):
+        assert f"--arm {label}={j10.RAW_RESULTS_ROOT / REG[label]}" in command
+
+
+def test_n3_n7_arm3_incomplete_or_planless_above_the_cap_is_not_run(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(j12, "J12_TEST_N_TASKS", len(TASKS))
+    for case, arm3_kw, why in (
+            ("crash", {"crash": {("sc2_2", 1)}}, "J10 arm 3 (planner_alone_cap81) is incomplete: 23/24 non-crashed"),
+            ("planless", {"planless": {("sc0_1", 1), ("sc1_1", 2)}}, "2 planless arm-3 keys > cap 1")):
+        report, code = registered_read(registered_family(tmp_path / case, arm3_kw=arm3_kw))
+        assert code == 1 and report["status"] == "NOT_RUN", case
+        assert report["headline"].startswith(f"J12 not run: {why}") and "Verdicts" not in report["headline"]
+        assert report["verdicts"] == {d: "not_run" for d in ("D1", "D2", "D3", "D4")}
+        assert report["label"].startswith("J12 NOT RUN") and report["not_the_j12_result"] is True
+        assert by_id(report)["D1"]["computed_not_registered"]["verdict"] == "supported"  # kept, for diagnosis
+        assert all(r["reading"] is None for r in report["readings"].values())
+        md = j12.render_markdown(report, "x.json")
+        assert "| supported |" not in md and "(h*: supported)" not in md
+    assert report["planless_contingency"]["plan_source_arm"]["complete"] is True
+
+
+def test_n4_a_registered_read_needs_seeds_1_2_and_168_tasks(tmp_path: Path):
+    dirs = {label: tmp_path / REG[label] for label in (*j12.J12_ARMS, PLAN)}
+    report, code = registered_read(dirs, seeds=[1], expected_n_tasks=168)
+    assert code == 2 and "seeds [1]" in report["reason"]
+    report, code = registered_read(dirs, seeds=[1, 2, 3], expected_n_tasks=168)
+    assert code == 2 and "seeds [1, 2, 3]" in report["reason"]
+    report, code = registered_read(dirs, expected_n_tasks=57)
+    assert code == 2 and "--expected-n-tasks 57" in report["reason"] and "all 168 test_normal tasks" in report["reason"]
+
+
+def test_n5_each_arm_is_read_only_from_its_registered_campaign(tmp_path: Path):
+    # The ids are §2's table, read from the configs; arm 3's is J10's.
+    assert REG == {"prefix_m6": "j12_prefix_m6_20260924", "prefix_zs_m6": "j12_prefix_zs_m6_20260924",
+                   "prefix_m11": "j10_prefix_m11_20260924", "prefix_zs_m11": "j10_prefix_zs_m11_20260924",
+                   PLAN: "j10_planner_alone_cap81_20260924"}
+    good = {label: tmp_path / REG[label] for label in (*j12.J12_ARMS, PLAN)}
+    for label, bad in (("prefix_m6", tmp_path / "prefix_m6"), ("prefix_m11", tmp_path / REG["prefix_zs_m11"]),
+                       (PLAN, tmp_path / "j10_planner_alone_cap81_20260924_copy")):
+        report, code = registered_read(dict(good, **{label: bad}), expected_n_tasks=168)
+        assert code == 2 and f"on test_normal {label} is the registered campaign {REG[label]}" in report["reason"]
+
+
+def test_refill_confirmation_gates_a_divergent_key_on_the_registered_read(tmp_path: Path, monkeypatch):
+    """J12 Amendment 2 / A1 Amendment 5 §B.1: a divergent key counts only after a crash-only resumption run."""
+    monkeypatch.setattr(j12, "J12_TEST_N_TASKS", len(TASKS))
+    dirs = registered_family(tmp_path)
+    _am2_crash(dirs["prefix_m11"], [AM2_KEY])
+    report, code = registered_read(dirs)
+    blk = report["j12_am2_divergence"]
+    assert code == 1 and report["status"] == "INCOMPLETE"
+    assert "divergent_keys_need_refill_confirmation:1" in report["incomplete_reasons"]
+    assert blk["refill_confirmed_by_operator"] is False and blk["resumption_condition"]["required"] is True
+    md = j12.render_markdown(report, "x.json")
+    assert "INCOMPLETE until confirmed" in md and "--divergent-refill-confirmed" in md
+    report, code = registered_read(dirs, divergent_refill_confirmed=True)
+    assert code == 0 and report["status"] == "COMPLETE", report["headline"]
+    assert report["j12_am2_divergence"]["refill_confirmed_by_operator"] is True
+    assert by_id(report)["D1"]["n_noncrashed_pairs"] == 23
+    # No divergent key: the flag is irrelevant.
+    report, code = registered_read(registered_family(tmp_path / "clean"))
+    assert code == 0 and report["j12_am2_divergence"]["refill_confirmed_by_operator"] is None

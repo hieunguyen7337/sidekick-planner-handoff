@@ -12,9 +12,10 @@ bound of the scenario-clustered 95 % interval above 0 and the Holm-adjusted p <=
 h* (scripts/analysis/handoff_control.py) is 1 iff the loop ran live after the replayed prefix. It
 replaces handoff_occurred (effective_m < n_source_actions, src/sidekick/prefix_source.py:184), which is
 false whenever the source made at most m executed actions even if its prefix was not terminal and the
-executor then took control (src/sidekick/systems/loop.py:743-756); the pending J12 Amendment 1 makes h*
-the registered D3 / D4 estimand. The flag versions are kept as the sensitivity keys D3_flag / D4_flag
-(``sensitivity_h_flag``), re-read in the same Holm family of four; D1 / D2 do not use h.
+executor then took control (src/sidekick/systems/loop.py:743-756 at the arms' pin 6f40fec; the block has
+moved at HEAD); J12 Amendment 1 (committed) makes h* the registered D3 / D4 estimand. The flag versions
+are kept as the sensitivity keys D3_flag / D4_flag (``sensitivity_h_flag``), re-read in their own Holm
+family of four (D1, D2, D3_flag, D4_flag), apart from the registered family; D1 / D2 do not use h.
 
 Reuse, not re-implementation
 ----------------------------
@@ -28,7 +29,7 @@ a margin of 0), the decomposition (am1_decomposition), the silenced counts (a1_n
 the limit rates (am1_limit_rates), the planless keys and their verdict rule (a1_planless_keys,
 a1_apply_key_exclusion) and the protocol guard (a1_protocol_guard). 10,000 draws, seed 20260924.
 
-The handoff-only estimand mirrors scripts/analysis/j17_depth_fixes.py:329-350 (paired_components):
+The handoff-only estimand mirrors scripts/analysis/j17_depth_fixes.py:329-346 (paired_components):
 d = m11 − m6 per (task_id, seed), h from the m11 arm, a missing flag counted as h = 0, whole clusters
 resampled. j17 is not imported: it refuses held-out paths by design.
 
@@ -44,9 +45,12 @@ test_normal) is incomplete and draws no reading.
 Interface:
   python scripts/analysis/j12_report.py --split test_normal --confirm-heldout-test-split \\
       --arm prefix_m6=DIR --arm prefix_zs_m6=DIR --arm prefix_m11=DIR --arm prefix_zs_m11=DIR \\
-      [--arm planner_alone_cap81=DIR] [--out campaign/results/j12_depth_test_normal.report.json]
-  --plumbing-check is accepted only on dev, and only over *_dryrun campaigns; test_challenge is
-  always refused.
+      --arm planner_alone_cap81=DIR [--divergent-refill-confirmed] \\
+      [--out campaign/results/j12_depth_test_normal.report.json]
+  On test_normal every DIR's name must be its arm's registered campaign id (§2; arm 3's is J10's), arm 3
+  is required, and --seeds / --expected-n-tasks must be the registered 1,2 / 168. Arm 3 incomplete or its
+  planless keys above the cap: J12 is reported NOT RUN (§6). --plumbing-check is accepted only on dev, and
+  only over *_dryrun campaigns; test_challenge is always refused.
 """
 from __future__ import annotations
 
@@ -99,6 +103,24 @@ REGISTERED_TEST_ID = re.compile(r"^j1[02]_[A-Za-z0-9_]+_20260924$")
 # prefix (the two M^r_6 arms and J10's prefix_m11 / prefix_zs_m11), so D1-D4 each remove the union of
 # their two arms' divergent keys (scripts/analysis/replay_divergence.py), up to 16.
 J12_AM2 = f"{J12_PREREG} Amendment 2"
+# The registered read (J12 §2, §6:164): seeds 1, 2 over all 168 test_normal tasks, the four contrast arms and
+# J10 arm 3, each under its registered campaign id, read from its config's campaign_id (never typed here).
+J12_TEST_SEEDS: tuple[int, ...] = (1, 2)
+J12_TEST_N_TASKS = j10.A1_SPLIT_N_TASKS["test_normal"]  # 168
+J12_ARM_CONFIGS: dict[str, str] = {**J12_ARMS, J12_PLAN_SOURCE_ARM: str(j10.A1_ARMS[J12_PLAN_SOURCE_ARM])}
+# J12 §4:103: a D that is not supported is reported as "not replicated". Display only: the JSON verdict stays.
+J12_VERDICT_WORDS = {"not_supported": "not replicated", "not_run": "not run"}
+# A1 §5.5 (A1:317-318): the sign-flip p is set against the bootstrap's unadjusted 95 % interval at the matching
+# level -- 0.05 two-sided, 0.025 one-sided (cluster_inference.registered_signflip does not double a one-sided p).
+J12_SIGNFLIP_LEVEL = {"two-sided": 0.05, "greater": 0.025, "less": 0.025}
+# A1 Amendment 5 §B.1 (J12 Amendment 2): a divergent key counts only after at least one crash-only resumption
+# run after the crash first appeared. The result files cannot show that; the operator confirms it.
+J12_REFILL_HOW = (
+    "confirm that each arm with a divergent key had at least one crash-only resumption run after the crash first "
+    "appeared: resubmit that arm's job line (scripts/pbs/j12_arm.pbs for a J12 arm, scripts/pbs/j10_arm.pbs for "
+    "J10's prefix_m11 / prefix_zs_m11), which purges the crashed episodes and re-runs only them; a later job's "
+    "'[j10] resume:' and '[j10] tally cid=... crashed=N' lines must show the same keys still crashed. Then re-run "
+    "this read with --divergent-refill-confirmed.")
 
 
 def _dev(key: str, diff_pp: float, ci: list[float], n_pairs: int, n_handoff: Optional[int] = None,
@@ -131,7 +153,7 @@ J12_PREDICTIONS: list[dict[str, Any]] = [
      "threshold_pp": 0.0, "holm_family": True,
      "statement": ("as D1 on handoff episodes: Σ d·h / Σ h > 0, h = h* of the prefix_m11 episode (the "
                    "executor took control after the replayed prefix)"),
-     "citation": f"{J12_PREREG} §3-§4; h* per the pending J12 Amendment 1",
+     "citation": f"{J12_PREREG} §3-§4; h* per J12 Amendment 1",
      "dev_reference": _dev("handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only", 7.66,
                            [1.19, 14.06], 171, n_handoff=88, source=J12_DEV_REPORT_HSTAR, h=hc.HSTAR_NAME),
      "dev_reference_flag": _dev("handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only", 12.03,
@@ -141,7 +163,7 @@ J12_PREDICTIONS: list[dict[str, Any]] = [
      "rule": J12_RULE, "threshold_pp": 0.0, "holm_family": True,
      "statement": ("as D2 on handoff episodes: Σ d·h / Σ h > 0, h = h* of the prefix_zs_m11 episode (the "
                    "executor took control after the replayed prefix)"),
-     "citation": f"{J12_PREREG} §3-§4; h* per the pending J12 Amendment 1",
+     "citation": f"{J12_PREREG} §3-§4; h* per J12 Amendment 1",
      "dev_reference": _dev("handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only", 7.81,
                            [0.79, 13.95], 171, n_handoff=88, source=J12_DEV_REPORT_HSTAR, h=hc.HSTAR_NAME),
      "dev_reference_flag": _dev("handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only", 13.93,
@@ -235,6 +257,8 @@ def j12_evaluate_handoff_only(
     out["verdict_unadjusted"] = rule["decide"](st["point"], lo_above, hi_below)
     out["p_value"] = j10.bootstrap_pvalue(samples, t, rule["direction"])
     out["p_value_two_sided"] = j10.bootstrap_pvalue(samples, t, "two-sided")
+    # J12 §4:104-106: a reversal prints its one-sided "less" p, unadjusted; internal until one is read.
+    out["_p_less"] = j10.bootstrap_pvalue(samples, t, "less")
     if stability:
         # TGC beside it, through the handoff-depth helper (handoff-only and all-episode).
         out["tgc_secondary"] = j10.a1_handoff_depth(left, right, flags, j10.A1_METRIC_FIELDS["tgc"],
@@ -268,7 +292,20 @@ def j12_evaluate(
 ) -> dict[str, Any]:
     if pred["kind"] == "handoff_only":
         return j12_evaluate_handoff_only(pred, arms, handoff_flags, n_boot=n_boot, seed=seed, stability=stability)
-    return j10.a1_evaluate_contrast_prediction(pred, arms, n_boot=n_boot, seed=seed, stability=stability)
+    out = j10.a1_evaluate_contrast_prediction(pred, arms, n_boot=n_boot, seed=seed, stability=stability)
+    if stability and (out.get("events_unadjusted") or {}).get("hi_below_threshold"):
+        out["_p_less"] = j12_p_less_paired(pred, arms, n_boot=n_boot, seed=seed)
+    return out
+
+
+def j12_p_less_paired(pred: dict[str, Any], arms: dict[str, dict[str, Any]], *, n_boot: int, seed: int) -> float:
+    """J12 §4:104-106 for D1 / D2: j10_report.bootstrap_pvalue(..., direction="less") at the threshold, on the
+    scenario resamples a1_evaluate_contrast_prediction drew (the same arms, series, B and seed, so the same
+    draws); that function keeps only the 'greater' and two-sided p, so the resamples are drawn again here."""
+    left, right = j10.a1_am5_pair(arms, pred["left"], pred["right"])
+    series = j10.a1_paired_series(left["episodes"], right["episodes"], j10.A1_METRIC_FIELDS[pred["metric"]])
+    means = j10.a1_interval(series, "scenario", n_boot=n_boot, seed=seed)["_means"]
+    return j10.bootstrap_pvalue(means, float(pred["threshold_pp"]) / 100.0, "less")
 
 
 def j12_apply_pair_rule(r: dict[str, Any], arms: dict[str, dict[str, Any]], expected_pairs: int) -> None:
@@ -295,11 +332,16 @@ def j12_apply_pair_rule(r: dict[str, Any], arms: dict[str, dict[str, Any]], expe
 
 def j12_decide_family(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Holm over D1-D4 through a1_decide_family, then the unadjusted reversal flag (J12 §4: an upper
-    bound below 0 is reported as a primary finding; the "greater" p cannot reject for it)."""
+    bound below 0 is reported as a primary finding; the "greater" p cannot reject for it).
+
+    J12 §3:77-78: an incomplete contrast draws no reading, so the flag is read only for a decidable D
+    (None otherwise). A reversal carries its one-sided "less" p, unadjusted (§4:104-106)."""
     multiplicity = j10.a1_decide_family(results)
     for r in results:
         ev = r.get("events_unadjusted") or {}
-        r["reversal_unadjusted"] = bool(ev.get("hi_below_threshold")) if ev else None
+        r["reversal_unadjusted"] = bool(ev.get("hi_below_threshold")) if ev and r.get("decidable") else None
+        if r["reversal_unadjusted"]:
+            r["p_value_less_unadjusted"] = r.get("_p_less")
     return multiplicity | {"family_id": "J12", "citation": f"{J12_PREREG} §3"}
 
 
@@ -436,7 +478,7 @@ def j12_bound_rows(results: list[dict[str, Any]], live: dict[str, dict[str, Any]
         reach = [a for a, v in per.items() if v["bound_pp"] is not None and v["bound_pp"] >= J12_BOUND_FLAG_PP - 1e-12]
         sentence = None
         if reach:
-            sentence = (f"{r['id']} {r.get('verdict')}; " + "; ".join(
+            sentence = (f"{r['id']} {j12_word(r.get('verdict'))}; " + "; ".join(
                 f"{a}: {per[a]['n_episodes_live_answer']} episode(s) got a live answer to an executor ask, "
                 f"bounding its mean at {per[a]['bound_pp']:.2f} pp" for a in reach)
                 + f" ({A1_AM1_I}; no verdict changes).")
@@ -444,15 +486,109 @@ def j12_bound_rows(results: list[dict[str, Any]], live: dict[str, dict[str, Any]
     return out
 
 
+# ---- the verdict's sentence ----------------------------------------------------------------------
+def j12_word(verdict: Any) -> str:
+    """J12 §4:103: not_supported is printed "not replicated" wherever a verdict is printed; the JSON keeps the code."""
+    return J12_VERDICT_WORDS.get(verdict, str(verdict))
+
+
+def j12_signflip_disagreement(r: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """A1 §5.5 (A1:317-318, via J12 §3:71): a sign-flip p that disagrees with the bootstrap verdict is reported in
+    the verdict's sentence. Not decision-bearing.
+
+    Like is set against like: the bootstrap side is the unadjusted 95 % scenario interval's event against the
+    threshold (lo above / hi below, the events every verdict here is read from); the sign-flip side is its p at the
+    matching level (J12_SIGNFLIP_LEVEL), in the direction of the point estimate when the test is two-sided. A
+    one-sided test reaches only its own side. None when the D is not decidable or either p or events is absent."""
+    perm = r.get("permutation_sensitivity") or {}
+    p, ev = perm.get("p_value"), r.get("events_unadjusted")
+    if not r.get("decidable") or p is None or not ev:
+        return None
+    alt = perm.get("alternative", "two-sided")
+    level = J12_SIGNFLIP_LEVEL.get(alt, 0.05)
+    t_pp = float(r["threshold_pp"])
+    point_pp = ((r.get("contrast") or {}).get("scenario") or {}).get("diff_pp")
+    boot = ("above" if ev.get("lo_above_threshold") and alt in ("two-sided", "greater")
+            else "below" if ev.get("hi_below_threshold") and alt in ("two-sided", "less") else None)
+    flip = None
+    if float(p) <= level + 1e-12:
+        flip = ("above" if alt == "greater" else "below" if alt == "less"
+                else None if point_pp is None or point_pp == t_pp else "above" if point_pp > t_pp else "below")
+    out: dict[str, Any] = {
+        "rule": "A1 §5.5: a disagreement is reported in the same sentence as the verdict; not decision-bearing",
+        "basis": (f"bootstrap: the unadjusted 95 % scenario interval against {t_pp:+.2f} pp; sign-flip: its p at "
+                  f"{level} ({alt})"),
+        "p_value": p, "alternative": alt, "level": level, "bootstrap_side": boot, "signflip_side": flip,
+        "agrees": boot == flip, "sentence": None}
+    if boot != flip:
+        if boot and flip:
+            what = f"rejects at {level} on the {flip} side while the bootstrap interval lies {boot} {t_pp:+.2f} pp"
+        elif boot:
+            what = f"does not reject at {level} while the bootstrap interval excludes {t_pp:+.2f} pp"
+        else:
+            what = f"rejects at {level} while the bootstrap interval includes {t_pp:+.2f} pp"
+        out["sentence"] = f"the scenario sign-flip p = {float(p):.4g} ({alt}) {what} (A1 §5.5; not decision-bearing)"
+    return out
+
+
+def j12_tgc_atom_notes(r: dict[str, Any]) -> Optional[str]:
+    """A1 §5.2 (A1:275-277, via J12 §3:70): TGC is binary per episode, so its percentile bounds sit on atoms of the
+    paired-difference distribution; a bound equal to its threshold's nearest atom is reported as such, not as a
+    pass or fail by a hair. Every D's threshold is 0, itself an atom (k / n with k = 0 at any resample size n), so
+    a bound on it is one within 0.005 pp of 0. D1 / D2: tgc_secondary's scenario and task intervals; D3 / D4: its
+    handoff_only and all rows (a1_handoff_depth). At most one note per D's TGC row, naming every bound on the atom;
+    None when no bound is on it."""
+    t = float(r.get("threshold_pp", 0.0))
+    tgc = r.get("tgc_secondary") or {}
+    if t != 0.0 or not tgc:
+        return None
+    rows: list[tuple[str, Any]] = []
+    if r.get("kind") == "handoff_only":
+        for pop, name in (("handoff_only", "handoff-only"), ("all", "all-episode")):
+            for unit in ("scenario", "task"):
+                rows.append((f"{name} {unit}", (tgc.get(pop) or {}).get(f"ci95_pp_{unit}")))
+    else:
+        for unit in ("scenario", "task"):
+            rows.append((unit, (tgc.get(unit) or {}).get("ci95_pp")))
+    groups, n_bounds = [], 0
+    for where, ci in rows:
+        sides = [side for side, b in zip(("lower", "upper"), ci or ()) if b is not None and abs(float(b) - t) < 0.005]
+        if sides:
+            groups.append(f"the {where} {' and '.join(sides)}")
+            n_bounds += len(sides)
+    if not groups:
+        return None
+    named = groups[0] if len(groups) == 1 else ", ".join(groups[:-1]) + " and " + groups[-1]
+    verb = "bound sits" if n_bounds == 1 else "bounds sit"
+    return f"{r['id']} TGC: {named} {verb} on the atom at the threshold {t:g} (A1 §5.2)"
+
+
+def j12_verdict_sentence(r: dict[str, Any]) -> str:
+    """One D's verdict as printed: the J12 §4 word, a reversal's unadjusted 'less' p, and a disagreeing sign-flip."""
+    parts = [f"{r['id']} {j12_word(r.get('verdict'))}"]
+    if r.get("reversal_unadjusted"):
+        p_less = r.get("p_value_less_unadjusted")
+        parts.append("reversal (the unadjusted scenario interval's upper bound is below 0), a primary finding; "
+                     f"one-sided p (less) = {'—' if p_less is None else f'{float(p_less):.4g}'}, unadjusted")
+    note = (r.get("signflip_disagreement") or {}).get("sentence")
+    if note:
+        parts.append(note)
+    return "; ".join(parts)
+
+
 # ---- readings ----------------------------------------------------------------------------------
-def j12_readings(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """J12 §4's fixed readings, per receiver, from the final verdicts."""
+def j12_readings(results: list[dict[str, Any]], not_run: Optional[str] = None) -> dict[str, Any]:
+    """J12 §4's fixed readings, per receiver, from the final verdicts. When the D1 / D3 (D2 / D4) pattern cannot
+    apply -- the handoff-only D on the boundary or incomplete, or the all-episode D undecided -- the reason is
+    one explicit line. With `not_run` (§6's abort rule) no reading is drawn."""
     by_id = {r["id"]: r for r in results}
     out = {}
     for receiver, (all_id, ho_id) in J12_READING_PAIRS.items():
         va, vh = by_id[all_id].get("verdict"), by_id[ho_id].get("verdict")
         word = J12_RECEIVER_WORD[receiver]
-        if va == "supported" and vh == "supported":
+        if not_run:
+            key = None
+        elif va == "supported" and vh == "supported":
             key = "all_and_handoff"
         elif va == "supported" and vh == "not_supported":
             key = "all_not_handoff"
@@ -460,13 +596,23 @@ def j12_readings(results: list[dict[str, Any]]) -> dict[str, Any]:
             key = "all_not"
         else:
             key = None
-        reversals = [i for i in (all_id, ho_id) if by_id[i].get("reversal_unadjusted")]
+        if not_run:
+            reason: Optional[str] = f"J12 not run: {not_run}; no reading is drawn (J12 §6)"
+        elif key is not None:
+            reason = None
+        elif va == "supported":
+            reason = (f"{all_id} supported, but the {all_id} / {ho_id} pattern reading cannot apply: {ho_id} is "
+                      f"{j12_word(vh)}, and J12 §4 fixes readings only for {ho_id} supported or not replicated")
+        else:
+            reason = (f"no fixed reading: {all_id} is {j12_word(va)}, and J12 §4 fixes readings only for {all_id} "
+                      "supported or not replicated")
+        reversals = [] if not_run else [i for i in (all_id, ho_id) if by_id[i].get("reversal_unadjusted")]
         out[receiver] = {
             "ids": [all_id, ho_id],
             "verdicts": {all_id: va, ho_id: vh},
             "reading_key": key,
             "reading": None if key is None else J12_READINGS[key].format(receiver=word),
-            "no_reading_reason": None if key is not None else f"no fixed reading for {all_id}={va}, {ho_id}={vh}",
+            "no_reading_reason": reason,
             "not_supported_is_reported_as": "not replicated, never as evidence of no effect",
             "reversals_unadjusted": reversals,
         }
@@ -474,6 +620,30 @@ def j12_readings(results: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 # ---- protocol ------------------------------------------------------------------------------------
+def j12_registered_campaigns(repo_root: Path = REPO_ROOT) -> dict[str, str]:
+    """label -> the campaign id its config declares (J12 §2): the two J12 arms, J10's two m = 11 arms and J10
+    arm 3 (J12_ARM_CONFIGS). Raises ValueError if a config cannot be read or its id is not a registered one."""
+    import yaml  # lazy, as j11_report.resolve_campaigns
+
+    out: dict[str, str] = {}
+    for label, rel in J12_ARM_CONFIGS.items():
+        try:
+            data = yaml.safe_load((repo_root / rel).read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as exc:
+            raise ValueError(f"{rel}: cannot read campaign_id ({type(exc).__name__}: {exc})") from exc
+        cid = data.get("campaign_id") if isinstance(data, dict) else None
+        if not isinstance(cid, str) or not REGISTERED_TEST_ID.match(cid):
+            raise ValueError(f"{rel}: campaign_id {cid!r} is not a registered J10/J12 test campaign id")
+        out[label] = cid
+    return out
+
+
+def j12_read_command(campaigns: dict[str, str], root: Path = j10.RAW_RESULTS_ROOT) -> str:
+    """The registered read (J12 §6:164) with every arm J12 reads, arm 3 included, at its campaign directory."""
+    arms = " ".join(f"--arm {label}={root / campaigns[label]}" for label in J12_ARM_CONFIGS)
+    return f"python scripts/analysis/j12_report.py --split test_normal --confirm-heldout-test-split {arms}"
+
+
 def j12_protocol_guard(
     split: str,
     confirm: bool,
@@ -481,11 +651,16 @@ def j12_protocol_guard(
     arm_dirs: dict[str, Path],
     out_path: Optional[Path],
     registered_settings: bool,
+    *,
+    seeds: Optional[list[int]] = None,
+    expected_n_tasks: Optional[int] = None,
 ) -> Optional[str]:
     """A1's guard (test_normal needs the flag; no plumbing on test; held-out markers; no --out under
     the raw results; registered bootstrap on test), plus J12's: test_challenge is never read; a
     registered J10 / J12 test campaign id is read only on test_normal and a *_dryrun one never
-    there; --plumbing-check reads only *_dryrun campaigns on dev."""
+    there; --plumbing-check reads only *_dryrun campaigns on dev. On test_normal, the registered read
+    only: seeds 1, 2 and 168 tasks (§2); every --arm directory named by its arm's registered campaign id
+    (§2, from the configs); and J10 arm 3 given (§3's planless keys, §6's abort rule)."""
     if split == "test_challenge":
         return f"refusing test_challenge: J12 never reads it [{J12_PREREG} §7]"
     proto = j10.a1_protocol_guard(split, confirm, plumbing, arm_dirs.values(), out_path, registered_settings)
@@ -504,6 +679,26 @@ def j12_protocol_guard(
                     f"on {split} only its *_dryrun twin may be read")
         if plumbing and not dry:
             return f"refusing --plumbing-check over {label}={directory}: plumbing checks read only *_dryrun campaigns"
+    if split == "test_normal":
+        if seeds is not None and sorted(seeds) != list(J12_TEST_SEEDS):
+            return (f"refusing test_normal with seeds {sorted(seeds)}: the registered read is seeds "
+                    f"{', '.join(map(str, J12_TEST_SEEDS))} [{J12_PREREG} §2]")
+        if expected_n_tasks is not None and expected_n_tasks != J12_TEST_N_TASKS:
+            return (f"refusing test_normal with --expected-n-tasks {expected_n_tasks}: the registered read is all "
+                    f"{J12_TEST_N_TASKS} test_normal tasks [{J12_PREREG} §2]")
+        try:
+            campaigns = j12_registered_campaigns()
+        except ValueError as exc:
+            return f"refusing test_normal: {exc}"
+        for label, directory in sorted(arm_dirs.items()):
+            want = campaigns.get(label)
+            if want is not None and Path(directory).name != want:
+                return (f"refusing {label}={directory}: on test_normal {label} is the registered campaign {want} "
+                        f"[{J12_PREREG} §2], not {Path(directory).name!r}")
+        if J12_PLAN_SOURCE_ARM not in arm_dirs:
+            return (f"refusing test_normal without --arm {J12_PLAN_SOURCE_ARM}=DIR: J10 arm 3 is required on the "
+                    f"registered read, for its planless keys ({J12_PREREG} §3; A1 §4.2) and the §6 abort rule. "
+                    f"The registered read is: {j12_read_command(campaigns)}")
     return None
 
 
@@ -512,9 +707,16 @@ def j12_am2_block(
     results: list[dict[str, Any]],
     flag_sensitivity: dict[str, Any],
     decomposition: dict[str, Any],
+    *,
+    refill_confirmed: bool = False,
+    confirmation_required: bool = False,
 ) -> dict[str, Any]:
     """J12 Amendment 2 (A1 Amendment 5 §B.5), reported regardless of outcome: each J12 arm's divergent keys and
-    their count, zero included, and each affected D's (and companion's) number of pairs."""
+    their count, zero included, and each affected D's (and companion's) number of pairs.
+
+    §B.1's resumption condition (a key counts only after >= 1 crash-only resumption run) is not readable from the
+    result files, so the operator confirms it (--divergent-refill-confirmed): `refill_confirmed_by_operator` is
+    the flag when a divergent key exists, None when none does (the flag is then irrelevant)."""
     per_arm = {}
     for label in J12_ARMS:
         if label in arms:
@@ -545,6 +747,7 @@ def j12_am2_block(
                 "n_excluded": len(excluded), "n_pairs": (blk.get("goal_pass") or {}).get("n_pairs")}
     non_replay = {label: [rd.key_label(k) for k in arm[j10.A1_AM5_NONREPLAY]]
                   for label, arm in arms.items() if arm.get(j10.A1_AM5_NONREPLAY)}
+    n_total = sum(v["n_divergent"] for v in per_arm.values())
     return {
         "rule": f"{J12_AM2} (J10 A1 Amendment 5 §B, unchanged)",
         "decision_bearing": "completeness only: every statistic, the Holm family and every threshold run as registered",
@@ -552,7 +755,14 @@ def j12_am2_block(
         "cap": rd.DIVERGENCE_CAP,
         "replay_arms": list(J12_ARMS),
         "per_arm": per_arm,
-        "n_divergent_total": sum(v["n_divergent"] for v in per_arm.values()),
+        "n_divergent_total": n_total,
+        "refill_confirmed_by_operator": bool(refill_confirmed) if n_total else None,
+        "resumption_condition": {
+            "rule": ("A1 Amendment 5 §B.1: a divergent key counts only after at least one crash-only resumption run "
+                     "after the crash was first recorded; the result files cannot show it"),
+            "required": bool(confirmation_required and n_total),
+            "how_to_confirm": J12_REFILL_HOW,
+        },
         "contrasts": contrasts,
         "companions": companions,
         "non_replay_divergent": {"keys": non_replay, "treated_as": "an ordinary crash"},
@@ -574,9 +784,11 @@ def build_report_j12(
     n_boot: int = j10.A1_BOOTSTRAP_N,
     bootstrap_seed: int = j10.A1_BOOTSTRAP_SEED,
     out_path: Optional[Path] = None,
+    divergent_refill_confirmed: bool = False,
 ) -> tuple[dict[str, Any], int]:
     registered = n_boot == j10.A1_BOOTSTRAP_N and bootstrap_seed == j10.A1_BOOTSTRAP_SEED
-    proto = j12_protocol_guard(split, confirm_heldout_test_split, plumbing_check, arm_dirs, out_path, registered)
+    proto = j12_protocol_guard(split, confirm_heldout_test_split, plumbing_check, arm_dirs, out_path, registered,
+                               seeds=seeds, expected_n_tasks=expected_n_tasks)
     if proto:
         return ({"protocol": "J12", "label": "REFUSED", "refused": True, "reason": proto,
                  "headline": proto, "split": split}, 2)
@@ -614,6 +826,16 @@ def build_report_j12(
     if bool(split_problems) or len(tasks) != expected_n_tasks or any(r.startswith("mixed_systems") for r in reasons):
         for arm in arms.values():
             arm["complete"] = False
+    # J12 §6:148: J12 is reported NOT RUN if arm 3 cannot complete (336 non-crashed, 0 crashed on the registered
+    # matrix) or its planless keys exceed the cap. Arm 3 is read over the contrast arms' matrix; never a contrast arm.
+    not_run: list[str] = []
+    plan_dir = arm_dirs.get(J12_PLAN_SOURCE_ARM)
+    plan_arm = (None if plan_dir is None
+                else j10.a1_arm_episodes(J12_PLAN_SOURCE_ARM, j10.load_arm_tree(plan_dir), tasks, seeds))
+    if plan_arm is not None and not plan_arm["complete"]:
+        not_run.append(f"J10 arm 3 ({J12_PLAN_SOURCE_ARM}) is incomplete: {plan_arm['n_scored']}/"
+                       f"{plan_arm['n_expected']} non-crashed, crash {plan_arm['n_crash']}, missing "
+                       f"{plan_arm['n_missing']}")
 
     # h* is D3 / D4's indicator; the flag (handoff_occurred, h_flag) is kept for the sensitivity.
     flag_handoff = {a: j10.a1_handoff_flags(contrast_dirs[a]) for a in sorted(contrast_dirs)}
@@ -635,24 +857,40 @@ def build_report_j12(
         "rule": "A1 §4.2 (J12 §3)", "source_arm": J12_PLAN_SOURCE_ARM, "cap": planless_cap,
         "keys": None if planless is None else [f"{s}/{t}" for t, s in planless],
         "n_keys": None if planless is None else len(planless), "sensitivity": None,
+        "plan_source_arm": None if plan_arm is None else {
+            k: plan_arm[k] for k in ("n_expected", "n_scored", "n_crash", "n_missing", "complete")}
+        | {"dir": str(plan_dir), "rule": f"{J12_PREREG} §6:148 (not run if arm 3 cannot complete)"},
     }
     if planless is None:
         contingency["note"] = f"{J12_PLAN_SOURCE_ARM} not given; the planless keys cannot be listed"
     elif planless:
         if len(planless) > planless_cap:
             reasons.append(f"planless_keys_above_cap:{len(planless)}>{planless_cap}")
+            not_run.append(f"{len(planless)} planless arm-3 keys > cap {planless_cap}")
         contingency["sensitivity"] = j12_key_exclusion_sensitivity(
             results, arms, handoff_flags, planless, n_boot=n_boot, seed=bootstrap_seed)
         j10.a1_apply_key_exclusion(results, contingency["sensitivity"]["differs"])
     for r in results:
         for key in [k for k in r if k.startswith("_")]:
             r.pop(key)
+    not_run_why = "; ".join(not_run) + f" ({J12_PREREG} §6:148)" if not_run else None
+    if not_run_why:
+        # No D verdict is a registered result: each is kept, for diagnosis only, under computed_not_registered.
+        for r in results:
+            r["computed_not_registered"] = {k: r.pop(k) for k in ("verdict", "verdict_holm", "verdict_unadjusted")
+                                            if k in r} | {"why": f"J12 not run: {not_run_why}"}
+            r["verdict"] = "not_run"
+            r["reversal_unadjusted"] = None
+            r.pop("p_value_less_unadjusted", None)
+    for r in results:
+        r["signflip_disagreement"] = None if not_run_why else j12_signflip_disagreement(r)
+        r["verdict_sentence"] = j12_verdict_sentence(r)
 
     live = {a: j12_live_asks(contrast_dirs[a], arms[a]) for a in sorted(arms)}
     bounds = j12_bound_rows(results, live)
     for r in results:
         r["live_ask_bound"] = bounds[r["id"]]
-    readings = j12_readings(results)
+    readings = j12_readings(results, not_run_why)
     decomposition, decomposition_flag = {}, {}
     for receiver, (target, base) in J12_RECEIVERS.items():
         if target not in arms or base not in arms:
@@ -666,33 +904,53 @@ def build_report_j12(
                                               flags_.get(target, {}), j10.A1_METRIC_FIELDS[metric],
                                               n_boot=n_boot, seed=bootstrap_seed)
                 for metric in ("goal_pass", "tgc")}
-    # silenced_counts keep the flag (h_flag) as before; handoff_control_counts give h* beside it.
+    # silenced_counts keep the flag (h_flag) as before; silenced_counts_h_star count the same with h* (J12 §4:110,
+    # Amendment 1), and handoff_control_counts cross the two.
     silenced = {a: j10.a1_no_handoff_counts(arms[a], flag_handoff.get(a, {}), J12_PREFIX_M.get(a))
                 | {"citation": f"{J12_PREREG} §4 (silenced count: episodes with no handoff)", "h": hc.HFLAG_NAME}
                 for a in sorted(arms)}
+    silenced_hstar = {a: j10.a1_no_handoff_counts(arms[a], handoff_flags.get(a, {}), J12_PREFIX_M.get(a))
+                      | {"citation": f"{J12_PREREG} §4 and Amendment 1 (silenced count with h*)", "h": hc.HSTAR_NAME}
+                      for a in sorted(arms)}
     control_counts = {a: {"m": J12_PREFIX_M.get(a)} | hc.control_counts(controls[a], keys=arms[a]["episodes"].keys())
                       for a in sorted(arms) if a in controls}
+
+    # J12 Amendment 2 / A1 Amendment 5 §B.1: on the registered read a divergent key needs the operator's
+    # confirmation of a crash-only resumption run; without it the read is INCOMPLETE.
+    registered_read = split == "test_normal" and registered and not plumbing_check
+    am2 = j12_am2_block(arms, results, flag_sensitivity, decomposition, refill_confirmed=divergent_refill_confirmed,
+                        confirmation_required=registered_read)
+    if registered_read and am2["n_divergent_total"] and not divergent_refill_confirmed:
+        reasons.append(f"divergent_keys_need_refill_confirmation:{am2['n_divergent_total']}")
 
     decided = [r for r in results if r.get("decidable")]
     all_decided = len(decided) == len(results)
     label = ("PLUMBING CHECK, NOT A RESULT" if plumbing_check
              else "J12 DRY RUN ON DEV, NOT THE J12 RESULT" if split == "dev"
+             else "J12 NOT RUN (§6 abort rule), NOT A RESULT" if not_run_why
              else "J12 registered analysis")
     if not registered:
         label += " (NON-REGISTERED bootstrap settings)"
-    headline = ("COMPLETE: D1-D4 decided." if all_decided and not reasons
-                else "INCOMPLETE: " + "; ".join(reasons or ["some predictions not decidable"]) + ".")
-    headline += " Verdicts: " + ", ".join(f"{r['id']} {r.get('verdict')}" for r in results) + "."
-    sentences = [b["sentence"] for b in bounds.values() if b["sentence"]]
-    if sentences:
-        headline += " " + " ".join(sentences)
+    if not_run_why:
+        status = "NOT_RUN"
+        headline = f"J12 not run: {not_run_why}."
+    else:
+        status = "COMPLETE" if all_decided and not reasons else "INCOMPLETE"
+        headline = ("COMPLETE: D1-D4 decided." if status == "COMPLETE"
+                    else "INCOMPLETE: " + "; ".join(reasons or ["some predictions not decidable"]) + ".")
+        headline += " Verdicts: " + "; ".join(r["verdict_sentence"] for r in results) + "."
+        sentences = [b["sentence"] for b in bounds.values() if b["sentence"]]
+        if sentences:
+            headline += " " + " ".join(sentences)
     report: dict[str, Any] = {
         "protocol": "J12",
         "prereg": J12_PREREG,
         "generated_by": "scripts/analysis/j12_report.py",
         "label": label,
+        "status": status,
         "headline": headline,
-        "not_the_j12_result": plumbing_check or not registered or split != "test_normal",
+        "not_the_j12_result": bool(plumbing_check or not registered or split != "test_normal" or not_run_why),
+        "not_run_reasons": not_run,
         "split": split,
         "seeds": seeds,
         "expected_n_tasks": expected_n_tasks,
@@ -706,11 +964,15 @@ def build_report_j12(
             "interval": "95% percentile; lo = means[int(0.025 B)], hi = means[int(0.975 B)]",
             "paired_on": "(task_id, seed)",
             "p": "j10_report.bootstrap_pvalue, direction 'greater' at 0 (J12 §3)",
+            "p_reversal": ("p_value_less_unadjusted: direction 'less' at 0, unadjusted, for a decidable D whose "
+                           "unadjusted scenario upper bound is below 0 (J12 §4:104-106)"),
         },
         "stability_rule": {"id": "POOL-04", "window_pp": j10.POOL04_WINDOW_PP, "seeds": list(j10.POOL04_SEEDS),
                            "reported_bound": {"n_boot": j10.POOL04_BIG_N, "seed": j10.POOL04_BIG_SEED}},
         "permutation_rule": {"id": "A1 §5.5", "decision_bearing": False, "clusters": "scenario",
-                             "alternative": "two-sided", "handoff_only": "over the handoff pairs' d"},
+                             "alternative": "two-sided", "handoff_only": "over the handoff pairs' d",
+                             "disagreement": ("signflip_disagreement per D: its p at 0.05 (two-sided) against the "
+                                              "unadjusted 95 % scenario interval; a disagreement is in verdict_sentence")},
         "multiplicity": multiplicity,
         "planless_contingency": contingency,
         "arms": {a: {k: v for k, v in arm.items() if k != "episodes"}
@@ -726,7 +988,9 @@ def build_report_j12(
         "beside": {
             "decision_bearing": False,
             "tgc": {r["id"]: r.get("tgc_secondary") for r in results},
+            "tgc_atom_notes": {r["id"]: j12_tgc_atom_notes(r) for r in results},
             "silenced_counts": silenced,
+            "silenced_counts_h_star": silenced_hstar,
             "handoff_control_counts": control_counts,
             "decomposition": decomposition,
             "decomposition_h_flag": decomposition_flag,
@@ -736,10 +1000,10 @@ def build_report_j12(
         },
         "crash_convention": ("error_type == 'crash' is not an outcome (dropped, counted, arm incomplete); "
                              "limit / timeout / parse_error / api_error are scored outcomes."),
-        "j12_am2_divergence": j12_am2_block(arms, results, flag_sensitivity, decomposition),
+        "j12_am2_divergence": am2,
     }
     report = j10._strip_internal(report)
-    return report, (0 if all_decided and not reasons else 1)
+    return report, (0 if status == "COMPLETE" else 1)
 
 
 def _fmt(value: Any) -> str:
@@ -759,22 +1023,31 @@ def render_markdown(report: dict[str, Any], json_name: str) -> str:
         lines.append(
             f"| {r['id']} | {r['left']} − {r['right']} | {r['population']} | {_fmt(scen.get('diff_pp'))} | "
             f"{_fmt(scen.get('ci95_pp'))} | {_fmt(task.get('ci95_pp'))} | {_fmt(r.get('p_value'))} | "
-            f"{_fmt((r.get('holm') or {}).get('p_adjusted'))} | {r.get('verdict')} |")
+            f"{_fmt((r.get('holm') or {}).get('p_adjusted'))} | {j12_word(r.get('verdict'))} |")
+    not_run = report.get("status") == "NOT_RUN"
+    lines += ["", "Verdicts (J12 §4: not supported is reported as not replicated):", ""]
+    lines += [f"- {r.get('verdict_sentence') or r['id']}" for r in report["predictions"]]
     sens = report.get("sensitivity_h_flag") or {}
     lines += ["", "D3 / D4: h = h*, the executor took control after the replayed prefix "
               "(scripts/analysis/handoff_control.py). Sensitivity with h = handoff_occurred (not decision-bearing):", ""]
     for sid in ("D3_flag", "D4_flag"):
+        if not_run:
+            lines.append(f"- {sid}: not printed (J12 not run)")
+            continue
         s = sens.get(sid) or {}
         scen = (s.get("contrast") or {}).get("scenario") or {}
         lines.append(f"- {sid}: {_fmt(scen.get('diff_pp'))} pp {_fmt(scen.get('ci95_pp'))}, n handoff "
                      f"{_fmt((s.get('contrast') or {}).get('n_handoff'))}, Holm p "
-                     f"{_fmt((s.get('holm') or {}).get('p_adjusted'))}, verdict {_fmt(s.get('verdict_holm'))} "
-                     f"(h*: {_fmt(s.get('verdict_holm_with_hstar'))})")
+                     f"{_fmt((s.get('holm') or {}).get('p_adjusted'))}, verdict {j12_word(s.get('verdict_holm'))} "
+                     f"(h*: {j12_word(s.get('verdict_holm_with_hstar'))})")
+    by_pid = {r["id"]: r for r in report["predictions"]}
     lines += ["", "## Readings (J12 §4)", ""]
     for receiver, rd in report["readings"].items():
+        rev = rd["reversals_unadjusted"]
+        p_less = ", ".join(f"{i} {_fmt(by_pid[i].get('p_value_less_unadjusted'))}" for i in rev)
         lines.append(f"- {receiver}: {rd['reading'] or rd['no_reading_reason']}"
-                     + (f" Reversal (unadjusted) in {rd['reversals_unadjusted']}: reported as a primary finding."
-                        if rd["reversals_unadjusted"] else ""))
+                     + (f". Reversal (unadjusted) in {rev}: reported as a primary finding; one-sided p (less), "
+                        f"unadjusted: {p_less}." if rev else ""))
     lines += ["", "## Live executor asks (A1 Amendment 1 §I)", ""]
     for arm, v in report["beside"]["live_asks"].items():
         lines.append(f"- {arm}: {v['n_episodes_live_answer']} episode(s), {v['n_live_answer_calls']} call(s); "
@@ -783,14 +1056,40 @@ def render_markdown(report: dict[str, Any], json_name: str) -> str:
         if (r.get("live_ask_bound") or {}).get("sentence"):
             lines.append(f"- {r['live_ask_bound']['sentence']}")
     lines += ["", "## Beside the family (not decision-bearing)", ""]
+    for pid, t in (report["beside"].get("tgc") or {}).items():
+        t = t or {}
+        if by_pid.get(pid, {}).get("kind") == "handoff_only":
+            ho = t.get("handoff_only") or {}
+            txt = (f"handoff-only {_fmt(ho.get('diff_pp'))} pp, scenario CI {_fmt(ho.get('ci95_pp_scenario'))}, "
+                   f"task CI {_fmt(ho.get('ci95_pp_task'))}")
+        else:
+            scen, task = t.get("scenario") or {}, t.get("task") or {}
+            txt = (f"{_fmt(scen.get('diff_pp'))} pp, scenario CI {_fmt(scen.get('ci95_pp'))}, "
+                   f"task CI {_fmt(task.get('ci95_pp'))}")
+        note = (report["beside"].get("tgc_atom_notes") or {}).get(pid)
+        lines.append(f"- TGC {pid}: {txt}" + (f"; {note}" if note else ""))
     for arm, v in report["beside"]["limit_rates"].items():
         lines.append(f"- limit rate {arm}: {v['n_limit']}/{v['n_scored']} = {_fmt(v['limit_rate'])}")
+    hstar_counts = report["beside"].get("silenced_counts_h_star") or {}
     for arm, v in report["beside"]["silenced_counts"].items():
-        lines.append(f"- {arm} (m = {v['m']}): handoff {v['n_handoff']}, no handoff {v['n_no_handoff']}, "
-                     f"flag missing {v['n_flag_missing']}")
+        h = hstar_counts.get(arm) or {}
+        lines.append(f"- silenced count {arm} (m = {v['m']}), by handoff_occurred: handoff {v['n_handoff']}, no handoff "
+                     f"{v['n_no_handoff']}, flag missing {v['n_flag_missing']}; by h*: handoff {_fmt(h.get('n_handoff'))}, "
+                     f"no handoff {_fmt(h.get('n_no_handoff'))}, h* undefined {_fmt(h.get('n_flag_missing'))}")
     for arm, v in (report["beside"].get("handoff_control_counts") or {}).items():
         lines.append(f"- {arm} (m = {v['m']}): h_flag true {v['n_h_flag_true']}, live but unflagged "
                      f"{v['n_live_but_unflagged']}, terminal {v['n_terminal']}, h* undefined {v['n_hstar_undefined']}")
+    am2 = report.get("j12_am2_divergence") or {}
+    if am2:
+        lines += ["", "## Replay divergence (J12 Amendment 2)", "",
+                  f"Divergent keys: {am2['n_divergent_total']} (cap {am2['cap']} per D). "
+                  + ", ".join(f"{a} {v['n_divergent']}" + (f" ({', '.join(v['keys'])})" if v["keys"] else "")
+                              for a, v in am2["per_arm"].items()) + "."]
+        cond = am2.get("resumption_condition") or {}
+        if am2.get("refill_confirmed_by_operator"):
+            lines.append("Crash-only resumption confirmed by the operator (--divergent-refill-confirmed).")
+        elif cond.get("required"):
+            lines.append(f"INCOMPLETE until confirmed: {cond['rule']}. How to confirm: {cond['how_to_confirm']}")
     return "\n".join(lines) + "\n"
 
 
@@ -802,9 +1101,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seeds", default=j10.A1_DEFAULT_SEEDS, help="registered seeds (1,2)")
     p.add_argument("--expected-n-tasks", type=int, default=None, help="default: dev 57, test_normal 168")
     p.add_argument("--arm", action="append", required=True, metavar="LABEL=DIR",
-                   help=f"repeatable; labels {sorted(J12_ARMS)} and, optionally, {J12_PLAN_SOURCE_ARM}")
+                   help=(f"repeatable; labels {sorted(J12_ARMS)} and {J12_PLAN_SOURCE_ARM} (J10 arm 3: required on "
+                         "test_normal, optional on dev); on test_normal each DIR is named by its registered campaign id"))
     p.add_argument("--bootstrap-seed", type=int, default=j10.A1_BOOTSTRAP_SEED)
     p.add_argument("--n-boot", type=int, default=j10.A1_BOOTSTRAP_N)
+    p.add_argument("--divergent-refill-confirmed", dest="divergent_refill_confirmed", action="store_true",
+                   help=("the operator confirms that every arm with a replay_divergence key had a crash-only "
+                         "resumption run after the crash first appeared (A1 Amendment 5 §B.1); without it a "
+                         "test_normal read with a divergent key is INCOMPLETE"))
     p.add_argument("--out", type=Path, default=None,
                    help=f"report JSON; a .md is written beside it. Default on test_normal: {J12_DEFAULT_OUT}")
     return p
@@ -842,7 +1146,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     report, code = build_report_j12(
         split=args.split, seeds=seeds, arm_dirs=arm_dirs, expected_n_tasks=expected,
         confirm_heldout_test_split=args.confirm_heldout_test_split, plumbing_check=args.plumbing_check,
-        n_boot=args.n_boot, bootstrap_seed=args.bootstrap_seed, out_path=out)
+        n_boot=args.n_boot, bootstrap_seed=args.bootstrap_seed, out_path=out,
+        divergent_refill_confirmed=args.divergent_refill_confirmed)
     text = json.dumps(report, indent=2, default=str) + "\n"
     print(text, end="")
     if out is not None and code != 2:

@@ -397,7 +397,8 @@ def test_am2_one_divergent_key_reads_its_contrasts_on_335_pairs(tmp_path: Path):
     key = ("sc00_1", 1)
     root = write_tree(tmp_path, dict(REPLICATE, A1=lambda t, s: 1.0 if (t, s) == key else 0.5))
     _crash(root, "M_bplus_11", [key])
-    report, rc = build(root)
+    # R1: §B.1's crash-only resumption run is confirmed by the operator (without it: INCOMPLETE, see test_refill_*).
+    report, rc = build(root, divergent_refill_confirmed=True)
     assert rc == 0 and report["status"] == "COMPLETE", report["headline"]
     c = report["contrasts"]
     assert {k: c[k]["n_pairs"] for k in lp.L_IDS} == {"L1": 336, "L2": 335, "L3": 335, "L4": 335, "L5": 336}
@@ -426,7 +427,7 @@ def test_am2_two_prefix_arms_remove_the_union(tmp_path: Path):
     root = write_tree(tmp_path, REPLICATE)
     _crash(root, "M_zs_11", [("sc00_1", 1)])
     _crash(root, "M_zs_6", [("sc00_1", 1), ("sc01_2", 2)])
-    report, rc = build(root)
+    report, rc = build(root, divergent_refill_confirmed=True)  # R1: §B.1 confirmed by the operator
     assert rc == 0, report["headline"]
     l5 = report["contrasts"]["L5"]
     assert (l5["n_pairs"], l5["n_expected"], l5["status"], l5["point_pp"]) == (334, 334, "COMPLETE", 20.0)
@@ -440,7 +441,7 @@ def test_am2_more_than_16_divergent_keys_leave_the_contrast_incomplete(tmp_path:
     for n in (17, 16):
         root = write_tree(tmp_path / str(n), REPLICATE)
         _crash(root, "M_bplus_11", [(t, 1) for t in TASKS[:n]])
-        report, rc = build(root)
+        report, rc = build(root, divergent_refill_confirmed=True)  # R1: §B.1 confirmed by the operator
         c = report["contrasts"]
         assert report["arms"]["M_bplus_11"]["complete"] is True
         assert c["L1"]["status"] == c["L5"]["status"] == "COMPLETE"
@@ -472,3 +473,205 @@ def test_am2_a_divergent_key_plus_an_ordinary_crash_is_incomplete(tmp_path: Path
                                             "arm_complete": False}
     assert blk["non_replay_divergent"]["keys"] == {"A1": ["1/sc04_1"]}
     assert report["arms"]["A1"]["complete"] is False
+
+
+# ---- R1 (2026-09-25): the J11 pre-read audit's findings ------------------------------------------------------
+def test_n2_not_run_is_decided_before_missing_campaigns_when_the_replay_arms_never_started(tmp_path: Path):
+    # §6: above 16 planless C keys no replay arm starts (j11_arm.pbs refuses them), so only C and E exist.
+    root = write_tree(tmp_path, {code: REPLICATE[code] for code in ("C", "E")})
+    planless(root, [(TASKS[i], 1) for i in range(17)])
+    report, rc = build(root)
+    assert rc == 1 and report["status"] == "NOT_RUN", report["headline"]
+    assert report["headline"] == "NOT RUN (prereg §6 abort rule): 17 planless C keys > cap 16"
+    assert len(report["missing_campaigns"]) == 7  # T, A, A1, the four prefix arms: listed, not the status
+    assert {r["reading"] for r in report["readings"].values()} == {j11.NOT_RUN}
+    assert "## Missing campaigns" in j11.render_markdown(report)
+
+
+def test_n3_c_below_336_non_crashed_is_not_run_whatever_campaigns_exist(tmp_path: Path):
+    root = write_tree(tmp_path, REPLICATE, errors={("C", "sc05_2", 1): "crash"}, skip=("E",))
+    report, rc = build(root)
+    assert rc == 1 and report["status"] == "NOT_RUN", report["headline"]
+    assert report["not_run_reasons"] == ["C has 335/336 non-crashed episodes (crash 1, missing 0)"]
+    assert report["planless"]["c_below_matrix"] is True and report["missing_campaigns"]  # E absent: still NOT_RUN
+    assert {r["reading"] for r in report["readings"].values()} == {j11.NOT_RUN_C}
+
+
+def _j10_report(path: Path, p6: str = "supported", split: str = "test_normal", status: str = "COMPLETE",
+                **extra) -> Path:
+    data = {"protocol": "A1", "status": status, "split": split, "not_the_j10_result": split != "test_normal",
+            "label": "J10 A1 registered analysis", "verdicts": {"P1": "supported", "P6": p6},
+            "arms": {"planner_alone_cap81": {"goal_pass_mean": 0.8, "n_scored": 336, "n_expected": 336,
+                                             "complete": True}}} | extra
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return path
+
+
+def test_seam_a_not_run_j10_report_is_read_and_the_combined_statement_is_not_drawn(tmp_path: Path):
+    # The J10 / J11 contract: every J10 report carries status, split and verdicts; under NOT_RUN every verdict is
+    # "not_run" and the arms carry counts only (j10_report.a1_r2_not_run_report).
+    not_run = {"status": "NOT_RUN", "p6": "not_run", "not_the_j10_result": False,
+               "verdicts": {p: "not_run" for p in ("P1", "P2", "P3", "P4", "P5", "P6")},
+               "not_run_reasons": ["arm planner_alone_cap81 incomplete"],
+               "arms": {"planner_alone_cap81": {"n_scored": 300, "n_expected": 336, "complete": False}}}
+    root = write_tree(tmp_path / "res", REPLICATE)
+    report, rc = build(root, j10_report_path=_j10_report(tmp_path / "j10_nr.json", **not_run))
+    comb = report["combined_with_j10"]
+    assert rc == 0 and report["status"] == "COMPLETE" and report["readings"]["L1"]["reading"] == "replicates"
+    assert comb["status"] == "not_drawn" and comb["j10_not_run"] is True and comb["j10_status"] == "NOT_RUN"
+    assert comb["statement"] == "combined statement with J10 P6: not drawn: J10 not run"
+    assert comb["j10_not_run_reasons"] == ["arm planner_alone_cap81 incomplete"] and "p6_holds" not in comb
+    assert comb["statement"] in j11.render_markdown(report)
+    assert report["descriptive"]["ceiling_goal_pass_luna"]["status"] == "not_available"
+    # A NOT_RUN report flagged not_the_j10_result is still read (only split and verdicts are checked under NOT_RUN).
+    rep2, rc2 = build(root, j10_report_path=_j10_report(tmp_path / "j10_nr2.json", **(not_run | {
+        "not_the_j10_result": True})))
+    assert rc2 == 0 and rep2["combined_with_j10"]["statement"] == j11.COMBINED_J10_NOT_RUN
+    # Still refused: a NOT_RUN report from another split, and any report without a verdicts block.
+    for name, kw, why in (("dev_nr.json", not_run | {"split": "dev"}, "its split is 'dev'"),
+                          ("noverd.json", not_run | {"verdicts": None}, "no verdicts block"),
+                          ("noverd_c.json", {"verdicts": None}, "no verdicts block")):
+        read, refusal = j11.load_j10_report(_j10_report(tmp_path / name, **kw))
+        assert read is None and why in refusal, (name, refusal)
+    rep3, rc3 = j11.build_report(split="test_normal", confirm_heldout_test_split=True, n_boot=B,
+                                 results_root=tmp_path / "absent",
+                                 j10_report_path=_j10_report(tmp_path / "noverd2.json", **(not_run | {"verdicts": None})))
+    assert rc3 == 2 and rep3["status"] == "REFUSED" and "no verdicts block" in rep3["headline"]
+
+
+def test_n4_combined_statement_with_j10_p6(tmp_path: Path):
+    j10_path = _j10_report(tmp_path / "j10.report.json")
+    root = write_tree(tmp_path / "res", REPLICATE)
+    report, rc = build(root, j10_report_path=j10_path)
+    comb = report["combined_with_j10"]
+    assert rc == 0 and comb["status"] == "drawn" and (comb["p6_holds"], comb["l1_holds"]) == (True, True)
+    assert comb["statement"] == ("J10's P6 is supported (gpt-5.6-luna) and J11's L1 replicates (P27): the channel "
+                                 "result holds on held-out data for two planners.")
+    assert comb["statement"] in j11.render_markdown(report)
+    # The sign-flip agrees with every bootstrap reading here (56 clusters, constant differences): no sentence.
+    assert all(r["signflip_disagreement"] is None for r in report["readings"].values())
+    # §4's other cases, and the undecided ones, on the pure function.
+    st = lambda p6, l1: j11.combined_statement({"verdicts": {"P6": p6}}, l1, registered=True)["statement"]  # noqa: E731
+    assert st("supported", "fails_to_replicate").startswith("Exactly one holds: J10's P6 is supported")
+    assert st("not_supported", "replicates").startswith("Exactly one holds: J11's L1 replicates")
+    assert st("reversed", "not_resolved").endswith("that is the generality result.")
+    assert st("on_boundary", "replicates") == "combined statement with J10 P6: not drawn, J10 P6 is 'on_boundary'"
+    assert "J11 L1 has no reading" in st("supported", lp.NONE_FAMILY)
+    # Absent: pending. A J10 report from another split is refused before anything is read.
+    assert j11.combined_statement(None, "replicates", registered=True)["statement"] == j11.COMBINED_PENDING
+    report, rc = j11.build_report(split="test_normal", confirm_heldout_test_split=True, n_boot=B,
+                                  results_root=tmp_path / "absent",
+                                  j10_report_path=_j10_report(tmp_path / "j10_dev.json", split="dev"))
+    assert rc == 2 and report["status"] == "REFUSED" and "its split is 'dev'" in report["headline"]
+
+
+def test_n5_planner_strength_is_descriptive_and_delta_p_is_listed_as_omitted(tmp_path: Path):
+    report, rc = build(write_tree(tmp_path, REPLICATE))
+    desc = report["descriptive"]
+    assert desc["label"].startswith("DESCRIPTIVE: no direction, no verdict")
+    assert (desc["ceiling_goal_pass"]["planner"], desc["ceiling_goal_pass"]["goal_pass_mean"]) == ("P27", 0.75)
+    assert desc["ceiling_goal_pass_luna"]["status"] == "not_available"
+    assert desc["delta_vs_luna"]["status"] == "not_computed"
+    amb = {a["id"]: a for a in report["ambiguities"]}["lp_descriptive_delta_and_planner_strength"]
+    assert "evaluate_delta" in amb["script_behaviour"] and "NOT computed" in amb["script_behaviour"]
+    assert j11._luna_ceiling({"arms": {"planner_alone_cap81": {"goal_pass_mean": 0.8}}})["goal_pass_mean"] == 0.8
+
+
+def test_n6_the_handoff_occurred_companion_is_printed_beside_each_h_star_row(tmp_path: Path):
+    flag = lambda t, s: SCEN[t] < 28  # noqa: E731
+    live = lambda t, s: SCEN[t] < 42  # noqa: E731
+    design = dict(REPLICATE, M_bplus_6=lambda t, s: 0.5 if SCEN[t] < 42 else 0.6)
+    root = write_tree(tmp_path, design, flags={"M_bplus_11": flag, "M_zs_11": lambda t, s: True},
+                      live={"M_bplus_11": live})
+    report, rc = build(root)
+    lines = j11.render_markdown(report).splitlines()
+    l3 = [x for x in lines if x.startswith("| L3_handoff_only |")]
+    assert len(l3) == 2 and "| h* | 336 | 252 | 22.0 |" in l3[0] and "| handoff_occurred | 336 | 168 | 22.0 |" in l3[1]
+    assert sum(1 for x in lines if x.startswith("| L4_handoff_only |")) == 2
+
+
+def test_n7_a_disagreeing_sign_flip_goes_in_the_readings_sentence(tmp_path: Path):
+    spec = lp.CONTRAST_BY_ID["L3"]  # 'greater' at 0: the sign-flip level is 0.025
+    c = {"status": "COMPLETE", "scenario": {"lo": 0.004, "hi": 0.08, "point": 0.04}, "signflip": {"p_value": 0.031}}
+    sf = j11.signflip_disagreement(c, spec)
+    assert (sf["agrees"], sf["bootstrap_side"], sf["signflip_side"], sf["level"]) == (False, "above", None, 0.025)
+    assert sf["sentence"] == ("the scenario sign-flip p = 0.031 (greater) does not reject at 0.025 while the "
+                              "bootstrap interval excludes +0.00 pp (A1 §5.5; not decision-bearing)")
+    assert j11.signflip_disagreement(dict(c, signflip={"p_value": 0.01}), spec)["sentence"] is None
+    # L4 ('less' at +7.00 pp): an interval that includes 7 against a rejecting sign-flip.
+    l4 = {"status": "COMPLETE", "scenario": {"lo": 0.0, "hi": 0.075, "point": 0.03}, "signflip": {"p_value": 0.02}}
+    assert "rejects at 0.025 while the bootstrap interval includes +7.00 pp" in \
+        j11.signflip_disagreement(l4, lp.CONTRAST_BY_ID["L4"])["sentence"]
+    # In a read: the contrasts' block carries the check; a disagreement's sentence is printed in the reading's.
+    report, rc = build(write_tree(tmp_path, REPLICATE))
+    assert rc == 0 and report["contrasts"]["L3"]["signflip_disagreement"]["agrees"] is True
+    report["readings"]["L3"]["signflip_disagreement"] = sf["sentence"]
+    line = next(x for x in j11.render_markdown(report).splitlines() if x.startswith("- L3:"))
+    assert line.startswith("- L3: **supported** (") and line.endswith(f"; {sf['sentence']})")
+
+
+def test_n9_the_sensitivity_counts_and_texts_subtract_divergent_keys(tmp_path: Path):
+    root = write_tree(tmp_path, REPLICATE)
+    planless(root, [("sc00_1", 2)])
+    _crash(root, "M_bplus_11", [("sc01_1", 1)])
+    report, rc = build(root, divergent_refill_confirmed=True)
+    s = report["sensitivity_planless"]
+    assert rc == 0 and s["n_expected"] == 335  # the gate's and L1's
+    assert s["gate"]["n_expected"] == 335
+    assert {c: s["contrasts"][c]["n_expected"] for c in lp.L_IDS} == {"L1": 335, "L2": 334, "L3": 334, "L4": 334,
+                                                                      "L5": 335}
+    assert {c: s["contrasts"][c]["n_pairs"] for c in lp.L_IDS} == {"L1": 335, "L2": 334, "L3": 334, "L4": 334,
+                                                                   "L5": 335}
+    assert "| L3 | 334 | 334 |" in j11.render_markdown(report)
+    # The boundary texts, on the pure rewrite: J11 §3, each contrast's own counts.
+    sens = {"excluded_keys": ["2/sc00_1"], "gate": {"verdict": "too_weak"},
+            "contrasts": {c: {"reading": "not_supported"} for c in lp.L_IDS}}
+    before = {"readings": {c: {"reading": "supported", "why": "-"} for c in lp.L_IDS}}
+    after = {"readings": dict(before["readings"], L3={"reading": lp.ON_BOUNDARY, "why": "Amendment 4: ..."})}
+    n_x = {"gate": 335, **{c: 334 for c in lp.L_IDS}}
+    contrasts = {c: {"n_expected": 335} for c in lp.L_IDS}
+    _g, read = j11.j11_boundary_texts({"verdict": "passes"}, before, {"verdict": "passes"}, after, sens, contrasts,
+                                      n_x, 336)
+    assert read["readings"]["L3"]["why"] == (f"{j11.PREREG} §3: reads 'supported' on 335 pairs but 'not_supported' "
+                                             "without 2/sc00_1 (334 pairs); on the boundary, never resolved")
+    gate, read = j11.j11_boundary_texts({"verdict": "passes"}, before, {"verdict": lp.ON_BOUNDARY}, before, sens,
+                                        contrasts, n_x, 336)
+    assert gate["why"] == (f"{j11.PREREG} §3: the gate reads 'passes' on 336 pairs but 'too_weak' without 2/sc00_1 "
+                           "(335 pairs)")
+    assert {r["reading"] for r in read["readings"].values()} == {j11.NONE_GATE_BOUNDARY}
+
+
+def test_n10_the_am2_block_is_printed_even_when_empty_and_n8_strings_cite_the_right_documents(tmp_path: Path):
+    root = write_tree(tmp_path, REPLICATE)
+    answer = [{"event_type": "run_start"}, {"event_type": "intervention", "actor": "planner",
+                                            "payload": {"forced": False}}]
+    for i in range(4):  # 4 / 336 = 1.19 pp on T: L1's reading carries the Amendment 1 §I bound
+        ep = root / CAMPAIGNS["T"]["campaign"] / "fixed_k" / "1" / f"sc0{i}_1"
+        (ep / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in answer), encoding="utf-8")
+    report, rc = build(root)
+    md = j11.render_markdown(report)
+    assert f"## Replay divergence ({j11.AM2} §B.5)" in md
+    assert "Divergent keys over the prefix arms: 0 (cap 16 per contrast)." in md
+    assert "| M_bplus_11 | - | 0 | 0 | True |" in md
+    assert report["j11_am2_divergence"]["refill_confirmed_by_operator"] is None
+    # The three strings that cited the wrong document.
+    assert report["holm"]["scope"] == j11.HOLM_SCOPE and f"{j11.PREREG} §3" in j11.HOLM_SCOPE
+    assert f"({lp.PREREG}:81-82)" in j11.HOLM_SCOPE
+    assert "(J10 A1 Amendment 1 §I, no reading changes)" in next(x for x in md.splitlines() if x.startswith("- L1:"))
+    assert "Amendment 4" not in j11.NONE_GATE_BOUNDARY and "J11 §3" in j11.NONE_GATE_BOUNDARY
+
+
+def test_refill_confirmation_gates_a_divergent_key_on_the_registered_read(tmp_path: Path):
+    """Amendment 2 §B.1: a divergent key counts only after a crash-only resumption run, which the files cannot show."""
+    root = write_tree(tmp_path, REPLICATE)
+    _crash(root, "M_bplus_11", [("sc00_1", 1)])
+    report, rc = build(root)
+    blk = report["j11_am2_divergence"]
+    assert rc == 1 and report["status"] == "INCOMPLETE"
+    assert "divergent_keys_need_refill_confirmation:1" in report["incomplete"]
+    assert blk["refill_confirmed_by_operator"] is False and blk["resumption_condition"]["required"] is True
+    md = j11.render_markdown(report)
+    assert "INCOMPLETE until confirmed" in md and "--divergent-refill-confirmed" in md
+    report, rc = build(root, divergent_refill_confirmed=True)
+    assert rc == 0 and report["status"] == "COMPLETE" and readings(report) == ALL_SUPPORTED
+    assert report["j11_am2_divergence"]["refill_confirmed_by_operator"] is True
