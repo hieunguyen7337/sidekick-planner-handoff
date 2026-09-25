@@ -1,10 +1,13 @@
 # BFCL `multi_turn_base` dev design (Wave E): dev preregistration
 
-**Status**: DRAFT
+**Status**: FROZEN 2026-09-25, as revised (§8); amended only by appending below §8
 
 Written 2026-09-24 by unit BFCL-E2 (`campaign/workers/briefs/20260924_bfcl_e2_build.md`) for review. It covers the
 BFCL **dev** split only. The dev read is exploratory: it gives effect sizes and power for a BFCL test preregistration
 (the E-prereg), and it makes no confirmatory claim.
+
+Revised 2026-09-25, before any hosted or replay dev episode existed, to add a third receiver (`qzs`) and a third
+seed. §8 is the revision and freeze record.
 
 Sources: plan `docs/plan_top_venue_20260924.md:84-85` and `:146-162`; environment record `docs/bfcl_env_20260924.md`;
 scoping `docs/second_env_scoping_20260923.md` §0, §2 and §3.
@@ -49,14 +52,19 @@ This grid was decided by Claude on 2026-09-24 (`docs/bfcl_env_20260924.md`, "Dec
 
 ## 4. The dev arms
 
-Every arm runs on 50 dev entries × seeds 1, 2 = **100 episodes**. Each has a config `configs/bfcl_<arm>.yaml`, with
-`campaign_id` `bfcl_<arm>_dev_20260924`, and is submitted only through `scripts/pbs/bfcl_arm.pbs`.
+Every arm runs on 50 dev entries × seeds 1, 2, 3 = **150 episodes**. Each has a config `configs/bfcl_<arm>.yaml`,
+with `campaign_id` `bfcl_<arm>_dev_20260924`, and is submitted only through `scripts/pbs/bfcl_arm.pbs` with
+`SEEDS=1,2,3`. Spike (b) already holds seeds 1 and 2 of `executor_alone_zs`, so only its seed 3 remains to run.
 
-**The two receivers.**
+**The three receivers.**
 - `zs` is the primary receiver: zero-shot `ibm-granite/granite-4.2-8b`. Its executor block is the one spike (b) ran.
 - `bplus` is the AppWorld-tailored adapter `sft_b_plus`, served from
   `/scratch/n12194778/sidekick/artifacts/adapters/sft_b_plus_iaware_granite8b` (the J10 adapter). It runs out of
   domain, because BFCL has no train split.
+- `qzs` is a second executor family: zero-shot `Qwen/Qwen3-8B`, with the executor block of AppWorld's zero-shot Qwen
+  arms (`configs/hj15_executor_alone_zsq.yaml`). It is added on dev only. It asks whether the channel and depth
+  contrasts hold across executor families in a second environment. On AppWorld, the Qwen family exists on dev only
+  (QWEN-* rows).
 
 | arm | runner system | receiver | k / m | replays | J10 template |
 |---|---|---|---|---|---|
@@ -69,48 +77,60 @@ Every arm runs on 50 dev entries × seeds 1, 2 = **100 episodes**. Each has a co
 | advise_k5_neutral | fixed_k, neutral prompt | zs | k = 5 | first plan | `j10_advise_k10_neutral` |
 | prefix_zs_m2, _m4, _m6 | prefix_handoff | zs | m = 2, 4, 6 | first m actions of planner_alone_cap81 | `j10_prefix_zs_m9` |
 | prefix_bplus_m2, _m4, _m6 | prefix_handoff | bplus | m = 2, 4, 6 | first m actions | `j10_prefix_m9` |
+| executor_alone_qzs | executor_alone | qzs | — | — | its zs sibling |
+| plan_qzs | prompt_only | qzs | — | first plan | `plan_zs` |
+| takeover_k5_qzs, advise_k5_fullctx_qzs, advise_k5_neutral_qzs | fixed_k (as their zs siblings) | qzs | k = 5 | first plan | their zs siblings |
+| prefix_qzs_m2, _m4, _m6 | prefix_handoff | qzs | m = 2, 4, 6 | first m actions | `prefix_zs_m*` |
 
 - **Planner.** `gpt-5.6-luna` at medium effort, with a cap of 81 planner calls: the planner block of J10 arm 3.
-- **The channel arms** run on `zs` only, at k = 5. That is AppWorld's k = 10 rescaled for BFCL's shorter episodes
-  (scoping §3).
+- **The channel arms** run on `zs` and `qzs`, at k = 5. That is AppWorld's k = 10 rescaled for BFCL's shorter
+  episodes (scoping §3). They do not run on `bplus`, as before.
 - **plan_zs runs `prompt_only`, not `sft_plan`.**
   - `sft_plan.py:18` defaults `adapter_name` to `sft_plan` when `executor.lora_name` is null. That would request
     a model the server does not serve.
   - `prompt_only` is the same policy without that default. `configs/hj15_prompt_only_zsq.yaml` is the precedent.
 - **Order.**
   1. planner_alone_cap81 runs first.
-  2. The wrapper refuses a replay arm until that campaign holds ≥ 100 non-crashed episodes for the requested
-     seeds, with 0 crashed and 0 unreadable.
+  2. The wrapper refuses a replay arm until that campaign holds 50 non-crashed episodes per requested seed (150
+     for seeds 1, 2, 3), with 0 crashed and 0 unreadable.
   3. Past 5 % planless source episodes, the replay arm is refused (J10 A1 §4.2's rule).
 
 ## 5. Hosted-call budget
 
 - **Per-episode figures** come from scoping §3: `planner_alone` 12, a channel arm 3, a prefix or `executor_alone`
   arm 0. `plan_zs` spends calls only on executor asks, costed at 1 per episode.
-- **The dry run** is scoping §3's 100 calls. It covers the first-submission smokes of the hosted arms (2 episodes
-  each).
+- **The dry run** is scoping §3's 100 calls, raised to 150 for the four `qzs` hosted arms. It covers the
+  first-submission smokes of the hosted arms (2 episodes each).
+- **The free arms** are 9 prefix arms × 150, `executor_alone_bplus` and `executor_alone_qzs` × 150, and seed 3 of
+  `executor_alone_zs` (50; spike b holds its seeds 1 and 2): 1,700 episodes.
 - **Retries** are 10 % of the arms plus the dry run, as in scoping §3.
 
 | item | hosted calls / episode | episodes | hosted calls |
 |---|---|---|---|
-| planner_alone_cap81 | 12 | 100 | 1,200 |
-| plan_zs | 1 | 100 | 100 |
-| takeover_k5 | 3 | 100 | 300 |
-| advise_k5_fullctx | 3 | 100 | 300 |
-| advise_k5_neutral | 3 | 100 | 300 |
-| prefix arms (6) and executor_alone_bplus | 0 | 700 | 0 |
-| subtotal, arms | | | 2,200 |
-| dry run | | | 100 |
-| retries, 10 % of 2,300 | | | 230 |
-| **total** | | | **2,530** |
+| planner_alone_cap81 | 12 | 150 | 1,800 |
+| plan_zs | 1 | 150 | 150 |
+| takeover_k5 | 3 | 150 | 450 |
+| advise_k5_fullctx | 3 | 150 | 450 |
+| advise_k5_neutral | 3 | 150 | 450 |
+| plan_qzs | 1 | 150 | 150 |
+| takeover_k5_qzs | 3 | 150 | 450 |
+| advise_k5_fullctx_qzs | 3 | 150 | 450 |
+| advise_k5_neutral_qzs | 3 | 150 | 450 |
+| prefix arms (9) and executor_alone (zs seed 3, bplus, qzs) | 0 | 1,700 | 0 |
+| subtotal, arms | | | 4,800 |
+| dry run | | | 150 |
+| retries, 10 % of 4,950 | | | 495 |
+| **total** | | | **5,445** |
 
-Beside scoping §3's E1 gate (≈ 2,100), this adds `advise_k5_neutral` and `plan_zs`.
+Beside scoping §3's E1 gate (≈ 2,100), this adds `advise_k5_neutral`, `plan_zs`, the `qzs` receiver and seed 3.
+At ≈ $0.0020–0.0027 per call it is ≈ $11–15 of luna list-price usage, about a quarter of a Plus week
+(`docs/plan_luna_reset_20260925.md` §0).
 
 **Per-arm ceilings.** `bfcl_arm.pbs` stops a hosted arm when its live calls, plus a projection for its missing
-episodes, would exceed `MAX_PLANNER_CALLS`. The default is the high end × 100:
-- planner_alone_cap81: 16 → 1,600;
-- a channel arm: 4 → 400;
-- plan_zs: 2 → 200.
+episodes, would exceed `MAX_PLANNER_CALLS`. The default is the high end × the target episodes (150):
+- planner_alone_cap81: 16 → 2,400;
+- a channel arm: 4 → 600;
+- plan_zs and plan_qzs: 2 → 300.
 
 The replay arms are gated on zero live planner calls.
 
@@ -125,7 +145,7 @@ minus the cached records. The dev read reports hosted calls the same way.
 - the `limit` rate and the crash count;
 - live planner calls per episode (`ledger_totals.planner_calls_total`).
 
-**Pairing.** Contrasts are paired by (entry, seed). They use a cluster bootstrap over the 50 entries (2 seeds each),
+**Pairing.** Contrasts are paired by (entry, seed). They use a cluster bootstrap over the 50 entries (3 seeds each),
 because BFCL has no scenario grouping like AppWorld's.
 
 **The contrasts it prepares, mirrored from J10.** Each gets a point estimate, a paired interval and the per-pair SD
@@ -141,6 +161,11 @@ that sizes the E-prereg's power.
 - **Depth span, m2 → m6**: `prefix_m6 − prefix_m2`, per receiver, with the m4 arm reported between them.
 - **Described, not tested**: `executor_alone_bplus − executor_alone_zs` (tailoring out of domain) and
   `plan_zs − executor_alone_zs` (one plan).
+- **The second executor family (`qzs`), described.**
+  - P6, CF1, the depth span and the no-plan floor are repeated on `qzs`.
+  - Each receiver's contrast is reported beside the other's. The receiver difference is reported as a
+    difference-in-differences with its interval.
+  - Nothing on `qzs` is tested.
 
 **What it does not decide.** No dev number carries a decision rule. The E-prereg fixes the following before any
 test episode:
@@ -158,3 +183,14 @@ test episode:
   - `bfcl_task_ids` refuses any split name but `dev` and `test`.
 - **When the E-prereg lands.** A test submission path is added to the wrapper then, gated on its FROZEN Status line
   as `j10_arm.pbs` gates on A1's.
+
+## 8. Revision and freeze record
+
+- **Revision (2026-09-25).** It added the `qzs` receiver and its 8 arms, and seed 3 on every arm. It also scaled §4's
+  replay gate, §5's budget and ceilings, and §6's pairing, and added the `qzs` read in §6. The source is the user's
+  decisions of 2026-09-25 ("Do all the recommended decisions", on `docs/plan_luna_reset_20260925.md` §5).
+- **BFCL dev data that existed at freeze.** Spikes a and c are ground-truth and share checks with no executor. Spike
+  b is `executor_alone_zs`, seeds 1 and 2, 100 episodes, 36 successes. Its aggregate appears in §2. No hosted, replay,
+  prefix or `qzs` dev episode existed.
+- **Freeze.** The Status line reads FROZEN from the commit that records this section. After that the document is
+  amended only by appending below this section, never by editing above it.

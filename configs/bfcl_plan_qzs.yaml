@@ -1,0 +1,58 @@
+# BFCL multi_turn_base, Wave E dev design (docs/prereg_bfcl_dev_20260924.md): arm `plan_qzs`, plan_zs
+# with the third receiver, qzs = zero-shot Qwen3-8B, in place of zero-shot granite-4.2-8b: one cached
+# plan and the receiver acts on it.
+# Source: configs/bfcl_plan_zs.yaml
+# Differs from source in: campaign_id, executor.model
+# tests/unit/test_bfcl_e2_configs.py diffs the parsed YAML of both files against exactly this list.
+# The executor block is AppWorld's zero-shot Qwen3-8B receiver, configs/hj15_prompt_only_zsq.yaml:21-37
+# (granite's block with only executor.model changed); the same test pins the two blocks equal.
+# scripts/pbs/bfcl_arm.pbs serves Qwen/Qwen3-8B from the home HF cache for every *_qzs stem.
+#
+# ⚠ Runs under runner --system prompt_only, not sft_plan, for plan_zs's reason: sft_plan.py:18 defaults
+# adapter_name to 'sft_plan' when executor.lora_name is null. configs/hj15_prompt_only_zsq.yaml is the
+# Qwen precedent. scripts/pbs/bfcl_arm.pbs derives prompt_only from this stem.
+#
+# No `split:` key: the split is a command-line argument, and bfcl accepts only dev and test.
+# Submit via scripts/pbs/bfcl_arm.pbs, which refuses any split but dev.
+env: bfcl
+campaign_id: bfcl_plan_qzs_dev_20260924
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays BFCL planner_alone_cap81's FIRST plan packet per (task_id, seed), as plan_zs does, so the
+  # two receivers act on byte-identical plans. Only executor asks spend hosted calls:
+  # CachedPacketPlanner.correct forwards them to the inner Codex planner.
+  packet_source: /scratch/n12194778/sidekick/results/bfcl_planner_alone_cap81_dev_20260924
+  # verify_configs.py treats it as pending only while the path is absent.
+  packet_source_pending: "produced by BFCL arm planner_alone_cap81 (dev), not yet run"
+  packet_system: planner_alone
+  # Load-bearing: make_planner passes this to CachedPacketPlanner. A cache miss aborts, with one
+  # exception (J10 A1 §4.2): a source episode scored without a crash whose last attempt wrote no
+  # plan gets a live first plan, for that key only. An absent or crashed source episode still aborts.
+  on_missing: call_if_planless
+executor:
+  type: vllm
+  model: Qwen/Qwen3-8B
+  base_url: http://127.0.0.1:8000
+  lora_name: null  # zero-shot: complete() sends model=<executor.model>.
+  temperature: 0.7
+  max_tokens: 2048
+  # End generation at the close of the first action. Never add a bare "```": it matches the
+  # opening fence.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # prompt_only calls the planner once per episode (plan_first, planner_drives=False), and that
+  # plan is replayed, so this cap binds only on executor asks.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

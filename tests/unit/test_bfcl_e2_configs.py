@@ -25,6 +25,21 @@ REPLAY = ("planner.packet_source", "planner.packet_source_pending")
 PLAN_REPLAY = ("env", "campaign_id") + REPLAY + ("executor.lora_name",)
 CHANNEL = PLAN_REPLAY + ("fixed_k",)
 PREFIX = ("env", "campaign_id", "handoff.source_campaign", "handoff.m") + REPLAY
+# The third receiver, qzs = zero-shot Qwen3-8B: each stem is its zs sibling with only the receiver's model changed.
+QZS = ("campaign_id", "executor.model")
+QWEN = "Qwen/Qwen3-8B"
+# stem -> zs sibling.
+QZS_SIBLING = {
+    "bfcl_executor_alone_qzs": "bfcl_executor_alone_zs",
+    "bfcl_plan_qzs": "bfcl_plan_zs",
+    "bfcl_takeover_k5_qzs": "bfcl_takeover_k5",
+    "bfcl_advise_k5_fullctx_qzs": "bfcl_advise_k5_fullctx",
+    "bfcl_advise_k5_neutral_qzs": "bfcl_advise_k5_neutral",
+    **{f"bfcl_prefix_qzs_m{m}": f"bfcl_prefix_zs_m{m}" for m in (2, 4, 6)},
+}
+# AppWorld's zero-shot Qwen3-8B configs (hj15_*_zsq); the qzs executor block is copied from them.
+ZSQ = ["hj15_executor_alone_zsq", "hj15_prompt_only_zsq", "hj15_prefix_zsq_m6", "hj15_prefix_zsq_m9",
+       "hj15_prefix_zsq_m11"]
 
 # Stated here rather than read from the headers, so a header edit that widens what may differ fails a
 # test instead of silently licensing the drift. stem -> (J10 template, fields that differ).
@@ -37,14 +52,18 @@ REGISTRY: dict[str, tuple[str, tuple[str, ...]]] = {
     "bfcl_advise_k5_neutral": ("configs/j10_advise_k10_neutral.yaml", CHANNEL),
     **{f"bfcl_prefix_zs_m{m}": ("configs/j10_prefix_zs_m9.yaml", PREFIX) for m in (2, 4, 6)},
     **{f"bfcl_prefix_bplus_m{m}": ("configs/j10_prefix_m9.yaml", PREFIX) for m in (2, 4, 6)},
+    # qzs: the template is the zs sibling itself, not J10.
+    **{qzs: (f"configs/{zs}.yaml", QZS) for qzs, zs in QZS_SIBLING.items()},
 }
 STEMS = sorted(REGISTRY)
 PREFIX_ARMS = [s for s in STEMS if s.startswith("bfcl_prefix_")]
-CHANNEL_ARMS = ["bfcl_advise_k5_fullctx", "bfcl_advise_k5_neutral", "bfcl_takeover_k5"]
-REPLAY_ARMS = sorted(PREFIX_ARMS + CHANNEL_ARMS + ["bfcl_plan_zs"])
+CHANNEL_ARMS = ["bfcl_advise_k5_fullctx", "bfcl_advise_k5_neutral", "bfcl_takeover_k5",
+                "bfcl_advise_k5_fullctx_qzs", "bfcl_advise_k5_neutral_qzs", "bfcl_takeover_k5_qzs"]
+REPLAY_ARMS = sorted(PREFIX_ARMS + CHANNEL_ARMS + ["bfcl_plan_zs", "bfcl_plan_qzs"])
 # The brief's receiver column: None is zero-shot granite; the planner_alone executor is never built.
 RECEIVER = {s: None for s in STEMS}
 RECEIVER.update({s: "sft_b_plus" for s in STEMS if "bplus" in s})
+RECEIVER.update({s: "qzs" for s in QZS_SIBLING})
 RECEIVER[SOURCE_STEM] = "mock"
 
 SOURCE_RE = re.compile(r"^# Source: (configs/\S+\.yaml)(?:\s|$)")
@@ -91,8 +110,8 @@ def _declared(stem: str) -> tuple[str, list[str]]:
 
 
 def test_the_config_set_is_the_dev_design_plus_spike_b():
-    # 12 arms of the unit brief's table A, plus the spike (b) arm bfcl_executor_alone_zs.
-    assert len(STEMS) == 12
+    # 12 arms of the unit brief's table A, the 8 qzs arms of unit S2, plus the spike (b) arm bfcl_executor_alone_zs.
+    assert len(STEMS) == 12 + 8 and len(QZS_SIBLING) == 8
     assert sorted(p.stem for p in CONFIGS.glob("bfcl_*.yaml")) == sorted(STEMS + ["bfcl_executor_alone_zs"])
 
 
@@ -126,7 +145,7 @@ def test_env_split_and_campaign_id(stem: str):
 
 def test_campaign_ids_are_unique_and_the_source_path_is_the_planner_alone_campaign():
     ids = [_cfg(s)["campaign_id"] for s in STEMS] + [_cfg("bfcl_executor_alone_zs")["campaign_id"]]
-    assert len(ids) == len(set(ids)) == 13
+    assert len(ids) == len(set(ids)) == 21
     assert SOURCE.rsplit("/", 1)[1] == _cfg(SOURCE_STEM)["campaign_id"]
 
 
@@ -136,9 +155,26 @@ def test_receiver(stem: str):
     if RECEIVER[stem] == "mock":
         assert executor["type"] == "mock"
         return
-    # zs: spike (b)'s executor block verbatim; bplus: the same block under the sft_b_plus alias.
+    # zs: spike (b)'s executor block verbatim; bplus: the same block under the sft_b_plus alias; qzs: the
+    # same block with Qwen3-8B as the model.
     zs = _cfg("bfcl_executor_alone_zs")["executor"]
-    assert executor == dict(zs, lora_name=RECEIVER[stem])
+    if RECEIVER[stem] == "qzs":
+        assert executor == dict(zs, model=QWEN)
+    else:
+        assert executor == dict(zs, lora_name=RECEIVER[stem])
+
+
+@pytest.mark.parametrize("stem", sorted(QZS_SIBLING))
+def test_qzs_executor_is_appworlds_zero_shot_qwen_block(stem: str):
+    # Copied from AppWorld's zero-shot Qwen3-8B configs: model id, sampling, stop, thinking off, prompt budget.
+    blocks = [_cfg(z)["executor"] for z in ZSQ]
+    assert all(b == blocks[0] for b in blocks), "the hj15 zsq executor blocks disagree"
+    executor = _cfg(stem)["executor"]
+    assert executor == blocks[0]
+    assert (executor["model"], executor["lora_name"], executor["temperature"]) == (QWEN, None, 0.7)
+    assert executor["chat_template_kwargs"] == {"enable_thinking": False}
+    # Everything but the receiver's model is the zs sibling's, so a qzs - zs contrast is the receiver alone.
+    assert _diff(_cfg(QZS_SIBLING[stem]), _cfg(stem)) == {"campaign_id", "executor.model"}
 
 
 def test_bplus_comments_name_the_j10_adapter():
@@ -154,18 +190,18 @@ def test_fixed_k_takeover_and_advice_prompt(stem: str):
         assert cfg["fixed_k"] == 5 and cfg["executor"]["lora_name"] is None
     else:
         assert "fixed_k" not in cfg
-    assert cfg.get("takeover") is (True if stem == "bfcl_takeover_k5" else None)
+    assert cfg.get("takeover") is (True if stem in ("bfcl_takeover_k5", "bfcl_takeover_k5_qzs") else None)
     assert "advice_from_act" not in cfg
     prompt = (cfg.get("planner") or {}).get("correct_prompt")
-    assert prompt == ("neutral" if stem == "bfcl_advise_k5_neutral" else None)
+    assert prompt == ("neutral" if stem in ("bfcl_advise_k5_neutral", "bfcl_advise_k5_neutral_qzs") else None)
     assert cfg.get("correct_context") == ("full" if stem.startswith("bfcl_advise_") else None)
 
 
-def test_the_depth_grid_is_exactly_2_4_6_on_both_receivers():
+def test_the_depth_grid_is_exactly_2_4_6_on_every_receiver():
     grid = {}
     for stem in PREFIX_ARMS:
         grid.setdefault(RECEIVER[stem], set()).add(_cfg(stem)["handoff"]["m"])
-    assert grid == {None: {2, 4, 6}, "sft_b_plus": {2, 4, 6}}
+    assert grid == {None: {2, 4, 6}, "sft_b_plus": {2, 4, 6}, "qzs": {2, 4, 6}}
     for stem in PREFIX_ARMS:
         assert stem.endswith(f"_m{_cfg(stem)['handoff']['m']}")
 
@@ -219,28 +255,33 @@ def _n(cell: str) -> int:
     return int(cell.replace(",", "").strip("*"))
 
 
-def test_prereg_is_a_draft_with_one_status_line():
+def test_prereg_is_frozen_with_one_status_line():
+    # Frozen 2026-09-25 as revised (§8); later amendments append below §8 and add no Status line.
     status = [l for l in PREREG.read_text(encoding="utf-8").splitlines() if l.startswith("**Status**")]
-    assert status == ["**Status**: DRAFT"]
+    assert len(status) == 1 and status[0].startswith("**Status**: FROZEN 2026-09-25")
 
 
 def test_prereg_budget_arithmetic():
     rows = _budget_rows()
     arms = {k: v for k, v in rows.items() if v[0]}
-    # Hand check: 12x100 + 1x100 + 3 x (3x100) + 0 = 2,200; dry run 100; 10 % of 2,300 = 230; 2,530.
+    # Hand check (revision of 2026-09-25, 150 episodes per arm): 12x150 + 2 x (1x150) + 6 x (3x150) + 0
+    # = 1,800 + 300 + 2,700 = 4,800; dry run 150; 10 % of 4,950 = 495; 5,445.
     for item, (cpe, n, calls) in arms.items():
         assert _n(cpe) * _n(n) == _n(calls), item
     subtotal = sum(_n(v[2]) for v in arms.values())
-    assert subtotal == _n(rows["subtotal, arms"][2]) == 2200
+    assert subtotal == _n(rows["subtotal, arms"][2]) == 4800
     dry = _n(rows["dry run"][2])
-    assert dry == 100
-    assert _n(rows["retries, 10 % of 2,300"][2]) == (subtotal + dry) // 10 == 230
-    assert _n(rows["total"][2]) == subtotal + dry + 230 == 2530
-    # Every hosted arm of the design is costed, and the free arms account for 700 episodes.
-    hosted = {"planner_alone_cap81", "plan_zs", "takeover_k5", "advise_k5_fullctx", "advise_k5_neutral"}
+    assert dry == 150
+    assert _n(rows["retries, 10 % of 4,950"][2]) == (subtotal + dry) // 10 == 495
+    assert _n(rows["total"][2]) == subtotal + dry + 495 == 5445
+    # Every hosted arm of the design, on zs and on qzs, is costed at 150 episodes. The free arms are 9 prefix
+    # arms x 150, executor_alone_bplus and _qzs x 150, and seed 3 of executor_alone_zs (spike b holds 1 and 2).
+    hosted = {"planner_alone_cap81", "plan_zs", "takeover_k5", "advise_k5_fullctx", "advise_k5_neutral",
+              "plan_qzs", "takeover_k5_qzs", "advise_k5_fullctx_qzs", "advise_k5_neutral_qzs"}
     assert hosted <= set(arms)
-    free = arms["prefix arms (6) and executor_alone_bplus"]
-    assert (_n(free[0]), _n(free[1])) == (0, 7 * 100)
+    assert all(_n(arms[a][1]) == 150 for a in hosted)
+    free = arms["prefix arms (9) and executor_alone (zs seed 3, bplus, qzs)"]
+    assert (_n(free[0]), _n(free[1])) == (0, 9 * 150 + 2 * 150 + 50)
 
 
 def test_prereg_spike_numbers_are_the_report_keys():

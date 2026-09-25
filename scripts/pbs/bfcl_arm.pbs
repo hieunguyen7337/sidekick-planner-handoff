@@ -25,19 +25,24 @@
 #   SYSTEM      runner --system; default derived from the stem, and it must agree
 #   SPLIT       dev only; anything else is refused (no BFCL test prereg is frozen)
 #   TASKS       0 = the whole dev split (50 entries)
-#   SEEDS       default 1,2
+#   SEEDS       default 1,2; any distinct list works (1,2,3 -> target 150). Target, replay-source
+#               gate, planless cap and MAX_PLANNER_CALLS all scale with the requested seeds.
 #   CID         default: the config's campaign_id
 #   EXPECTED_CODEX_VERSION  required, and must be 0.153.4, whenever planner.type is codex
 #   MAX_PLANNER_CALLS  live-call ceiling of a hosted arm; default (calls/episode high end) x target
-#   WORKERS (6), RUN_TIMEOUT (12600 s), SMOKE_TASKS (2), SAFETY (1.2)
+#   WORKERS (6), RUN_TIMEOUT (12600 s), SMOKE_TASKS (2, capped at the tasks run), SAFETY (1.2)
+# Receivers: zs = zero-shot granite-4.2-8b, bplus = granite + sft_b_plus, qzs = zero-shot
+#   Qwen/Qwen3-8B (served from the home HF cache, as scripts/pbs/hj12_prefix.pbs serves it).
 # Refusals (exit 2), before a model is loaded or anything under results/ changes: SPLIT other
 #   than dev; a config stem not in the dev design; config env not bfcl; a `split:` key; a config
 #   campaign_id other than bfcl_<stem>_dev_20260924; CID without a _dev_ marker; SYSTEM disagreeing
-#   with the stem; the receiver, planner, fixed_k, takeover, advice prompt or depth m not the ones
-#   the stem registers; planner.type codex without EXPECTED_CODEX_VERSION=0.153.4 or with another
-#   `codex --version`; a replay source other than bfcl_planner_alone_cap81_dev_20260924, or one not
-#   complete for the requested tasks/seeds; more planless source episodes than the 5 % cap; the
-#   sft_b_plus adapter directory missing; another live job holding the CID.
+#   with the stem; SEEDS malformed or repeating a seed; the receiver, planner, fixed_k, takeover,
+#   advice prompt or depth m not the ones the stem registers; planner.type codex without
+#   EXPECTED_CODEX_VERSION=0.153.4 or with another `codex --version`; a replay source other than
+#   bfcl_planner_alone_cap81_dev_20260924, or one missing any (seed, task) the arm will run; more
+#   planless source episodes than the 5 % cap; the sft_b_plus adapter directory missing; Qwen3-8B
+#   weights missing, stubbed or sparse in the home HF cache (a qzs arm); another live job holding
+#   the CID.
 # Exit codes: 0 arm complete (target non-crashed episodes, 0 crashed) | 2 refused | 3 crashes or
 #   missing episodes remain -> resubmit | 1 smoke, gate, MAX_PLANNER_CALLS or infrastructure failure.
 #
@@ -109,6 +114,17 @@ export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || e
 PY="${PY:-${SIDEKICK_VENV}/bin/python}"
 SUM="${REPO}/scripts/setup/campaign_summarize.py"
 MODEL_GRANITE=ibm-granite/granite-4.2-8b
+# The qzs receiver is AppWorld's zero-shot Qwen3-8B (configs/hj15_*_zsq.yaml executor.model). Its
+# weights live in the HOME hub, granite's in /scratch/n12194778/hf (which holds no Qwen3-8B):
+# hj12_prefix.pbs:126 (QWEN_HF_HOME) and :595-606 (hj12_hf_home_for_model) switch HF_HOME per base
+# model and serve Qwen offline, and lp_live.pbs:67 records the same split. The directory is
+# overridable in a self-test only.
+MODEL_QWEN=Qwen/Qwen3-8B
+REGISTERED_QWEN_HF_HOME="${HOME}/.cache/huggingface"
+QWEN_HF_HOME="${REGISTERED_QWEN_HF_HOME}"
+if [[ "${SELFTEST}" == "1" && -n "${BFCL_QWEN_HF_HOME:-}" ]]; then
+  QWEN_HF_HOME="${BFCL_QWEN_HF_HOME}"
+fi
 # The sft_b_plus receiver is the one J10 serves (j10_arm.pbs:117-124, A1 r2 §4 F8): alias and
 # directory are fixed here, because a different adapter under the same alias changes the receiver
 # while every log still says sft_b_plus. The directory is overridable in a self-test only.
@@ -219,6 +235,16 @@ case "${CFG_STEM}" in
     REG_SYSTEM=prefix_handoff; RECEIVER=zs; HOSTED=0; CPE_HIGH=0; EXP_M="${CFG_STEM##*_m}";;
   prefix_bplus_m2|prefix_bplus_m4|prefix_bplus_m6)
     REG_SYSTEM=prefix_handoff; RECEIVER=bplus; HOSTED=0; CPE_HIGH=0; EXP_M="${CFG_STEM##*_m}";;
+  # The third receiver, qzs (zero-shot Qwen3-8B): each stem is its zs sibling with executor.model
+  # changed, so every other registered fact (system, hosted, high end, k, takeover, prompt, m) is
+  # the sibling's.
+  executor_alone_qzs)   REG_SYSTEM=executor_alone; RECEIVER=qzs; HOSTED=0; CPE_HIGH=0;;
+  plan_qzs)             REG_SYSTEM=prompt_only;    RECEIVER=qzs; HOSTED=1; CPE_HIGH=2;;
+  takeover_k5_qzs)      REG_SYSTEM=fixed_k; RECEIVER=qzs; HOSTED=1; CPE_HIGH=4; EXP_K=5; EXP_TAKEOVER=1;;
+  advise_k5_fullctx_qzs) REG_SYSTEM=fixed_k; RECEIVER=qzs; HOSTED=1; CPE_HIGH=4; EXP_K=5;;
+  advise_k5_neutral_qzs) REG_SYSTEM=fixed_k; RECEIVER=qzs; HOSTED=1; CPE_HIGH=4; EXP_K=5; EXP_PROMPT=neutral;;
+  prefix_qzs_m2|prefix_qzs_m4|prefix_qzs_m6)
+    REG_SYSTEM=prefix_handoff; RECEIVER=qzs; HOSTED=0; CPE_HIGH=0; EXP_M="${CFG_STEM##*_m}";;
   *) fatal "${CFG_BASE} is not an arm of the BFCL dev design (configs/bfcl_<stem>.yaml, docs/prereg_bfcl_dev_20260924.md)";;
 esac
 if [[ -z "${SYSTEM}" ]]; then
@@ -231,17 +257,31 @@ fi
 [[ "${CFG_CAMPAIGN_ID}" == "bfcl_${CFG_STEM}_dev_20260924" ]] \
   || fatal "config campaign_id ${CFG_CAMPAIGN_ID:-<unset>} is not bfcl_${CFG_STEM}_dev_20260924"
 [[ "${TASKS}" =~ ^[0-9]+$ && "${TASKS}" -le "${N_DEV}" ]] || fatal "TASKS must be 0..${N_DEV} (0 = all), got ${TASKS}"
-[[ "${SEEDS}" =~ ^[0-9]+(,[0-9]+)*$ ]] || fatal "SEEDS must look like 1,2 -- got ${SEEDS}"
+# No leading zeros: the runner parses 01 as 1, but the source gate, the planless count and the
+# tally compare seeds as text (the result.json seed, the <seed>/ directory), so 01 would never match.
+[[ "${SEEDS}" =~ ^(0|[1-9][0-9]*)(,(0|[1-9][0-9]*))*$ ]] \
+  || fatal "SEEDS must look like 1,2 or 1,2,3 (comma-separated, no leading zeros) -- got ${SEEDS}"
+N_SEEDS=$(tr ',' '\n' <<< "${SEEDS}" | wc -l | tr -d ' ')
+# A repeated seed runs once but would count twice in TARGET, so the arm could never complete.
+[[ "$(tr ',' '\n' <<< "${SEEDS}" | sort -u | wc -l | tr -d ' ')" == "${N_SEEDS}" ]] \
+  || fatal "SEEDS=${SEEDS} repeats a seed; the target would count episodes that are never run"
 CID="${CID:-${CFG_CAMPAIGN_ID}}"
 [[ -n "${CID}" ]] || fatal "no campaign id"
 [[ "${CID}" =~ ^[A-Za-z0-9_.-]+$ && "${CID}" != "." && "${CID}" != ".." ]] || fatal "unsafe CID ${CID}"
 [[ "${CID}" == *_dev_* ]] || fatal "CID=${CID} does not say _dev_; a dev run must not look like a test campaign"
 TARGET_TASKS="${TASKS}"
 if [[ "${TASKS}" -eq 0 ]]; then TARGET_TASKS="${N_DEV}"; fi
-N_SEEDS=$(awk -F, '{print NF}' <<< "${SEEDS}")
-SMOKE_SEED="${SEEDS%%,*}"
 TARGET=$(( TARGET_TASKS * N_SEEDS ))
-echo "[bfcl] cid=${CID} system=${SYSTEM} receiver=${RECEIVER} hosted=${HOSTED} target=${TARGET} (${TARGET_TASKS} tasks x ${N_SEEDS} seeds)"
+# The smoke is the first SMOKE_TASKS dev entries at the first requested seed. Capped at the tasks
+# the arm runs, so its (seed, task) keys are always among the arm's own, which the replay-source
+# gate below checks one by one.
+SMOKE_SEED="${SEEDS%%,*}"
+[[ "${SMOKE_TASKS}" =~ ^[1-9][0-9]*$ ]] || fatal "SMOKE_TASKS must be a positive integer, got ${SMOKE_TASKS}"
+if (( SMOKE_TASKS > TARGET_TASKS )); then
+  echo "[bfcl] SMOKE_TASKS=${SMOKE_TASKS} exceeds the ${TARGET_TASKS} tasks run; smoke capped at ${TARGET_TASKS}"
+  SMOKE_TASKS="${TARGET_TASKS}"
+fi
+echo "[bfcl] cid=${CID} system=${SYSTEM} receiver=${RECEIVER} hosted=${HOSTED} target=${TARGET} (${TARGET_TASKS} tasks x ${N_SEEDS} seeds) seeds=${SEEDS} smoke=${SMOKE_TASKS} tasks x seed ${SMOKE_SEED}"
 
 # ---- receiver ---------------------------------------------------------------------------------
 case "${RECEIVER}" in
@@ -250,9 +290,48 @@ case "${RECEIVER}" in
   zs|bplus)
     [[ "${EXECUTOR_TYPE}" == "vllm" ]] || fatal "executor.type=${EXECUTOR_TYPE}, expected vllm"
     [[ "${EXECUTOR_MODEL}" == "${MODEL_GRANITE}" ]] || fatal "executor.model=${EXECUTOR_MODEL}, expected ${MODEL_GRANITE}";;
+  qzs)
+    [[ "${EXECUTOR_TYPE}" == "vllm" ]] || fatal "executor.type=${EXECUTOR_TYPE}, expected vllm"
+    [[ "${EXECUTOR_MODEL}" == "${MODEL_QWEN}" ]] \
+      || fatal "executor.model=${EXECUTOR_MODEL}, expected ${MODEL_QWEN}: ${CFG_STEM} is the zero-shot Qwen3-8B receiver";;
 esac
-if [[ "${RECEIVER}" == "zs" ]]; then
+if [[ "${RECEIVER}" == "zs" || "${RECEIVER}" == "qzs" ]]; then
   [[ -z "${LORA_NAME}" ]] || fatal "executor.lora_name=${LORA_NAME}: this arm is zero-shot (null)"
+fi
+# The weights the server will load, checked before a GPU model loads. This cache has held 512-byte
+# LFS pointer stubs for whole models (Qwen3-32B), which fail to load, and SPARSE blobs of the right
+# size that read back as zeros (Qwen3.8-27B-FP8, lp_live.pbs:67-69), which vLLM serves as garbage.
+# Every *.safetensors of the snapshot refs/main names must be >= 1 MiB, and the shards together
+# must be at least half allocated (block counts on this mount lag a fresh write; dl_planner_model.pbs:63-70).
+check_hf_weights () {
+  local hf_home="$1" model="$2"
+  local repo="${hf_home}/hub/models--${model//\//--}"
+  local ref snap f size blocks bsize n=0 apparent=0 allocated=0
+  [[ -s "${repo}/refs/main" ]] || fatal "${model} is not cached under HF_HOME=${hf_home}: no ${repo}/refs/main"
+  ref="$(tr -d '[:space:]' < "${repo}/refs/main")"
+  snap="${repo}/snapshots/${ref}"
+  [[ -f "${snap}/config.json" ]] || fatal "${model} snapshot ${snap} has no config.json"
+  for f in "${snap}"/*.safetensors; do
+    [[ -e "${f}" ]] || continue
+    read -r size blocks bsize < <(stat -L -c '%s %b %B' "${f}" 2>/dev/null) || true
+    [[ "${size:-}" =~ ^[0-9]+$ && "${blocks:-}" =~ ^[0-9]+$ && "${bsize:-}" =~ ^[0-9]+$ ]] \
+      || fatal "could not stat ${f}"
+    (( size >= 1048576 )) || fatal "${model} shard ${f} is ${size} bytes: an LFS pointer stub, not weights"
+    n=$(( n + 1 )); apparent=$(( apparent + size )); allocated=$(( allocated + blocks * bsize ))
+  done
+  (( n > 0 )) || fatal "${model} snapshot ${snap} holds no *.safetensors"
+  (( allocated * 2 >= apparent )) \
+    || fatal "${model} shards under ${snap} are sparse: ${allocated} of ${apparent} bytes allocated; they would load as zeros"
+  echo "[bfcl] ${model} weights: ${n} shards, ${apparent} bytes, ${allocated} allocated, snapshot ${ref} under HF_HOME=${hf_home}"
+}
+if [[ "${RECEIVER}" == "qzs" ]]; then
+  check_hf_weights "${QWEN_HF_HOME}" "${MODEL_QWEN}"
+  # For the whole job, not only the server: the runner's tokenizer (executor.py _get_tokenizer,
+  # AutoTokenizer.from_pretrained(executor.model)) counts prompt tokens against max_prompt_tokens
+  # from the same HF_HOME. Offline as hj12_prefix.pbs:599, so a miss fails instead of downloading.
+  export HF_HOME="${QWEN_HF_HOME}"
+  export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+  echo "[bfcl] qzs receiver: HF_HOME=${HF_HOME} HF_HUB_OFFLINE=${HF_HUB_OFFLINE}"
 fi
 LORA_MODULES=()
 # Ported from j10_arm.pbs:757-775 (register_lora), and run in preflight so a missing adapter is
@@ -326,7 +405,11 @@ fi
 # first m actions (handoff.source_campaign), plan_zs and the channel arms replay its first plan
 # (planner.packet_source). Against a partial source a replay episode crashes on a missing packet or
 # replays a plan the source never scored, so the source must hold >= TARGET non-crashed result.json
-# for the requested seeds, 0 crashed, 0 unreadable. Ported from j10_arm.pbs:373-445.
+# for the REQUESTED seeds (150 for 1,2,3), 0 crashed, 0 unreadable. Ported from j10_arm.pbs:373-445.
+# A count alone can pass a source that lacks a whole seed (TASKS=30 SEEDS=1,2,3 needs 90; a 1,2
+# source holds 100), so every (seed, task) key the arm runs -- the first TARGET_TASKS dev entries
+# (bfcl_task_ids, as the runner picks them) x the requested seeds -- must also be present, by its
+# <seed>/<task> directory, which is where CachedPacketPlanner reads the packet (planner.py:883).
 REQUIRED_SOURCE="${OUT}/${PLANNER_ALONE_CID}"
 for src in "${HANDOFF_SOURCE}" "${PACKET_SOURCE}"; do
   [[ -z "${src}" || "${src%/}" == "${REQUIRED_SOURCE}" ]] \
@@ -334,15 +417,19 @@ for src in "${HANDOFF_SOURCE}" "${PACKET_SOURCE}"; do
 done
 require_complete_source () {
   local what="$1" src="$2"
-  local stats src_ok src_crash src_bad src_exists
-  stats="$(timeout 300 "${PY}" - "${src}" "${SEEDS}" <<'PY'
+  local stats src_ok src_crash src_bad src_exists src_need src_missing src_first
+  stats="$(timeout 300 "${PY}" - "${src}" "${SEEDS}" "${TARGET_TASKS}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
+from sidekick.environments.bfcl_env import bfcl_task_ids
+
 root = Path(sys.argv[1])
-seeds = {s for s in sys.argv[2].split(",") if s}
+seeds = [s for s in sys.argv[2].split(",") if s]
+need = {f"{s}/{t}" for s in seeds for t in bfcl_task_ids("dev", int(sys.argv[3]))}
 ok = crash = bad = 0
+have = set()
 if root.is_dir():
     for path in root.rglob("result.json"):
         try:
@@ -356,12 +443,15 @@ if root.is_dir():
             crash += 1
         elif str(row.get("seed")) in seeds:
             ok += 1
-print(f"{ok} {crash} {bad} {1 if root.is_dir() else 0}")
+            have.add(f"{path.parent.parent.name}/{path.parent.name}")
+missing = sorted(need - have)
+print(ok, crash, bad, 1 if root.is_dir() else 0, len(need), len(missing), ",".join(missing[:3]) or "-")
 PY
 )" || fatal "could not inspect the ${what} ${src}"
-  read -r src_ok src_crash src_bad src_exists <<< "${stats}"
-  echo "[bfcl] ${what} ${src}: exists=${src_exists} non_crashed=${src_ok} crashed=${src_crash} unreadable=${src_bad} (need >= ${TARGET}, 0 crashed)"
-  if [[ "${src_exists}" != "1" || "${src_ok}" -lt "${TARGET}" || "${src_crash}" -ne 0 || "${src_bad}" -ne 0 ]]; then
+  read -r src_ok src_crash src_bad src_exists src_need src_missing src_first <<< "${stats}"
+  echo "[bfcl] ${what} ${src}: exists=${src_exists} non_crashed=${src_ok} crashed=${src_crash} unreadable=${src_bad} missing_keys=${src_missing}/${src_need} (need >= ${TARGET} non-crashed for seeds ${SEEDS}, 0 crashed, every key)"
+  if [[ "${src_exists}" != "1" || "${src_ok}" -lt "${TARGET}" || "${src_crash}" -ne 0 || "${src_bad}" -ne 0 || "${src_missing}" -ne 0 ]]; then
+    [[ "${src_missing}" == "0" ]] || echo "[bfcl] ${what}: first missing <seed>/<task> keys: ${src_first}"
     fatal "${what} campaign is not complete; planner_alone_cap81 must complete before the replay arms start"
   fi
 }
@@ -373,14 +463,18 @@ if [[ -n "${PACKET_SOURCE}" ]] && ! [[ "${SYSTEM}" == "prefix_handoff" && "${PAC
   require_complete_source "planner.packet_source" "${PACKET_SOURCE}"
   # Source episodes scored without a crash that wrote no plan: on_missing: call_if_planless plans
   # them live, one call per key per arm (J10 A1 §4.2). More than 5 % of the target points at the
-  # harness, not the planner, so the arm is refused (j10_arm.pbs:421-445).
-  PLANLESS="$(timeout 300 "${PY}" - "${PACKET_SOURCE}" "${PACKET_SYSTEM}" "${SEEDS}" <<'PY'
+  # harness, not the planner, so the arm is refused (j10_arm.pbs:421-445). Counted over the keys
+  # this arm runs (requested seeds x its tasks), the same set TARGET counts: 5 % of 150 for 1,2,3.
+  PLANLESS="$(timeout 300 "${PY}" - "${PACKET_SOURCE}" "${PACKET_SYSTEM}" "${SEEDS}" "${TARGET_TASKS}" <<'PY'
 import sys
 
 from sidekick.agents.planner import planless_source_keys
+from sidekick.environments.bfcl_env import bfcl_task_ids
 
 seeds = [s for s in sys.argv[3].split(",") if s]
-print(" ".join(planless_source_keys(sys.argv[1], sys.argv[2], seeds)))
+tasks = set(bfcl_task_ids("dev", int(sys.argv[4])))
+keys = planless_source_keys(sys.argv[1], sys.argv[2], seeds)
+print(" ".join(k for k in keys if k.split("/", 1)[1] in tasks))
 PY
 )" || fatal "could not list the planner_alone episodes without a plan under ${PACKET_SOURCE}"
   N_PLANLESS=$(wc -w <<< "${PLANLESS}")
@@ -403,7 +497,8 @@ if [[ "${HOSTED}" == "1" ]]; then
 fi
 
 # ---- MAX_PLANNER_CALLS: the live-call brake of scripts/pbs/hj12_live.pbs:25-29, per arm -------
-# Default: the arm's calls/episode high end x target. The count starts from the ledger key
+# Default: the arm's calls/episode high end x target, where target = tasks x REQUESTED seeds (never
+# a fixed 100): planner_alone 16 x 150 = 2400 at SEEDS=1,2,3. The count starts from the ledger key
 # ledger_totals.planner_calls_total (CostLedger), never the replay-inclusive planner_calls_total
 # (hj12_live.pbs:659-661), and subtracts the cached plan replays: loop.py:465 rewrites every
 # planner response's n_calls to the attempt count, so a replayed plan (provider "cache", n_calls 0
@@ -567,6 +662,9 @@ trap cleanup EXIT
 trap 'echo "[bfcl] caught TERM"; exit 143' TERM
 
 # ---- vLLM: the base model, plus sft_b_plus for a bplus arm (j10_arm.pbs:756-928) ------------------
+# A qzs arm serves Qwen/Qwen3-8B with no LoRA and the identical flags hj12_prefix.pbs:1177-1184 gives
+# AppWorld's zero-shot Qwen arms (bf16, max-model-len 32768, gpu-memory-utilization 0.85, no
+# reasoning parser); only HF_HOME differs, set above for the whole job.
 bfcl_vllm_fatal () {
   echo "[bfcl] FATAL: $*"
   if [[ -n "${VLOG:-}" && -f "${VLOG}" ]]; then
@@ -672,7 +770,7 @@ if [[ "${EXECUTOR_TYPE}" == "vllm" ]]; then
     ${LORA_SERVE_FLAGS[@]+"${LORA_SERVE_FLAGS[@]}"} \
     > "${VLOG}" 2>&1 &
   VLLM_PID=$!
-  echo "[bfcl] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} ${LORA_SERVE_FLAGS[*]} vlog=${VLOG}"
+  echo "[bfcl] vllm serve ${MODEL} pid=${VLLM_PID} port=${VLLM_PORT} ${LORA_SERVE_FLAGS[*]} HF_HOME=${HF_HOME} vlog=${VLOG}"
   t0=$(date +%s); deadline=$((t0 + 300)); healthy=0
   while (( $(date +%s) < deadline )); do
     kill -0 "${VLLM_PID}" 2>/dev/null || bfcl_vllm_fatal "vllm died before healthy"

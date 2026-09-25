@@ -1,0 +1,37 @@
+# BFCL multi_turn_base, Wave E dev design (docs/prereg_bfcl_dev_20260924.md): arm `executor_alone_qzs`,
+# the floor of the third receiver, qzs = zero-shot Qwen3-8B: executor_alone_zs with Qwen3-8B in place
+# of zero-shot granite-4.2-8b. Zero hosted planner calls.
+# Source: configs/bfcl_executor_alone_zs.yaml
+# Differs from source in: campaign_id, executor.model
+# tests/unit/test_bfcl_e2_configs.py diffs the parsed YAML of both files against exactly this list.
+# The executor block is AppWorld's zero-shot Qwen3-8B receiver, configs/hj15_executor_alone_zsq.yaml:9-27
+# (granite's block with only executor.model changed); the same test pins the two blocks equal.
+# scripts/pbs/bfcl_arm.pbs serves Qwen/Qwen3-8B from the home HF cache for every *_qzs stem.
+#
+# No `split:` key: the split is a command-line argument, and bfcl accepts only dev and test.
+# Submit via scripts/pbs/bfcl_arm.pbs, which refuses any split but dev.
+env: bfcl
+campaign_id: bfcl_executor_alone_qzs_dev_20260924
+planner:
+  type: mock          # never called by executor_alone; must not be codex
+executor:
+  type: vllm
+  model: Qwen/Qwen3-8B
+  base_url: http://127.0.0.1:8000
+  lora_name: null  # zero-shot: complete() sends model=<executor.model>.
+  temperature: 0.7
+  max_tokens: 2048
+  # End generation at the close of the first action. Never add a bare "```": it matches the
+  # opening fence.
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

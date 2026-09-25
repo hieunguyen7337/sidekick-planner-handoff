@@ -12,16 +12,32 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
 import yaml
+
+from sidekick.environments.bfcl_env import bfcl_task_ids
 
 REPO = Path(__file__).resolve().parents[2]
 PBS = REPO / "scripts" / "pbs" / "bfcl_arm.pbs"
 CFG = REPO / "configs" / "bfcl_executor_alone_zs.yaml"
 SOURCE_CID = "bfcl_planner_alone_cap81_dev_20260924"
 REGISTERED_SOURCE = f"/scratch/n12194778/sidekick/results/{SOURCE_CID}"
+# The 50 dev entries in the order the runner takes them; the source gate checks these (seed, task) keys.
+DEV_IDS = bfcl_task_ids("dev", 0)
+QWEN = "Qwen/Qwen3-8B"
+MIB = 1024 * 1024
+# The third receiver, zero-shot Qwen3-8B: new stem -> its zs sibling.
+QZS_SIBLING = {
+    "bfcl_executor_alone_qzs.yaml": "bfcl_executor_alone_zs.yaml",
+    "bfcl_plan_qzs.yaml": "bfcl_plan_zs.yaml",
+    "bfcl_takeover_k5_qzs.yaml": "bfcl_takeover_k5.yaml",
+    "bfcl_advise_k5_fullctx_qzs.yaml": "bfcl_advise_k5_fullctx.yaml",
+    "bfcl_advise_k5_neutral_qzs.yaml": "bfcl_advise_k5_neutral.yaml",
+    **{f"bfcl_prefix_qzs_m{m}.yaml": f"bfcl_prefix_zs_m{m}.yaml" for m in (2, 4, 6)},
+}
 # Every config of the dev design, and the runner --system the wrapper derives from its stem.
 SYSTEM_OF = {
     "bfcl_executor_alone_zs.yaml": "executor_alone",
@@ -33,9 +49,45 @@ SYSTEM_OF = {
     "bfcl_advise_k5_neutral.yaml": "fixed_k",
     **{f"bfcl_prefix_{r}_m{m}.yaml": "prefix_handoff" for r in ("zs", "bplus") for m in (2, 4, 6)},
 }
+SYSTEM_OF.update({qzs: SYSTEM_OF[zs] for qzs, zs in QZS_SIBLING.items()})
 HOSTED = {"bfcl_planner_alone_cap81.yaml", "bfcl_plan_zs.yaml", "bfcl_takeover_k5.yaml",
           "bfcl_advise_k5_fullctx.yaml", "bfcl_advise_k5_neutral.yaml"}
+HOSTED |= {qzs for qzs, zs in QZS_SIBLING.items() if zs in HOSTED}
 CODEX_OK = {"EXPECTED_CODEX_VERSION": "0.153.4"}
+
+
+def _receiver(name: str) -> str:
+    if "planner_alone" in name:
+        return "none"
+    return "qzs" if "qzs" in name else ("bplus" if "bplus" in name else "zs")
+
+
+def _qwen_cache(root: Path, shard: str = "real", ref: str = "b968826d") -> Path:
+    """An HF_HOME holding Qwen/Qwen3-8B as the hub lays it out: refs/main -> snapshot -> symlink -> blob.
+
+    shard: "real" (1 MiB written, fsynced), "stub" (a 512-byte pointer), "sparse" (8 MiB apparent, nothing
+    allocated) or "none" (no *.safetensors).
+    """
+    repo = root / "hub" / "models--Qwen--Qwen3-8B"
+    snap = repo / "snapshots" / ref
+    if (snap / "config.json").is_file():
+        return root
+    (repo / "refs").mkdir(parents=True)
+    (repo / "blobs").mkdir()
+    snap.mkdir(parents=True)
+    (repo / "refs" / "main").write_text(ref, encoding="utf-8")
+    (snap / "config.json").write_text("{}", encoding="utf-8")
+    if shard != "none":
+        blob = repo / "blobs" / "0123abcd"
+        with open(blob, "wb") as fh:
+            if shard == "sparse":
+                fh.truncate(8 * MIB)
+            else:
+                fh.write(os.urandom(512 if shard == "stub" else MIB))
+                fh.flush()
+                os.fsync(fh.fileno())
+        (snap / "model-00001-of-00001.safetensors").symlink_to(blob)
+    return root
 
 
 def _stub_dir(tmp: Path, version: str = "codex-cli 0.153.4") -> Path:
@@ -59,11 +111,12 @@ def _adapter(tmp: Path, weights: bool = True) -> Path:
 def _run(tmp: Path, **env: str) -> subprocess.CompletedProcess:
     full = dict(os.environ)
     for key in ("SPLIT", "TASKS", "SEEDS", "CID", "SYSTEM", "EXPECTED_CODEX_VERSION", "MAX_PLANNER_CALLS",
-                "BFCL_SELFTEST_STAGE", "BFCL_SPEND_RATE_CID", "PBS_JOBID", "CFG"):
+                "BFCL_SELFTEST_STAGE", "BFCL_SPEND_RATE_CID", "PBS_JOBID", "CFG", "SMOKE_TASKS", "HF_HUB_OFFLINE"):
         full.pop(key, None)
     full.update({"BFCL_SELFTEST": "1", "BFCL_REPO": str(REPO), "BFCL_OUT": str(tmp / "out"),
                  "BFCL_LOGDIR": str(tmp / "logs"), "PY": sys.executable,
-                 "BFCL_ADAPTER_SFT_B_PLUS": str(_adapter(tmp))})
+                 "BFCL_ADAPTER_SFT_B_PLUS": str(_adapter(tmp)),
+                 "BFCL_QWEN_HF_HOME": str(_qwen_cache(tmp / "qwen_hf"))})
     if "BFCL_STUB_DIR" not in env:
         full["BFCL_STUB_DIR"] = str(_stub_dir(tmp))
     full.update(env)
@@ -101,7 +154,7 @@ def _write_results(root: Path, rows: list[tuple[str, int, str | None]], system: 
 
 def _complete_source(tmp: Path, n_tasks: int = 50, seeds: tuple[int, ...] = (1, 2)) -> Path:
     src = tmp / "out" / SOURCE_CID
-    _write_results(src, [(f"multi_turn_base_{i}", s, None) for i in range(n_tasks) for s in seeds], "planner_alone")
+    _write_results(src, [(t, s, None) for t in DEV_IDS[:n_tasks] for s in seeds], "planner_alone")
     return src
 
 
@@ -177,7 +230,7 @@ def test_every_config_passes_preflight_once_planner_alone_is_complete(tmp_path: 
     assert proc.returncode == 0, _out(proc)
     line = next(l for l in proc.stdout.splitlines() if "selftest preflight ok" in l)
     stem = name[: -len(".yaml")]
-    receiver = "none" if "planner_alone" in stem else ("bplus" if "bplus" in stem else "zs")
+    receiver = _receiver(name)
     assert f"system={SYSTEM_OF[name]} cid={stem}_dev_20260924 receiver={receiver} target=100" in line
     if name in HOSTED:
         assert line.endswith("gate=--gate --expect-planner --expect-model gpt-5.6-luna")
@@ -186,6 +239,225 @@ def test_every_config_passes_preflight_once_planner_alone_is_complete(tmp_path: 
         assert line.endswith("gate=--gate")  # zero live planner calls
     if receiver == "bplus":
         assert "lora-module sft_b_plus=" in proc.stdout
+    else:
+        assert "lora-module" not in proc.stdout
+    if receiver == "qzs":
+        assert f"qzs receiver: HF_HOME={tmp_path / 'qwen_hf'} HF_HUB_OFFLINE=1" in proc.stdout
+        assert f"{QWEN} weights: 1 shards, {MIB} bytes" in proc.stdout
+    else:
+        assert "qzs receiver" not in proc.stdout and f"{QWEN} weights" not in proc.stdout
+
+
+# ---- the third receiver, qzs: zero-shot Qwen3-8B ---------------------------------------------------
+
+@pytest.mark.parametrize("name", sorted(QZS_SIBLING))
+def test_a_qzs_stem_registers_what_its_zs_sibling_does(tmp_path: Path, name: str) -> None:
+    # Same system, hosted gate and default ceiling as the sibling; only the receiver differs.
+    _complete_source(tmp_path)
+    got = {}
+    for cfg in (name, QZS_SIBLING[name]):
+        proc = _run(tmp_path, CFG=str(_variant(tmp_path, cfg)), **CODEX_OK)
+        assert proc.returncode == 0, _out(proc)
+        line = next(l for l in proc.stdout.splitlines() if "selftest preflight ok" in l)
+        ceiling = [l.split("MAX_PLANNER_CALLS=")[1].split()[0] for l in proc.stdout.splitlines()
+                   if l.startswith("[bfcl] MAX_PLANNER_CALLS=")]
+        got[cfg] = (line.replace(cfg[5:-5], "<stem>").replace("receiver=qzs", "receiver=zs"), ceiling)
+    assert got[name] == got[QZS_SIBLING[name]]
+
+
+@pytest.mark.parametrize(
+    "name, edit, message",
+    [
+        # The refusal the brief names: a qzs config whose model is granite.
+        ("bfcl_executor_alone_qzs.yaml", {"executor": {"model": "ibm-granite/granite-4.2-8b"}},
+         "executor.model=ibm-granite/granite-4.2-8b, expected Qwen/Qwen3-8B: executor_alone_qzs is the zero-shot Qwen3-8B receiver"),
+        ("bfcl_plan_qzs.yaml", {"executor": {"model": "ibm-granite/granite-4.2-8b"}}, "expected Qwen/Qwen3-8B"),
+        ("bfcl_prefix_qzs_m4.yaml", {"executor": {"model": "Qwen/Qwen3-32B"}}, "expected Qwen/Qwen3-8B"),
+        ("bfcl_takeover_k5_qzs.yaml", {"executor": {"lora_name": "sft_b_plus_qwen8b"}}, "this arm is zero-shot (null)"),
+        ("bfcl_executor_alone_qzs.yaml", {"executor": {"type": "mock"}}, "executor.type=mock, expected vllm"),
+        # The zs receiver still refuses Qwen, and qzs keeps its sibling's channel facts.
+        ("bfcl_prefix_zs_m2.yaml", {"executor": {"model": QWEN}}, "expected ibm-granite/granite-4.2-8b"),
+        ("bfcl_advise_k5_neutral_qzs.yaml", {"planner": {"correct_prompt": "correction"}}, "registers neutral"),
+        ("bfcl_takeover_k5_qzs.yaml", {"takeover": None}, "takeover=0, but takeover_k5_qzs registers takeover=1"),
+        ("bfcl_prefix_qzs_m6.yaml", {"handoff": {"m": 2}}, "handoff.m=2, but prefix_qzs_m6 registers m=6"),
+        ("bfcl_executor_alone_qzs.yaml", {"campaign_id": "bfcl_executor_alone_zs_dev_20260924"},
+         "is not bfcl_executor_alone_qzs_dev_20260924"),
+    ],
+)
+def test_qzs_receiver_refusals(tmp_path: Path, name: str, edit: dict, message: str) -> None:
+    _complete_source(tmp_path)
+    proc = _run(tmp_path, CFG=str(_variant(tmp_path, name, edit)), **CODEX_OK)
+    assert proc.returncode == 2 and message in proc.stdout, _out(proc)
+
+
+@pytest.mark.parametrize(
+    "shard, message",
+    [
+        ("stub", "is 512 bytes: an LFS pointer stub, not weights"),
+        ("none", "holds no *.safetensors"),
+    ],
+)
+def test_qwen_weights_must_be_real_in_the_hf_cache(tmp_path: Path, shard: str, message: str) -> None:
+    bad = _qwen_cache(tmp_path / f"hf_{shard}", shard=shard)
+    proc = _run(tmp_path, CFG=str(_variant(tmp_path, "bfcl_executor_alone_qzs.yaml")), BFCL_QWEN_HF_HOME=str(bad))
+    assert proc.returncode == 2 and message in proc.stdout, _out(proc)
+
+
+@pytest.fixture
+def hole_dir(tmp_path: Path):
+    """A directory whose filesystem reports a hole as unallocated. /tmp on the compute nodes is wekafs, which
+    reports a truncated 8 MiB file as 8 MiB allocated (job 25867829), so /dev/shm (tmpfs) is tried first."""
+    made = None
+    candidates = [tmp_path]
+    if os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK):
+        made = Path(tempfile.mkdtemp(prefix="bfcl_hole_", dir="/dev/shm"))
+        candidates.insert(0, made)
+    try:
+        for d in candidates:
+            probe = d / "probe"
+            with open(probe, "wb") as fh:
+                fh.truncate(8 * MIB)
+            holey = probe.stat().st_blocks * 512 * 2 < 8 * MIB
+            probe.unlink()
+            if holey:
+                yield d
+                return
+        pytest.skip("no writable filesystem here reports a hole as unallocated")
+    finally:
+        if made is not None:
+            shutil.rmtree(made, ignore_errors=True)
+
+
+def test_sparse_qwen_weights_are_refused(tmp_path: Path, hole_dir: Path) -> None:
+    # An 8 MiB hole: nothing (or a metadata block or two) allocated, well under half.
+    bad = _qwen_cache(hole_dir / "hf_sparse", shard="sparse")
+    proc = _run(tmp_path, CFG=str(_variant(tmp_path, "bfcl_executor_alone_qzs.yaml")), BFCL_QWEN_HF_HOME=str(bad))
+    assert proc.returncode == 2 and "are sparse: " in proc.stdout, _out(proc)
+    assert f"of {8 * MIB} bytes allocated; they would load as zeros" in proc.stdout
+
+
+def test_qwen_must_be_cached_at_all(tmp_path: Path) -> None:
+    empty = tmp_path / "empty_hf"
+    empty.mkdir()
+    proc = _run(tmp_path, CFG=str(_variant(tmp_path, "bfcl_executor_alone_qzs.yaml")), BFCL_QWEN_HF_HOME=str(empty))
+    assert proc.returncode == 2 and f"Qwen/Qwen3-8B is not cached under HF_HOME={empty}" in proc.stdout, _out(proc)
+    # A granite arm never looks at the Qwen cache.
+    proc = _run(tmp_path, BFCL_QWEN_HF_HOME=str(empty))
+    assert proc.returncode == 0, _out(proc)
+
+
+def test_a_real_submission_serves_qwen_from_the_home_cache() -> None:
+    text = PBS.read_text(encoding="utf-8")
+    assert 'if [[ "${SELFTEST}" == "1" && -n "${BFCL_QWEN_HF_HOME:-}" ]]; then' in text
+    assert 'REGISTERED_QWEN_HF_HOME="${HOME}/.cache/huggingface"' in text
+    assert "MODEL_QWEN=Qwen/Qwen3-8B" in text
+    # The serve line is the one hj12_prefix.pbs gives AppWorld's zero-shot Qwen arms, flag for flag.
+    serve = ('--served-model-name "${MODEL}" \\\n    --dtype bfloat16 \\\n    --max-model-len 32768 \\\n'
+             '    --host 127.0.0.1 --port "${VLLM_PORT}" \\\n    --gpu-memory-utilization 0.85 \\\n')
+    assert serve in text and serve in (REPO / "scripts" / "pbs" / "hj12_prefix.pbs").read_text(encoding="utf-8")
+    assert "reasoning-parser" not in text.replace("Do NOT add reasoning-parser flags", "")
+
+
+# ---- seeds 1,2,3 -------------------------------------------------------------------------------
+
+def test_seeds_1_2_3_scale_the_target_and_the_smoke_keeps_the_first_seed(tmp_path: Path) -> None:
+    proc = _run(tmp_path, SEEDS="1,2,3")
+    assert proc.returncode == 0, _out(proc)
+    # By hand: 50 tasks x 3 seeds = 150; the smoke is 2 entries at seed 1.
+    assert "target=150 (50 tasks x 3 seeds) seeds=1,2,3 smoke=2 tasks x seed 1" in proc.stdout
+    assert "target=150 gate=--gate" in proc.stdout
+    proc = _run(tmp_path, SEEDS="3,1,2", TASKS="1")
+    assert proc.returncode == 0, _out(proc)
+    # 1 task x 3 seeds = 3; the default 2-entry smoke is capped at the 1 task run, at the first listed seed.
+    assert "SMOKE_TASKS=2 exceeds the 1 tasks run; smoke capped at 1" in proc.stdout
+    assert "target=3 (1 tasks x 3 seeds) seeds=3,1,2 smoke=1 tasks x seed 3" in proc.stdout
+
+
+@pytest.mark.parametrize(
+    "env, message",
+    [
+        ({"SEEDS": "1,2,2"}, "SEEDS=1,2,2 repeats a seed"),
+        ({"SEEDS": "01,2,3"}, "SEEDS must look like 1,2 or 1,2,3 (comma-separated, no leading zeros)"),
+        ({"SEEDS": "1,2,"}, "SEEDS must look like"),
+        ({"SMOKE_TASKS": "0"}, "SMOKE_TASKS must be a positive integer, got 0"),
+    ],
+)
+def test_seed_and_smoke_refusals(tmp_path: Path, env: dict, message: str) -> None:
+    proc = _run(tmp_path, **env)
+    assert proc.returncode == 2 and message in proc.stdout, _out(proc)
+
+
+def test_the_default_ceiling_scales_with_seeds_1_2_3(tmp_path: Path) -> None:
+    _complete_source(tmp_path, seeds=(1, 2, 3))
+    # Hand values at 150 episodes: planner_alone 16 x 150, a channel arm 4 x 150, a plan arm 2 x 150.
+    for name, want in (("bfcl_planner_alone_cap81.yaml", 2400), ("bfcl_takeover_k5.yaml", 600),
+                       ("bfcl_advise_k5_neutral_qzs.yaml", 600), ("bfcl_plan_zs.yaml", 300),
+                       ("bfcl_plan_qzs.yaml", 300)):
+        proc = _run(tmp_path, CFG=str(_variant(tmp_path, name)), SEEDS="1,2,3", **CODEX_OK)
+        assert proc.returncode == 0, _out(proc)
+        assert f"MAX_PLANNER_CALLS={want} " in proc.stdout and "x 150) safety=1.2" in proc.stdout, _out(proc)
+
+
+@pytest.mark.parametrize("name", ["bfcl_plan_qzs.yaml", "bfcl_prefix_qzs_m2.yaml", "bfcl_advise_k5_fullctx.yaml"])
+def test_the_source_gate_counts_the_requested_seeds(tmp_path: Path, name: str) -> None:
+    cfg = str(_variant(tmp_path, name))
+    src = tmp_path / "out" / SOURCE_CID
+    what = "prefix source" if "prefix" in name else "planner.packet_source"
+    _complete_source(tmp_path, seeds=(1, 2))
+    # A source complete at seeds 1,2 serves SEEDS=1,2 but not 1,2,3: 100 < 150 and no seed-3 key.
+    proc = _run(tmp_path, CFG=cfg, **CODEX_OK)
+    assert proc.returncode == 0, _out(proc)
+    assert f"{what} {src}: exists=1 non_crashed=100 crashed=0 unreadable=0 missing_keys=0/100 (need >= 100" in proc.stdout
+    proc = _run(tmp_path, CFG=cfg, SEEDS="1,2,3", **CODEX_OK)
+    assert proc.returncode == 2, _out(proc)
+    assert "non_crashed=100 crashed=0 unreadable=0 missing_keys=50/150 (need >= 150 non-crashed for seeds 1,2,3" in proc.stdout
+    assert "first missing <seed>/<task> keys: 3/" in proc.stdout
+    assert "planner_alone_cap81 must complete before the replay arms start" in proc.stdout
+    # Seed 3 run for 49 of the 50 entries: 149, still refused; the 50th completes it.
+    _write_results(src, [(t, 3, None) for t in DEV_IDS[:49]], "planner_alone")
+    proc = _run(tmp_path, CFG=cfg, SEEDS="1,2,3", **CODEX_OK)
+    assert proc.returncode == 2 and "non_crashed=149 crashed=0 unreadable=0 missing_keys=1/150" in proc.stdout
+    assert f"first missing <seed>/<task> keys: 3/{DEV_IDS[49]}" in proc.stdout
+    _write_results(src, [(DEV_IDS[49], 3, None)], "planner_alone")
+    proc = _run(tmp_path, CFG=cfg, SEEDS="1,2,3", **CODEX_OK)
+    assert proc.returncode == 0, _out(proc)
+    assert "non_crashed=150 crashed=0 unreadable=0 missing_keys=0/150 (need >= 150" in proc.stdout
+
+
+def test_a_count_that_covers_the_target_does_not_excuse_a_missing_seed(tmp_path: Path) -> None:
+    # TASKS=30 SEEDS=1,2,3 needs 90 episodes; a 1,2 source holds 100 of seeds {1,2,3}, so the count
+    # alone passes, but none of the 30 seed-3 keys exists and every one of those episodes would abort.
+    _complete_source(tmp_path, seeds=(1, 2))
+    proc = _run(tmp_path, CFG=str(_variant(tmp_path, "bfcl_takeover_k5_qzs.yaml")), TASKS="30", SEEDS="1,2,3",
+                **CODEX_OK)
+    assert proc.returncode == 2, _out(proc)
+    assert "non_crashed=100 crashed=0 unreadable=0 missing_keys=30/90 (need >= 90" in proc.stdout
+
+
+def test_the_planless_cap_is_5_percent_of_150_at_seeds_1_2_3(tmp_path: Path) -> None:
+    src = _complete_source(tmp_path, seeds=(1, 2, 3))
+    cfg = str(_variant(tmp_path, "bfcl_advise_k5_fullctx_qzs.yaml"))
+    # 5 % of 150 = 7.5, so 7 planless keys pass and the 8th is refused ("more than 5 %"). Seed 3 counts.
+    _planless(src, [(t, 3) for t in DEV_IDS[:7]])
+    proc = _run(tmp_path, CFG=cfg, SEEDS="1,2,3", **CODEX_OK)
+    assert proc.returncode == 0, _out(proc)
+    assert "planner_alone episodes scored without a plan: 7 (cap 7, as J10 A1 §4.2)" in proc.stdout
+    # The same source at the default seeds 1,2: cap 5, and the seed-3 keys are not this arm's.
+    proc = _run(tmp_path, CFG=cfg, **CODEX_OK)
+    assert proc.returncode == 0 and "scored without a plan: 0 (cap 5," in proc.stdout, _out(proc)
+    _planless(src, [(DEV_IDS[7], 1)])
+    proc = _run(tmp_path, CFG=cfg, SEEDS="1,2,3", **CODEX_OK)
+    assert proc.returncode == 2
+    assert "8 planner_alone episodes wrote no plan, above the cap of 7 (5 % of 150)" in proc.stdout
+
+
+def test_the_planless_count_ignores_keys_outside_the_tasks_run(tmp_path: Path) -> None:
+    src = _complete_source(tmp_path, seeds=(1, 2, 3))
+    _planless(src, [(DEV_IDS[40], 1), (DEV_IDS[41], 2), (DEV_IDS[2], 3)])
+    proc = _run(tmp_path, CFG=str(_variant(tmp_path, "bfcl_plan_qzs.yaml")), TASKS="10", SEEDS="1,2,3", **CODEX_OK)
+    # 10 tasks x 3 seeds = 30, cap 1; only DEV_IDS[2] at seed 3 is one of this arm's keys.
+    assert proc.returncode == 0, _out(proc)
+    assert f"scored without a plan: 1 (cap 1, as J10 A1 §4.2): 3/{DEV_IDS[2]}" in proc.stdout
 
 
 def test_the_default_ceiling_is_the_high_end_per_episode_times_the_target(tmp_path: Path) -> None:
@@ -289,7 +561,7 @@ def test_an_adapter_without_its_config_is_refused(tmp_path: Path) -> None:
 
 def test_a_planless_source_key_is_refused_when_the_arm_would_abort_on_it(tmp_path: Path) -> None:
     src = _complete_source(tmp_path)
-    _planless(src, [("multi_turn_base_3", 1)])
+    _planless(src, [(DEV_IDS[3], 1)])
     cfg = _variant(tmp_path, "bfcl_plan_zs.yaml", {"planner": {"on_missing": "fail"}})
     proc = _run(tmp_path, CFG=str(cfg), **CODEX_OK)
     assert proc.returncode == 2 and "planner.on_missing is 'fail', so the 1 planless source episode(s) would crash" in proc.stdout
@@ -323,17 +595,17 @@ def test_a_replay_arm_waits_for_a_complete_non_crashed_source(tmp_path: Path, na
     proc = _run(tmp_path, CFG=cfg, **CODEX_OK)  # not started
     assert proc.returncode == 2 and wait in proc.stdout and f"{what} {src}: exists=0" in proc.stdout
     # One episode short of 50 x 2.
-    _write_results(src, [(f"multi_turn_base_{i}", s, None) for i in range(50) for s in (1, 2) if (i, s) != (49, 2)],
+    _write_results(src, [(t, s, None) for i, t in enumerate(DEV_IDS) for s in (1, 2) if (i, s) != (49, 2)],
                    "planner_alone")
     proc = _run(tmp_path, CFG=cfg, **CODEX_OK)
-    assert proc.returncode == 2 and "non_crashed=99" in proc.stdout
-    _write_results(src, [("multi_turn_base_49", 2, "crash")], "planner_alone")
+    assert proc.returncode == 2 and "non_crashed=99" in proc.stdout and "missing_keys=1/100" in proc.stdout
+    _write_results(src, [(DEV_IDS[49], 2, "crash")], "planner_alone")
     proc = _run(tmp_path, CFG=cfg, **CODEX_OK)
     assert proc.returncode == 2 and "crashed=1" in proc.stdout
-    _write_results(src, [("multi_turn_base_49", 2, None)], "planner_alone")
+    _write_results(src, [(DEV_IDS[49], 2, None)], "planner_alone")
     proc = _run(tmp_path, CFG=cfg, **CODEX_OK)
     assert proc.returncode == 0, _out(proc)
-    assert f"{what} {src}: exists=1 non_crashed=100 crashed=0 unreadable=0" in proc.stdout
+    assert f"{what} {src}: exists=1 non_crashed=100 crashed=0 unreadable=0 missing_keys=0/100" in proc.stdout
 
 
 def test_a_replay_source_other_than_planner_alone_is_refused(tmp_path: Path) -> None:
@@ -355,12 +627,13 @@ def _planless(src: Path, keys: list[tuple[str, int]]) -> None:
 def test_planless_source_episodes_are_listed_and_capped_at_5_percent(tmp_path: Path) -> None:
     src = _complete_source(tmp_path)
     cfg = str(_variant(tmp_path, "bfcl_advise_k5_neutral.yaml"))
-    _planless(src, [("multi_turn_base_3", 2), ("multi_turn_base_7", 1)])
+    _planless(src, [(DEV_IDS[3], 2), (DEV_IDS[7], 1)])
     proc = _run(tmp_path, CFG=cfg, **CODEX_OK)
     assert proc.returncode == 0, _out(proc)
-    # 5 % of 100 = 5, by hand.
-    assert "planner_alone episodes scored without a plan: 2 (cap 5, as J10 A1 §4.2): 1/multi_turn_base_7 2/multi_turn_base_3" in proc.stdout
-    _planless(src, [(f"multi_turn_base_{i}", 1) for i in range(20, 24)])  # 6 in all
+    # 5 % of 100 = 5, by hand. Listed seed-first, as planless_source_keys sorts the paths.
+    assert (f"planner_alone episodes scored without a plan: 2 (cap 5, as J10 A1 §4.2): 1/{DEV_IDS[7]} 2/{DEV_IDS[3]}"
+            in proc.stdout)
+    _planless(src, [(t, 1) for t in DEV_IDS[20:24]])  # 6 in all
     proc = _run(tmp_path, CFG=cfg, **CODEX_OK)
     assert proc.returncode == 2 and "6 planner_alone episodes wrote no plan, above the cap of 5" in proc.stdout
 
@@ -454,3 +727,35 @@ def test_spend_guard_does_not_count_a_replayed_plan_as_a_hosted_call(tmp_path: P
     # By hand: (8 - 2) / 2 = 3 per episode; ceil(3 x 100 x 1.2) = 360 <= 400. The raw ledger would give 480.
     assert proc.returncode == 0, _out(proc)
     assert "rate=6/2 missing=100 projection=360 ceiling=400" in proc.stdout
+
+
+def test_spend_guard_at_seeds_1_2_3_projects_150_episodes_against_2400(tmp_path: Path) -> None:
+    cfg = str(_variant(tmp_path, "bfcl_planner_alone_cap81.yaml"))
+    cid = "bfcl_planner_alone_cap81_dev_20260924"
+    smoke = f"{cid}_smoke_1"
+    _write_results(tmp_path / "out" / smoke, [("a", 1, None), ("b", 1, None)], "planner_alone",
+                   totals={"planner_calls_total": 15})
+    env = dict(CFG=cfg, BFCL_SELFTEST_STAGE="spend", BFCL_SPEND_RATE_CID=smoke, SEEDS="1,2,3", **CODEX_OK)
+    # By hand: 15/episode; ceil(15 x 150 x 1.2) = 2700 > 16 x 150 = 2400 -> refused.
+    proc = _run(tmp_path, **env)
+    assert proc.returncode == 1 and "missing=150 projection=2700 ceiling=2400" in proc.stdout, _out(proc)
+    # Extending a finished 1,2 campaign to 1,2,3: 100 episodes spent 1000 (10 each); 50 missing ->
+    # ceil(10 x 50 x 1.2) = 600; 1000 + 600 = 1600 <= 2400.
+    _write_results(tmp_path / "out" / cid, [(t, s, None) for t in DEV_IDS for s in (1, 2)],
+                   "planner_alone", totals={"planner_calls_total": 10})
+    proc = _run(tmp_path, CFG=cfg, BFCL_SELFTEST_STAGE="spend", SEEDS="1,2,3", **CODEX_OK)
+    assert proc.returncode == 0, _out(proc)
+    assert "live_so_far=1000 (ledger 1000 minus cached plans) episodes=100" in proc.stdout
+    assert "missing=50 projection=600 ceiling=2400" in proc.stdout
+
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="jq not on PATH")
+def test_tally_completes_at_seeds_1_2_3_and_calls_seed_3_other_at_the_default(tmp_path: Path) -> None:
+    cid = "bfcl_selftest_dev_s3"
+    _write_results(tmp_path / "out" / cid, [(t, s, None) for t in ("t0", "t1") for s in (1, 2, 3)], "executor_alone")
+    proc = _run(tmp_path, BFCL_SELFTEST_STAGE="tally", CID=cid, TASKS="2", SEEDS="1,2,3")
+    assert proc.returncode == 0, _out(proc)
+    assert "result_files=6 non_crashed=6 crashed=0 target=6 unreadable=0 other_seed=0" in proc.stdout
+    proc = _run(tmp_path, BFCL_SELFTEST_STAGE="tally", CID=cid, TASKS="2")
+    assert proc.returncode == 0, _out(proc)
+    assert "result_files=6 non_crashed=4 crashed=0 target=4 unreadable=0 other_seed=2" in proc.stdout
