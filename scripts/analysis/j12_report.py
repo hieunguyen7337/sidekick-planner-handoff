@@ -51,6 +51,9 @@ Interface:
   is required, and --seeds / --expected-n-tasks must be the registered 1,2 / 168. Arm 3 incomplete or its
   planless keys above the cap: J12 is reported NOT RUN (§6). --plumbing-check is accepted only on dev, and
   only over *_dryrun campaigns; test_challenge is always refused.
+  A registered read with an arm's --arm not given or its directory absent stops before any contrast arm is
+  loaded (R3): MISSING_CAMPAIGNS, exit 3, the JSON naming the missing and found campaigns only -- or NOT_RUN,
+  exit 1, when §6's abort rule, read from arm 3 alone, fires first. Dev reads still compute partial rows.
 """
 from __future__ import annotations
 
@@ -702,6 +705,95 @@ def j12_protocol_guard(
     return None
 
 
+def j12_arm3_incomplete_reason(plan_arm: dict[str, Any]) -> str:
+    """J12 §6:148's first abort reason: arm 3 cannot complete."""
+    return (f"J10 arm 3 ({J12_PLAN_SOURCE_ARM}) is incomplete: {plan_arm['n_scored']}/{plan_arm['n_expected']} "
+            f"non-crashed, crash {plan_arm['n_crash']}, missing {plan_arm['n_missing']}")
+
+
+def j12_planless_reason(n_planless: int, cap: int) -> str:
+    """J12 §6:148's second abort reason: arm 3's planless keys above the cap."""
+    return f"{n_planless} planless arm-3 keys > cap {cap}"
+
+
+# R3 (2026-09-25): a registered read with a campaign missing (an --arm not given, or a directory that does not
+# exist) stops before any contrast is computed. Its JSON holds these keys and nothing else: no predictions,
+# verdicts, readings, sensitivity, beside block or arm statistic. NOT_RUN's early report adds not_run_reasons.
+J12_EARLY_STOP_KEYS: tuple[str, ...] = ("protocol", "label", "split", "status", "headline", "not_run_reasons",
+                                        "missing_campaigns", "campaigns_found", "printed")
+
+
+def j12_stopped_early(report: dict[str, Any]) -> bool:
+    """True for R3's early report (registered read, a campaign missing, nothing computed)."""
+    return (report.get("status") in ("MISSING_CAMPAIGNS", "NOT_RUN") and "missing_campaigns" in report
+            and set(report) <= set(J12_EARLY_STOP_KEYS))
+
+
+def j12_missing_campaign_stop(arm_dirs: dict[str, Path], seeds: list[int],
+                              expected_n_tasks: int) -> Optional[tuple[dict[str, Any], int]]:
+    """R3, on the registered read (past j12_protocol_guard: confirmed, registered bootstrap, arm 3 given): None
+    when every J12 arm and arm 3 is given and its directory exists; otherwise the early report, built before any
+    contrast arm is loaded and before anything is computed.
+
+    J12 §6:148's abort rule decides first, as J11's does: j12_arm.pbs refuses the J12 arms when arm 3 is
+    incomplete or above the planless-key cap (and j10_arm.pbs checks arm 3 before J10's m = 11 arms), so after
+    the abort their campaigns are absent by design. The rule reads arm 3 alone, as j12_arm.pbs does: fewer than
+    the registered matrix of non-crashed episodes, any crashed, empty, unreadable or duplicate result, or planless
+    keys above int(0.05 x the matrix). If it fires the report is NOT_RUN (exit 1); if not, MISSING_CAMPAIGNS
+    (exit 3). Neither carries a number derived from a contrast arm's episodes. With arm 3's directory missing
+    the rule has nothing to read and the report is MISSING_CAMPAIGNS."""
+    campaigns = j12_registered_campaigns()
+    missing: list[dict[str, Any]] = []
+    found: list[dict[str, Any]] = []
+    for label in J12_ARM_CONFIGS:  # the four contrast arms, then arm 3
+        directory = arm_dirs.get(label)
+        row = {"arm": label, "campaign": campaigns[label], "path": None if directory is None else str(directory)}
+        if directory is None:
+            missing.append(row | {"why": "no --arm given"})
+        elif not Path(directory).is_dir():
+            missing.append(row | {"why": "no directory"})
+        else:
+            found.append(row)
+    if not missing:
+        return None
+    names = ", ".join(f"{m['arm']}:{m['campaign']} ({m['why']})" for m in missing)
+    expected_pairs = expected_n_tasks * len(seeds)
+    plan_dir = arm_dirs.get(J12_PLAN_SOURCE_ARM)
+    not_run: list[str] = []
+    if plan_dir is not None and Path(plan_dir).is_dir():
+        plan_loaded = j10.load_arm_tree(plan_dir)
+        plan_arm = j10.a1_arm_episodes(J12_PLAN_SOURCE_ARM, plan_loaded,
+                                       j10.discover_tasks({J12_PLAN_SOURCE_ARM: plan_loaded}, seeds), seeds)
+        if not plan_arm["complete"] or plan_arm["n_scored"] < expected_pairs:
+            # Over the registered matrix: a key arm 3 lacks is missing, whatever tasks its own tree holds.
+            not_run.append(j12_arm3_incomplete_reason(dict(
+                plan_arm, n_expected=expected_pairs,
+                n_missing=max(expected_pairs - plan_arm["n_scored"] - plan_arm["n_crash"], 0))))
+        planless = j10.a1_planless_keys({J12_PLAN_SOURCE_ARM: Path(plan_dir)}, seeds) or []
+        cap = int(expected_pairs * j10.A1_PLANLESS_CAP_FRACTION)
+        if len(planless) > cap:
+            not_run.append(j12_planless_reason(len(planless), cap))
+        arm3_note = (f"Arm 3 ({J12_PLAN_SOURCE_ARM}) alone was loaded first, for {J12_PREREG} §6:148's abort rule, "
+                     "which decides before MISSING_CAMPAIGNS; " + ("it fired." if not_run else "it did not fire."))
+    else:
+        arm3_note = f"Arm 3's campaign is missing, so {J12_PREREG} §6:148's abort rule had nothing to read."
+    printed = ("No contrast was computed. The registered read stops when a campaign is missing, before any "
+               "contrast arm's episodes are loaded: this report carries no prediction, verdict, reading, Holm, "
+               f"sensitivity, beside block or arm statistic. {arm3_note}")
+    if not_run:
+        not_run_why = "; ".join(not_run) + f" ({J12_PREREG} §6:148)"
+        return ({"protocol": "J12", "label": "J12 NOT RUN (§6 abort rule), NOT A RESULT", "split": "test_normal",
+                 "status": "NOT_RUN",
+                 "headline": f"J12 not run: {not_run_why}. Campaigns absent: {names}. No contrast was computed.",
+                 "not_run_reasons": not_run, "missing_campaigns": missing, "campaigns_found": found,
+                 "printed": printed}, 1)
+    return ({"protocol": "J12", "label": "J12 registered analysis", "split": "test_normal",
+             "status": "MISSING_CAMPAIGNS",
+             "headline": f"MISSING CAMPAIGNS: {names}. Stopped before computing anything: no contrast was computed.",
+             "missing_campaigns": missing, "campaigns_found": found,
+             "printed": printed + " Re-run the registered read once every campaign exists."}, 3)
+
+
 def j12_am2_block(
     arms: dict[str, dict[str, Any]],
     results: list[dict[str, Any]],
@@ -792,6 +884,12 @@ def build_report_j12(
     if proto:
         return ({"protocol": "J12", "label": "REFUSED", "refused": True, "reason": proto,
                  "headline": proto, "split": split}, 2)
+    # R3: past the guard, test_normal is the registered read. A missing campaign stops it here, before any
+    # contrast arm is loaded (after §6:148's arm-3-only abort rule). Dev reads keep computing partial rows.
+    if split == "test_normal":
+        early = j12_missing_campaign_stop(arm_dirs, seeds, expected_n_tasks)
+        if early is not None:
+            return early
 
     contrast_dirs = {a: p for a, p in arm_dirs.items() if a in J12_ARMS}
     loaded = {label: j10.load_arm_tree(path) for label, path in contrast_dirs.items()}
@@ -833,9 +931,7 @@ def build_report_j12(
     plan_arm = (None if plan_dir is None
                 else j10.a1_arm_episodes(J12_PLAN_SOURCE_ARM, j10.load_arm_tree(plan_dir), tasks, seeds))
     if plan_arm is not None and not plan_arm["complete"]:
-        not_run.append(f"J10 arm 3 ({J12_PLAN_SOURCE_ARM}) is incomplete: {plan_arm['n_scored']}/"
-                       f"{plan_arm['n_expected']} non-crashed, crash {plan_arm['n_crash']}, missing "
-                       f"{plan_arm['n_missing']}")
+        not_run.append(j12_arm3_incomplete_reason(plan_arm))
 
     # h* is D3 / D4's indicator; the flag (handoff_occurred, h_flag) is kept for the sensitivity.
     flag_handoff = {a: j10.a1_handoff_flags(contrast_dirs[a]) for a in sorted(contrast_dirs)}
@@ -866,7 +962,7 @@ def build_report_j12(
     elif planless:
         if len(planless) > planless_cap:
             reasons.append(f"planless_keys_above_cap:{len(planless)}>{planless_cap}")
-            not_run.append(f"{len(planless)} planless arm-3 keys > cap {planless_cap}")
+            not_run.append(j12_planless_reason(len(planless), planless_cap))
         contingency["sensitivity"] = j12_key_exclusion_sensitivity(
             results, arms, handoff_flags, planless, n_boot=n_boot, seed=bootstrap_seed)
         j10.a1_apply_key_exclusion(results, contingency["sensitivity"]["differs"])
@@ -1012,6 +1108,9 @@ def _fmt(value: Any) -> str:
 
 def render_markdown(report: dict[str, Any], json_name: str) -> str:
     """The .md beside the JSON. Every number is copied from the report dict; none is typed."""
+    if j12_stopped_early(report):
+        # R3: the registered read stopped at a missing campaign; nothing below the headline exists.
+        return f"# J12 prefix-depth test — {report['label']}\n\n{report['headline']}\n"
     lines = [f"# J12 prefix-depth test — {report['label']}", "",
              f"Generated by `scripts/analysis/j12_report.py` beside `{json_name}`; every number here is a key "
              f"of that JSON. Prereg: `{report['prereg']}`.", "", report["headline"], "",

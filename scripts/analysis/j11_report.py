@@ -38,7 +38,10 @@ Exit codes
   2  protocol error or refusal: split / flags, non-registered settings on test, a held-out marker
      where none may be, a (task_id, seed) key twice in one campaign, an output directory under
      /scratch or inside the results tree
-  3  a registered campaign directory does not exist yet (the report names each one)
+  3  a registered campaign directory does not exist yet (the report names each one). On the registered read
+     the report stops there, before any contrast is computed: after prereg §6's abort rule, which reads C
+     alone, no other arm is loaded and the JSON names the missing and found campaigns only (R3). A plumbing
+     check still computes what its dry-run campaigns allow.
 """
 from __future__ import annotations
 
@@ -275,6 +278,77 @@ def resolve_campaigns(split: str, repo_root: Path = REPO_ROOT) -> dict[str, dict
 def planless_keys(c_dir: Path, seeds: tuple[int, ...] = SEEDS) -> list[tuple[str, int]]:
     """(task_id, seed) of C's episodes scored without a crash whose last attempt wrote no plan."""
     return j10.a1_planless_keys({j10.A1_PLAN_SOURCE_ARM: c_dir}, list(seeds)) or []
+
+
+def abort_rule(planless: list[tuple[str, int]], c_arm: dict[str, Any], expected: int) -> dict[str, Any]:
+    """prereg §6: J11 is not run above int(0.05 x the matrix) planless C keys, or with C below the matrix of
+    non-crashed episodes. Reads C alone (its planless keys and its a1_arm_episodes counts)."""
+    cap = int(expected * j10.A1_PLANLESS_CAP_FRACTION)
+    abort = len(planless) > cap
+    c_short = c_arm["n_scored"] < expected
+    not_run: list[str] = []
+    if abort:
+        not_run.append(f"{len(planless)} planless C keys > cap {cap}")
+    if c_short:
+        not_run.append(f"C has {c_arm['n_scored']}/{expected} non-crashed episodes (crash {c_arm['n_crash']}, "
+                       f"missing {c_arm['n_missing']})")
+    return {"cap": cap, "abort": abort, "c_short": c_short, "not_run": not_run}
+
+
+# R3 (2026-09-25): a registered read with a campaign missing stops before any contrast is computed. Its JSON holds
+# these keys and nothing else: no gate, contrast, reading, Holm, sensitivity, descriptive or arm statistic.
+EARLY_STOP_KEYS: tuple[str, ...] = ("protocol", "label", "split", "status", "headline", "missing_campaigns",
+                                    "campaigns_found", "printed")
+
+
+def stopped_early(report: dict[str, Any]) -> bool:
+    """True for R3's early MISSING_CAMPAIGNS report (registered read, nothing computed)."""
+    return report.get("status") == "MISSING_CAMPAIGNS" and set(report) <= set(EARLY_STOP_KEYS)
+
+
+def missing_campaign_stop(report: dict[str, Any], campaigns: dict[str, dict[str, str]],
+                          results_root: Path) -> Optional[tuple[dict[str, Any], int]]:
+    """R3, on the registered read with a campaign missing: the early MISSING_CAMPAIGNS report (exit 3), built
+    before any arm but C is loaded and before anything is computed; or None to continue with the full read.
+
+    None in two cases. (1) prereg §6's abort rule fires: NOT_RUN decides before MISSING_CAMPAIGNS (after the
+    abort no replay arm starts, so their absence is expected), and the full read reports it as before. The rule
+    needs C alone, so C is loaded first -- the only arm loaded before the stop -- and its planless keys and
+    non-crashed count are read exactly as the full read reads them: C's scored episodes lie in C's own tasks, so
+    its count over C's tasks equals its count over every arm's (j10.discover_tasks is the union). (2) C's
+    campaign holds a key twice: the full read reports that ERROR (exit 2) before computing anything. With C itself
+    missing the abort rule has nothing to read and the read stops here."""
+    missing = report["missing_campaigns"]
+    missing_arms = {m["arm"] for m in missing}
+    if "C" in missing_arms:
+        c_note = "C's campaign is missing, so prereg §6's abort rule had nothing to read."
+    else:
+        c_dir = results_root / campaigns["C"]["campaign"]
+        try:
+            c_loaded = lp.load_campaign("C", c_dir)
+        except lp.ProtocolError:
+            return None
+        c_arm = j10.a1_arm_episodes("C", c_loaded, j10.discover_tasks({"C": c_loaded}, list(SEEDS)), list(SEEDS))
+        if abort_rule(planless_keys(c_dir), c_arm, N_TASKS_TEST * len(SEEDS))["not_run"]:
+            return None
+        c_note = ("C alone was loaded first, for prereg §6's abort rule, which decides before MISSING_CAMPAIGNS; "
+                  "it did not fire.")
+    names = ", ".join(f"{m['arm']}:{m['campaign']}" for m in missing)
+    early = {
+        "protocol": "J11",
+        "label": report["label"],
+        "split": report["split"],
+        "status": "MISSING_CAMPAIGNS",
+        "headline": f"MISSING CAMPAIGNS: {names}. Stopped before computing anything: no contrast was computed.",
+        "missing_campaigns": missing,
+        "campaigns_found": [{"arm": code, "campaign": arm["campaign"], "path": str(results_root / arm["campaign"])}
+                            for code, arm in campaigns.items() if code not in missing_arms],
+        "printed": ("No contrast was computed. The registered read stops when a campaign is missing, before any "
+                    "other arm's episodes are loaded: this report carries no gate, contrast, reading, Holm, "
+                    f"sensitivity, descriptive or arm statistic. {c_note} Re-run the registered read once every "
+                    "campaign exists."),
+    }
+    return early, 3
 
 
 def read_family(gate: dict[str, Any], records: dict[str, dict[str, Any]], expected: int) -> dict[str, Any]:
@@ -683,13 +757,20 @@ def build_report(
     report["missing_campaigns"] = [
         {"arm": code, "campaign": arm["campaign"], "path": str(results_root / arm["campaign"])}
         for code, arm in campaigns.items() if not (results_root / arm["campaign"]).is_dir()]
+    if errors:
+        report.update(status="ERROR", exit_code=2, errors=errors, headline="ERROR: " + "; ".join(errors))
+        return report, 2
+    # R3: on the registered read a missing campaign stops here, before any contrast (after §6's C-only abort rule).
+    if registered and report["missing_campaigns"]:
+        early = missing_campaign_stop(report, campaigns, results_root)
+        if early is not None:
+            return early
     loaded: dict[str, dict[str, Any]] = {}
-    if not errors:
-        for code in ALL_ARMS:
-            try:
-                loaded[code] = lp.load_campaign(code, results_root / campaigns[code]["campaign"])
-            except lp.ProtocolError as exc:
-                errors.append(str(exc))
+    for code in ALL_ARMS:
+        try:
+            loaded[code] = lp.load_campaign(code, results_root / campaigns[code]["campaign"])
+        except lp.ProtocolError as exc:
+            errors.append(str(exc))
     if errors:
         report.update(status="ERROR", exit_code=2, errors=errors, headline="ERROR: " + "; ".join(errors))
         return report, 2
@@ -718,17 +799,9 @@ def build_report(
 
     c_dir = results_root / campaigns["C"]["campaign"]
     planless = planless_keys(c_dir)
-    cap = int(expected * j10.A1_PLANLESS_CAP_FRACTION)
-    abort = len(planless) > cap
     # prereg §6:151: J11 is also not run if C cannot reach the matrix of non-crashed episodes (336 on test).
-    c_arm = arms["C"]
-    c_short = c_arm["n_scored"] < expected
-    not_run: list[str] = []
-    if abort:
-        not_run.append(f"{len(planless)} planless C keys > cap {cap}")
-    if c_short:
-        not_run.append(f"C has {c_arm['n_scored']}/{expected} non-crashed episodes (crash {c_arm['n_crash']}, "
-                       f"missing {c_arm['n_missing']})")
+    rule = abort_rule(planless, arms["C"], expected)
+    cap, abort, c_short, not_run = rule["cap"], rule["abort"], rule["c_short"], rule["not_run"]
     contingency = {"rule": f"{PREREG} §2, §3, §6", "source_arm": "C", "cap": cap,
                    "keys": [f"{s}/{t}" for t, s in planless], "n_keys": len(planless),
                    "abort_rule_fired": abort, "c_below_matrix": c_short}
@@ -905,6 +978,9 @@ def _luna_ceiling(j10_read: Optional[dict[str, Any]]) -> dict[str, Any]:
 def render_markdown(report: dict[str, Any], json_path: Optional[Path] = None) -> str:
     """Every number below is read from `report` (the JSON), never recomputed."""
     L: list[str] = ["# J11: the LP-2 planner on test_normal", ""]
+    if stopped_early(report):
+        # R3: the registered read stopped at a missing campaign; nothing below the headline exists.
+        return "\n".join(L + [f"**Status: {report['status']}** (exit 3). {report['headline']}"]) + "\n"
     L.append(f"Registered analysis of `{report['prereg']}` (replicating `{report['replicates']}`). Generated by "
              "`scripts/analysis/j11_report.py`" + (f"; JSON: `{json_path}`." if json_path else "."))
     L += ["", f"**Status: {report['status']}** (exit {report['exit_code']}). {report['headline']}", ""]
@@ -1091,7 +1167,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                 plumbing_check=args.plumbing_check, results_root=args.results_root,
                                 n_boot=args.n_boot, bootstrap_seed=args.seed, j10_report_path=args.j10_report,
                                 divergent_refill_confirmed=args.divergent_refill_confirmed)
-    report["date"] = _dt.date.today().strftime("%Y%m%d")
+    if not stopped_early(report):  # R3's early report holds EARLY_STOP_KEYS only
+        report["date"] = _dt.date.today().strftime("%Y%m%d")
     out = args.out_dir / f"{OUT_STEM[args.split]}.report.json"
     md = args.out_dir / f"{OUT_STEM[args.split]}.md"
     args.out_dir.mkdir(parents=True, exist_ok=True)

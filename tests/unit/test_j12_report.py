@@ -6,6 +6,7 @@ bootstrap mean equal to it, a degenerate interval and a p of 0 or 1, all writabl
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -790,3 +791,93 @@ def test_refill_confirmation_gates_a_divergent_key_on_the_registered_read(tmp_pa
     # No divergent key: the flag is irrelevant.
     report, code = registered_read(registered_family(tmp_path / "clean"))
     assert code == 0 and report["j12_am2_divergence"]["refill_confirmed_by_operator"] is None
+
+
+# ---- R3 (2026-09-25): a registered read with a missing campaign stops before computing anything ----------------
+COMPUTED_KEYS = {"predictions", "verdicts", "readings", "multiplicity", "planless_contingency", "arms", "beside",
+                 "sensitivity_h_flag", "j12_am2_divergence", "incomplete_reasons", "contrast", "diff_pp", "ci95_pp",
+                 "p_value", "goal_pass_mean", "n_scored"}
+
+
+def _all_keys(obj) -> set:
+    """Every dict key anywhere in obj (the JSON walked)."""
+    if isinstance(obj, dict):
+        return set(obj).union(*(_all_keys(v) for v in obj.values()))
+    if isinstance(obj, list):
+        return set().union(*(_all_keys(v) for v in obj))
+    return set()
+
+
+def test_r3_registered_read_missing_j10s_m11_arms_stops_before_computing(tmp_path: Path, capsys, monkeypatch):
+    # J10's prefix_m11 / prefix_zs_m11 do not exist yet: their --arm directories are named but absent.
+    monkeypatch.setattr(j12, "J12_TEST_N_TASKS", len(TASKS))
+    dirs = registered_family(tmp_path / "r")
+    for label in ("prefix_m11", "prefix_zs_m11"):
+        shutil.rmtree(dirs[label])
+    loaded: list = []
+    real = j10.load_arm_tree
+    monkeypatch.setattr(j10, "load_arm_tree", lambda p, *a, **k: loaded.append(Path(p).name) or real(p, *a, **k))
+
+    def _computed(*_a, **_k):
+        raise AssertionError("a D was computed on a registered read with a missing campaign")
+
+    monkeypatch.setattr(j12, "j12_evaluate", _computed)
+    out = tmp_path / "j12_depth.report.json"
+    code = j12.main(["--split", "test_normal", "--confirm-heldout-test-split", *_argv(dirs), "--out", str(out)])
+    capsys.readouterr()
+    assert code == 3
+    assert loaded == [REG[PLAN]]  # arm 3 alone, for §6:148's abort rule; no contrast arm's episodes
+    text = out.read_text(encoding="utf-8")
+    report = json.loads(text)
+    assert set(report) == set(j12.J12_EARLY_STOP_KEYS) - {"not_run_reasons"}
+    assert report["status"] == "MISSING_CAMPAIGNS" and not _all_keys(report) & COMPUTED_KEYS
+    assert "diff_pp" not in text and "Verdicts" not in report["headline"]
+    assert [(m["arm"], m["campaign"], m["why"]) for m in report["missing_campaigns"]] == [
+        ("prefix_m11", REG["prefix_m11"], "no directory"), ("prefix_zs_m11", REG["prefix_zs_m11"], "no directory")]
+    assert [f["arm"] for f in report["campaigns_found"]] == ["prefix_m6", "prefix_zs_m6", PLAN]
+    assert "No contrast was computed." in report["printed"] and "it did not fire" in report["printed"]
+    assert out.with_suffix(".md").read_text(encoding="utf-8") == (
+        f"# J12 prefix-depth test — {report['label']}\n\n{report['headline']}\n")
+
+
+def test_r3_a_registered_read_without_a_contrast_arm_given_stops_too(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(j12, "J12_TEST_N_TASKS", len(TASKS))
+    dirs = registered_family(tmp_path / "r")
+    del dirs["prefix_m6"]
+    report, code = registered_read(dirs)
+    assert code == 3 and report["status"] == "MISSING_CAMPAIGNS"
+    assert report["missing_campaigns"] == [{"arm": "prefix_m6", "campaign": REG["prefix_m6"], "path": None,
+                                            "why": "no --arm given"}]
+    assert not _all_keys(report) & COMPUTED_KEYS
+
+
+def test_r3_arm3s_abort_rule_decides_before_the_missing_campaigns(tmp_path: Path, monkeypatch):
+    # §6:148 and j12_arm.pbs: after the abort no J12 arm starts, so the contrast arms are absent by design.
+    monkeypatch.setattr(j12, "J12_TEST_N_TASKS", len(TASKS))
+    for case, arm3_kw, why in (
+            ("crash", {"crash": {("sc2_2", 1)}},
+             "J10 arm 3 (planner_alone_cap81) is incomplete: 23/24 non-crashed, crash 1, missing 0"),
+            ("planless", {"planless": {("sc0_1", 1), ("sc1_1", 2)}}, "2 planless arm-3 keys > cap 1")):
+        dirs = registered_family(tmp_path / case, arm3_kw=arm3_kw)
+        for label in j12.J12_ARMS:
+            shutil.rmtree(dirs[label])
+        report, code = registered_read(dirs)
+        assert code == 1 and report["status"] == "NOT_RUN", case
+        assert report["headline"].startswith(f"J12 not run: {why}") and report["not_run_reasons"] == [why]
+        assert set(report) == set(j12.J12_EARLY_STOP_KEYS) and not _all_keys(report) & COMPUTED_KEYS
+        assert len(report["missing_campaigns"]) == 4 and "it fired" in report["printed"]
+        assert j12.render_markdown(report, "x.json") == f"# J12 prefix-depth test — {report['label']}\n\n{report['headline']}\n"
+
+
+def test_r3_a_dev_read_with_an_arm_missing_still_computes_the_rows_it_can(tmp_path: Path):
+    for case in ("not_given", "no_directory"):
+        dirs = write_family(tmp_path / case, CONSTANT, prefix_m11={"handoff": ALL_H})
+        if case == "not_given":
+            del dirs["prefix_zs_m11"]
+        else:
+            shutil.rmtree(dirs["prefix_zs_m11"])
+        report, code = report_for(dirs)
+        assert code == 1 and report["status"] == "INCOMPLETE", case
+        assert by_id(report)["D1"]["contrast"]["scenario"]["diff_pp"] == 12.5, case  # partial rows, as before
+        assert not j12.j12_stopped_early(report) and "| D1 | prefix_m11 − prefix_m6 | all | 12.5 |" in (
+            j12.render_markdown(report, "x.json"))

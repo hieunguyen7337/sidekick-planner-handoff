@@ -675,3 +675,90 @@ def test_refill_confirmation_gates_a_divergent_key_on_the_registered_read(tmp_pa
     report, rc = build(root, divergent_refill_confirmed=True)
     assert rc == 0 and report["status"] == "COMPLETE" and readings(report) == ALL_SUPPORTED
     assert report["j11_am2_divergence"]["refill_confirmed_by_operator"] is True
+
+
+# ---- R3 (2026-09-25): a registered read with a missing campaign stops before computing anything ----------------
+COMPUTED_KEYS = {"contrasts", "gate", "readings", "holm", "sensitivity_planless", "descriptive", "arms", "settings",
+                 "reporting_only", "planless", "combined_with_j10", "j11_am2_divergence", "incomplete",
+                 "diff_pp", "point_pp", "goal_pass_mean", "p_raw", "scenario", "n_pairs", "n_scored"}
+
+
+def _all_keys(obj) -> set:
+    """Every dict key anywhere in obj (the JSON walked)."""
+    if isinstance(obj, dict):
+        return set(obj).union(*(_all_keys(v) for v in obj.values()))
+    if isinstance(obj, list):
+        return set().union(*(_all_keys(v) for v in obj))
+    return set()
+
+
+def _spy_loads_and_forbid_compute(monkeypatch) -> list:
+    """Record each arm lp.load_campaign loads; any statistic computed fails the test."""
+    loaded: list = []
+    real = lp.load_campaign
+    monkeypatch.setattr(lp, "load_campaign", lambda code, d: loaded.append(code) or real(code, d))
+
+    def _computed(*_a, **_k):
+        raise AssertionError("a statistic was computed on a registered read with a missing campaign")
+
+    monkeypatch.setattr(lp, "evaluate_gate", _computed)
+    monkeypatch.setattr(lp, "key_exclusion_sensitivity", _computed)
+    monkeypatch.setattr(j11, "am2_evaluate_contrast", _computed)
+    return loaded
+
+
+def test_r3_registered_read_with_e_missing_stops_before_computing_and_writes_no_value(tmp_path: Path,
+                                                                                     monkeypatch, capsys):
+    # The 2026-09-25 invocation: every J11 arm present, E (J10 arm 1b) not yet.
+    root = write_tree(tmp_path / "res", REPLICATE, skip=("E",))
+    loaded = _spy_loads_and_forbid_compute(monkeypatch)
+    out = tmp_path / "out"
+    rc = j11.main(["--split", "test_normal", "--confirm-heldout-test-split", "--results-root", str(root),
+                   "--out-dir", str(out), "--n-boot", str(B)])
+    assert rc == 3 and json.loads(capsys.readouterr().out)["status"] == "MISSING_CAMPAIGNS"
+    assert loaded == ["C"]  # C alone, for prereg §6's abort rule; no other arm's episodes
+    text = (out / "j11_lp2_test_normal.report.json").read_text(encoding="utf-8")
+    data = json.loads(text)
+    assert set(data) == set(j11.EARLY_STOP_KEYS) and data["status"] == "MISSING_CAMPAIGNS"
+    assert not _all_keys(data) & COMPUTED_KEYS and "diff_pp" not in text
+    assert data["missing_campaigns"] == [{"arm": "E", "campaign": "j10_executor_alone_bplus_20260924",
+                                          "path": str(root / "j10_executor_alone_bplus_20260924")}]
+    assert [f["arm"] for f in data["campaigns_found"]] == list(j11.ARM_ORDER)
+    assert data["headline"].startswith("MISSING CAMPAIGNS: E:j10_executor_alone_bplus_20260924. ")
+    assert "gate" not in data["headline"] and "L1" not in data["headline"]  # no verdict or reading summary
+    assert "No contrast was computed." in data["printed"] and "it did not fire" in data["printed"]
+    md = (out / "j11_lp2_test_normal.md").read_text(encoding="utf-8")
+    assert md == f"# J11: the LP-2 planner on test_normal\n\n**Status: MISSING_CAMPAIGNS** (exit 3). {data['headline']}\n"
+
+
+def test_r3_with_c_itself_missing_no_arm_is_loaded(tmp_path: Path, monkeypatch):
+    root = write_tree(tmp_path, REPLICATE, skip=("C",))
+    loaded = _spy_loads_and_forbid_compute(monkeypatch)
+    report, rc = build(root)
+    assert rc == 3 and report["status"] == "MISSING_CAMPAIGNS" and loaded == []
+    assert set(report) == set(j11.EARLY_STOP_KEYS) and [m["arm"] for m in report["missing_campaigns"]] == ["C"]
+    assert "abort rule had nothing to read" in report["printed"]
+
+
+def test_r3_not_run_still_decides_before_the_early_stop(tmp_path: Path):
+    # R1 item 11 with E missing too: the C-only abort rule fires first, and the read reports NOT_RUN as before.
+    root = write_tree(tmp_path, {code: REPLICATE[code] for code in ("C",)})
+    planless(root, [(TASKS[i], 2) for i in range(17)])
+    report, rc = build(root)
+    assert rc == 1 and report["status"] == "NOT_RUN", report["headline"]
+    assert len(report["missing_campaigns"]) == 8 and report["not_run_reasons"] == ["17 planless C keys > cap 16"]
+    assert {r["reading"] for r in report["readings"].values()} == {j11.NOT_RUN}
+
+
+def test_r3_dev_plumbing_with_a_missing_dryrun_campaign_still_computes(tmp_path: Path):
+    dev = j11.resolve_campaigns("dev")
+    c_tasks = ["sc00_1", "sc00_2", "sc00_3"]
+    root = write_tree(tmp_path / "res", {k: v for k, v in REPLICATE.items() if k not in ("E", "M_zs_11")},
+                      split="dev", tasks=c_tasks, campaigns=dev)
+    write_tree(root, {"E": 0.25}, split="dev", tasks=c_tasks, campaigns=dev)
+    report, rc = j11.build_report(split="dev", plumbing_check=True, results_root=root, n_boot=B)
+    assert rc == 3 and report["status"] == "MISSING_CAMPAIGNS"
+    assert report["headline"].startswith("PLUMBING CHECK, NOT A RESULT. MISSING CAMPAIGNS: M_zs_11:")
+    assert report["gate"]["n_pairs"] == 6 and report["gate"]["point_pp"] == 50.0  # partial rows, as before
+    assert report["contrasts"]["L1"]["status"] == "COMPLETE" and report["contrasts"]["L5"]["status"] != "COMPLETE"
+    assert not j11.stopped_early(report) and "## Gate and L1-L5" in j11.render_markdown(report)
