@@ -1,0 +1,65 @@
+# Dev arm X1: structured-direction advice at k = 1, full context (docs/plan_luna_reset_20260925.md:106,
+# closing G3 and G8 of docs/plan_top_venue_20260924.md). EXPLORATORY, DEV ONLY: not registered, and
+# never a J10 arm.
+# Source: configs/dev_advise_structured_fixed_k_10_fullctx.yaml
+# Differs from source in: campaign_id, fixed_k
+# tests/unit/test_dev_arms.py diffs the parsed YAML of both files against exactly this list.
+#
+# D2 at R2.4's review cadence. fixed_k is the only key k moves: hj13_advise_fixed_k_1_fullctx
+# differs from hj12_advise_fixed_k_10_fullctx, and R2.4 (dev_advise_neutral_fixed_k_1_fullctx)
+# from b2_advise_neutral_fixed_k_10_fullctx, in campaign_id and fixed_k alone; no limit or
+# budget changes with k (limits.max_planner_calls 81 = 2·max_steps + 1 already allows a review
+# at every step). X1 therefore differs from R2.4 only in planner.correct_prompt, structured
+# against neutral: the prompt contrast D2 makes at k = 10, made at k = 1.
+#
+# Expected hosted calls: ≈ 2,170 [INFERRED from plan, docs/plan_luna_reset_20260925.md:106].
+# MAX_PLANNER_CALLS defaults to 3,780 (scripts/pbs/hj12_live.pbs:72). That default covers R2.4
+# only if R2.4 runs alone in its job, and X1 spends like R2.4: every arm in a job spends against
+# one running total. Submit X1 alone with MAX_PLANNER_CALLS=2700, as R2.4. The smoke projection
+# FATALs before the full run if the 3-episode smoke averages more than 2700 / (114 × 1.2) ≈ 19.7
+# live calls per episode, against ≈ 19.0 expected [INFERRED].
+# Submit (Claude, never a worker) once this branch is merged into the plan worktree, which
+# hj12_live.pbs runs from (REPO, hj12_live.pbs:104). One GPU job; it serves granite + sft_b_plus:
+#   qsub -v ARMS="dev_advise_structured_fixed_k_1_fullctx",DATE=20260924,MAX_PLANNER_CALLS=2700 /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/scripts/pbs/hj12_live.pbs
+# DATE=20260924 is load-bearing: hj12_live names the campaign <stem>_<DATE>, which must equal
+# campaign_id below. It is the dev-arm family's date, not the day of submission.
+env: appworld
+campaign_id: dev_advise_structured_fixed_k_1_fullctx_20260924
+correct_context: full
+fixed_k: 1          # review every step; the cached up-front plan remains free
+planner:
+  type: codex
+  model: gpt-5.6-luna
+  reasoning_effort: medium
+  correct_prompt: structured
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+  # Replays HJ-1 packets: the up-front plan costs nothing, every episode sees the
+  # identical plan per task+seed, and only the reviews spend hosted calls.
+  # CachedPacketPlanner.correct forwards to the inner Codex planner.
+  packet_source: /scratch/n12194778/sidekick/results/hj1b_planner_20260915
+  packet_system: planner_alone
+  on_missing: fail
+executor:
+  type: vllm
+  model: ibm-granite/granite-4.2-8b
+  base_url: http://127.0.0.1:8000
+  lora_name: sft_b_plus  # Must equal the alias launched via --lora-modules <alias>=<path>; a mismatch means requests silently hit the BASE model and the whole evaluation measures nothing while still producing plausible numbers.
+  temperature: 0.7
+  max_tokens: 2048
+  stop: ["</py>", "</python>", "</tool_call>"]
+  chat_template_kwargs:
+    enable_thinking: false
+  timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 32768 (vLLM max_model_len) minus the 2048 generation budget above = 30720.
+  # If you change executor.max_tokens, change this too: prompt + generation must
+  # fit max_model_len or vLLM returns 400 and the episode crashes.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_steps=40 is the real limit.
+  per_step_timeout_s: 300  # 300s: 120s ReadTimeout-crashed 10/114 of HJ-1R arm A at 10 workers; the bound censored the slowest episodes.
+  # 81 = 2·max_steps + 1. The inherited 25 cap ended 11 of 12 `limit` episodes
+  # in HJ-1; max_steps: 40 must be the binding cap.
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml

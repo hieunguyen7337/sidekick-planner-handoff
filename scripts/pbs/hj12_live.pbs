@@ -181,11 +181,21 @@ WAVE_B_ARMS=(
 )
 
 # Review arms (plan 2026-09-24, docs/plan_top_venue_20260924.md G3): R2.4 neutral advice at
-# k = 1 and D2 structured advice at k = 10. Dev only, exploratory. Like WAVE_B_ARMS,
-# selectable ONLY by an explicit ARMS=..., never by ARMSET.
+# k = 1 and D2 structured advice at k = 10; X1 (docs/plan_luna_reset_20260925.md) is D2 at
+# k = 1. Dev only, exploratory. Like WAVE_B_ARMS, selectable ONLY by an explicit ARMS=...,
+# never by ARMSET.
 REVIEW_ARMS=(
   "fixed_k|${REPO}/configs/dev_advise_neutral_fixed_k_1_fullctx.yaml|dev_advise_neutral_fixed_k_1_fullctx"
   "fixed_k|${REPO}/configs/dev_advise_structured_fixed_k_10_fullctx.yaml|dev_advise_structured_fixed_k_10_fullctx"
+  "fixed_k|${REPO}/configs/dev_advise_structured_fixed_k_1_fullctx.yaml|dev_advise_structured_fixed_k_1_fullctx"
+)
+
+# Effort arms (docs/plan_luna_reset_20260925.md X3): the planner alone at low effort, which
+# with hj13_planner_alone_cap81 (medium) and D3 (high) makes an effort curve. Dev only,
+# exploratory. Like REVIEW_ARMS, selectable ONLY by an explicit ARMS=..., never by ARMSET.
+# planner_alone never calls the executor, so the vLLM server this job starts goes unused.
+EFFORT_ARMS=(
+  "planner_alone|${REPO}/configs/dev_planner_alone_cap81_low.yaml|dev_planner_alone_cap81_low"
 )
 
 # Planning controls (brief campaign/workers/briefs/20260924_ctrl_planning_controls.md): the
@@ -201,7 +211,7 @@ hj12_select_arms () {
   SELECTED_ARMS=()
   local all_specs valid_stems spec sys cfg s matches
   local -a given=()
-  all_specs=("${LIVE_ARMS[@]}" "${WAVE_B_ARMS[@]}" "${REVIEW_ARMS[@]}" "${CONTROL_ARMS[@]}")
+  all_specs=("${LIVE_ARMS[@]}" "${WAVE_B_ARMS[@]}" "${REVIEW_ARMS[@]}" "${EFFORT_ARMS[@]}" "${CONTROL_ARMS[@]}")
   valid_stems=()
   for spec in "${all_specs[@]}"; do
     IFS='|' read -r sys cfg s <<<"${spec}"

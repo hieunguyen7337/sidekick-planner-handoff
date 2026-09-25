@@ -1,6 +1,7 @@
-"""The four dev arms of plan 2026-09-24 (R2.4, D2, D3, R7.1): configs, the no-op executor, registry.
+"""The dev arms of plan 2026-09-24 (R2.4, D2, D3, R7.1) and of plan 2026-09-25 (X1, X3): configs,
+the no-op executor, registry.
 
-All four are exploratory and dev only; none is a J10 arm (tests/unit/test_j10_configs.py pins that
+All six are exploratory and dev only; none is a J10 arm (tests/unit/test_j10_configs.py pins that
 set). Each config is its source with the listed keys changed. As in test_j10_configs, the list is
 stated here rather than read from the headers, so a header edit that widens what may differ fails
 a test instead of licensing the drift. Nothing here runs an arm: the registry cases take the
@@ -53,6 +54,11 @@ REGISTRY: dict[str, tuple[str, tuple[str, ...]]] = {
         "configs/hj13_planner_alone_cap81.yaml",
         ("campaign_id", "planner.reasoning_effort", "limits.per_step_timeout_s")),
     "dev_noop_complete": ("configs/hj8_executor_alone_bplus.yaml", ("campaign_id",) + NOOP_EXECUTOR),
+    # X1: D2 at k = 1. X3: D3 at low effort (docs/plan_luna_reset_20260925.md:106,108).
+    "dev_advise_structured_fixed_k_1_fullctx": (
+        "configs/dev_advise_structured_fixed_k_10_fullctx.yaml", ("campaign_id", "fixed_k")),
+    "dev_planner_alone_cap81_low": (
+        "configs/dev_planner_alone_cap81_high.yaml", ("campaign_id", "planner.reasoning_effort")),
 }
 # The value each changed key must hold, from the brief's table (plan §4, W3/W4).
 VALUES: dict[str, dict[str, object]] = {
@@ -60,14 +66,47 @@ VALUES: dict[str, dict[str, object]] = {
     "dev_advise_structured_fixed_k_10_fullctx": {"planner.correct_prompt": "structured"},
     "dev_planner_alone_cap81_high": {"planner.reasoning_effort": "high", "limits.per_step_timeout_s": 300},
     "dev_noop_complete": {"executor.type": "mock", "executor.script": ["COMPLETE"]},
+    "dev_advise_structured_fixed_k_1_fullctx": {"fixed_k": 1},
+    "dev_planner_alone_cap81_low": {"planner.reasoning_effort": "low"},
 }
 # Hosted arms: expected calls as the header states them, marked as the plan's estimate.
 EXPECTED_CALLS = {
     "dev_advise_neutral_fixed_k_1_fullctx": "≈ 2,170",
     "dev_advise_structured_fixed_k_10_fullctx": "≈ 300",
     "dev_planner_alone_cap81_high": "≈ 1,700",
+    "dev_advise_structured_fixed_k_1_fullctx": "≈ 2,170",
+    "dev_planner_alone_cap81_low": "≈ 1,600",
 }
-REVIEW_ARMS = ["dev_advise_neutral_fixed_k_1_fullctx", "dev_advise_structured_fixed_k_10_fullctx"]
+REVIEW_ARMS = [
+    "dev_advise_neutral_fixed_k_1_fullctx",
+    "dev_advise_structured_fixed_k_10_fullctx",
+    "dev_advise_structured_fixed_k_1_fullctx",
+]
+EFFORT_ARMS = ["dev_planner_alone_cap81_low"]
+HJ12_ARMS = REVIEW_ARMS + EFFORT_ARMS
+# The MAX_PLANNER_CALLS each hj12_live submit line passes; None means the 3,780 default.
+SUBMIT_CEILING: dict[str, int | None] = {
+    "dev_advise_neutral_fixed_k_1_fullctx": 2700,
+    "dev_advise_structured_fixed_k_10_fullctx": None,
+    "dev_advise_structured_fixed_k_1_fullctx": 2700,
+    "dev_planner_alone_cap81_low": 2100,
+}
+# Matched comparisons beyond the declared source: (other config, the only keys that may differ).
+# k moves fixed_k and nothing else (no limit or budget), so X1 is R2.4 with the structured prompt;
+# X3 is the medium-effort ceiling with low effort and D3's per-step timeout.
+PAIRS: dict[str, tuple[str, frozenset[str]]] = {
+    "dev_advise_structured_fixed_k_1_fullctx": (
+        "configs/dev_advise_neutral_fixed_k_1_fullctx.yaml", frozenset({"campaign_id", "planner.correct_prompt"})),
+    "dev_planner_alone_cap81_low": (
+        "configs/hj13_planner_alone_cap81.yaml",
+        frozenset({"campaign_id", "planner.reasoning_effort", "limits.per_step_timeout_s"})),
+}
+# (k = 10 config, its k = 1 counterpart): each pair differs in campaign_id and fixed_k alone.
+K_PAIRS = [
+    ("configs/hj12_advise_fixed_k_10_fullctx.yaml", "configs/hj13_advise_fixed_k_1_fullctx.yaml"),
+    ("configs/b2_advise_neutral_fixed_k_10_fullctx.yaml", "configs/dev_advise_neutral_fixed_k_1_fullctx.yaml"),
+    ("configs/dev_advise_structured_fixed_k_10_fullctx.yaml", "configs/dev_advise_structured_fixed_k_1_fullctx.yaml"),
+]
 STEMS = sorted(REGISTRY)
 
 SOURCE_RE = re.compile(r"^# Source: (configs/\S+\.yaml)(?:\s|$)")
@@ -151,6 +190,19 @@ def test_differs_from_its_declared_source_only_in_the_declared_fields(stem: str)
     assert _diff(_load(REPO / source), _cfg(stem)) == set(fields)
 
 
+@pytest.mark.parametrize("stem", sorted(PAIRS))
+def test_differs_from_its_matched_arm_only_in_the_compared_fields(stem: str):
+    other, fields = PAIRS[stem]
+    assert _diff(_load(REPO / other), _cfg(stem)) == set(fields)
+
+
+@pytest.mark.parametrize(("k10", "k1"), K_PAIRS)
+def test_k_moves_fixed_k_alone(k10: str, k1: str):
+    a, b = _load(REPO / k10), _load(REPO / k1)
+    assert (a["fixed_k"], b["fixed_k"]) == (10, 1)
+    assert _diff(a, b) == {"campaign_id", "fixed_k"}
+
+
 @pytest.mark.parametrize("stem", STEMS)
 def test_the_changed_keys_hold_the_planned_values(stem: str):
     flat = _flatten(_cfg(stem))
@@ -197,6 +249,8 @@ def test_hosted_planners_build_with_the_new_values():
         ("dev_advise_neutral_fixed_k_1_fullctx", "correct_prompt", "neutral"),
         ("dev_advise_structured_fixed_k_10_fullctx", "correct_prompt", "structured"),
         ("dev_planner_alone_cap81_high", "reasoning_effort", "high"),
+        ("dev_advise_structured_fixed_k_1_fullctx", "correct_prompt", "structured"),
+        ("dev_planner_alone_cap81_low", "reasoning_effort", "low"),
     ):
         cfg = _cfg(stem)
         cfg["planner"] = {k: v for k, v in cfg["planner"].items() if not k.startswith("packet_")}
@@ -287,7 +341,7 @@ def test_the_noop_submit_line_is_a_cpu_dev_run_of_this_config():
     assert "--gpu" not in line and "qsub" not in line
 
 
-# --- registry: hj12_live.pbs (R2.4, D2) and hj1b_planner_alone.pbs (D3) --------------------------
+# --- registry: hj12_live.pbs (R2.4, D2, X1, X3) and hj1b_planner_alone.pbs (D3) ------------------
 
 
 def _select(**extra: str) -> subprocess.CompletedProcess[str]:
@@ -302,28 +356,42 @@ def _rows(proc: subprocess.CompletedProcess[str]) -> list[list[str]]:
     return [line.split("|") for line in proc.stdout.splitlines() if line.count("|") == 2]
 
 
-def test_review_arms_is_the_two_fixed_k_arms():
+def test_review_arms_is_the_three_fixed_k_arms():
     assert read_bash_array(HJ12_LIVE, "REVIEW_ARMS") == [
         f"fixed_k|${{REPO}}/configs/{stem}.yaml|{stem}" for stem in REVIEW_ARMS
     ]
 
 
-def test_arms_selects_the_review_stems():
-    proc = _select(ARMS=" ".join(REVIEW_ARMS))
+def test_effort_arms_is_the_one_planner_alone_arm():
+    assert read_bash_array(HJ12_LIVE, "EFFORT_ARMS") == [
+        f"planner_alone|${{REPO}}/configs/{stem}.yaml|{stem}" for stem in EFFORT_ARMS
+    ]
+
+
+def test_arms_selects_the_review_and_effort_stems():
+    proc = _select(ARMS=" ".join(HJ12_ARMS))
     assert proc.returncode == 0, proc.stdout + proc.stderr
     rows = _rows(proc)
-    assert [row[2] for row in rows] == REVIEW_ARMS
+    assert [row[2] for row in rows] == HJ12_ARMS
     for system, cfg, stem in rows:
-        assert system == "fixed_k"
+        assert system == ("planner_alone" if stem in EFFORT_ARMS else "fixed_k")
         assert Path(cfg).name == f"{stem}.yaml" and (CONFIGS / Path(cfg).name).is_file()
 
 
+@pytest.mark.parametrize("stem", HJ12_ARMS)
+def test_each_new_stem_is_selectable_alone(stem: str):
+    # Each is submitted in a job of its own (the header ceilings assume it).
+    proc = _select(ARMS=stem)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert [row[2] for row in _rows(proc)] == [stem]
+
+
 @pytest.mark.parametrize("armset", ["live", "all"])
-def test_no_armset_selects_a_review_stem(armset: str):
+def test_no_armset_selects_a_review_or_effort_stem(armset: str):
     proc = _select(ARMSET=armset)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     stems = [row[2] for row in _rows(proc)]
-    assert stems and not set(stems) & set(REVIEW_ARMS)
+    assert stems and not set(stems) & set(HJ12_ARMS)
 
 
 def test_an_unknown_stem_is_still_refused():
@@ -331,12 +399,24 @@ def test_an_unknown_stem_is_still_refused():
     assert proc.returncode == 2 and "FATAL: unknown ARMS stem dev_advise_not_an_arm" in proc.stdout
 
 
-@pytest.mark.parametrize("stem", REVIEW_ARMS)
+@pytest.mark.parametrize("stem", HJ12_ARMS)
 def test_hosted_submit_lines_name_the_stem_and_date(stem: str):
     lines = _submit_lines(stem)
     assert len(lines) == 1
     assert lines[0].startswith(f'qsub -v ARMS="{stem}",DATE={DATE}')
     assert lines[0].endswith("/scripts/pbs/hj12_live.pbs")
+
+
+@pytest.mark.parametrize("stem", HJ12_ARMS)
+def test_hosted_submit_lines_pass_the_planned_ceiling(stem: str):
+    (line,) = _submit_lines(stem)
+    ceiling = SUBMIT_CEILING[stem]
+    if ceiling is None:
+        assert "MAX_PLANNER_CALLS" not in line
+    else:
+        assert f'qsub -v ARMS="{stem}",DATE={DATE},MAX_PLANNER_CALLS={ceiling} ' in line
+        # The header states the same ceiling it submits with.
+        assert f"MAX_PLANNER_CALLS={ceiling}" in _header_text(stem).replace(line, "")
 
 
 def test_hj1b_takes_config_and_cid_unchanged_and_the_d3_line_uses_them():

@@ -1,0 +1,62 @@
+# Dev arm X3: the planner alone at low reasoning effort, cap 81 (docs/plan_luna_reset_20260925.md:108,
+# a cost-quality point for G4 and G12 of docs/plan_top_venue_20260924.md). EXPLORATORY, DEV ONLY:
+# not registered, and never a J10 arm.
+# Source: configs/dev_planner_alone_cap81_high.yaml
+# Differs from source in: campaign_id, planner.reasoning_effort
+# tests/unit/test_dev_arms.py diffs the parsed YAML of both files against exactly this list.
+#
+# With hj13_planner_alone_cap81 (medium) and D3 (high) this gives a low/medium/high effort curve
+# for the planner acting alone: same model, harness and cap; codex runs with
+# model_reasoning_effort=low (src/sidekick/agents/planner.py:217).
+# limits.per_step_timeout_s is D3's 300, kept although it exists only because of high effort: the
+# medium arm (hj13) ran at 120. It bounds every planner call (src/sidekick/systems/loop.py:327).
+# Keeping it makes X3 differ from D3 in effort alone. Medium had 0 timeouts in 114 episodes at
+# 120 (configs/dev_planner_alone_cap81_high.yaml:13), and low-effort calls should be no slower,
+# so 300 is not expected to bind [INFERRED].
+# Disclose it beside the result: low and high ran at 300, medium at 120.
+#
+# Expected hosted calls: ≈ 1,600 [INFERRED from plan, docs/plan_luna_reset_20260925.md:108].
+# D3 at high effort spent 1,556 over 114 episodes, 33 on its 3-episode smoke
+# [OBSERVED campaign/workers/logs/dev_planner_alone_cap81_high_20260924.out:35,86].
+# MAX_PLANNER_CALLS defaults to 3,780 (scripts/pbs/hj12_live.pbs:72). That default covers R2.4
+# only if R2.4 runs alone in its job; X3 is submitted alone with MAX_PLANNER_CALLS=2100. The
+# smoke projection FATALs before the full run if the 3-episode smoke averages more than
+# 2100 / (114 × 1.2) ≈ 15.3 live calls per episode, against ≈ 14.0 expected and 11.0 on D3's
+# smoke [INFERRED].
+# Wrapper: hj12_live.pbs (EFFORT_ARMS), not D3's hj1b_planner_alone.pbs. hj12_live carries the
+# MAX_PLANNER_CALLS ceiling and purges only crashed episodes on resume; hj1b has no job-level
+# ceiling and its --purge-broken re-rolls scored timeout and parse_error episodes
+# (hj1b_planner_alone.pbs:74). The cost: hj12_live holds a GPU and serves granite + sft_b_plus,
+# which planner_alone never calls (planner_drives=True, src/sidekick/systems/planner_alone.py:17).
+# Submit (Claude, never a worker) once this branch is merged into the plan worktree, which
+# hj12_live.pbs runs from (REPO, hj12_live.pbs:104). One GPU job:
+#   qsub -v ARMS="dev_planner_alone_cap81_low",DATE=20260924,MAX_PLANNER_CALLS=2100 /mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/scripts/pbs/hj12_live.pbs
+# DATE=20260924 is load-bearing: hj12_live names the campaign <stem>_<DATE>, which must equal
+# campaign_id below. It is the dev-arm family's date, not the day of submission.
+#
+# The model and effort MUST be stated explicitly. ~/.codex/config.toml on this box
+# defaults to gpt-5.6-sol at xhigh; relying on the default would run a different and
+# far more expensive model and invalidate the arm.
+env: appworld
+campaign_id: dev_planner_alone_cap81_low_20260924
+planner:
+  type: codex
+  binary: codex
+  model: gpt-5.6-luna
+  reasoning_effort: low
+  timeout_s: 300
+  scratch_parent: /scratch/n12194778/sidekick/codex_scratch
+executor:
+  type: mock          # never called by planner_alone; must not be vllm
+  # Required by scripts/setup/verify_configs.py for every non-exempt config; the
+  # frozen-pilot source escapes that check, so the copy inherited a gap it never
+  # had. The mock executor never generates, so this bound is inert here.
+  max_prompt_tokens: 30720
+limits:
+  max_steps: 40
+  max_tokens_per_episode: 2000000   # non-binding: max_planner_calls=25 is the real limit.
+  # 32000 made every episode die at step 2 -- each codex call resends the whole
+  # transcript on ~15.4k scaffolding, so 2 calls cost 88k input tokens.
+  per_step_timeout_s: 300
+  max_planner_calls: 81
+prices: configs/cost/prices_2026-09.yaml
