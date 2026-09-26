@@ -194,3 +194,37 @@ test episode:
   prefix or `qzs` dev episode existed.
 - **Freeze.** The Status line reads FROZEN from the commit that records this section. After that the document is
   amended only by appending below this section, never by editing above it.
+
+## 9. Amendment 1: hosted-arm launch ceilings (2026-09-26, before any hosted BFCL episode)
+
+- **What changes.** Only §5's per-arm launch brake `MAX_PLANNER_CALLS` changes, and only for these arms:
+  - each of the six channel arms (`takeover_k5`, `advise_k5_fullctx`, `advise_k5_neutral`, on `zs` and on `qzs`):
+    600 → **1,200** (8 per episode × 150);
+  - `plan_zs` and `plan_qzs`: 300 → **600** (4 per episode × 150).
+
+  `planner_alone_cap81` stays at 2,400. The value is passed per arm as `MAX_PLANNER_CALLS`, which `bfcl_arm.pbs:67,507`
+  already accepts. Nothing else changes: the arms, §5's per-episode figures and budget table, the seeds, the replay
+  gates, §6's dev read and §7's test-contact rule all stay as frozen.
+- **Why.** `bfcl_arm.pbs` launches a hosted arm only if a 2-episode smoke keeps the projected spend under the
+  ceiling (`bfcl_arm.pbs:552-567`). The smoke is the first two dev entries at seed 1; the projection is the smoke's
+  live calls per episode × 150 × SAFETY 1.2.
+  - In the executor-alone smokes, the two smoke entries averaged 21 steps (`qzs`) and 24 (`bplus`).
+  - Across the full arms, episodes averaged 15.53 (`zs`), 18.49 (`bplus`) and 20.09 (`qzs`) steps.
+  - 21 steps is BFCL's per-turn force-quit.
+  - A k = 5 channel arm reviews at every 5th step, so its smoke would make about 8-10 live calls and project 720-900.
+    Every channel arm would therefore be refused before its first scored episode.
+  - A plan-replay arm spends live calls only on executor asks. Under the old 300 ceiling it is refused if its two
+    smoke episodes ask the planner 4 times; under 600 it is refused at 7 asks.
+
+  The ceiling is a brake against runaway spend, not the expected spend. §5's 3 calls per episode came from scoping
+  §3, which did not model the force-quit length; at k = 5 that length makes about 4 reviews per episode typical.
+- **Data seen.** Only executor-alone dev data: the three 150-episode arms and their smokes, from which the step
+  counts above were read. No hosted, channel, plan-replay or prefix BFCL episode existed at this amendment, so no
+  outcome it governs could inform it.
+- **Cost.** At about 4 calls per channel episode, the six channel arms spend about 900 calls more than §5's 2,700.
+  The new ceilings allow at most 4,200 more calls than the old ones. The luna allowance is a subscription whose spend
+  the user approved on 2026-09-25.
+- **Source.** The user, 2026-09-26: "follow the recommendation if you believe it can truly help". The recommendation
+  came from a readiness audit of the week-A burn driver.
+
+*Amendment 1 ends.*
