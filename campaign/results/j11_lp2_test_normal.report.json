@@ -1,0 +1,3177 @@
+{
+  "protocol": "J11",
+  "prereg": "docs/prereg_j11_lp2_test_20260924.md",
+  "replicates": "docs/prereg_lp_planner_strength_20260923.md",
+  "split": "test_normal",
+  "planner": {
+    "code": "P27",
+    "model": "Qwen/Qwen3.8-27B-FP8"
+  },
+  "plumbing_check": false,
+  "results_root": "/scratch/n12194778/sidekick/results",
+  "label": "J11 registered read (test_normal)",
+  "campaigns": {
+    "C": {
+      "config": "configs/j11_planner_alone_cap81_qwen38_27b.yaml",
+      "campaign": "j11_planner_alone_cap81_qwen38_27b_20260924"
+    },
+    "T": {
+      "config": "configs/j11_takeover_fixed_k_10.yaml",
+      "campaign": "j11_takeover_fixed_k_10_20260924"
+    },
+    "A": {
+      "config": "configs/j11_advise_fixed_k_10_fullctx.yaml",
+      "campaign": "j11_advise_fixed_k_10_fullctx_20260924"
+    },
+    "A1": {
+      "config": "configs/j11_advise_fixed_k_1_fullctx.yaml",
+      "campaign": "j11_advise_fixed_k_1_fullctx_20260924"
+    },
+    "M_bplus_6": {
+      "config": "configs/j11_prefix_bplus_m6.yaml",
+      "campaign": "j11_prefix_bplus_m6_20260924"
+    },
+    "M_bplus_11": {
+      "config": "configs/j11_prefix_bplus_m11.yaml",
+      "campaign": "j11_prefix_bplus_m11_20260924"
+    },
+    "M_zs_6": {
+      "config": "configs/j11_prefix_zs_m6.yaml",
+      "campaign": "j11_prefix_zs_m6_20260924"
+    },
+    "M_zs_11": {
+      "config": "configs/j11_prefix_zs_m11.yaml",
+      "campaign": "j11_prefix_zs_m11_20260924"
+    },
+    "E": {
+      "config": "configs/j10_executor_alone_bplus.yaml",
+      "campaign": "j10_executor_alone_bplus_20260924"
+    }
+  },
+  "missing_campaigns": [],
+  "status": "COMPLETE",
+  "exit_code": 0,
+  "headline": "COMPLETE: gate passes, L1 on_the_boundary",
+  "errors": [],
+  "settings": {
+    "unit": "paired episode, key (task_id, seed)",
+    "n_tasks": 168,
+    "seeds": [
+      1,
+      2
+    ],
+    "expected_pairs": 336,
+    "metric": "goal_pass (field goal_pass_rate) decision-bearing; TGC secondary",
+    "bootstrap": {
+      "n": 10000,
+      "seed": 20260924,
+      "registered": true,
+      "primary_clustering": "scenario",
+      "secondary_clustering": "task"
+    },
+    "multiplicity": {
+      "method": "Holm step-down",
+      "family": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "m": 5,
+      "alpha": 0.05
+    },
+    "pool04": {
+      "window_pp": 1.0,
+      "seeds": [
+        20260924,
+        1,
+        2,
+        3,
+        7,
+        101,
+        999
+      ]
+    },
+    "signflip": "j10.a1_permutation: scenario clusters; exact if 2^G <= 2^20, else 100,000 Monte Carlo patterns",
+    "crash_convention": "drop only error_type == 'crash'; every other error_type is scored",
+    "machinery": "scripts/analysis/lp_report.py functions, at this matrix (j11_report.lp_matrix)"
+  },
+  "n_tasks_observed": 168,
+  "incomplete": [],
+  "not_run_reasons": [],
+  "planless": {
+    "rule": "docs/prereg_j11_lp2_test_20260924.md \u00a72, \u00a73, \u00a76",
+    "source_arm": "C",
+    "cap": 16,
+    "keys": [
+      "1/2d9f728_3",
+      "2/8ce6779_3",
+      "1/9ef798c_2",
+      "1/cef9191_2"
+    ],
+    "n_keys": 4,
+    "abort_rule_fired": false,
+    "c_below_matrix": false
+  },
+  "gate": {
+    "id": "gate",
+    "definition": "C - E",
+    "left": "C",
+    "right": "E",
+    "rule": "point estimate of C_p - E <= 0 => too_weak; > 0 => passes",
+    "citation": "docs/prereg_lp_planner_strength_20260923.md:98-101",
+    "metric": "goal_pass",
+    "field": "goal_pass_rate",
+    "n_pairs": 336,
+    "n_expected": 336,
+    "n_dropped_missing_field": 0,
+    "counts": [
+      {
+        "arm": "C",
+        "complete": true,
+        "n_scored": 336,
+        "n_expected": 336,
+        "n_crash": 0,
+        "n_missing": 0
+      },
+      {
+        "arm": "E",
+        "complete": true,
+        "n_scored": 336,
+        "n_expected": 336,
+        "n_crash": 0,
+        "n_missing": 0
+      }
+    ],
+    "status": "COMPLETE",
+    "point_pp": 3.21,
+    "scenario": {
+      "clustering": "scenario",
+      "n_pairs": 336,
+      "n_clusters": 56,
+      "point": 0.0320922619047619,
+      "lo": -0.03710119047619048,
+      "hi": 0.09695238095238096,
+      "diff_pp": 3.21,
+      "ci95_pp": [
+        -3.71,
+        9.7
+      ],
+      "n_boot": 10000,
+      "seed": 20260924
+    },
+    "task": {
+      "clustering": "task",
+      "n_pairs": 336,
+      "n_clusters": 168,
+      "point": 0.0320922619047619,
+      "lo": -0.022684523809523814,
+      "hi": 0.08641964285714285,
+      "diff_pp": 3.21,
+      "ci95_pp": [
+        -2.27,
+        8.64
+      ],
+      "n_boot": 10000,
+      "seed": 20260924
+    },
+    "verdict": "passes",
+    "why": "point estimate +3.21 pp > 0: the planner is informative",
+    "signflip": {
+      "decision_bearing": false,
+      "clusters": "scenario",
+      "null": "cluster sums of (difference - threshold) symmetric about zero",
+      "threshold": 0.0,
+      "seed": 20260924,
+      "alternative": "greater",
+      "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+      "status": "ok",
+      "p_value": 0.18126818731812683,
+      "method": "monte_carlo",
+      "n_patterns": 100000,
+      "n_clusters": 56
+    },
+    "tgc_secondary": {
+      "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+      "point_pp": 22.32,
+      "field": "tgc",
+      "n_pairs": 336,
+      "n_shared": 336,
+      "n_left_only": 0,
+      "n_right_only": 0,
+      "n_dropped_missing_field": 0,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 336,
+        "n_clusters": 56,
+        "point": 0.22321428571428573,
+        "lo": 0.13690476190476192,
+        "hi": 0.30654761904761907,
+        "diff_pp": 22.32,
+        "ci95_pp": [
+          13.69,
+          30.65
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 336,
+        "n_clusters": 168,
+        "point": 0.22321428571428573,
+        "lo": 0.15476190476190477,
+        "hi": 0.2916666666666667,
+        "diff_pp": 22.32,
+        "ci95_pp": [
+          15.48,
+          29.17
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      }
+    }
+  },
+  "contrasts": {
+    "L1": {
+      "id": "L1",
+      "definition": "T - A",
+      "left": "T",
+      "right": "A",
+      "claim": "action beats advice at a matched trigger",
+      "predicted": "> 0",
+      "threshold_pp": 0.0,
+      "rule_text": "replicates: lo > 0 and Holm p <= .05; reversed: hi < 0 and Holm p <= .05; fails_to_replicate: unadjusted interval includes 0; else not_resolved",
+      "citation": "docs/prereg_lp_planner_strength_20260923.md:92,104-106",
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 336,
+      "n_expected": 336,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "T",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "A",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 5.08,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 336,
+        "n_clusters": 56,
+        "point": 0.050845238095238096,
+        "lo": 0.010681547619047618,
+        "hi": 0.09046130952380953,
+        "diff_pp": 5.08,
+        "ci95_pp": [
+          1.07,
+          9.05
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 336,
+        "n_clusters": 168,
+        "point": 0.050845238095238096,
+        "lo": 0.012785714285714286,
+        "hi": 0.08789583333333334,
+        "diff_pp": 5.08,
+        "ci95_pp": [
+          1.28,
+          8.79
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.014,
+      "p_raw_direction": "two-sided",
+      "p_raw_text": "two-sided: 2 x min(share of draws <= 0, share >= 0)",
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "lo",
+          "hi"
+        ],
+        "within_window": {
+          "lo": false,
+          "hi": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true,
+        "on_boundary": false,
+        "status": "not_fired"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.016989830101698983,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 56
+      },
+      "tgc_secondary": {
+        "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+        "point_pp": 6.55,
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.06547619047619048,
+          "lo": 0.002976190476190476,
+          "hi": 0.13095238095238096,
+          "diff_pp": 6.55,
+          "ci95_pp": [
+            0.3,
+            13.1
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.06547619047619048,
+          "lo": 0.005952380952380952,
+          "hi": 0.125,
+          "diff_pp": 6.55,
+          "ci95_pp": [
+            0.6,
+            12.5
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "reading": "on_the_boundary",
+      "reading_why": "docs/prereg_j11_lp2_test_20260924.md \u00a73: reads 'not_resolved' on 336 pairs but 'replicates' without 1/2d9f728_3, 1/9ef798c_2, 1/cef9191_2, 2/8ce6779_3 (332 pairs); on the boundary, never resolved",
+      "p_holm": 0.07,
+      "holm_rejects": false,
+      "signflip_disagreement": {
+        "rule": "J10 A1 \u00a75.5 (J11 \u00a73:75): a disagreement is reported in the same sentence as the reading",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.05 (two-sided)",
+        "p_value": 0.016989830101698983,
+        "alternative": "two-sided",
+        "level": 0.05,
+        "bootstrap_side": "above",
+        "signflip_side": "above",
+        "agrees": true,
+        "sentence": null
+      }
+    },
+    "L2": {
+      "id": "L2",
+      "definition": "A1 - M_bplus_11",
+      "left": "A1",
+      "right": "M_bplus_11",
+      "claim": "advice at every step does not reach the 11-action prefix",
+      "predicted": "< 0",
+      "threshold_pp": 0.0,
+      "rule_text": "supported iff hi < 0 and Holm p <= .05",
+      "citation": "docs/prereg_lp_planner_strength_20260923.md:93",
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 336,
+      "n_expected": 336,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "A1",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_bplus_11",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 11.84,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 336,
+        "n_clusters": 56,
+        "point": 0.11838095238095236,
+        "lo": 0.07092559523809523,
+        "hi": 0.16603273809523808,
+        "diff_pp": 11.84,
+        "ci95_pp": [
+          7.09,
+          16.6
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 336,
+        "n_clusters": 168,
+        "point": 0.11838095238095236,
+        "lo": 0.07328571428571429,
+        "hi": 0.1645,
+        "diff_pp": 11.84,
+        "ci95_pp": [
+          7.33,
+          16.45
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 1.0,
+      "p_raw_direction": "less",
+      "p_raw_text": "2 x share of draws >= 0",
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "hi"
+        ],
+        "within_window": {
+          "hi": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true,
+        "on_boundary": false,
+        "status": "not_fired"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "less",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 1.0,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 56
+      },
+      "tgc_secondary": {
+        "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+        "point_pp": 17.86,
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.17857142857142858,
+          "lo": 0.11011904761904762,
+          "hi": 0.24702380952380953,
+          "diff_pp": 17.86,
+          "ci95_pp": [
+            11.01,
+            24.7
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.17857142857142858,
+          "lo": 0.1130952380952381,
+          "hi": 0.24404761904761904,
+          "diff_pp": 17.86,
+          "ci95_pp": [
+            11.31,
+            24.4
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "reading": "not_supported",
+      "reading_why": "scenario CI [+7.09, +16.60] pp, point +11.84 pp: upper >= +0.00 pp",
+      "p_holm": 1.0,
+      "holm_rejects": false,
+      "signflip_disagreement": {
+        "rule": "J10 A1 \u00a75.5 (J11 \u00a73:75): a disagreement is reported in the same sentence as the reading",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.025 (less)",
+        "p_value": 1.0,
+        "alternative": "less",
+        "level": 0.025,
+        "bootstrap_side": null,
+        "signflip_side": null,
+        "agrees": true,
+        "sentence": null
+      }
+    },
+    "L3": {
+      "id": "L3",
+      "definition": "M_bplus_11 - M_bplus_6",
+      "left": "M_bplus_11",
+      "right": "M_bplus_6",
+      "claim": "depth span, tailored receiver",
+      "predicted": "> 0",
+      "threshold_pp": 0.0,
+      "rule_text": "supported iff lo > 0 and Holm p <= .05",
+      "citation": "docs/prereg_lp_planner_strength_20260923.md:94",
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 336,
+      "n_expected": 336,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "M_bplus_11",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_bplus_6",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 0.01,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 336,
+        "n_clusters": 56,
+        "point": 0.00011011904761904664,
+        "lo": -0.04250892857142857,
+        "hi": 0.04337202380952381,
+        "diff_pp": 0.01,
+        "ci95_pp": [
+          -4.25,
+          4.34
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 336,
+        "n_clusters": 168,
+        "point": 0.00011011904761904664,
+        "lo": -0.04479761904761905,
+        "hi": 0.04370238095238095,
+        "diff_pp": 0.01,
+        "ci95_pp": [
+          -4.48,
+          4.37
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.9942,
+      "p_raw_direction": "greater",
+      "p_raw_text": "2 x share of draws <= 0",
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "lo"
+        ],
+        "within_window": {
+          "lo": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true,
+        "on_boundary": false,
+        "status": "not_fired"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "greater",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.4966850331496685,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 56
+      },
+      "tgc_secondary": {
+        "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+        "point_pp": 1.19,
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.011904761904761904,
+          "lo": -0.041666666666666664,
+          "hi": 0.0625,
+          "diff_pp": 1.19,
+          "ci95_pp": [
+            -4.17,
+            6.25
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.011904761904761904,
+          "lo": -0.041666666666666664,
+          "hi": 0.0625,
+          "diff_pp": 1.19,
+          "ci95_pp": [
+            -4.17,
+            6.25
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "reading": "not_supported",
+      "reading_why": "scenario CI [-4.25, +4.34] pp, point +0.01 pp: lower <= +0.00 pp",
+      "p_holm": 1.0,
+      "holm_rejects": false,
+      "signflip_disagreement": {
+        "rule": "J10 A1 \u00a75.5 (J11 \u00a73:75): a disagreement is reported in the same sentence as the reading",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.025 (greater)",
+        "p_value": 0.4966850331496685,
+        "alternative": "greater",
+        "level": 0.025,
+        "bootstrap_side": null,
+        "signflip_side": null,
+        "agrees": true,
+        "sentence": null
+      }
+    },
+    "L4": {
+      "id": "L4",
+      "definition": "C - M_bplus_11",
+      "left": "C",
+      "right": "M_bplus_11",
+      "claim": "non-inferiority of the 11-action prefix to the ceiling at the J9 margin",
+      "predicted": "upper bound < +7.00 pp",
+      "threshold_pp": 7.0,
+      "rule_text": "supported iff hi < +7.00 pp and Holm p <= .05",
+      "citation": "docs/prereg_lp_planner_strength_20260923.md:95",
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 336,
+      "n_expected": 336,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "C",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_bplus_11",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 0.86,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 336,
+        "n_clusters": 56,
+        "point": 0.008550595238095236,
+        "lo": -0.05967559523809524,
+        "hi": 0.07077083333333334,
+        "diff_pp": 0.86,
+        "ci95_pp": [
+          -5.97,
+          7.08
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 336,
+        "n_clusters": 168,
+        "point": 0.008550595238095236,
+        "lo": -0.045258928571428575,
+        "hi": 0.061827380952380946,
+        "diff_pp": 0.86,
+        "ci95_pp": [
+          -4.53,
+          6.18
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.0528,
+      "p_raw_direction": "less",
+      "p_raw_text": "2 x share of draws >= +7.00 pp",
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 7.0,
+        "bounds_checked": [
+          "hi"
+        ],
+        "within_window": {
+          "hi": true
+        },
+        "fired": true,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "bounds_by_seed": [
+          {
+            "seed": 20260924,
+            "lo_pp": -5.97,
+            "hi_pp": 7.08,
+            "verdict": "upper_not_below_threshold"
+          },
+          {
+            "seed": 1,
+            "lo_pp": -5.81,
+            "hi_pp": 7.12,
+            "verdict": "upper_not_below_threshold"
+          },
+          {
+            "seed": 2,
+            "lo_pp": -5.81,
+            "hi_pp": 7.35,
+            "verdict": "upper_not_below_threshold"
+          },
+          {
+            "seed": 3,
+            "lo_pp": -5.9,
+            "hi_pp": 7.05,
+            "verdict": "upper_not_below_threshold"
+          },
+          {
+            "seed": 7,
+            "lo_pp": -5.97,
+            "hi_pp": 7.3,
+            "verdict": "upper_not_below_threshold"
+          },
+          {
+            "seed": 101,
+            "lo_pp": -5.77,
+            "hi_pp": 7.1,
+            "verdict": "upper_not_below_threshold"
+          },
+          {
+            "seed": 999,
+            "lo_pp": -5.96,
+            "hi_pp": 7.25,
+            "verdict": "upper_not_below_threshold"
+          }
+        ],
+        "verdicts_by_seed": [
+          "upper_not_below_threshold"
+        ],
+        "stable": true,
+        "bound_200k": {
+          "n_boot": 200000,
+          "seed": 20260924,
+          "lo_pp": -5.9,
+          "hi_pp": 7.12,
+          "verdict": "upper_not_below_threshold",
+          "decision_bearing": false
+        },
+        "on_boundary": false,
+        "status": "stable"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.07,
+        "seed": 20260924,
+        "alternative": "less",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.03555964440355597,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 56
+      },
+      "tgc_secondary": {
+        "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+        "point_pp": 10.71,
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.10714285714285714,
+          "lo": 0.017857142857142856,
+          "hi": 0.19047619047619047,
+          "diff_pp": 10.71,
+          "ci95_pp": [
+            1.79,
+            19.05
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.10714285714285714,
+          "lo": 0.03571428571428571,
+          "hi": 0.17857142857142858,
+          "diff_pp": 10.71,
+          "ci95_pp": [
+            3.57,
+            17.86
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "reading": "not_supported",
+      "reading_why": "scenario CI [-5.97, +7.08] pp, point +0.86 pp: upper >= +7.00 pp",
+      "p_holm": 0.2112,
+      "holm_rejects": false,
+      "signflip_disagreement": {
+        "rule": "J10 A1 \u00a75.5 (J11 \u00a73:75): a disagreement is reported in the same sentence as the reading",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +7.00 pp; sign-flip: its p at 0.025 (less)",
+        "p_value": 0.03555964440355597,
+        "alternative": "less",
+        "level": 0.025,
+        "bootstrap_side": null,
+        "signflip_side": null,
+        "agrees": true,
+        "sentence": null
+      }
+    },
+    "L5": {
+      "id": "L5",
+      "definition": "M_zs_11 - M_zs_6",
+      "left": "M_zs_11",
+      "right": "M_zs_6",
+      "claim": "depth span, untailored receiver",
+      "predicted": "> 0",
+      "threshold_pp": 0.0,
+      "rule_text": "supported iff lo > 0 and Holm p <= .05",
+      "citation": "docs/prereg_lp_planner_strength_20260923.md:96",
+      "metric": "goal_pass",
+      "field": "goal_pass_rate",
+      "n_pairs": 336,
+      "n_expected": 336,
+      "n_dropped_missing_field": 0,
+      "counts": [
+        {
+          "arm": "M_zs_11",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        },
+        {
+          "arm": "M_zs_6",
+          "complete": true,
+          "n_scored": 336,
+          "n_expected": 336,
+          "n_crash": 0,
+          "n_missing": 0
+        }
+      ],
+      "status": "COMPLETE",
+      "point_pp": 3.25,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 336,
+        "n_clusters": 56,
+        "point": 0.03247619047619047,
+        "lo": -0.0013422619047619058,
+        "hi": 0.06655654761904761,
+        "diff_pp": 3.25,
+        "ci95_pp": [
+          -0.13,
+          6.66
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "task": {
+        "clustering": "task",
+        "n_pairs": 336,
+        "n_clusters": 168,
+        "point": 0.03247619047619047,
+        "lo": -0.003654761904761907,
+        "hi": 0.07028273809523809,
+        "diff_pp": 3.25,
+        "ci95_pp": [
+          -0.37,
+          7.03
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "p_raw": 0.0582,
+      "p_raw_direction": "greater",
+      "p_raw_text": "2 x share of draws <= 0",
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "lo"
+        ],
+        "within_window": {
+          "lo": true
+        },
+        "fired": true,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "bounds_by_seed": [
+          {
+            "seed": 20260924,
+            "lo_pp": -0.13,
+            "hi_pp": 6.66,
+            "verdict": "lower_not_above_threshold"
+          },
+          {
+            "seed": 1,
+            "lo_pp": -0.15,
+            "hi_pp": 6.68,
+            "verdict": "lower_not_above_threshold"
+          },
+          {
+            "seed": 2,
+            "lo_pp": -0.17,
+            "hi_pp": 6.69,
+            "verdict": "lower_not_above_threshold"
+          },
+          {
+            "seed": 3,
+            "lo_pp": -0.17,
+            "hi_pp": 6.63,
+            "verdict": "lower_not_above_threshold"
+          },
+          {
+            "seed": 7,
+            "lo_pp": -0.06,
+            "hi_pp": 6.67,
+            "verdict": "lower_not_above_threshold"
+          },
+          {
+            "seed": 101,
+            "lo_pp": -0.11,
+            "hi_pp": 6.7,
+            "verdict": "lower_not_above_threshold"
+          },
+          {
+            "seed": 999,
+            "lo_pp": -0.03,
+            "hi_pp": 6.67,
+            "verdict": "lower_not_above_threshold"
+          }
+        ],
+        "verdicts_by_seed": [
+          "lower_not_above_threshold"
+        ],
+        "stable": true,
+        "bound_200k": {
+          "n_boot": 200000,
+          "seed": 20260924,
+          "lo_pp": -0.1,
+          "hi_pp": 6.67,
+          "verdict": "lower_not_above_threshold",
+          "decision_bearing": false
+        },
+        "on_boundary": false,
+        "status": "stable"
+      },
+      "signflip": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "greater",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 0.032749672503274964,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 56
+      },
+      "tgc_secondary": {
+        "label": "secondary: reported, not decision-bearing (prereg \u00a73)",
+        "point_pp": 2.38,
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.023809523809523808,
+          "lo": -0.02976190476190476,
+          "hi": 0.0744047619047619,
+          "diff_pp": 2.38,
+          "ci95_pp": [
+            -2.98,
+            7.44
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.023809523809523808,
+          "lo": -0.026785714285714284,
+          "hi": 0.0744047619047619,
+          "diff_pp": 2.38,
+          "ci95_pp": [
+            -2.68,
+            7.44
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "reading": "not_supported",
+      "reading_why": "scenario CI [-0.13, +6.66] pp, point +3.25 pp: lower <= +0.00 pp",
+      "p_holm": 0.2112,
+      "holm_rejects": false,
+      "signflip_disagreement": {
+        "rule": "J10 A1 \u00a75.5 (J11 \u00a73:75): a disagreement is reported in the same sentence as the reading",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.025 (greater)",
+        "p_value": 0.032749672503274964,
+        "alternative": "greater",
+        "level": 0.025,
+        "bootstrap_side": null,
+        "signflip_side": null,
+        "agrees": true,
+        "sentence": null
+      }
+    }
+  },
+  "holm": {
+    "method": "Holm step-down",
+    "alpha": 0.05,
+    "family": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "L5"
+    ],
+    "m": 5,
+    "scope": "L1-L5, one Holm family of m = 5 (docs/prereg_j11_lp2_test_20260924.md \u00a73); within this planner, no correction across planners, as LP's family (docs/prereg_lp_planner_strength_20260923.md:81-82)",
+    "p": {
+      "L1": {
+        "p_raw": 0.014,
+        "p_holm": 0.07,
+        "rejects_at_alpha": false
+      },
+      "L2": {
+        "p_raw": 1.0,
+        "p_holm": 1.0,
+        "rejects_at_alpha": false
+      },
+      "L3": {
+        "p_raw": 0.9942,
+        "p_holm": 1.0,
+        "rejects_at_alpha": false
+      },
+      "L4": {
+        "p_raw": 0.0528,
+        "p_holm": 0.2112,
+        "rejects_at_alpha": false
+      },
+      "L5": {
+        "p_raw": 0.0582,
+        "p_holm": 0.2112,
+        "rejects_at_alpha": false
+      }
+    }
+  },
+  "readings": {
+    "L1": {
+      "reading": "on_the_boundary",
+      "why": "docs/prereg_j11_lp2_test_20260924.md \u00a73: reads 'not_resolved' on 336 pairs but 'replicates' without 1/2d9f728_3, 1/9ef798c_2, 1/cef9191_2, 2/8ce6779_3 (332 pairs); on the boundary, never resolved",
+      "signflip_disagreement": null
+    },
+    "L2": {
+      "reading": "not_supported",
+      "why": "scenario CI [+7.09, +16.60] pp, point +11.84 pp: upper >= +0.00 pp",
+      "signflip_disagreement": null
+    },
+    "L3": {
+      "reading": "not_supported",
+      "why": "scenario CI [-4.25, +4.34] pp, point +0.01 pp: lower <= +0.00 pp",
+      "signflip_disagreement": null
+    },
+    "L4": {
+      "reading": "not_supported",
+      "why": "scenario CI [-5.97, +7.08] pp, point +0.86 pp: upper >= +7.00 pp",
+      "signflip_disagreement": null
+    },
+    "L5": {
+      "reading": "not_supported",
+      "why": "scenario CI [-0.13, +6.66] pp, point +3.25 pp: lower <= +0.00 pp",
+      "signflip_disagreement": null
+    }
+  },
+  "combined_with_j10": {
+    "status": "pending",
+    "rule": "docs/prereg_j11_lp2_test_20260924.md \u00a74:105-109",
+    "statement": "combined statement with J10 P6: pending the J10 read"
+  },
+  "sensitivity_planless": {
+    "label": "SENSITIVITY (C's planless keys excluded): not decision-bearing, except that a verdict or reading that differs is on the boundary",
+    "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a73 (the rule lp_report.apply_key_exclusion applies)",
+    "excluded_keys": [
+      "1/2d9f728_3",
+      "1/9ef798c_2",
+      "1/cef9191_2",
+      "2/8ce6779_3"
+    ],
+    "n_expected": 332,
+    "gate": {
+      "status": "COMPLETE",
+      "n_pairs": 332,
+      "point_pp": 3.34,
+      "scenario": {
+        "clustering": "scenario",
+        "n_pairs": 332,
+        "n_clusters": 56,
+        "point": 0.033448795180722884,
+        "lo": -0.0365848484848485,
+        "hi": 0.0991969696969697,
+        "diff_pp": 3.34,
+        "ci95_pp": [
+          -3.66,
+          9.92
+        ],
+        "n_boot": 10000,
+        "seed": 20260924
+      },
+      "verdict": "passes",
+      "n_expected": 332
+    },
+    "contrasts": {
+      "L1": {
+        "status": "COMPLETE",
+        "n_pairs": 332,
+        "point_pp": 5.38,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 332,
+          "n_clusters": 56,
+          "point": 0.05380120481927712,
+          "lo": 0.012550898203592814,
+          "hi": 0.09412537313432835,
+          "diff_pp": 5.38,
+          "ci95_pp": [
+            1.26,
+            9.41
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 332,
+          "n_clusters": 168,
+          "point": 0.05380120481927712,
+          "lo": 0.014661631419939576,
+          "hi": 0.09099401197604791,
+          "diff_pp": 5.38,
+          "ci95_pp": [
+            1.47,
+            9.1
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "p_raw": 0.0096,
+        "reading": "replicates",
+        "n_expected": 332
+      },
+      "L2": {
+        "status": "COMPLETE",
+        "n_pairs": 332,
+        "point_pp": 11.46,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 332,
+          "n_clusters": 56,
+          "point": 0.11458734939759035,
+          "lo": 0.06508734939759037,
+          "hi": 0.1643060606060606,
+          "diff_pp": 11.46,
+          "ci95_pp": [
+            6.51,
+            16.43
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 332,
+          "n_clusters": 168,
+          "point": 0.11458734939759035,
+          "lo": 0.06926969696969697,
+          "hi": 0.16143843843843844,
+          "diff_pp": 11.46,
+          "ci95_pp": [
+            6.93,
+            16.14
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "p_raw": 1.0,
+        "reading": "not_supported",
+        "n_expected": 332
+      },
+      "L3": {
+        "status": "COMPLETE",
+        "n_pairs": 332,
+        "point_pp": 0.1,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 332,
+          "n_clusters": 56,
+          "point": 0.0010150602409638547,
+          "lo": -0.0420273556231003,
+          "hi": 0.045346625766871165,
+          "diff_pp": 0.1,
+          "ci95_pp": [
+            -4.2,
+            4.53
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 332,
+          "n_clusters": 168,
+          "point": 0.0010150602409638547,
+          "lo": -0.04367173252279635,
+          "hi": 0.04501807228915663,
+          "diff_pp": 0.1,
+          "ci95_pp": [
+            -4.37,
+            4.5
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "p_raw": 0.9566,
+        "reading": "not_supported",
+        "n_expected": 332
+      },
+      "L4": {
+        "status": "COMPLETE",
+        "n_pairs": 332,
+        "point_pp": 1.07,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 332,
+          "n_clusters": 56,
+          "point": 0.010662650602409635,
+          "lo": -0.058482035928143716,
+          "hi": 0.07377177177177177,
+          "diff_pp": 1.07,
+          "ci95_pp": [
+            -5.85,
+            7.38
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 332,
+          "n_clusters": 168,
+          "point": 0.010662650602409635,
+          "lo": -0.04349397590361446,
+          "hi": 0.06438138138138139,
+          "diff_pp": 1.07,
+          "ci95_pp": [
+            -4.35,
+            6.44
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "p_raw": 0.063,
+        "reading": "not_supported",
+        "n_expected": 332
+      },
+      "L5": {
+        "status": "COMPLETE",
+        "n_pairs": 332,
+        "point_pp": 3.25,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 332,
+          "n_clusters": 56,
+          "point": 0.03253313253012048,
+          "lo": -0.0017237237237237252,
+          "hi": 0.06715060240963855,
+          "diff_pp": 3.25,
+          "ci95_pp": [
+            -0.17,
+            6.72
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 332,
+          "n_clusters": 168,
+          "point": 0.03253313253012048,
+          "lo": -0.004054545454545454,
+          "hi": 0.07057099697885195,
+          "diff_pp": 3.25,
+          "ci95_pp": [
+            -0.41,
+            7.06
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "p_raw": 0.0626,
+        "reading": "not_supported",
+        "n_expected": 332
+      }
+    },
+    "holm": {
+      "method": "Holm step-down",
+      "alpha": 0.05,
+      "family": [
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "m": 5,
+      "scope": "L1-L5, one Holm family of m = 5 (docs/prereg_j11_lp2_test_20260924.md \u00a73); within this planner, no correction across planners, as LP's family (docs/prereg_lp_planner_strength_20260923.md:81-82)",
+      "p": {
+        "L1": {
+          "p_raw": 0.0096,
+          "p_holm": 0.047999999999999994,
+          "rejects_at_alpha": true
+        },
+        "L2": {
+          "p_raw": 1.0,
+          "p_holm": 1.0,
+          "rejects_at_alpha": false
+        },
+        "L3": {
+          "p_raw": 0.9566,
+          "p_holm": 1.0,
+          "rejects_at_alpha": false
+        },
+        "L4": {
+          "p_raw": 0.063,
+          "p_holm": 0.2504,
+          "rejects_at_alpha": false
+        },
+        "L5": {
+          "p_raw": 0.0626,
+          "p_holm": 0.2504,
+          "rejects_at_alpha": false
+        }
+      }
+    },
+    "n_expected_note": "n_expected is the matrix minus the planless keys, the gate's and L1's count; a contrast with divergent keys (Amendment 2) expects fewer: each row's n_expected"
+  },
+  "descriptive": {
+    "label": "DESCRIPTIVE: no direction, no verdict (docs/prereg_j11_lp2_test_20260924.md \u00a74:86; docs/prereg_lp_planner_strength_20260923.md:116-122)",
+    "ceiling_goal_pass": {
+      "planner": "P27",
+      "campaign": "j11_planner_alone_cap81_qwen38_27b_20260924",
+      "goal_pass_mean": 0.581914,
+      "n_scored": 336,
+      "n_expected": 336,
+      "n_goal_pass_missing": 0,
+      "complete": true
+    },
+    "ceiling_goal_pass_luna": {
+      "status": "not_available",
+      "reason": "needs --j10-report (J10 arm 3's mean goal_pass)"
+    },
+    "delta_vs_luna": {
+      "status": "not_computed",
+      "reason": "lp_report.evaluate_delta needs luna's T and A on the same keys (on test_normal J10's takeover_k10 and advise_k10_fullctx), which J11 does not read; see AMBIGUITIES lp_descriptive_delta_and_planner_strength"
+    }
+  },
+  "reporting_only": {
+    "label": "REPORTED BESIDE THE PREDICTIONS: not decision-bearing (prereg \u00a74)",
+    "handoff_only": {
+      "L3_handoff_only": {
+        "id": "L3_handoff_only",
+        "companion_of": "L3",
+        "left": "M_bplus_11",
+        "right": "M_bplus_6",
+        "flags_from": "M_bplus_11",
+        "threshold_pp": 0.0,
+        "orientation": "as L3: M^bplus_11 \u2212 M^bplus_6",
+        "decision_bearing": false,
+        "margin_pp": null,
+        "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a74 (J10 A1 Amendment 1 \u00a7B pattern)",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = left \u2212 right, h = h* of the left (prefix) episode: the executor took control after the replayed prefix (scripts/analysis/handoff_control.py)",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 331,
+          "n_silenced": 5,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": -0.19,
+            "ci95_pp_scenario": [
+              -4.53,
+              4.2
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.7,
+              4.23
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 13.34,
+            "ci95_pp_scenario": [
+              0.0,
+              66.7
+            ],
+            "n_undefined_scenario": 150,
+            "ci95_pp_task": [
+              0.0,
+              44.47
+            ],
+            "n_undefined_task": 62
+          },
+          "all": {
+            "diff_pp": 0.01,
+            "ci95_pp_scenario": [
+              -4.25,
+              4.34
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.48,
+              4.37
+            ],
+            "n_undefined_task": 0
+          },
+          "vs_threshold": {
+            "threshold_pp": 0.0,
+            "lower_above": false,
+            "descriptive": true
+          }
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 331,
+          "n_silenced": 5,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": 0.91,
+            "ci95_pp_scenario": [
+              -4.5,
+              6.06
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.24,
+              6.04
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 20.0,
+            "ci95_pp_scenario": [
+              0.0,
+              100.0
+            ],
+            "n_undefined_scenario": 150,
+            "ci95_pp_task": [
+              0.0,
+              66.67
+            ],
+            "n_undefined_task": 62
+          },
+          "all": {
+            "diff_pp": 1.19,
+            "ci95_pp_scenario": [
+              -4.17,
+              6.25
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.17,
+              6.25
+            ],
+            "n_undefined_task": 0
+          }
+        },
+        "h": "h_star"
+      },
+      "L4_handoff_only": {
+        "id": "L4_handoff_only",
+        "companion_of": "L4",
+        "left": "M_bplus_11",
+        "right": "C",
+        "flags_from": "M_bplus_11",
+        "threshold_pp": -7.0,
+        "orientation": "negated: M^bplus_11 \u2212 C. L4's upper bound < +7.00 pp is this lower bound > \u22127.00 pp (J10 A1 Amendment 1 \u00a7B1, B1a)",
+        "decision_bearing": false,
+        "margin_pp": -7.0,
+        "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a74 (J10 A1 Amendment 1 \u00a7B pattern)",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = left \u2212 right, h = h* of the left (prefix) episode: the executor took control after the replayed prefix (scripts/analysis/handoff_control.py)",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 331,
+          "n_silenced": 5,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": -0.87,
+            "ci95_pp_scenario": [
+              -7.18,
+              6.07
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -6.27,
+              4.58
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 0.0,
+            "ci95_pp_scenario": [
+              0.0,
+              0.0
+            ],
+            "n_undefined_scenario": 150,
+            "ci95_pp_task": [
+              0.0,
+              0.0
+            ],
+            "n_undefined_task": 62
+          },
+          "all": {
+            "diff_pp": -0.86,
+            "ci95_pp_scenario": [
+              -7.07,
+              5.97
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -6.18,
+              4.53
+            ],
+            "n_undefined_task": 0
+          },
+          "ni": {
+            "margin_pp": -7.0,
+            "window_pp": 1.0,
+            "lower_bound_pp": -7.18,
+            "fired": true,
+            "bounds_by_seed": [
+              {
+                "seed": 20260924,
+                "lo_pp": -7.18,
+                "reading": "fails"
+              },
+              {
+                "seed": 1,
+                "lo_pp": -7.23,
+                "reading": "fails"
+              },
+              {
+                "seed": 2,
+                "lo_pp": -7.45,
+                "reading": "fails"
+              },
+              {
+                "seed": 3,
+                "lo_pp": -7.14,
+                "reading": "fails"
+              },
+              {
+                "seed": 7,
+                "lo_pp": -7.39,
+                "reading": "fails"
+              },
+              {
+                "seed": 101,
+                "lo_pp": -7.21,
+                "reading": "fails"
+              },
+              {
+                "seed": 999,
+                "lo_pp": -7.35,
+                "reading": "fails"
+              }
+            ],
+            "stable": true,
+            "bound_200k": {
+              "n_boot": 200000,
+              "seed": 20260924,
+              "lo_pp": -7.22,
+              "reading": "fails",
+              "decision_bearing": false
+            },
+            "reading": "fails"
+          },
+          "p_value_two_sided_at_margin": 0.0566
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 331,
+          "n_silenced": 5,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": -10.88,
+            "ci95_pp_scenario": [
+              -19.22,
+              -1.81
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -18.07,
+              -3.63
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 0.0,
+            "ci95_pp_scenario": [
+              0.0,
+              0.0
+            ],
+            "n_undefined_scenario": 150,
+            "ci95_pp_task": [
+              0.0,
+              0.0
+            ],
+            "n_undefined_task": 62
+          },
+          "all": {
+            "diff_pp": -10.71,
+            "ci95_pp_scenario": [
+              -19.05,
+              -1.79
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -17.86,
+              -3.57
+            ],
+            "n_undefined_task": 0
+          }
+        },
+        "h": "h_star"
+      },
+      "L5_handoff_only": {
+        "id": "L5_handoff_only",
+        "companion_of": "L5",
+        "left": "M_zs_11",
+        "right": "M_zs_6",
+        "flags_from": "M_zs_11",
+        "threshold_pp": 0.0,
+        "orientation": "as L5: M^zs_11 \u2212 M^zs_6",
+        "decision_bearing": false,
+        "margin_pp": null,
+        "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a74 (J10 A1 Amendment 1 \u00a7B pattern)",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = left \u2212 right, h = h* of the left (prefix) episode: the executor took control after the replayed prefix (scripts/analysis/handoff_control.py)",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 331,
+          "n_silenced": 5,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": 3.3,
+            "ci95_pp_scenario": [
+              -0.21,
+              6.83
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -0.39,
+              7.14
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 0.0,
+            "ci95_pp_scenario": [
+              -25.0,
+              50.0
+            ],
+            "n_undefined_scenario": 150,
+            "ci95_pp_task": [
+              -33.33,
+              33.33
+            ],
+            "n_undefined_task": 62
+          },
+          "all": {
+            "diff_pp": 3.25,
+            "ci95_pp_scenario": [
+              -0.13,
+              6.66
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -0.37,
+              7.03
+            ],
+            "n_undefined_task": 0
+          },
+          "vs_threshold": {
+            "threshold_pp": 0.0,
+            "lower_above": false,
+            "descriptive": true
+          }
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 331,
+          "n_silenced": 5,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": 2.42,
+            "ci95_pp_scenario": [
+              -3.02,
+              7.85
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -2.7,
+              7.49
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 0.0,
+            "ci95_pp_scenario": [
+              -50.0,
+              100.0
+            ],
+            "n_undefined_scenario": 150,
+            "ci95_pp_task": [
+              -66.67,
+              66.67
+            ],
+            "n_undefined_task": 62
+          },
+          "all": {
+            "diff_pp": 2.38,
+            "ci95_pp_scenario": [
+              -2.98,
+              7.44
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -2.68,
+              7.44
+            ],
+            "n_undefined_task": 0
+          }
+        },
+        "h": "h_star"
+      }
+    },
+    "handoff_only_h_flag": {
+      "L3_handoff_only": {
+        "id": "L3_handoff_only",
+        "companion_of": "L3",
+        "left": "M_bplus_11",
+        "right": "M_bplus_6",
+        "flags_from": "M_bplus_11",
+        "threshold_pp": 0.0,
+        "orientation": "as L3: M^bplus_11 \u2212 M^bplus_6",
+        "decision_bearing": false,
+        "margin_pp": null,
+        "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a74 (J10 A1 Amendment 1 \u00a7B pattern)",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = left \u2212 right, h = handoff_occurred of the left (prefix) episode",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 323,
+          "n_silenced": 13,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": -0.19,
+            "ci95_pp_scenario": [
+              -4.77,
+              4.48
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.73,
+              4.36
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 5.01,
+            "ci95_pp_scenario": [
+              -18.59,
+              32.17
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -20.36,
+              29.85
+            ],
+            "n_undefined_task": 0
+          },
+          "all": {
+            "diff_pp": 0.01,
+            "ci95_pp_scenario": [
+              -4.25,
+              4.34
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.48,
+              4.37
+            ],
+            "n_undefined_task": 0
+          },
+          "vs_threshold": {
+            "threshold_pp": 0.0,
+            "lower_above": false,
+            "descriptive": true
+          }
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 323,
+          "n_silenced": 13,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": 0.93,
+            "ci95_pp_scenario": [
+              -4.69,
+              6.44
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.35,
+              6.17
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 7.69,
+            "ci95_pp_scenario": [
+              -16.67,
+              40.0
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -18.18,
+              33.33
+            ],
+            "n_undefined_task": 0
+          },
+          "all": {
+            "diff_pp": 1.19,
+            "ci95_pp_scenario": [
+              -4.17,
+              6.25
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -4.17,
+              6.25
+            ],
+            "n_undefined_task": 0
+          }
+        },
+        "h": "h_flag"
+      },
+      "L4_handoff_only": {
+        "id": "L4_handoff_only",
+        "companion_of": "L4",
+        "left": "M_bplus_11",
+        "right": "C",
+        "flags_from": "M_bplus_11",
+        "threshold_pp": -7.0,
+        "orientation": "negated: M^bplus_11 \u2212 C. L4's upper bound < +7.00 pp is this lower bound > \u22127.00 pp (J10 A1 Amendment 1 \u00a7B1, B1a)",
+        "decision_bearing": false,
+        "margin_pp": -7.0,
+        "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a74 (J10 A1 Amendment 1 \u00a7B pattern)",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = left \u2212 right, h = handoff_occurred of the left (prefix) episode",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 323,
+          "n_silenced": 13,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": -1.42,
+            "ci95_pp_scenario": [
+              -7.93,
+              5.71
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -6.88,
+              4.16
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 13.08,
+            "ci95_pp_scenario": [
+              1.25,
+              31.52
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              1.14,
+              29.54
+            ],
+            "n_undefined_task": 0
+          },
+          "all": {
+            "diff_pp": -0.86,
+            "ci95_pp_scenario": [
+              -7.07,
+              5.97
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -6.18,
+              4.53
+            ],
+            "n_undefined_task": 0
+          },
+          "ni": {
+            "margin_pp": -7.0,
+            "window_pp": 1.0,
+            "lower_bound_pp": -7.93,
+            "fired": true,
+            "bounds_by_seed": [
+              {
+                "seed": 20260924,
+                "lo_pp": -7.93,
+                "reading": "fails"
+              },
+              {
+                "seed": 1,
+                "lo_pp": -7.91,
+                "reading": "fails"
+              },
+              {
+                "seed": 2,
+                "lo_pp": -8.18,
+                "reading": "fails"
+              },
+              {
+                "seed": 3,
+                "lo_pp": -7.93,
+                "reading": "fails"
+              },
+              {
+                "seed": 7,
+                "lo_pp": -8.14,
+                "reading": "fails"
+              },
+              {
+                "seed": 101,
+                "lo_pp": -8.03,
+                "reading": "fails"
+              },
+              {
+                "seed": 999,
+                "lo_pp": -8.09,
+                "reading": "fails"
+              }
+            ],
+            "stable": true,
+            "bound_200k": {
+              "n_boot": 200000,
+              "seed": 20260924,
+              "lo_pp": -7.98,
+              "reading": "fails",
+              "decision_bearing": false
+            },
+            "reading": "fails"
+          },
+          "p_value_two_sided_at_margin": 0.0942
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 323,
+          "n_silenced": 13,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": -11.46,
+            "ci95_pp_scenario": [
+              -20.0,
+              -2.15
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -18.77,
+              -4.01
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 7.69,
+            "ci95_pp_scenario": [
+              0.0,
+              27.27
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              0.0,
+              25.0
+            ],
+            "n_undefined_task": 0
+          },
+          "all": {
+            "diff_pp": -10.71,
+            "ci95_pp_scenario": [
+              -19.05,
+              -1.79
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -17.86,
+              -3.57
+            ],
+            "n_undefined_task": 0
+          }
+        },
+        "h": "h_flag"
+      },
+      "L5_handoff_only": {
+        "id": "L5_handoff_only",
+        "companion_of": "L5",
+        "left": "M_zs_11",
+        "right": "M_zs_6",
+        "flags_from": "M_zs_11",
+        "threshold_pp": 0.0,
+        "orientation": "as L5: M^zs_11 \u2212 M^zs_6",
+        "decision_bearing": false,
+        "margin_pp": null,
+        "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a74 (J10 A1 Amendment 1 \u00a7B pattern)",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = left \u2212 right, h = handoff_occurred of the left (prefix) episode",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 323,
+          "n_silenced": 13,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": 3.66,
+            "ci95_pp_scenario": [
+              0.12,
+              7.21
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -0.06,
+              7.51
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": -7.1,
+            "ci95_pp_scenario": [
+              -25.76,
+              10.03
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -27.01,
+              10.96
+            ],
+            "n_undefined_task": 0
+          },
+          "all": {
+            "diff_pp": 3.25,
+            "ci95_pp_scenario": [
+              -0.13,
+              6.66
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -0.37,
+              7.03
+            ],
+            "n_undefined_task": 0
+          },
+          "vs_threshold": {
+            "threshold_pp": 0.0,
+            "lower_above": true,
+            "descriptive": true
+          }
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 323,
+          "n_silenced": 13,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "handoff_only": {
+            "diff_pp": 2.48,
+            "ci95_pp_scenario": [
+              -3.1,
+              8.1
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -2.75,
+              7.62
+            ],
+            "n_undefined_task": 0
+          },
+          "silenced": {
+            "diff_pp": 0.0,
+            "ci95_pp_scenario": [
+              -20.0,
+              25.0
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -23.08,
+              23.08
+            ],
+            "n_undefined_task": 0
+          },
+          "all": {
+            "diff_pp": 2.38,
+            "ci95_pp_scenario": [
+              -2.98,
+              7.44
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              -2.68,
+              7.44
+            ],
+            "n_undefined_task": 0
+          }
+        },
+        "h": "h_flag"
+      }
+    },
+    "handoff_indicator": {
+      "primary": "h_star",
+      "sensitivity": "h_flag",
+      "h_star": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+      "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)"
+    },
+    "handoff_control_counts": {
+      "M_bplus_11": {
+        "n": 336,
+        "n_h_flag_true": 323,
+        "n_live_but_unflagged": 8,
+        "n_terminal": 5,
+        "n_hstar_true": 331,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_missing": 0,
+        "n_pre_loop_limit": 0,
+        "live_but_unflagged_keys": [
+          [
+            "270f1ff_3",
+            1
+          ],
+          [
+            "2d9f728_3",
+            1
+          ],
+          [
+            "6b6ca61_2",
+            1
+          ],
+          [
+            "8ce6779_3",
+            2
+          ],
+          [
+            "9ef798c_2",
+            1
+          ],
+          [
+            "cef9191_2",
+            1
+          ],
+          [
+            "f3f60f0_1",
+            1
+          ],
+          [
+            "f3f60f0_3",
+            2
+          ]
+        ],
+        "definition": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+        "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)"
+      },
+      "M_zs_11": {
+        "n": 336,
+        "n_h_flag_true": 323,
+        "n_live_but_unflagged": 8,
+        "n_terminal": 5,
+        "n_hstar_true": 331,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_missing": 0,
+        "n_pre_loop_limit": 0,
+        "live_but_unflagged_keys": [
+          [
+            "270f1ff_3",
+            1
+          ],
+          [
+            "2d9f728_3",
+            1
+          ],
+          [
+            "6b6ca61_2",
+            1
+          ],
+          [
+            "8ce6779_3",
+            2
+          ],
+          [
+            "9ef798c_2",
+            1
+          ],
+          [
+            "cef9191_2",
+            1
+          ],
+          [
+            "f3f60f0_1",
+            1
+          ],
+          [
+            "f3f60f0_3",
+            2
+          ]
+        ],
+        "definition": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+        "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)"
+      }
+    },
+    "L1_limit": {
+      "reporting_only": true,
+      "citation": "docs/prereg_j11_lp2_test_20260924.md \u00a74 (J10 A1 Amendment 1 \u00a7D1-\u00a7D3)",
+      "limit_rates": {
+        "A": {
+          "n_scored": 336,
+          "n_limit": 99,
+          "limit_rate": 0.294643
+        },
+        "T": {
+          "n_scored": 336,
+          "n_limit": 83,
+          "limit_rate": 0.247024
+        }
+      },
+      "limit_split": {
+        "post_treatment": true,
+        "not_a_corrected_estimate": true,
+        "n_pairs": 336,
+        "n_limit_pairs": 130,
+        "n_neither": 206,
+        "n_limit_left": 83,
+        "n_limit_right": 99,
+        "status": "ok",
+        "all": {
+          "diff_pp": 5.08,
+          "ci95_pp_scenario": [
+            1.07,
+            9.05
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            1.28,
+            8.79
+          ],
+          "n_undefined_task": 0
+        },
+        "contribution_limit_pairs": {
+          "diff_pp": 3.56,
+          "ci95_pp_scenario": [
+            0.17,
+            6.89
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            0.42,
+            6.72
+          ],
+          "n_undefined_task": 0
+        },
+        "contribution_neither": {
+          "diff_pp": 1.52,
+          "ci95_pp_scenario": [
+            -0.38,
+            3.45
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            -0.42,
+            3.42
+          ],
+          "n_undefined_task": 0
+        },
+        "mean_on_limit_pairs": {
+          "diff_pp": 9.21,
+          "ci95_pp_scenario": [
+            0.45,
+            18.38
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            1.08,
+            17.37
+          ],
+          "n_undefined_task": 0
+        },
+        "mean_on_neither": {
+          "diff_pp": 2.48,
+          "ci95_pp_scenario": [
+            -0.61,
+            5.6
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            -0.7,
+            5.6
+          ],
+          "n_undefined_task": 0
+        }
+      },
+      "limit_as_zero": {
+        "sensitivity": true,
+        "decision_bearing": false,
+        "field": "goal_pass_rate",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.05857738095238095,
+          "lo": 0.008425595238095237,
+          "hi": 0.1094672619047619,
+          "diff_pp": 5.86,
+          "ci95_pp": [
+            0.84,
+            10.95
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.05857738095238095,
+          "lo": 0.010017857142857143,
+          "hi": 0.10495833333333333,
+          "diff_pp": 5.86,
+          "ci95_pp": [
+            1.0,
+            10.5
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      }
+    },
+    "executor_asks": {
+      "reporting_only": true,
+      "rule": "docs/prereg_j11_lp2_test_20260924.md \u00a72 'Executor asks'; docs/prereg_j10_amendment_20260924.md Amendment 1 \u00a7I (the ledger PROV-02 bound)",
+      "definition": "an intervention event from actor planner with payload.forced false in the attempt that wrote result.json; bound = episodes with one or more / the matrix, in pp",
+      "denominator": 336,
+      "per_arm": {
+        "C": {
+          "n_episodes_with_answered_ask": 0,
+          "n_scored_episodes_with_answered_ask": 0,
+          "n_answered_ask_calls": 0,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.0,
+          "episodes": []
+        },
+        "T": {
+          "n_episodes_with_answered_ask": 0,
+          "n_scored_episodes_with_answered_ask": 0,
+          "n_answered_ask_calls": 0,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.0,
+          "episodes": []
+        },
+        "A": {
+          "n_episodes_with_answered_ask": 0,
+          "n_scored_episodes_with_answered_ask": 0,
+          "n_answered_ask_calls": 0,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.0,
+          "episodes": []
+        },
+        "A1": {
+          "n_episodes_with_answered_ask": 0,
+          "n_scored_episodes_with_answered_ask": 0,
+          "n_answered_ask_calls": 0,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.0,
+          "episodes": []
+        },
+        "M_bplus_6": {
+          "n_episodes_with_answered_ask": 0,
+          "n_scored_episodes_with_answered_ask": 0,
+          "n_answered_ask_calls": 0,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.0,
+          "episodes": []
+        },
+        "M_bplus_11": {
+          "n_episodes_with_answered_ask": 1,
+          "n_scored_episodes_with_answered_ask": 1,
+          "n_answered_ask_calls": 4,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.3,
+          "episodes": [
+            "1/8ce6779_2"
+          ]
+        },
+        "M_zs_6": {
+          "n_episodes_with_answered_ask": 1,
+          "n_scored_episodes_with_answered_ask": 1,
+          "n_answered_ask_calls": 1,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.3,
+          "episodes": [
+            "1/32616b5_2"
+          ]
+        },
+        "M_zs_11": {
+          "n_episodes_with_answered_ask": 0,
+          "n_scored_episodes_with_answered_ask": 0,
+          "n_answered_ask_calls": 0,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.0,
+          "episodes": []
+        },
+        "E": {
+          "n_episodes_with_answered_ask": 0,
+          "n_scored_episodes_with_answered_ask": 0,
+          "n_answered_ask_calls": 0,
+          "n_episodes_without_event_log": 0,
+          "bound_pp": 0.0,
+          "episodes": []
+        }
+      },
+      "per_contrast": {
+        "gate": {
+          "left": {
+            "arm": "C",
+            "bound_pp": 0.0
+          },
+          "right": {
+            "arm": "E",
+            "bound_pp": 0.0
+          },
+          "max_bound_pp": 0.0,
+          "bound_reaches_1pp": false
+        },
+        "L1": {
+          "left": {
+            "arm": "T",
+            "bound_pp": 0.0
+          },
+          "right": {
+            "arm": "A",
+            "bound_pp": 0.0
+          },
+          "max_bound_pp": 0.0,
+          "bound_reaches_1pp": false
+        },
+        "L2": {
+          "left": {
+            "arm": "A1",
+            "bound_pp": 0.0
+          },
+          "right": {
+            "arm": "M_bplus_11",
+            "bound_pp": 0.3
+          },
+          "max_bound_pp": 0.3,
+          "bound_reaches_1pp": false
+        },
+        "L3": {
+          "left": {
+            "arm": "M_bplus_11",
+            "bound_pp": 0.3
+          },
+          "right": {
+            "arm": "M_bplus_6",
+            "bound_pp": 0.0
+          },
+          "max_bound_pp": 0.3,
+          "bound_reaches_1pp": false
+        },
+        "L4": {
+          "left": {
+            "arm": "C",
+            "bound_pp": 0.0
+          },
+          "right": {
+            "arm": "M_bplus_11",
+            "bound_pp": 0.3
+          },
+          "max_bound_pp": 0.3,
+          "bound_reaches_1pp": false
+        },
+        "L5": {
+          "left": {
+            "arm": "M_zs_11",
+            "bound_pp": 0.0
+          },
+          "right": {
+            "arm": "M_zs_6",
+            "bound_pp": 0.3
+          },
+          "max_bound_pp": 0.3,
+          "bound_reaches_1pp": false
+        }
+      }
+    }
+  },
+  "arms": {
+    "C": {
+      "label": "C",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "planner_alone"
+      ],
+      "error_types": {
+        "limit": 102,
+        "none": 221,
+        "parse_error": 13
+      },
+      "goal_pass_mean": 0.581914,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.35119,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_planner_alone_cap81_qwen38_27b_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_planner_alone_cap81_qwen38_27b_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "planner_alone"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "T": {
+      "label": "T",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "error_types": {
+        "limit": 83,
+        "none": 252,
+        "parse_error": 1
+      },
+      "goal_pass_mean": 0.703449,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.401786,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_takeover_fixed_k_10_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_takeover_fixed_k_10_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "fixed_k"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "A": {
+      "label": "A",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "error_types": {
+        "limit": 99,
+        "none": 237
+      },
+      "goal_pass_mean": 0.652604,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.33631,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_advise_fixed_k_10_fullctx_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_advise_fixed_k_10_fullctx_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "fixed_k"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "A1": {
+      "label": "A1",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "fixed_k"
+      ],
+      "error_types": {
+        "limit": 86,
+        "none": 250
+      },
+      "goal_pass_mean": 0.691744,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.422619,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_advise_fixed_k_1_fullctx_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_advise_fixed_k_1_fullctx_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "fixed_k"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "M_bplus_6": {
+      "label": "M_bplus_6",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 134,
+        "none": 202
+      },
+      "goal_pass_mean": 0.573253,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.232143,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_prefix_bplus_m6_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_prefix_bplus_m6_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "prefix_handoff"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "M_bplus_11": {
+      "label": "M_bplus_11",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 124,
+        "none": 212
+      },
+      "goal_pass_mean": 0.573363,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.244048,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_prefix_bplus_m11_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_prefix_bplus_m11_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "prefix_handoff"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "M_zs_6": {
+      "label": "M_zs_6",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 108,
+        "none": 228
+      },
+      "goal_pass_mean": 0.562845,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.208333,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_prefix_zs_m6_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_prefix_zs_m6_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "prefix_handoff"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "M_zs_11": {
+      "label": "M_zs_11",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 102,
+        "none": 233,
+        "parse_error": 1
+      },
+      "goal_pass_mean": 0.595321,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.232143,
+      "complete": true,
+      "campaign": {
+        "campaign": "j11_prefix_zs_m11_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j11_prefix_zs_m11_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "prefix_handoff"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    },
+    "E": {
+      "label": "E",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "executor_alone"
+      ],
+      "error_types": {
+        "limit": 93,
+        "none": 243
+      },
+      "goal_pass_mean": 0.549821,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.127976,
+      "complete": true,
+      "campaign": {
+        "campaign": "j10_executor_alone_bplus_20260924",
+        "path": "/scratch/n12194778/sidekick/results/j10_executor_alone_bplus_20260924",
+        "present": true,
+        "n_results": 336,
+        "by_seed": {
+          "1": 168,
+          "2": 168
+        },
+        "systems": [
+          "executor_alone"
+        ],
+        "n_empty_files": 0,
+        "n_unreadable": 0,
+        "split_provenance": {
+          "test_normal": 336
+        }
+      }
+    }
+  },
+  "ambiguities": [
+    {
+      "id": "lp_machinery_at_336",
+      "what": "The prereg applies LP \u00a73-\u00a74 at 336 pairs; lp_report.py is written for 114.",
+      "script_behaviour": "lp_report's own functions are called with its matrix globals (N_TASKS, SEEDS, EXPECTED_PAIRS) and its key list (SENSITIVITY_EXCLUDE) set for the call and restored after (j11_report.lp_matrix). lp_report's fixed '114' in two 'why' texts is rewritten to 336 in this report; no number changes."
+    },
+    {
+      "id": "planless_sensitivity",
+      "what": "prereg \u00a73: every contrast and the gate are also reported with C's planless keys excluded.",
+      "script_behaviour": "The keys are sidekick.agents.planner.planless_source_keys over C (via j10.a1_planless_keys), the same list j11_arm.pbs prints. They are dropped from every arm and the family re-read by lp.key_exclusion_sensitivity; a gate verdict or reading that differs is on the boundary (lp.apply_key_exclusion, LP Amendment 4's rule). No planless key: no sensitivity block."
+    },
+    {
+      "id": "handoff_flags_for_depth_spans",
+      "what": "'h from the prefix arm' does not say which arm when both sides are prefix arms (L3, L5).",
+      "script_behaviour": "The deeper arm (m = 11), as J10 A1 Amendment 1 \u00a7B4 reads S6's handoff-only rise. For L3 and L5 the companion carries no NI reading (am1_handoff_ni's \u22127.00 pp reading belongs to L4 only); their interval is reported against 0, descriptively."
+    },
+    {
+      "id": "limit_blocks_scope",
+      "what": "L1's limit rate, limit split and limit-as-0 are reporting only (prereg \u00a74).",
+      "script_behaviour": "Computed only when L1 is complete; never change L1's reading."
+    },
+    {
+      "id": "executor_asks",
+      "what": "prereg \u00a72 says executor asks are 'counted and reported' without a form; J10 A1 Amendment 1 \u00a7I gives one (per arm, beside the contrasts, with the PROV-02 bound).",
+      "script_behaviour": "Counted from events.jsonl of the attempt that wrote result.json: an intervention event from actor planner with payload.forced false is one answered ask. The bound is every matrix episode with one or more (crashed ones included, so it is conservative) / the matrix, in pp, per arm; a contrast with a side at 1.00 pp or more has the bound printed in its reading's sentence. No reading, verdict or completeness changes."
+    },
+    {
+      "id": "abort_rule",
+      "what": "prereg \u00a76: J11 is reported as not run if more than 16 C episodes are planless, or if C cannot reach 336 non-crashed episodes.",
+      "script_behaviour": "The cap is int(0.05 x the matrix) (16 at 336), as j11_arm.pbs counts it. Above it the status is NOT_RUN (exit 1) and every L reads \"none (J11 not run: more than 5 % of C's episodes are planless, prereg \u00a76)\"; with C below the matrix of non-crashed episodes, NOT_RUN and 'none (J11 not run: C did not reach 336 non-crashed episodes, prereg \u00a76)'. NOT_RUN is decided before MISSING_CAMPAIGNS: after the abort no replay arm starts, so their absence is expected."
+    },
+    {
+      "id": "lp_descriptive_delta_and_planner_strength",
+      "what": "\u00a74:86 applies LP \u00a74 verbatim, whose descriptive block (LP prereg:116-122) has the channel margin \u0394_p = (T_p \u2212 A_p) \u2212 (T_luna \u2212 A_luna) on shared keys and planner strength, each ceiling's mean goal_pass.",
+      "script_behaviour": "Planner strength is reported for P27 only (descriptive.ceiling_goal_pass: C's mean, lp_report._mean_block), with luna's test_normal ceiling (J10 arm 3's mean) copied from --j10-report when given. \u0394_p is NOT computed: lp_report.evaluate_delta needs luna's T and A episodes on the same (task_id, seed) keys, which on test_normal are J10's takeover_k10 and advise_k10_fullctx campaigns; J11 \u00a72 names neither as a J11 read, so they are not loaded, and the J10 report carries no per-episode rows."
+    },
+    {
+      "id": "plumbing_matrix",
+      "what": "A dry run covers 3 dev tasks, not the registered matrix.",
+      "script_behaviour": "--plumbing-check reads the <id>_dryrun campaigns on dev at C's own task set; the report is labelled PLUMBING CHECK, NOT A RESULT."
+    }
+  ],
+  "j11_am2_divergence": {
+    "rule": "docs/prereg_j11_lp2_test_20260924.md Amendment 2 \u00a7B (J10 A1 Amendment 5 \u00a7B applied to J11)",
+    "decision_bearing": "completeness only: every statistic, the Holm family and every threshold run as registered",
+    "definition": "a (task_id, seed) of a prefix replay arm whose result.json has error_type == 'crash' and whose events.jsonl, from the last run_start on, holds an 'error' event with payload.reason == 'replay_divergence'; first result.json per key wins",
+    "cap": 16,
+    "prefix_arms": [
+      "M_bplus_6",
+      "M_bplus_11",
+      "M_zs_6",
+      "M_zs_11"
+    ],
+    "per_arm": {
+      "M_bplus_6": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      },
+      "M_bplus_11": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      },
+      "M_zs_6": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      },
+      "M_zs_11": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      }
+    },
+    "n_divergent_total": 0,
+    "refill_confirmed_by_operator": null,
+    "resumption_condition": {
+      "rule": "docs/prereg_j11_lp2_test_20260924.md Amendment 2 \u00a7B.1: a divergent key counts only after at least one crash-only resumption run after the crash was first recorded; the result files cannot show it",
+      "required": false,
+      "how_to_confirm": "confirm that each prefix arm with a divergent key had at least one crash-only resumption run after the crash first appeared: resubmit that arm's scripts/pbs/j11_arm.pbs line, which purges the crashed episodes and re-runs only them; a later job's '[j11] tally cid=... crashed=N' line must show the same keys still crashed. Then re-run this read with --divergent-refill-confirmed."
+    },
+    "contrasts": {},
+    "handoff_only_companions": {},
+    "unaffected": "the gate (C - E) and L1 (T - A) use no prefix arm and keep every pair",
+    "non_replay_divergent": {
+      "keys": {},
+      "treated_as": "an ordinary crash (T, A and A1 replay only C's first plan)"
+    },
+    "notes": [
+      "Paired statistics pair on the (task_id, seed) keys both arms score, and a divergent key is a crash, which a1_arm_episodes already drops from its replay arm; so removing it from the other arm changes no paired statistic, only the counts of unpaired keys (n_left_only / n_right_only) and completeness.",
+      "Amendment 5 \u00a7B.1's 'after at least one crash-only resumption' cannot be read from an arm's files: the refill deletes a crashed episode's directory whole (scripts/setup/campaign_summarize.py purge_crashed) and re-runs it, so a divergent key is read as a crash whose last attempt holds the divergence error; the wrapper's tally lines record the resumption.",
+      "The planless-key sensitivity re-reads each complete contrast on the pairs both arms score, so the divergent keys are absent from it too.",
+      "Not retroactive (\u00a7B.6): lp_report.py is not edited, and LP's registered read is unchanged."
+    ]
+  },
+  "date": "20260928"
+}
