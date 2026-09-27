@@ -1,0 +1,588 @@
+{
+  "meta": {
+    "generated_by": "scripts/analysis/bfcl_power.py",
+    "prereg": "docs/prereg_bfcl_test_20260925.md \u00a76 (power is reported, not used as a gate)",
+    "split": "dev",
+    "results_root": "/scratch/n12194778/sidekick/results",
+    "campaigns_found": [
+      "bfcl_advise_k5_fullctx_dev_20260924",
+      "bfcl_advise_k5_fullctx_qzs_dev_20260924",
+      "bfcl_advise_k5_neutral_dev_20260924",
+      "bfcl_advise_k5_neutral_qzs_dev_20260924",
+      "bfcl_executor_alone_bplus_dev_20260924",
+      "bfcl_executor_alone_qzs_dev_20260924",
+      "bfcl_executor_alone_zs_dev_20260924",
+      "bfcl_plan_qzs_dev_20260924",
+      "bfcl_plan_zs_dev_20260924",
+      "bfcl_planner_alone_cap81_dev_20260924",
+      "bfcl_prefix_bplus_m2_dev_20260924",
+      "bfcl_prefix_bplus_m4_dev_20260924",
+      "bfcl_prefix_bplus_m6_dev_20260924",
+      "bfcl_prefix_qzs_m2_dev_20260924",
+      "bfcl_prefix_qzs_m4_dev_20260924",
+      "bfcl_prefix_qzs_m6_dev_20260924",
+      "bfcl_prefix_zs_m2_dev_20260924",
+      "bfcl_prefix_zs_m4_dev_20260924",
+      "bfcl_prefix_zs_m6_dev_20260924",
+      "bfcl_takeover_k5_dev_20260924",
+      "bfcl_takeover_k5_qzs_dev_20260924"
+    ],
+    "campaigns_absent": [],
+    "n_sim": 1000,
+    "n_boot": 2000,
+    "seed": 20260924,
+    "seed_half": 20260925,
+    "alpha": 0.05,
+    "design": {
+      "n_entries": 150,
+      "seeds_per_entry": 2,
+      "dev_seeds_available": [
+        1,
+        2,
+        3
+      ],
+      "entries_drawn": "with replacement from the dev entries",
+      "seeds_drawn": "without replacement within an entry"
+    },
+    "cluster_unit": "entry",
+    "margin_pp": -7.0,
+    "dev_n_boot": 10000,
+    "dev_seed": 20260925,
+    "git_sha": "2e2642d07b59bbcce2429a9975d16fadf83624ff",
+    "generated_at": "2026-09-27T18:07:50+00:00",
+    "runtime_s": 41.1
+  },
+  "contrasts": {
+    "P6": {
+      "left": "takeover_k5",
+      "right": "advise_k5_fullctx",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "H",
+      "power_key": "holm_supported",
+      "dev_id": "P6"
+    },
+    "P3": {
+      "left": "prefix_zs_m6",
+      "right": "planner_alone_cap81",
+      "direction": "greater",
+      "threshold": -0.07,
+      "family": "H",
+      "power_key": "holm_supported",
+      "dev_id": "P3_zs_m6"
+    },
+    "P6_alone": {
+      "left": "takeover_k5",
+      "right": "advise_k5_fullctx",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "P6_alone",
+      "power_key": "holm_supported",
+      "dev_id": "P6"
+    },
+    "CF1": {
+      "left": "advise_k5_neutral",
+      "right": "advise_k5_fullctx",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "CF",
+      "power_key": "holm_supported",
+      "dev_id": "CF1"
+    },
+    "CF3": {
+      "left": "takeover_k5",
+      "right": "advise_k5_neutral",
+      "direction": "two-sided",
+      "threshold": 0.0,
+      "family": null,
+      "power_key": "excludes_on_predicted_side",
+      "dev_id": "CF3"
+    },
+    "B1_zs": {
+      "left": "prefix_zs_m6",
+      "right": "planner_alone_cap81",
+      "direction": "greater",
+      "threshold": -0.07,
+      "family": null,
+      "handoff_only": true,
+      "power_key": "lower_above",
+      "dev_id": "B1_zs_m6_hstar"
+    },
+    "B1_bplus": {
+      "left": "prefix_bplus_m6",
+      "right": "planner_alone_cap81",
+      "direction": "greater",
+      "threshold": -0.07,
+      "family": null,
+      "handoff_only": true,
+      "power_key": "lower_above",
+      "dev_id": "B1_bplus_m6_hstar"
+    },
+    "S3": {
+      "left": "prefix_bplus_m6",
+      "right": "planner_alone_cap81",
+      "direction": "greater",
+      "threshold": -0.07,
+      "family": null,
+      "power_key": "lower_above",
+      "dev_id": "P3_bplus_m6"
+    }
+  },
+  "dev": {
+    "P6": {
+      "dev_id": "P6",
+      "goal_pass": {
+        "left": "takeover_k5",
+        "right": "advise_k5_fullctx",
+        "diff_pp": 11.12,
+        "ci95_entry": [
+          4.16,
+          18.22
+        ],
+        "sd_pp": 38.055,
+        "left_mean": 0.734667,
+        "right_mean": 0.623444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0026,
+        "exploratory": true
+      },
+      "reason": null
+    },
+    "P3": {
+      "dev_id": "P3_zs_m6",
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -6.58,
+        "ci95_entry": [
+          -10.99,
+          -2.46
+        ],
+        "sd_pp": 19.646,
+        "left_mean": 0.716889,
+        "right_mean": 0.782667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0016,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 0.802
+      },
+      "reason": null
+    },
+    "P6_alone": {
+      "dev_id": "P6",
+      "goal_pass": {
+        "left": "takeover_k5",
+        "right": "advise_k5_fullctx",
+        "diff_pp": 11.12,
+        "ci95_entry": [
+          4.16,
+          18.22
+        ],
+        "sd_pp": 38.055,
+        "left_mean": 0.734667,
+        "right_mean": 0.623444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0026,
+        "exploratory": true
+      },
+      "reason": null
+    },
+    "CF1": {
+      "dev_id": "CF1",
+      "goal_pass": {
+        "left": "advise_k5_neutral",
+        "right": "advise_k5_fullctx",
+        "diff_pp": 4.38,
+        "ci95_entry": [
+          -0.29,
+          9.42
+        ],
+        "sd_pp": 30.419,
+        "left_mean": 0.667222,
+        "right_mean": 0.623444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0658,
+        "exploratory": true
+      },
+      "reason": null
+    },
+    "CF3": {
+      "dev_id": "CF3",
+      "goal_pass": {
+        "left": "takeover_k5",
+        "right": "advise_k5_neutral",
+        "diff_pp": 6.74,
+        "ci95_entry": [
+          0.79,
+          12.67
+        ],
+        "sd_pp": 35.153,
+        "left_mean": 0.734667,
+        "right_mean": 0.667222,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0258,
+        "exploratory": true
+      },
+      "reason": null
+    },
+    "B1_zs": {
+      "dev_id": "B1_zs_m6_hstar",
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -7.71,
+        "ci95_entry": [
+          -12.68,
+          -2.9
+        ],
+        "sd_pp": 21.073,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0016,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "reason": null
+    },
+    "B1_bplus": {
+      "dev_id": "B1_bplus_m6_hstar",
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -11.46,
+        "ci95_entry": [
+          -18.4,
+          -5.04
+        ],
+        "sd_pp": 27.649,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0004,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "reason": null
+    },
+    "S3": {
+      "dev_id": "P3_bplus_m6",
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -9.78,
+        "ci95_entry": [
+          -15.88,
+          -4.21
+        ],
+        "sd_pp": 25.849,
+        "left_mean": 0.684889,
+        "right_mean": 0.782667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0004,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "reason": null
+    }
+  },
+  "power": {
+    "P6": {
+      "full": 0.992,
+      "half": 0.563,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
+    },
+    "P3": {
+      "full": 0.064,
+      "half": 0.051,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
+    },
+    "P6_alone": {
+      "full": 0.995,
+      "half": 0.662,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
+    },
+    "CF1": {
+      "full": 0.731,
+      "half": 0.251,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
+    },
+    "CF3": {
+      "full": 0.886,
+      "half": 0.363,
+      "key": "excludes_on_predicted_side",
+      "rule": "two-sided: the 95% entry interval excludes 0 (no family)",
+      "reason": null
+    },
+    "B1_zs": {
+      "full": 0.009,
+      "half": 0.029,
+      "key": "lower_above",
+      "rule": "lower bound of the 95% entry interval above -7.00 pp (no family)",
+      "reason": null
+    },
+    "B1_bplus": {
+      "full": 0.0,
+      "half": 0.004,
+      "key": "lower_above",
+      "rule": "lower bound of the 95% entry interval above -7.00 pp (no family)",
+      "reason": null
+    },
+    "S3": {
+      "full": 0.0,
+      "half": 0.006,
+      "key": "lower_above",
+      "rule": "lower bound of the 95% entry interval above -7.00 pp (no family)",
+      "reason": null
+    }
+  },
+  "families_all_supported": {
+    "CF": {
+      "members": [
+        "CF1"
+      ],
+      "full": 0.731,
+      "half": 0.251,
+      "reason": null
+    },
+    "H": {
+      "members": [
+        "P6",
+        "P3"
+      ],
+      "full": 0.064,
+      "half": 0.043,
+      "reason": null
+    },
+    "P6_alone": {
+      "members": [
+        "P6_alone"
+      ],
+      "full": 0.995,
+      "half": 0.662,
+      "reason": null
+    }
+  },
+  "half_effect_shift_pp": {
+    "P6": 5.561,
+    "P3": 0.211,
+    "P6_alone": 5.561,
+    "CF1": 2.189,
+    "CF3": 3.372,
+    "B1_zs": -0.354,
+    "B1_bplus": -2.229,
+    "S3": -1.389
+  },
+  "power_at_dev_effect": {
+    "per_contrast": {
+      "P6": {
+        "excludes_on_predicted_side": 0.996,
+        "lower_above": 0.996,
+        "upper_below": 0.0,
+        "holm_supported": 0.992
+      },
+      "P3": {
+        "excludes_on_predicted_side": 0.064,
+        "lower_above": 0.064,
+        "upper_below": 0.011,
+        "holm_supported": 0.064
+      },
+      "P6_alone": {
+        "excludes_on_predicted_side": 0.995,
+        "lower_above": 0.995,
+        "upper_below": 0.0,
+        "holm_supported": 0.995
+      },
+      "CF1": {
+        "excludes_on_predicted_side": 0.731,
+        "lower_above": 0.731,
+        "upper_below": 0.0,
+        "holm_supported": 0.731
+      },
+      "CF3": {
+        "excludes_on_predicted_side": 0.886,
+        "lower_above": 0.886,
+        "upper_below": 0.0,
+        "holm_supported": 0.0
+      },
+      "B1_zs": {
+        "excludes_on_predicted_side": 0.009,
+        "lower_above": 0.009,
+        "upper_below": 0.069,
+        "holm_supported": 0.0
+      },
+      "B1_bplus": {
+        "excludes_on_predicted_side": 0.0,
+        "lower_above": 0.0,
+        "upper_below": 0.588,
+        "holm_supported": 0.0
+      },
+      "S3": {
+        "excludes_on_predicted_side": 0.0,
+        "lower_above": 0.0,
+        "upper_below": 0.349,
+        "holm_supported": 0.0
+      }
+    },
+    "families_all_supported": {
+      "CF": 0.731,
+      "H": 0.064,
+      "P6_alone": 0.995
+    },
+    "cf_readings": {
+      "CF1 not supported": 0.269,
+      "CF1 supported, CF3 > 0": 0.638,
+      "CF1 supported, CF3 includes 0": 0.093
+    }
+  },
+  "power_at_half_effect": {
+    "per_contrast": {
+      "P6": {
+        "excludes_on_predicted_side": 0.657,
+        "lower_above": 0.657,
+        "upper_below": 0.0,
+        "holm_supported": 0.563
+      },
+      "P3": {
+        "excludes_on_predicted_side": 0.052,
+        "lower_above": 0.052,
+        "upper_below": 0.018,
+        "holm_supported": 0.051
+      },
+      "P6_alone": {
+        "excludes_on_predicted_side": 0.662,
+        "lower_above": 0.662,
+        "upper_below": 0.0,
+        "holm_supported": 0.662
+      },
+      "CF1": {
+        "excludes_on_predicted_side": 0.251,
+        "lower_above": 0.251,
+        "upper_below": 0.001,
+        "holm_supported": 0.251
+      },
+      "CF3": {
+        "excludes_on_predicted_side": 0.363,
+        "lower_above": 0.363,
+        "upper_below": 0.0,
+        "holm_supported": 0.0
+      },
+      "B1_zs": {
+        "excludes_on_predicted_side": 0.029,
+        "lower_above": 0.029,
+        "upper_below": 0.041,
+        "holm_supported": 0.0
+      },
+      "B1_bplus": {
+        "excludes_on_predicted_side": 0.004,
+        "lower_above": 0.004,
+        "upper_below": 0.185,
+        "holm_supported": 0.0
+      },
+      "S3": {
+        "excludes_on_predicted_side": 0.006,
+        "lower_above": 0.006,
+        "upper_below": 0.112,
+        "holm_supported": 0.0
+      }
+    },
+    "families_all_supported": {
+      "CF": 0.251,
+      "H": 0.043,
+      "P6_alone": 0.662
+    },
+    "cf_readings": {
+      "CF1 not supported": 0.749,
+      "CF1 supported, CF3 > 0": 0.065,
+      "CF1 supported, CF3 includes 0": 0.186
+    }
+  },
+  "caveats": [
+    "Resampling dev entries treats the dev effect as the truth; the half-effect rows guard against that optimism.",
+    "B per simulated read is below the registered 10,000; interval endpoints carry Monte Carlo error.",
+    "Half effect: shift = (dev point - threshold) / 2 (am1_power.py:336-340), so the NI rows move half-way to -7.00 pp, and the rows at 0 move by half the dev mean.",
+    "Every row is on goal_pass_rate, the E-prereg's primary metric."
+  ]
+}

@@ -1,0 +1,2326 @@
+{
+  "meta": {
+    "generated_by": "scripts/analysis/bfcl_dev_report.py",
+    "prereg": "docs/prereg_bfcl_dev_20260924.md \u00a76 (exploratory; no decision rule)",
+    "split": "dev",
+    "results_root": "/scratch/n12194778/sidekick/results",
+    "configs_dir": "/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/configs",
+    "arms_configured": [
+      "advise_k5_fullctx",
+      "advise_k5_fullctx_qzs",
+      "advise_k5_neutral",
+      "advise_k5_neutral_qzs",
+      "executor_alone_bplus",
+      "executor_alone_qzs",
+      "executor_alone_zs",
+      "plan_qzs",
+      "plan_zs",
+      "planner_alone_cap81",
+      "prefix_bplus_m2",
+      "prefix_bplus_m4",
+      "prefix_bplus_m6",
+      "prefix_qzs_m2",
+      "prefix_qzs_m4",
+      "prefix_qzs_m6",
+      "prefix_zs_m2",
+      "prefix_zs_m4",
+      "prefix_zs_m6",
+      "takeover_k5",
+      "takeover_k5_qzs"
+    ],
+    "arms_expected_not_configured": [],
+    "arms_configured_not_expected": [],
+    "campaigns_found": [
+      "bfcl_advise_k5_fullctx_dev_20260924",
+      "bfcl_advise_k5_fullctx_qzs_dev_20260924",
+      "bfcl_advise_k5_neutral_dev_20260924",
+      "bfcl_advise_k5_neutral_qzs_dev_20260924",
+      "bfcl_executor_alone_bplus_dev_20260924",
+      "bfcl_executor_alone_qzs_dev_20260924",
+      "bfcl_executor_alone_zs_dev_20260924",
+      "bfcl_plan_qzs_dev_20260924",
+      "bfcl_plan_zs_dev_20260924",
+      "bfcl_planner_alone_cap81_dev_20260924",
+      "bfcl_prefix_bplus_m2_dev_20260924",
+      "bfcl_prefix_bplus_m4_dev_20260924",
+      "bfcl_prefix_bplus_m6_dev_20260924",
+      "bfcl_prefix_qzs_m2_dev_20260924",
+      "bfcl_prefix_qzs_m4_dev_20260924",
+      "bfcl_prefix_qzs_m6_dev_20260924",
+      "bfcl_prefix_zs_m2_dev_20260924",
+      "bfcl_prefix_zs_m4_dev_20260924",
+      "bfcl_prefix_zs_m6_dev_20260924",
+      "bfcl_takeover_k5_dev_20260924",
+      "bfcl_takeover_k5_qzs_dev_20260924"
+    ],
+    "campaigns_absent": [],
+    "campaigns_empty": [],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "n_dev_entries": 50,
+    "n_expected_per_arm": 150,
+    "all_arms_complete": true,
+    "arms_incomplete": [],
+    "n_boot": 10000,
+    "seed": 20260925,
+    "cluster_unit": "entry",
+    "ci": "95% percentile entry-cluster bootstrap; every interval is EXPLORATORY",
+    "ni_margin_pp": -7.0,
+    "git_sha": "2e2642d07b59bbcce2429a9975d16fadf83624ff",
+    "generated_at": "2026-09-27T18:06:34+00:00",
+    "definitions": {
+      "n": "readable result.json files of the arm at the requested seeds (meta.seeds), crashes included",
+      "n_expected": "50 dev entries x the requested seeds (150 at seeds 1, 2, 3; dev prereg \u00a74)",
+      "complete": "arm: non-crash episodes >= n_expected, n_crash == 0, and every requested seed holds 50; contrast: every arm it reads is complete. Incomplete rows are still computed and labelled, never refused",
+      "calls_live_reason": "set, with calls_live_mean null, when any non-crash episode's ledger total minus its cached-plan calls is negative; the count is not clamped",
+      "means": "goal_pass_mean, success_mean, calls_*_mean and limit_rate are over the arm's non-crash episodes (n - n_crash); success is result.json success (tgc when success is absent)",
+      "limit_rate": "share of non-crash episodes with error_type 'limit'",
+      "calls_ledger_mean": "result.json totals.planner_calls_total (the ledger key; a replayed plan adds 1)",
+      "calls_live_mean": "hosted planner calls: totals.planner_calls_total minus usage.n_calls (1 when absent) of the episode's own planner events with usage.provider == 'cache', last attempt (dev prereg \u00a75; the cached-record rule of j12_cost_axes.cached_plan_usages :743 and episode_cached_plan_attribution :812-815)",
+      "calls_attributed_mean": "result.json n_planner_calls: the count as published, a replayed plan as one call and a prefix arm charged its replayed prefix (j10_report A1_AM4_DEFINITIONS :4055-4059, commit f690b6a)",
+      "hstar": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload; counted over the arm's non-crash episodes; missing = no handoff record",
+      "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)",
+      "pairing": "(entry id, seed); a pair is dropped if either side is missing, either side is error_type 'crash', or either side lacks the metric; n_dropped counts every dropped key of the union",
+      "cluster": "entry id; all seeds of an entry are resampled together (never hj1_gate.scenario_of)",
+      "ci95_entry": "percentile 95% entry-cluster bootstrap, pp; EXPLORATORY",
+      "sd_pp": "sample SD (n-1) of the per-pair differences, pp (B1: over the handoff pairs)",
+      "p_two_sided": "j10_report.bootstrap_pvalue(means, 0, 'two-sided')",
+      "p_ni": "j10_report.bootstrap_pvalue(means, -0.07, 'greater') = 2 x share of replicates <= -7.00 pp",
+      "B1": "\u03a3d\u00b7h/\u03a3h over the pairs of the P3 row, h from the prefix (left) arm; a missing h counts as 0 and is counted; bootstrap resamples entries and recomputes the ratio, replicates with \u03a3h = 0 dropped",
+      "did": "the zs contrast minus its qzs repeat, each over its own pairs; each resample draws entries from the union and recomputes both means; replicates where either side has no pair are dropped"
+    }
+  },
+  "arms": {
+    "advise_k5_fullctx": {
+      "campaign_id": "bfcl_advise_k5_fullctx_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.623444,
+      "success_mean": 0.353333,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.0,
+      "error_types": {
+        "none": 147,
+        "parse_error": 3
+      },
+      "calls_live_mean": 2.493333,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 3.493333,
+      "calls_attributed_mean": 3.493333,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "advise_k5_fullctx_qzs": {
+      "campaign_id": "bfcl_advise_k5_fullctx_qzs_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.415778,
+      "success_mean": 0.153333,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.073333,
+      "error_types": {
+        "limit": 11,
+        "none": 139
+      },
+      "calls_live_mean": 4.206667,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 5.206667,
+      "calls_attributed_mean": 5.206667,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "advise_k5_neutral": {
+      "campaign_id": "bfcl_advise_k5_neutral_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.667222,
+      "success_mean": 0.446667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.02,
+      "error_types": {
+        "limit": 3,
+        "none": 146,
+        "parse_error": 1
+      },
+      "calls_live_mean": 3.02,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 4.02,
+      "calls_attributed_mean": 4.02,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "advise_k5_neutral_qzs": {
+      "campaign_id": "bfcl_advise_k5_neutral_qzs_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.571,
+      "success_mean": 0.326667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.1,
+      "error_types": {
+        "limit": 15,
+        "none": 135
+      },
+      "calls_live_mean": 4.773333,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 5.773333,
+      "calls_attributed_mean": 5.773333,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "executor_alone_bplus": {
+      "campaign_id": "bfcl_executor_alone_bplus_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.247222,
+      "success_mean": 0.153333,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.0,
+      "calls_attributed_mean": 0.0,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "executor_alone_qzs": {
+      "campaign_id": "bfcl_executor_alone_qzs_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.280333,
+      "success_mean": 0.073333,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.033333,
+      "error_types": {
+        "limit": 5,
+        "none": 145
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.0,
+      "calls_attributed_mean": 0.0,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "executor_alone_zs": {
+      "campaign_id": "bfcl_executor_alone_zs_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.545444,
+      "success_mean": 0.38,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.0,
+      "error_types": {
+        "none": 150
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.0,
+      "calls_attributed_mean": 0.0,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "plan_qzs": {
+      "campaign_id": "bfcl_plan_qzs_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.353667,
+      "success_mean": 0.106667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.04,
+      "error_types": {
+        "limit": 6,
+        "none": 144
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 1.0,
+      "calls_attributed_mean": 1.0,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "plan_zs": {
+      "campaign_id": "bfcl_plan_zs_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.666889,
+      "success_mean": 0.446667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 148,
+        "parse_error": 1
+      },
+      "calls_live_mean": 0.013333,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 1.013333,
+      "calls_attributed_mean": 1.013333,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "planner_alone_cap81": {
+      "campaign_id": "bfcl_planner_alone_cap81_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.782667,
+      "success_mean": 0.626667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 13.08,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 13.08,
+      "calls_attributed_mean": 13.08,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "prefix_bplus_m2": {
+      "campaign_id": "bfcl_prefix_bplus_m2_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.561111,
+      "success_mean": 0.346667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.0,
+      "calls_attributed_mean": 3.06,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 150,
+      "hstar_false": 0,
+      "hstar_missing": 0,
+      "h_flag_true": 144,
+      "h_flag_false": 1,
+      "h_flag_missing": 5
+    },
+    "prefix_bplus_m4": {
+      "campaign_id": "bfcl_prefix_bplus_m4_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.619333,
+      "success_mean": 0.406667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.0,
+      "calls_attributed_mean": 5.393333,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 146,
+      "hstar_false": 4,
+      "hstar_missing": 0,
+      "h_flag_true": 142,
+      "h_flag_false": 5,
+      "h_flag_missing": 3
+    },
+    "prefix_bplus_m6": {
+      "campaign_id": "bfcl_prefix_bplus_m6_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.684889,
+      "success_mean": 0.48,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.0,
+      "calls_attributed_mean": 7.346667,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 128,
+      "hstar_false": 22,
+      "hstar_missing": 0,
+      "h_flag_true": 122,
+      "h_flag_false": 23,
+      "h_flag_missing": 5
+    },
+    "prefix_qzs_m2": {
+      "campaign_id": "bfcl_prefix_qzs_m2_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.412444,
+      "success_mean": 0.16,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.033333,
+      "error_types": {
+        "limit": 5,
+        "none": 145
+      },
+      "calls_live_mean": 0.006667,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.006667,
+      "calls_attributed_mean": 3.066667,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 150,
+      "hstar_false": 0,
+      "hstar_missing": 0,
+      "h_flag_true": 127,
+      "h_flag_false": 1,
+      "h_flag_missing": 22
+    },
+    "prefix_qzs_m4": {
+      "campaign_id": "bfcl_prefix_qzs_m4_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.543778,
+      "success_mean": 0.26,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.106667,
+      "error_types": {
+        "limit": 16,
+        "none": 133,
+        "parse_error": 1
+      },
+      "calls_live_mean": 0.02,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.02,
+      "calls_attributed_mean": 5.413333,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 146,
+      "hstar_false": 4,
+      "hstar_missing": 0,
+      "h_flag_true": 103,
+      "h_flag_false": 5,
+      "h_flag_missing": 42
+    },
+    "prefix_qzs_m6": {
+      "campaign_id": "bfcl_prefix_qzs_m6_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.624222,
+      "success_mean": 0.373333,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.06,
+      "error_types": {
+        "limit": 9,
+        "none": 141
+      },
+      "calls_live_mean": 0.006667,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.006667,
+      "calls_attributed_mean": 7.353333,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 128,
+      "hstar_false": 22,
+      "hstar_missing": 0,
+      "h_flag_true": 102,
+      "h_flag_false": 23,
+      "h_flag_missing": 25
+    },
+    "prefix_zs_m2": {
+      "campaign_id": "bfcl_prefix_zs_m2_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.691556,
+      "success_mean": 0.473333,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 0.04,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.04,
+      "calls_attributed_mean": 3.1,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 150,
+      "hstar_false": 0,
+      "hstar_missing": 0,
+      "h_flag_true": 143,
+      "h_flag_false": 1,
+      "h_flag_missing": 6
+    },
+    "prefix_zs_m4": {
+      "campaign_id": "bfcl_prefix_zs_m4_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.701889,
+      "success_mean": 0.493333,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.0,
+      "error_types": {
+        "none": 150
+      },
+      "calls_live_mean": 0.0,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.0,
+      "calls_attributed_mean": 5.393333,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 146,
+      "hstar_false": 4,
+      "hstar_missing": 0,
+      "h_flag_true": 139,
+      "h_flag_false": 4,
+      "h_flag_missing": 7
+    },
+    "prefix_zs_m6": {
+      "campaign_id": "bfcl_prefix_zs_m6_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.716889,
+      "success_mean": 0.506667,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 0.006667,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 0.006667,
+      "calls_attributed_mean": 7.353333,
+      "n_cached_plan_events": 0,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      },
+      "hstar_true": 128,
+      "hstar_false": 22,
+      "hstar_missing": 0,
+      "h_flag_true": 121,
+      "h_flag_false": 22,
+      "h_flag_missing": 7
+    },
+    "takeover_k5": {
+      "campaign_id": "bfcl_takeover_k5_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.734667,
+      "success_mean": 0.54,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.0,
+      "error_types": {
+        "none": 149,
+        "parse_error": 1
+      },
+      "calls_live_mean": 2.573333,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 3.573333,
+      "calls_attributed_mean": 3.573333,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    },
+    "takeover_k5_qzs": {
+      "campaign_id": "bfcl_takeover_k5_qzs_dev_20260924",
+      "present": true,
+      "reason": null,
+      "n_expected": 150,
+      "n": 150,
+      "n_crash": 0,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "n_by_seed": {
+        "1": 50,
+        "2": 50,
+        "3": 50
+      },
+      "complete": true,
+      "complete_reason": null,
+      "goal_pass_mean": 0.654222,
+      "success_mean": 0.44,
+      "n_goal_pass_missing": 0,
+      "limit_rate": 0.006667,
+      "error_types": {
+        "limit": 1,
+        "none": 149
+      },
+      "calls_live_mean": 3.486667,
+      "calls_live_reason": null,
+      "calls_ledger_mean": 4.486667,
+      "calls_attributed_mean": 4.486667,
+      "n_cached_plan_events": 150,
+      "calls_attributed_reason": null,
+      "diagnostics": {
+        "n_unreadable": 0,
+        "n_missing_key": 0,
+        "n_seed_filtered": 0,
+        "n_duplicates": 0,
+        "duplicates": []
+      }
+    }
+  },
+  "contrasts": {
+    "P6": {
+      "left": "takeover_k5",
+      "right": "advise_k5_fullctx",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "takeover_k5",
+        "right": "advise_k5_fullctx",
+        "diff_pp": 11.12,
+        "ci95_entry": [
+          4.16,
+          18.22
+        ],
+        "sd_pp": 38.055,
+        "left_mean": 0.734667,
+        "right_mean": 0.623444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0026,
+        "exploratory": true
+      },
+      "success": {
+        "left": "takeover_k5",
+        "right": "advise_k5_fullctx",
+        "diff_pp": 18.67,
+        "ci95_entry": [
+          6.67,
+          30.67
+        ],
+        "sd_pp": 57.213,
+        "left_mean": 0.54,
+        "right_mean": 0.353333,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0026,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "CF1": {
+      "left": "advise_k5_neutral",
+      "right": "advise_k5_fullctx",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "advise_k5_neutral",
+        "right": "advise_k5_fullctx",
+        "diff_pp": 4.38,
+        "ci95_entry": [
+          -0.29,
+          9.42
+        ],
+        "sd_pp": 30.419,
+        "left_mean": 0.667222,
+        "right_mean": 0.623444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0658,
+        "exploratory": true
+      },
+      "success": {
+        "left": "advise_k5_neutral",
+        "right": "advise_k5_fullctx",
+        "diff_pp": 9.33,
+        "ci95_entry": [
+          2.0,
+          17.33
+        ],
+        "sd_pp": 48.254,
+        "left_mean": 0.446667,
+        "right_mean": 0.353333,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.015,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "CF3": {
+      "left": "takeover_k5",
+      "right": "advise_k5_neutral",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "takeover_k5",
+        "right": "advise_k5_neutral",
+        "diff_pp": 6.74,
+        "ci95_entry": [
+          0.79,
+          12.67
+        ],
+        "sd_pp": 35.153,
+        "left_mean": 0.734667,
+        "right_mean": 0.667222,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0258,
+        "exploratory": true
+      },
+      "success": {
+        "left": "takeover_k5",
+        "right": "advise_k5_neutral",
+        "diff_pp": 9.33,
+        "ci95_entry": [
+          0.0,
+          18.67
+        ],
+        "sd_pp": 52.26,
+        "left_mean": 0.54,
+        "right_mean": 0.446667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0602,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "P3_zs_m6": {
+      "left": "prefix_zs_m6",
+      "right": "planner_alone_cap81",
+      "kind": "ni",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -6.58,
+        "ci95_entry": [
+          -10.99,
+          -2.46
+        ],
+        "sd_pp": 19.646,
+        "left_mean": 0.716889,
+        "right_mean": 0.782667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0016,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 0.802
+      },
+      "success": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -12.0,
+        "ci95_entry": [
+          -22.0,
+          -2.67
+        ],
+        "sd_pp": 41.644,
+        "left_mean": 0.506667,
+        "right_mean": 0.626667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0154,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "P3_bplus_m6": {
+      "left": "prefix_bplus_m6",
+      "right": "planner_alone_cap81",
+      "kind": "ni",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -9.78,
+        "ci95_entry": [
+          -15.88,
+          -4.21
+        ],
+        "sd_pp": 25.849,
+        "left_mean": 0.684889,
+        "right_mean": 0.782667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0004,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "success": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -14.67,
+        "ci95_entry": [
+          -24.67,
+          -4.0
+        ],
+        "sd_pp": 46.899,
+        "left_mean": 0.48,
+        "right_mean": 0.626667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0062,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "B1_zs_m6_hstar": {
+      "left": "prefix_zs_m6",
+      "right": "planner_alone_cap81",
+      "kind": "hstar",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -7.71,
+        "ci95_entry": [
+          -12.68,
+          -2.9
+        ],
+        "sd_pp": 21.073,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0016,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "success": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -14.06,
+        "ci95_entry": [
+          -25.21,
+          -2.99
+        ],
+        "sd_pp": 44.782,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0154,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "h_source": "handoff_control.hstar_flags on the prefix arm's campaign root",
+      "complete": true,
+      "complete_reason": null
+    },
+    "B1_bplus_m6_hstar": {
+      "left": "prefix_bplus_m6",
+      "right": "planner_alone_cap81",
+      "kind": "hstar",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -11.46,
+        "ci95_entry": [
+          -18.4,
+          -5.04
+        ],
+        "sd_pp": 27.649,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0004,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "success": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -17.19,
+        "ci95_entry": [
+          -28.91,
+          -5.13
+        ],
+        "sd_pp": 50.368,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0062,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "h_source": "handoff_control.hstar_flags on the prefix arm's campaign root",
+      "complete": true,
+      "complete_reason": null
+    },
+    "B1_zs_m6_flag": {
+      "left": "prefix_zs_m6",
+      "right": "planner_alone_cap81",
+      "kind": "flag",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -7.52,
+        "ci95_entry": [
+          -12.73,
+          -2.48
+        ],
+        "sd_pp": 21.071,
+        "n_handoff": 121,
+        "n_h_missing": 7,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.003,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "success": {
+        "left": "prefix_zs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -14.05,
+        "ci95_entry": [
+          -25.78,
+          -2.42
+        ],
+        "sd_pp": 45.288,
+        "n_handoff": 121,
+        "n_h_missing": 7,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0208,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "h_source": "handoff_occurred of the prefix episode's last report event",
+      "complete": true,
+      "complete_reason": null
+    },
+    "B1_bplus_m6_flag": {
+      "left": "prefix_bplus_m6",
+      "right": "planner_alone_cap81",
+      "kind": "flag",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -12.02,
+        "ci95_entry": [
+          -19.26,
+          -5.3
+        ],
+        "sd_pp": 28.206,
+        "n_handoff": 122,
+        "n_h_missing": 5,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0004,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "success": {
+        "left": "prefix_bplus_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -18.03,
+        "ci95_entry": [
+          -30.17,
+          -5.43
+        ],
+        "sd_pp": 51.452,
+        "n_handoff": 122,
+        "n_h_missing": 5,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0062,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "h_source": "handoff_occurred of the prefix episode's last report event",
+      "complete": true,
+      "complete_reason": null
+    },
+    "depth_zs": {
+      "left": "prefix_zs_m6",
+      "right": "prefix_zs_m2",
+      "kind": "depth",
+      "reason": null,
+      "arm_means": {
+        "m2": {
+          "arm": "prefix_zs_m2",
+          "goal_pass_mean": 0.691556,
+          "success_mean": 0.473333
+        },
+        "m4": {
+          "arm": "prefix_zs_m4",
+          "goal_pass_mean": 0.701889,
+          "success_mean": 0.493333
+        },
+        "m6": {
+          "arm": "prefix_zs_m6",
+          "goal_pass_mean": 0.716889,
+          "success_mean": 0.506667
+        }
+      },
+      "m4_reason": null,
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 2.53,
+        "ci95_entry": [
+          -3.88,
+          8.48
+        ],
+        "sd_pp": 30.12,
+        "left_mean": 0.716889,
+        "right_mean": 0.691556,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.4192,
+        "exploratory": true
+      },
+      "success": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 3.33,
+        "ci95_entry": [
+          -5.33,
+          12.67
+        ],
+        "sd_pp": 46.942,
+        "left_mean": 0.506667,
+        "right_mean": 0.473333,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.5206,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "depth_bplus": {
+      "left": "prefix_bplus_m6",
+      "right": "prefix_bplus_m2",
+      "kind": "depth",
+      "reason": null,
+      "arm_means": {
+        "m2": {
+          "arm": "prefix_bplus_m2",
+          "goal_pass_mean": 0.561111,
+          "success_mean": 0.346667
+        },
+        "m4": {
+          "arm": "prefix_bplus_m4",
+          "goal_pass_mean": 0.619333,
+          "success_mean": 0.406667
+        },
+        "m6": {
+          "arm": "prefix_bplus_m6",
+          "goal_pass_mean": 0.684889,
+          "success_mean": 0.48
+        }
+      },
+      "m4_reason": null,
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 12.38,
+        "ci95_entry": [
+          7.16,
+          17.73
+        ],
+        "sd_pp": 36.365,
+        "left_mean": 0.684889,
+        "right_mean": 0.561111,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 13.33,
+        "ci95_entry": [
+          4.67,
+          22.0
+        ],
+        "sd_pp": 53.928,
+        "left_mean": 0.48,
+        "right_mean": 0.346667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0048,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "depth_qzs": {
+      "left": "prefix_qzs_m6",
+      "right": "prefix_qzs_m2",
+      "kind": "depth",
+      "reason": null,
+      "arm_means": {
+        "m2": {
+          "arm": "prefix_qzs_m2",
+          "goal_pass_mean": 0.412444,
+          "success_mean": 0.16
+        },
+        "m4": {
+          "arm": "prefix_qzs_m4",
+          "goal_pass_mean": 0.543778,
+          "success_mean": 0.26
+        },
+        "m6": {
+          "arm": "prefix_qzs_m6",
+          "goal_pass_mean": 0.624222,
+          "success_mean": 0.373333
+        }
+      },
+      "m4_reason": null,
+      "goal_pass": {
+        "left": "prefix_qzs_m6",
+        "right": "prefix_qzs_m2",
+        "diff_pp": 21.18,
+        "ci95_entry": [
+          15.74,
+          26.63
+        ],
+        "sd_pp": 29.085,
+        "left_mean": 0.624222,
+        "right_mean": 0.412444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "prefix_qzs_m6",
+        "right": "prefix_qzs_m2",
+        "diff_pp": 21.33,
+        "ci95_entry": [
+          13.33,
+          29.33
+        ],
+        "sd_pp": 42.705,
+        "left_mean": 0.373333,
+        "right_mean": 0.16,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "tailor_bplus_zs": {
+      "left": "executor_alone_bplus",
+      "right": "executor_alone_zs",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "executor_alone_bplus",
+        "right": "executor_alone_zs",
+        "diff_pp": -29.82,
+        "ci95_entry": [
+          -40.17,
+          -20.13
+        ],
+        "sd_pp": 47.793,
+        "left_mean": 0.247222,
+        "right_mean": 0.545444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "executor_alone_bplus",
+        "right": "executor_alone_zs",
+        "diff_pp": -22.67,
+        "ci95_entry": [
+          -34.67,
+          -11.33
+        ],
+        "sd_pp": 55.74,
+        "left_mean": 0.153333,
+        "right_mean": 0.38,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0004,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "plan_zs": {
+      "left": "plan_zs",
+      "right": "executor_alone_zs",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "plan_zs",
+        "right": "executor_alone_zs",
+        "diff_pp": 12.14,
+        "ci95_entry": [
+          2.79,
+          21.97
+        ],
+        "sd_pp": 44.642,
+        "left_mean": 0.666889,
+        "right_mean": 0.545444,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0092,
+        "exploratory": true
+      },
+      "success": {
+        "left": "plan_zs",
+        "right": "executor_alone_zs",
+        "diff_pp": 6.67,
+        "ci95_entry": [
+          -4.67,
+          17.33
+        ],
+        "sd_pp": 52.669,
+        "left_mean": 0.446667,
+        "right_mean": 0.38,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.2572,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "P6_qzs": {
+      "left": "takeover_k5_qzs",
+      "right": "advise_k5_fullctx_qzs",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "takeover_k5_qzs",
+        "right": "advise_k5_fullctx_qzs",
+        "diff_pp": 23.84,
+        "ci95_entry": [
+          15.02,
+          32.63
+        ],
+        "sd_pp": 37.75,
+        "left_mean": 0.654222,
+        "right_mean": 0.415778,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "takeover_k5_qzs",
+        "right": "advise_k5_fullctx_qzs",
+        "diff_pp": 28.67,
+        "ci95_entry": [
+          16.67,
+          40.67
+        ],
+        "sd_pp": 53.516,
+        "left_mean": 0.44,
+        "right_mean": 0.153333,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "CF1_qzs": {
+      "left": "advise_k5_neutral_qzs",
+      "right": "advise_k5_fullctx_qzs",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "advise_k5_neutral_qzs",
+        "right": "advise_k5_fullctx_qzs",
+        "diff_pp": 15.52,
+        "ci95_entry": [
+          10.13,
+          21.11
+        ],
+        "sd_pp": 31.215,
+        "left_mean": 0.571,
+        "right_mean": 0.415778,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "advise_k5_neutral_qzs",
+        "right": "advise_k5_fullctx_qzs",
+        "diff_pp": 17.33,
+        "ci95_entry": [
+          9.33,
+          25.33
+        ],
+        "sd_pp": 45.974,
+        "left_mean": 0.326667,
+        "right_mean": 0.153333,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "CF3_qzs": {
+      "left": "takeover_k5_qzs",
+      "right": "advise_k5_neutral_qzs",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "takeover_k5_qzs",
+        "right": "advise_k5_neutral_qzs",
+        "diff_pp": 8.32,
+        "ci95_entry": [
+          2.18,
+          14.27
+        ],
+        "sd_pp": 31.99,
+        "left_mean": 0.654222,
+        "right_mean": 0.571,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0084,
+        "exploratory": true
+      },
+      "success": {
+        "left": "takeover_k5_qzs",
+        "right": "advise_k5_neutral_qzs",
+        "diff_pp": 11.33,
+        "ci95_entry": [
+          3.33,
+          19.33
+        ],
+        "sd_pp": 45.667,
+        "left_mean": 0.44,
+        "right_mean": 0.326667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0056,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "plan_qzs": {
+      "left": "plan_qzs",
+      "right": "executor_alone_qzs",
+      "kind": "plain",
+      "reason": null,
+      "goal_pass": {
+        "left": "plan_qzs",
+        "right": "executor_alone_qzs",
+        "diff_pp": 7.33,
+        "ci95_entry": [
+          -0.31,
+          14.91
+        ],
+        "sd_pp": 31.845,
+        "left_mean": 0.353667,
+        "right_mean": 0.280333,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0602,
+        "exploratory": true
+      },
+      "success": {
+        "left": "plan_qzs",
+        "right": "executor_alone_qzs",
+        "diff_pp": 3.33,
+        "ci95_entry": [
+          -4.67,
+          12.0
+        ],
+        "sd_pp": 37.393,
+        "left_mean": 0.106667,
+        "right_mean": 0.073333,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.4878,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "P3_qzs_m6": {
+      "left": "prefix_qzs_m6",
+      "right": "planner_alone_cap81",
+      "kind": "ni",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_qzs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -15.84,
+        "ci95_entry": [
+          -22.13,
+          -9.8
+        ],
+        "sd_pp": 26.584,
+        "left_mean": 0.624222,
+        "right_mean": 0.782667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "success": {
+        "left": "prefix_qzs_m6",
+        "right": "planner_alone_cap81",
+        "diff_pp": -25.33,
+        "ci95_entry": [
+          -36.67,
+          -14.0
+        ],
+        "sd_pp": 48.031,
+        "left_mean": 0.373333,
+        "right_mean": 0.626667,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true,
+        "margin_pp": -7.0,
+        "lower_above_margin": false,
+        "p_ni": 1.0
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "did_P6": {
+      "zs": "P6",
+      "qzs": "P6_qzs",
+      "kind": "did",
+      "reason": null,
+      "goal_pass": {
+        "left": "P6",
+        "right": "P6_qzs",
+        "diff_pp": -12.72,
+        "ci95_entry": [
+          -21.99,
+          -3.31
+        ],
+        "zs_diff_pp": 11.12,
+        "qzs_diff_pp": 23.84,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0084,
+        "exploratory": true
+      },
+      "success": {
+        "left": "P6",
+        "right": "P6_qzs",
+        "diff_pp": -10.0,
+        "ci95_entry": [
+          -24.67,
+          4.67
+        ],
+        "zs_diff_pp": 18.67,
+        "qzs_diff_pp": 28.67,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.1926,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "did_CF1": {
+      "zs": "CF1",
+      "qzs": "CF1_qzs",
+      "kind": "did",
+      "reason": null,
+      "goal_pass": {
+        "left": "CF1",
+        "right": "CF1_qzs",
+        "diff_pp": -11.14,
+        "ci95_entry": [
+          -17.28,
+          -5.01
+        ],
+        "zs_diff_pp": 4.38,
+        "qzs_diff_pp": 15.52,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0006,
+        "exploratory": true
+      },
+      "success": {
+        "left": "CF1",
+        "right": "CF1_qzs",
+        "diff_pp": -8.0,
+        "ci95_entry": [
+          -18.0,
+          1.33
+        ],
+        "zs_diff_pp": 9.33,
+        "qzs_diff_pp": 17.33,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.121,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "did_depth": {
+      "zs": "depth_zs",
+      "qzs": "depth_qzs",
+      "kind": "did",
+      "reason": null,
+      "goal_pass": {
+        "left": "depth_zs",
+        "right": "depth_qzs",
+        "diff_pp": -18.64,
+        "ci95_entry": [
+          -25.88,
+          -11.79
+        ],
+        "zs_diff_pp": 2.53,
+        "qzs_diff_pp": 21.18,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "depth_zs",
+        "right": "depth_qzs",
+        "diff_pp": -18.0,
+        "ci95_entry": [
+          -28.0,
+          -7.33
+        ],
+        "zs_diff_pp": 3.33,
+        "qzs_diff_pp": 21.33,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0014,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    },
+    "did_plan": {
+      "zs": "plan_zs",
+      "qzs": "plan_qzs",
+      "kind": "did",
+      "reason": null,
+      "goal_pass": {
+        "left": "plan_zs",
+        "right": "plan_qzs",
+        "diff_pp": 4.81,
+        "ci95_entry": [
+          -5.2,
+          14.67
+        ],
+        "zs_diff_pp": 12.14,
+        "qzs_diff_pp": 7.33,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.3372,
+        "exploratory": true
+      },
+      "success": {
+        "left": "plan_zs",
+        "right": "plan_qzs",
+        "diff_pp": 3.33,
+        "ci95_entry": [
+          -9.33,
+          15.33
+        ],
+        "zs_diff_pp": 6.67,
+        "qzs_diff_pp": 3.33,
+        "n_pairs_zs": 150,
+        "n_pairs_qzs": 150,
+        "n_clusters": 50,
+        "n_clusters_common": 50,
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.6338,
+        "exploratory": true
+      },
+      "complete": true,
+      "complete_reason": null
+    }
+  }
+}
