@@ -1,0 +1,2447 @@
+{
+  "protocol": "J12",
+  "prereg": "docs/prereg_j12_depth_test_20260924.md",
+  "generated_by": "scripts/analysis/j12_report.py",
+  "label": "J12 registered analysis",
+  "status": "COMPLETE",
+  "headline": "COMPLETE: D1-D4 decided. Verdicts: D1 supported; D2 supported; D3 supported; D4 supported.",
+  "not_the_j12_result": false,
+  "not_run_reasons": [],
+  "split": "test_normal",
+  "seeds": [
+    1,
+    2
+  ],
+  "expected_n_tasks": 168,
+  "n_tasks_observed_union": 168,
+  "expected_pairs_per_contrast": 336,
+  "incomplete_reasons": [],
+  "arm_dirs": {
+    "planner_alone_cap81": "/scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924",
+    "prefix_m11": "/scratch/n12194778/sidekick/results/j10_prefix_m11_20260924",
+    "prefix_m6": "/scratch/n12194778/sidekick/results/j12_prefix_m6_20260924",
+    "prefix_zs_m11": "/scratch/n12194778/sidekick/results/j10_prefix_zs_m11_20260924",
+    "prefix_zs_m6": "/scratch/n12194778/sidekick/results/j12_prefix_zs_m6_20260924"
+  },
+  "bootstrap": {
+    "n": 10000,
+    "seed": 20260924,
+    "registered": true,
+    "primary_clustering": "scenario",
+    "secondary_clustering": "task",
+    "interval": "95% percentile; lo = means[int(0.025 B)], hi = means[int(0.975 B)]",
+    "paired_on": "(task_id, seed)",
+    "p": "j10_report.bootstrap_pvalue, direction 'greater' at 0 (J12 \u00a73)",
+    "p_reversal": "p_value_less_unadjusted: direction 'less' at 0, unadjusted, for a decidable D whose unadjusted scenario upper bound is below 0 (J12 \u00a74:104-106)"
+  },
+  "stability_rule": {
+    "id": "POOL-04",
+    "window_pp": 1.0,
+    "seeds": [
+      20260924,
+      1,
+      2,
+      3,
+      7,
+      101,
+      999
+    ],
+    "reported_bound": {
+      "n_boot": 200000,
+      "seed": 20260924
+    }
+  },
+  "permutation_rule": {
+    "id": "A1 \u00a75.5",
+    "decision_bearing": false,
+    "clusters": "scenario",
+    "alternative": "two-sided",
+    "handoff_only": "over the handoff pairs' d",
+    "disagreement": "signflip_disagreement per D: its p at 0.05 (two-sided) against the unadjusted 95 % scenario interval; a disagreement is in verdict_sentence"
+  },
+  "multiplicity": {
+    "method": "Holm step-down",
+    "alpha": 0.05,
+    "family": [
+      "D1",
+      "D2",
+      "D3",
+      "D4"
+    ],
+    "m": 4,
+    "family_id": "J12",
+    "citation": "docs/prereg_j12_depth_test_20260924.md \u00a73"
+  },
+  "planless_contingency": {
+    "rule": "A1 \u00a74.2 (J12 \u00a73)",
+    "source_arm": "planner_alone_cap81",
+    "cap": 16,
+    "keys": [],
+    "n_keys": 0,
+    "sensitivity": null,
+    "plan_source_arm": {
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "complete": true,
+      "dir": "/scratch/n12194778/sidekick/results/j10_planner_alone_cap81_20260924",
+      "rule": "docs/prereg_j12_depth_test_20260924.md \u00a76:148 (not run if arm 3 cannot complete)"
+    }
+  },
+  "arms": {
+    "prefix_m11": {
+      "label": "prefix_m11",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 46,
+        "none": 290
+      },
+      "goal_pass_mean": 0.771893,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.497024,
+      "complete": true,
+      "split_provenance": {
+        "test_normal": 336
+      },
+      "config": "configs/j10_prefix_m11.yaml",
+      "m": 11
+    },
+    "prefix_m6": {
+      "label": "prefix_m6",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 96,
+        "none": 238,
+        "parse_error": 2
+      },
+      "goal_pass_mean": 0.636345,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.309524,
+      "complete": true,
+      "split_provenance": {
+        "test_normal": 336
+      },
+      "config": "configs/j12_prefix_m6.yaml",
+      "m": 6
+    },
+    "prefix_zs_m11": {
+      "label": "prefix_zs_m11",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 35,
+        "none": 299,
+        "parse_error": 2
+      },
+      "goal_pass_mean": 0.794673,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.529762,
+      "complete": true,
+      "split_provenance": {
+        "test_normal": 336
+      },
+      "config": "configs/j10_prefix_zs_m11.yaml",
+      "m": 11
+    },
+    "prefix_zs_m6": {
+      "label": "prefix_zs_m6",
+      "n_expected": 336,
+      "n_scored": 336,
+      "n_crash": 0,
+      "n_missing": 0,
+      "n_extra_ignored": 0,
+      "n_empty_files": 0,
+      "n_unreadable": 0,
+      "n_duplicates": 0,
+      "root_missing": false,
+      "systems_in_tree": [
+        "prefix_handoff"
+      ],
+      "error_types": {
+        "limit": 69,
+        "none": 264,
+        "parse_error": 3
+      },
+      "goal_pass_mean": 0.705113,
+      "n_goal_pass_missing": 0,
+      "tgc_mean": 0.407738,
+      "complete": true,
+      "split_provenance": {
+        "test_normal": 336
+      },
+      "config": "configs/j12_prefix_zs_m6.yaml",
+      "m": 6
+    }
+  },
+  "predictions": [
+    {
+      "id": "D1",
+      "kind": "paired_contrast",
+      "receiver": "bplus",
+      "population": "all",
+      "metric": "goal_pass",
+      "left": "prefix_m11",
+      "right": "prefix_m6",
+      "rule": "lower_bound_above_threshold",
+      "threshold_pp": 0.0,
+      "holm_family": true,
+      "statement": "J10 prefix_m11 \u2212 J12 prefix_m6 on goal_pass, all pairs, is > 0 (scenario CI lower bound above 0 after Holm)",
+      "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74",
+      "dev_reference": {
+        "diff_pp": 8.39,
+        "ci95_pp_scenario": [
+          4.2,
+          12.63
+        ],
+        "n_pairs": 171,
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.all",
+        "bootstrap_seed": 20260924,
+        "population": "pooled cap-81 dev family, seeds 1-3 (hj17 + hj18)"
+      },
+      "rule_text": "supported if CI lo > t; else not_supported",
+      "direction": "greater",
+      "contrast": {
+        "field": "goal_pass_rate",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.13554761904761903,
+          "lo": 0.08779761904761904,
+          "hi": 0.1863720238095238,
+          "diff_pp": 13.55,
+          "ci95_pp": [
+            8.78,
+            18.64
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.13554761904761903,
+          "lo": 0.09688095238095237,
+          "hi": 0.1755,
+          "diff_pp": 13.55,
+          "ci95_pp": [
+            9.69,
+            17.55
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "tgc_secondary": {
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.1875,
+          "lo": 0.11904761904761904,
+          "hi": 0.25595238095238093,
+          "diff_pp": 18.75,
+          "ci95_pp": [
+            11.9,
+            25.6
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.1875,
+          "lo": 0.13095238095238096,
+          "hi": 0.24404761904761904,
+          "diff_pp": 18.75,
+          "ci95_pp": [
+            13.1,
+            24.4
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "events_unadjusted": {
+        "lo_above_threshold": true,
+        "hi_below_threshold": false
+      },
+      "verdict_unadjusted": "supported",
+      "p_value": 0.0,
+      "p_value_two_sided": 0.0,
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "lo"
+        ],
+        "within_window": {
+          "lo": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true
+      },
+      "permutation_sensitivity": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 9.99990000099999e-06,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 56
+      },
+      "decidable": true,
+      "n_noncrashed_pairs": 336,
+      "expected_pairs": 336,
+      "holm": {
+        "m": 4,
+        "p_raw": 0.0,
+        "p_adjusted": 0.0,
+        "rejects_at_alpha": true,
+        "p_raw_substituted": false
+      },
+      "verdict_holm": "supported",
+      "verdict": "supported",
+      "reversal_unadjusted": false,
+      "signflip_disagreement": {
+        "rule": "A1 \u00a75.5: a disagreement is reported in the same sentence as the verdict; not decision-bearing",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.05 (two-sided)",
+        "p_value": 9.99990000099999e-06,
+        "alternative": "two-sided",
+        "level": 0.05,
+        "bootstrap_side": "above",
+        "signflip_side": "above",
+        "agrees": true,
+        "sentence": null
+      },
+      "verdict_sentence": "D1 supported",
+      "live_ask_bound": {
+        "arms": {
+          "prefix_m11": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          },
+          "prefix_m6": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          }
+        },
+        "any_bound_reaches_1pp": false,
+        "sentence": null
+      }
+    },
+    {
+      "id": "D2",
+      "kind": "paired_contrast",
+      "receiver": "zs",
+      "population": "all",
+      "metric": "goal_pass",
+      "left": "prefix_zs_m11",
+      "right": "prefix_zs_m6",
+      "rule": "lower_bound_above_threshold",
+      "threshold_pp": 0.0,
+      "holm_family": true,
+      "statement": "J10 prefix_zs_m11 \u2212 J12 prefix_zs_m6 on goal_pass, all pairs, is > 0",
+      "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74",
+      "dev_reference": {
+        "diff_pp": 7.7,
+        "ci95_pp_scenario": [
+          3.69,
+          12.06
+        ],
+        "n_pairs": 171,
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.all",
+        "bootstrap_seed": 20260924,
+        "population": "pooled cap-81 dev family, seeds 1-3 (hj17 + hj18)"
+      },
+      "rule_text": "supported if CI lo > t; else not_supported",
+      "direction": "greater",
+      "contrast": {
+        "field": "goal_pass_rate",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.08955952380952381,
+          "lo": 0.049499999999999995,
+          "hi": 0.13167559523809524,
+          "diff_pp": 8.96,
+          "ci95_pp": [
+            4.95,
+            13.17
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.08955952380952381,
+          "lo": 0.05638392857142857,
+          "hi": 0.12452083333333333,
+          "diff_pp": 8.96,
+          "ci95_pp": [
+            5.64,
+            12.45
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "tgc_secondary": {
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.12202380952380952,
+          "lo": 0.05952380952380952,
+          "hi": 0.18452380952380953,
+          "diff_pp": 12.2,
+          "ci95_pp": [
+            5.95,
+            18.45
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.12202380952380952,
+          "lo": 0.07142857142857142,
+          "hi": 0.17559523809523808,
+          "diff_pp": 12.2,
+          "ci95_pp": [
+            7.14,
+            17.56
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "events_unadjusted": {
+        "lo_above_threshold": true,
+        "hi_below_threshold": false
+      },
+      "verdict_unadjusted": "supported",
+      "p_value": 0.0,
+      "p_value_two_sided": 0.0,
+      "pool04": {
+        "rule": "POOL-04",
+        "window_pp": 1.0,
+        "threshold_pp": 0.0,
+        "bounds_checked": [
+          "lo"
+        ],
+        "within_window": {
+          "lo": false
+        },
+        "fired": false,
+        "seeds": [
+          20260924,
+          1,
+          2,
+          3,
+          7,
+          101,
+          999
+        ],
+        "stable": true
+      },
+      "permutation_sensitivity": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 2.999970000299997e-05,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 56
+      },
+      "decidable": true,
+      "n_noncrashed_pairs": 336,
+      "expected_pairs": 336,
+      "holm": {
+        "m": 4,
+        "p_raw": 0.0,
+        "p_adjusted": 0.0,
+        "rejects_at_alpha": true,
+        "p_raw_substituted": false
+      },
+      "verdict_holm": "supported",
+      "verdict": "supported",
+      "reversal_unadjusted": false,
+      "signflip_disagreement": {
+        "rule": "A1 \u00a75.5: a disagreement is reported in the same sentence as the verdict; not decision-bearing",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.05 (two-sided)",
+        "p_value": 2.999970000299997e-05,
+        "alternative": "two-sided",
+        "level": 0.05,
+        "bootstrap_side": "above",
+        "signflip_side": "above",
+        "agrees": true,
+        "sentence": null
+      },
+      "verdict_sentence": "D2 supported",
+      "live_ask_bound": {
+        "arms": {
+          "prefix_zs_m11": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          },
+          "prefix_zs_m6": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          }
+        },
+        "any_bound_reaches_1pp": false,
+        "sentence": null
+      }
+    },
+    {
+      "id": "D3",
+      "kind": "handoff_only",
+      "receiver": "bplus",
+      "population": "handoff_only",
+      "metric": "goal_pass",
+      "left": "prefix_m11",
+      "right": "prefix_m6",
+      "flags_from": "prefix_m11",
+      "h": "h_star",
+      "rule": "lower_bound_above_threshold",
+      "threshold_pp": 0.0,
+      "holm_family": true,
+      "statement": "as D1 on handoff episodes: \u03a3 d\u00b7h / \u03a3 h > 0, h = h* of the prefix_m11 episode (the executor took control after the replayed prefix)",
+      "citation": "docs/prereg_j12_depth_test_20260924.md \u00a73-\u00a74; h* per J12 Amendment 1",
+      "dev_reference": {
+        "diff_pp": 7.66,
+        "ci95_pp_scenario": [
+          1.19,
+          14.06
+        ],
+        "n_pairs": 171,
+        "n_handoff": 88,
+        "h": "h_star",
+        "source": "campaign/results/j17_hstar_20260924.report.json",
+        "key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only",
+        "bootstrap_seed": 20260924,
+        "population": "pooled cap-81 dev family, seeds 1-3 (hj17 + hj18)"
+      },
+      "dev_reference_flag": {
+        "diff_pp": 12.03,
+        "ci95_pp_scenario": [
+          5.49,
+          18.57
+        ],
+        "n_pairs": 171,
+        "n_handoff": 71,
+        "h": "h_flag",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "key": "handoff_only_contrasts.bplus.m6_to_m11.goal_pass.handoff_only",
+        "bootstrap_seed": 20260924,
+        "population": "pooled cap-81 dev family, seeds 1-3 (hj17 + hj18)"
+      },
+      "rule_text": "supported if CI lo > t; else not_supported",
+      "direction": "greater",
+      "contrast": {
+        "field": "goal_pass_rate",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = prefix_m11 \u2212 prefix_m6, h = prefix_m11's h* (the executor took control after the replayed prefix)",
+        "h": "h_star",
+        "n_shared": 336,
+        "n_pairs": 336,
+        "n_handoff": 182,
+        "n_silenced": 154,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "status": "ok",
+        "scenario": {
+          "clustering": "scenario",
+          "n_clusters": 56,
+          "diff_pp": 14.14,
+          "ci95_pp": [
+            7.84,
+            21.34
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_clusters": 168,
+          "diff_pp": 14.14,
+          "ci95_pp": [
+            8.55,
+            19.95
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "events_unadjusted": {
+        "lo_above_threshold": true,
+        "hi_below_threshold": false
+      },
+      "verdict_unadjusted": "supported",
+      "p_value": 0.0,
+      "p_value_two_sided": 0.0,
+      "tgc_secondary": {
+        "n_pairs": 336,
+        "n_handoff": 182,
+        "n_no_handoff_or_flag_missing": 154,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h (handoff_only) and \u03a3 d / n (all); d = target \u2212 base, h at the target depth",
+        "status": "ok",
+        "n_boot": 10000,
+        "seed": 20260924,
+        "n_clusters_scenario": 56,
+        "handoff_only": {
+          "diff_pp": 14.29,
+          "ci95_pp_scenario": [
+            7.24,
+            22.02
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            7.65,
+            20.86
+          ],
+          "n_undefined_task": 0
+        },
+        "all": {
+          "diff_pp": 18.75,
+          "ci95_pp_scenario": [
+            11.9,
+            25.6
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            13.1,
+            24.4
+          ],
+          "n_undefined_task": 0
+        }
+      },
+      "pool04": {
+        "rule": "POOL-04",
+        "via": "j10_report.am1_ni_reading, margin = threshold",
+        "margin_pp": 0.0,
+        "window_pp": 1.0,
+        "lower_bound_pp": 7.84,
+        "fired": false,
+        "stable": true,
+        "reading": "holds"
+      },
+      "permutation_sensitivity": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 4.999950000499995e-05,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 51
+      },
+      "decidable": true,
+      "n_noncrashed_pairs": 336,
+      "expected_pairs": 336,
+      "holm": {
+        "m": 4,
+        "p_raw": 0.0,
+        "p_adjusted": 0.0,
+        "rejects_at_alpha": true,
+        "p_raw_substituted": false
+      },
+      "verdict_holm": "supported",
+      "verdict": "supported",
+      "reversal_unadjusted": false,
+      "signflip_disagreement": {
+        "rule": "A1 \u00a75.5: a disagreement is reported in the same sentence as the verdict; not decision-bearing",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.05 (two-sided)",
+        "p_value": 4.999950000499995e-05,
+        "alternative": "two-sided",
+        "level": 0.05,
+        "bootstrap_side": "above",
+        "signflip_side": "above",
+        "agrees": true,
+        "sentence": null
+      },
+      "verdict_sentence": "D3 supported",
+      "live_ask_bound": {
+        "arms": {
+          "prefix_m11": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          },
+          "prefix_m6": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          }
+        },
+        "any_bound_reaches_1pp": false,
+        "sentence": null
+      }
+    },
+    {
+      "id": "D4",
+      "kind": "handoff_only",
+      "receiver": "zs",
+      "population": "handoff_only",
+      "metric": "goal_pass",
+      "left": "prefix_zs_m11",
+      "right": "prefix_zs_m6",
+      "flags_from": "prefix_zs_m11",
+      "h": "h_star",
+      "rule": "lower_bound_above_threshold",
+      "threshold_pp": 0.0,
+      "holm_family": true,
+      "statement": "as D2 on handoff episodes: \u03a3 d\u00b7h / \u03a3 h > 0, h = h* of the prefix_zs_m11 episode (the executor took control after the replayed prefix)",
+      "citation": "docs/prereg_j12_depth_test_20260924.md \u00a73-\u00a74; h* per J12 Amendment 1",
+      "dev_reference": {
+        "diff_pp": 7.81,
+        "ci95_pp_scenario": [
+          0.79,
+          13.95
+        ],
+        "n_pairs": 171,
+        "n_handoff": 88,
+        "h": "h_star",
+        "source": "campaign/results/j17_hstar_20260924.report.json",
+        "key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only",
+        "bootstrap_seed": 20260924,
+        "population": "pooled cap-81 dev family, seeds 1-3 (hj17 + hj18)"
+      },
+      "dev_reference_flag": {
+        "diff_pp": 13.93,
+        "ci95_pp_scenario": [
+          5.12,
+          21.22
+        ],
+        "n_pairs": 171,
+        "n_handoff": 71,
+        "h": "h_flag",
+        "source": "campaign/results/j17_depth_fixes_20260924.report.json",
+        "key": "handoff_only_contrasts.zs.m6_to_m11.goal_pass.handoff_only",
+        "bootstrap_seed": 20260924,
+        "population": "pooled cap-81 dev family, seeds 1-3 (hj17 + hj18)"
+      },
+      "rule_text": "supported if CI lo > t; else not_supported",
+      "direction": "greater",
+      "contrast": {
+        "field": "goal_pass_rate",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = prefix_zs_m11 \u2212 prefix_zs_m6, h = prefix_zs_m11's h* (the executor took control after the replayed prefix)",
+        "h": "h_star",
+        "n_shared": 336,
+        "n_pairs": 336,
+        "n_handoff": 182,
+        "n_silenced": 154,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "status": "ok",
+        "scenario": {
+          "clustering": "scenario",
+          "n_clusters": 56,
+          "diff_pp": 12.85,
+          "ci95_pp": [
+            6.89,
+            18.72
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_clusters": 168,
+          "diff_pp": 12.85,
+          "ci95_pp": [
+            7.52,
+            18.45
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "events_unadjusted": {
+        "lo_above_threshold": true,
+        "hi_below_threshold": false
+      },
+      "verdict_unadjusted": "supported",
+      "p_value": 0.0,
+      "p_value_two_sided": 0.0,
+      "tgc_secondary": {
+        "n_pairs": 336,
+        "n_handoff": 182,
+        "n_no_handoff_or_flag_missing": 154,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h (handoff_only) and \u03a3 d / n (all); d = target \u2212 base, h at the target depth",
+        "status": "ok",
+        "n_boot": 10000,
+        "seed": 20260924,
+        "n_clusters_scenario": 56,
+        "handoff_only": {
+          "diff_pp": 15.93,
+          "ci95_pp_scenario": [
+            7.94,
+            24.07
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            8.65,
+            23.21
+          ],
+          "n_undefined_task": 0
+        },
+        "all": {
+          "diff_pp": 12.2,
+          "ci95_pp_scenario": [
+            5.95,
+            18.45
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            7.14,
+            17.56
+          ],
+          "n_undefined_task": 0
+        }
+      },
+      "pool04": {
+        "rule": "POOL-04",
+        "via": "j10_report.am1_ni_reading, margin = threshold",
+        "margin_pp": 0.0,
+        "window_pp": 1.0,
+        "lower_bound_pp": 6.89,
+        "fired": false,
+        "stable": true,
+        "reading": "holds"
+      },
+      "permutation_sensitivity": {
+        "decision_bearing": false,
+        "clusters": "scenario",
+        "null": "cluster sums of (difference - threshold) symmetric about zero",
+        "threshold": 0.0,
+        "seed": 20260924,
+        "alternative": "two-sided",
+        "rule": "A1 r2 \u00a75.5: exact if 2^G <= 2^20, else Monte Carlo over 100,000 patterns",
+        "status": "ok",
+        "p_value": 9.99990000099999e-05,
+        "method": "monte_carlo",
+        "n_patterns": 100000,
+        "n_clusters": 51
+      },
+      "decidable": true,
+      "n_noncrashed_pairs": 336,
+      "expected_pairs": 336,
+      "holm": {
+        "m": 4,
+        "p_raw": 0.0,
+        "p_adjusted": 0.0,
+        "rejects_at_alpha": true,
+        "p_raw_substituted": false
+      },
+      "verdict_holm": "supported",
+      "verdict": "supported",
+      "reversal_unadjusted": false,
+      "signflip_disagreement": {
+        "rule": "A1 \u00a75.5: a disagreement is reported in the same sentence as the verdict; not decision-bearing",
+        "basis": "bootstrap: the unadjusted 95 % scenario interval against +0.00 pp; sign-flip: its p at 0.05 (two-sided)",
+        "p_value": 9.99990000099999e-05,
+        "alternative": "two-sided",
+        "level": 0.05,
+        "bootstrap_side": "above",
+        "signflip_side": "above",
+        "agrees": true,
+        "sentence": null
+      },
+      "verdict_sentence": "D4 supported",
+      "live_ask_bound": {
+        "arms": {
+          "prefix_zs_m11": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          },
+          "prefix_zs_m6": {
+            "n_episodes_live_answer": 0,
+            "bound_pp": 0.0
+          }
+        },
+        "any_bound_reaches_1pp": false,
+        "sentence": null
+      }
+    }
+  ],
+  "verdicts": {
+    "D1": "supported",
+    "D2": "supported",
+    "D3": "supported",
+    "D4": "supported"
+  },
+  "readings": {
+    "bplus": {
+      "ids": [
+        "D1",
+        "D3"
+      ],
+      "verdicts": {
+        "D1": "supported",
+        "D3": "supported"
+      },
+      "reading_key": "all_and_handoff",
+      "reading": "on held-out tasks, a later handoff raises the tailored executor's quality, and not only through episodes the planner finishes itself",
+      "no_reading_reason": null,
+      "not_supported_is_reported_as": "not replicated, never as evidence of no effect",
+      "reversals_unadjusted": []
+    },
+    "zs": {
+      "ids": [
+        "D2",
+        "D4"
+      ],
+      "verdicts": {
+        "D2": "supported",
+        "D4": "supported"
+      },
+      "reading_key": "all_and_handoff",
+      "reading": "on held-out tasks, a later handoff raises the untailored executor's quality, and not only through episodes the planner finishes itself",
+      "no_reading_reason": null,
+      "not_supported_is_reported_as": "not replicated, never as evidence of no effect",
+      "reversals_unadjusted": []
+    }
+  },
+  "handoff_indicator": {
+    "D3_D4": "h_star",
+    "h_star": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+    "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)",
+    "sensitivity": "sensitivity_h_flag (D3_flag, D4_flag)"
+  },
+  "sensitivity_h_flag": {
+    "decision_bearing": false,
+    "what": "D3 / D4 with h = the m = 11 episode's handoff_occurred (h_flag) in place of h*; Holm over D1, D2, D3_flag, D4_flag; POOL-04 and the sign-flip not re-run",
+    "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)",
+    "D3_flag": {
+      "id": "D3_flag",
+      "sensitivity_of": "D3",
+      "h": "h_flag",
+      "contrast": {
+        "field": "goal_pass_rate",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = prefix_m11 \u2212 prefix_m6, h = prefix_m11's handoff_occurred",
+        "h": "h_flag",
+        "n_shared": 336,
+        "n_pairs": 336,
+        "n_handoff": 164,
+        "n_silenced": 172,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "status": "ok",
+        "scenario": {
+          "clustering": "scenario",
+          "n_clusters": 56,
+          "diff_pp": 15.65,
+          "ci95_pp": [
+            8.96,
+            23.49
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_clusters": 168,
+          "diff_pp": 15.65,
+          "ci95_pp": [
+            9.82,
+            21.63
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "p_value": 0.0,
+      "verdict_unadjusted": "supported",
+      "holm": {
+        "m": 4,
+        "p_raw": 0.0,
+        "p_adjusted": 0.0,
+        "rejects_at_alpha": true,
+        "p_raw_substituted": false
+      },
+      "verdict_holm": "supported",
+      "verdict_holm_with_hstar": "supported",
+      "differs_from_hstar": false,
+      "decidable": true,
+      "reason": null
+    },
+    "D4_flag": {
+      "id": "D4_flag",
+      "sensitivity_of": "D4",
+      "h": "h_flag",
+      "contrast": {
+        "field": "goal_pass_rate",
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h, d = prefix_zs_m11 \u2212 prefix_zs_m6, h = prefix_zs_m11's handoff_occurred",
+        "h": "h_flag",
+        "n_shared": 336,
+        "n_pairs": 336,
+        "n_handoff": 164,
+        "n_silenced": 172,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "status": "ok",
+        "scenario": {
+          "clustering": "scenario",
+          "n_clusters": 56,
+          "diff_pp": 14.67,
+          "ci95_pp": [
+            9.09,
+            20.39
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_clusters": 168,
+          "diff_pp": 14.67,
+          "ci95_pp": [
+            9.22,
+            20.4
+          ],
+          "n_resamples_undefined": 0,
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "p_value": 0.0,
+      "verdict_unadjusted": "supported",
+      "holm": {
+        "m": 4,
+        "p_raw": 0.0,
+        "p_adjusted": 0.0,
+        "rejects_at_alpha": true,
+        "p_raw_substituted": false
+      },
+      "verdict_holm": "supported",
+      "verdict_holm_with_hstar": "supported",
+      "differs_from_hstar": false,
+      "decidable": true,
+      "reason": null
+    },
+    "verdict_holm_differs": []
+  },
+  "beside": {
+    "decision_bearing": false,
+    "tgc": {
+      "D1": {
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.1875,
+          "lo": 0.11904761904761904,
+          "hi": 0.25595238095238093,
+          "diff_pp": 18.75,
+          "ci95_pp": [
+            11.9,
+            25.6
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.1875,
+          "lo": 0.13095238095238096,
+          "hi": 0.24404761904761904,
+          "diff_pp": 18.75,
+          "ci95_pp": [
+            13.1,
+            24.4
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "D2": {
+        "field": "tgc",
+        "n_pairs": 336,
+        "n_shared": 336,
+        "n_left_only": 0,
+        "n_right_only": 0,
+        "n_dropped_missing_field": 0,
+        "scenario": {
+          "clustering": "scenario",
+          "n_pairs": 336,
+          "n_clusters": 56,
+          "point": 0.12202380952380952,
+          "lo": 0.05952380952380952,
+          "hi": 0.18452380952380953,
+          "diff_pp": 12.2,
+          "ci95_pp": [
+            5.95,
+            18.45
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        },
+        "task": {
+          "clustering": "task",
+          "n_pairs": 336,
+          "n_clusters": 168,
+          "point": 0.12202380952380952,
+          "lo": 0.07142857142857142,
+          "hi": 0.17559523809523808,
+          "diff_pp": 12.2,
+          "ci95_pp": [
+            7.14,
+            17.56
+          ],
+          "n_boot": 10000,
+          "seed": 20260924
+        }
+      },
+      "D3": {
+        "n_pairs": 336,
+        "n_handoff": 182,
+        "n_no_handoff_or_flag_missing": 154,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h (handoff_only) and \u03a3 d / n (all); d = target \u2212 base, h at the target depth",
+        "status": "ok",
+        "n_boot": 10000,
+        "seed": 20260924,
+        "n_clusters_scenario": 56,
+        "handoff_only": {
+          "diff_pp": 14.29,
+          "ci95_pp_scenario": [
+            7.24,
+            22.02
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            7.65,
+            20.86
+          ],
+          "n_undefined_task": 0
+        },
+        "all": {
+          "diff_pp": 18.75,
+          "ci95_pp_scenario": [
+            11.9,
+            25.6
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            13.1,
+            24.4
+          ],
+          "n_undefined_task": 0
+        }
+      },
+      "D4": {
+        "n_pairs": 336,
+        "n_handoff": 182,
+        "n_no_handoff_or_flag_missing": 154,
+        "n_flag_missing": 0,
+        "n_dropped_missing_field": 0,
+        "estimand": "\u03a3 d\u00b7h / \u03a3 h (handoff_only) and \u03a3 d / n (all); d = target \u2212 base, h at the target depth",
+        "status": "ok",
+        "n_boot": 10000,
+        "seed": 20260924,
+        "n_clusters_scenario": 56,
+        "handoff_only": {
+          "diff_pp": 15.93,
+          "ci95_pp_scenario": [
+            7.94,
+            24.07
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            8.65,
+            23.21
+          ],
+          "n_undefined_task": 0
+        },
+        "all": {
+          "diff_pp": 12.2,
+          "ci95_pp_scenario": [
+            5.95,
+            18.45
+          ],
+          "n_undefined_scenario": 0,
+          "ci95_pp_task": [
+            7.14,
+            17.56
+          ],
+          "n_undefined_task": 0
+        }
+      }
+    },
+    "tgc_atom_notes": {
+      "D1": null,
+      "D2": null,
+      "D3": null,
+      "D4": null
+    },
+    "silenced_counts": {
+      "prefix_m11": {
+        "m": 11,
+        "n_scored": 336,
+        "n_handoff": 164,
+        "n_no_handoff": 172,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 (silenced count: episodes with no handoff)",
+        "h": "h_flag"
+      },
+      "prefix_m6": {
+        "m": 6,
+        "n_scored": 336,
+        "n_handoff": 322,
+        "n_no_handoff": 14,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 (silenced count: episodes with no handoff)",
+        "h": "h_flag"
+      },
+      "prefix_zs_m11": {
+        "m": 11,
+        "n_scored": 336,
+        "n_handoff": 164,
+        "n_no_handoff": 172,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 (silenced count: episodes with no handoff)",
+        "h": "h_flag"
+      },
+      "prefix_zs_m6": {
+        "m": 6,
+        "n_scored": 336,
+        "n_handoff": 322,
+        "n_no_handoff": 14,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 (silenced count: episodes with no handoff)",
+        "h": "h_flag"
+      }
+    },
+    "silenced_counts_h_star": {
+      "prefix_m11": {
+        "m": 11,
+        "n_scored": 336,
+        "n_handoff": 182,
+        "n_no_handoff": 154,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 and Amendment 1 (silenced count with h*)",
+        "h": "h_star"
+      },
+      "prefix_m6": {
+        "m": 6,
+        "n_scored": 336,
+        "n_handoff": 323,
+        "n_no_handoff": 13,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 and Amendment 1 (silenced count with h*)",
+        "h": "h_star"
+      },
+      "prefix_zs_m11": {
+        "m": 11,
+        "n_scored": 336,
+        "n_handoff": 182,
+        "n_no_handoff": 154,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 and Amendment 1 (silenced count with h*)",
+        "h": "h_star"
+      },
+      "prefix_zs_m6": {
+        "m": 6,
+        "n_scored": 336,
+        "n_handoff": 323,
+        "n_no_handoff": 13,
+        "n_flag_missing": 0,
+        "citation": "docs/prereg_j12_depth_test_20260924.md \u00a74 and Amendment 1 (silenced count with h*)",
+        "h": "h_star"
+      }
+    },
+    "handoff_control_counts": {
+      "prefix_m11": {
+        "m": 11,
+        "n": 336,
+        "n_h_flag_true": 164,
+        "n_live_but_unflagged": 18,
+        "n_terminal": 154,
+        "n_hstar_true": 182,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_missing": 0,
+        "n_pre_loop_limit": 0,
+        "live_but_unflagged_keys": [
+          [
+            "0de03ea_2",
+            1
+          ],
+          [
+            "2c544f9_2",
+            1
+          ],
+          [
+            "2c544f9_2",
+            2
+          ],
+          [
+            "325d6ec_2",
+            1
+          ],
+          [
+            "325d6ec_2",
+            2
+          ],
+          [
+            "325d6ec_3",
+            1
+          ],
+          [
+            "325d6ec_3",
+            2
+          ],
+          [
+            "6f4b9a5_3",
+            1
+          ],
+          [
+            "8ce6779_3",
+            2
+          ],
+          [
+            "9dabbc9_3",
+            2
+          ],
+          [
+            "9ef798c_2",
+            1
+          ],
+          [
+            "d18139b_1",
+            1
+          ],
+          [
+            "f861c32_2",
+            1
+          ],
+          [
+            "f861c32_2",
+            2
+          ],
+          [
+            "fd1f8fa_2",
+            1
+          ],
+          [
+            "fd1f8fa_2",
+            2
+          ],
+          [
+            "fd1f8fa_3",
+            1
+          ],
+          [
+            "fd1f8fa_3",
+            2
+          ]
+        ],
+        "definition": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+        "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)"
+      },
+      "prefix_m6": {
+        "m": 6,
+        "n": 336,
+        "n_h_flag_true": 322,
+        "n_live_but_unflagged": 1,
+        "n_terminal": 13,
+        "n_hstar_true": 323,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_missing": 0,
+        "n_pre_loop_limit": 0,
+        "live_but_unflagged_keys": [
+          [
+            "8ce6779_3",
+            2
+          ]
+        ],
+        "definition": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+        "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)"
+      },
+      "prefix_zs_m11": {
+        "m": 11,
+        "n": 336,
+        "n_h_flag_true": 164,
+        "n_live_but_unflagged": 18,
+        "n_terminal": 154,
+        "n_hstar_true": 182,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_missing": 0,
+        "n_pre_loop_limit": 0,
+        "live_but_unflagged_keys": [
+          [
+            "0de03ea_2",
+            1
+          ],
+          [
+            "2c544f9_2",
+            1
+          ],
+          [
+            "2c544f9_2",
+            2
+          ],
+          [
+            "325d6ec_2",
+            1
+          ],
+          [
+            "325d6ec_2",
+            2
+          ],
+          [
+            "325d6ec_3",
+            1
+          ],
+          [
+            "325d6ec_3",
+            2
+          ],
+          [
+            "6f4b9a5_3",
+            1
+          ],
+          [
+            "8ce6779_3",
+            2
+          ],
+          [
+            "9dabbc9_3",
+            2
+          ],
+          [
+            "9ef798c_2",
+            1
+          ],
+          [
+            "d18139b_1",
+            1
+          ],
+          [
+            "f861c32_2",
+            1
+          ],
+          [
+            "f861c32_2",
+            2
+          ],
+          [
+            "fd1f8fa_2",
+            1
+          ],
+          [
+            "fd1f8fa_2",
+            2
+          ],
+          [
+            "fd1f8fa_3",
+            1
+          ],
+          [
+            "fd1f8fa_3",
+            2
+          ]
+        ],
+        "definition": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+        "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)"
+      },
+      "prefix_zs_m6": {
+        "m": 6,
+        "n": 336,
+        "n_h_flag_true": 322,
+        "n_live_but_unflagged": 1,
+        "n_terminal": 13,
+        "n_hstar_true": 323,
+        "n_hstar_undefined": 0,
+        "n_h_flag_true_but_terminal": 0,
+        "n_h_flag_missing": 0,
+        "n_pre_loop_limit": 0,
+        "live_but_unflagged_keys": [
+          [
+            "8ce6779_3",
+            2
+          ]
+        ],
+        "definition": "h* = 1 iff the prefix arm's last attempt holds an event only the live loop writes at step >= effective_m + 1 (scripts/analysis/handoff_control.py); effective_m from the handoff record's payload",
+        "h_flag": "h_flag = handoff_occurred of the last `report` event of the last attempt (effective_m < n_source_actions, src/sidekick/prefix_source.py:184)"
+      }
+    },
+    "decomposition": {
+      "bplus": {
+        "target": "prefix_m11",
+        "base": "prefix_m6",
+        "h": "h_star",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 182,
+          "n_silenced": 154,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 13.55,
+            "ci95_pp_scenario": [
+              8.78,
+              18.64
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              9.69,
+              17.55
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 7.66,
+            "ci95_pp_scenario": [
+              4.14,
+              11.68
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              4.58,
+              10.81
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 5.9,
+            "ci95_pp_scenario": [
+              3.05,
+              8.92
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              3.67,
+              8.21
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.565,
+            "ci95_scenario": [
+              0.3847,
+              0.734
+            ],
+            "ci95_task": [
+              0.4175,
+              0.699
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 14.14,
+            "ci95_pp_scenario": [
+              7.84,
+              21.34
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              8.55,
+              19.95
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 12.86,
+            "ci95_pp_scenario": [
+              6.85,
+              18.99
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              8.16,
+              17.79
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 182,
+          "n_silenced": 154,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 18.75,
+            "ci95_pp_scenario": [
+              11.9,
+              25.6
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              13.1,
+              24.4
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 7.74,
+            "ci95_pp_scenario": [
+              3.87,
+              11.9
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              4.17,
+              11.31
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 11.01,
+            "ci95_pp_scenario": [
+              5.65,
+              16.96
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              6.85,
+              15.18
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.4127,
+            "ci95_scenario": [
+              0.2364,
+              0.6071
+            ],
+            "ci95_task": [
+              0.2558,
+              0.5667
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 14.29,
+            "ci95_pp_scenario": [
+              7.24,
+              22.02
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              7.65,
+              20.86
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 24.03,
+            "ci95_pp_scenario": [
+              12.68,
+              35.29
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              15.23,
+              33.12
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        }
+      },
+      "zs": {
+        "target": "prefix_zs_m11",
+        "base": "prefix_zs_m6",
+        "h": "h_star",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 182,
+          "n_silenced": 154,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 8.96,
+            "ci95_pp_scenario": [
+              4.95,
+              13.17
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              5.64,
+              12.45
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 6.96,
+            "ci95_pp_scenario": [
+              3.54,
+              10.64
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              4.02,
+              10.08
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 1.99,
+            "ci95_pp_scenario": [
+              0.25,
+              3.8
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              0.51,
+              3.45
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.7774,
+            "ci95_scenario": [
+              0.5906,
+              0.9664
+            ],
+            "ci95_task": [
+              0.6141,
+              0.9349
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 12.85,
+            "ci95_pp_scenario": [
+              6.89,
+              18.72
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              7.52,
+              18.45
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 4.35,
+            "ci95_pp_scenario": [
+              0.55,
+              8.29
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              1.1,
+              7.5
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 182,
+          "n_silenced": 154,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 12.2,
+            "ci95_pp_scenario": [
+              5.95,
+              18.45
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              7.14,
+              17.56
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 8.63,
+            "ci95_pp_scenario": [
+              4.17,
+              13.39
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              4.76,
+              12.8
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 3.57,
+            "ci95_pp_scenario": [
+              -0.3,
+              7.44
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              0.6,
+              6.55
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.7073,
+            "ci95_scenario": [
+              0.4865,
+              1.0263
+            ],
+            "ci95_task": [
+              0.5152,
+              0.9375
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 15.93,
+            "ci95_pp_scenario": [
+              7.94,
+              24.07
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              8.65,
+              23.21
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 7.79,
+            "ci95_pp_scenario": [
+              -0.56,
+              16.27
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              1.32,
+              14.29
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        }
+      }
+    },
+    "decomposition_h_flag": {
+      "bplus": {
+        "target": "prefix_m11",
+        "base": "prefix_m6",
+        "h": "h_flag",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 164,
+          "n_silenced": 172,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 13.55,
+            "ci95_pp_scenario": [
+              8.78,
+              18.64
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              9.69,
+              17.55
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 7.64,
+            "ci95_pp_scenario": [
+              4.26,
+              11.54
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              4.74,
+              10.61
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 5.92,
+            "ci95_pp_scenario": [
+              2.84,
+              9.2
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              3.44,
+              8.42
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.5634,
+            "ci95_scenario": [
+              0.3854,
+              0.7463
+            ],
+            "ci95_task": [
+              0.4182,
+              0.7065
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 15.65,
+            "ci95_pp_scenario": [
+              8.96,
+              23.49
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              9.82,
+              21.63
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 11.56,
+            "ci95_pp_scenario": [
+              5.75,
+              17.49
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              6.89,
+              16.37
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 164,
+          "n_silenced": 172,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 18.75,
+            "ci95_pp_scenario": [
+              11.9,
+              25.6
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              13.1,
+              24.4
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 7.14,
+            "ci95_pp_scenario": [
+              3.57,
+              11.01
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              3.57,
+              10.42
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 11.61,
+            "ci95_pp_scenario": [
+              6.25,
+              17.56
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              7.44,
+              15.77
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.381,
+            "ci95_scenario": [
+              0.2167,
+              0.5645
+            ],
+            "ci95_task": [
+              0.2319,
+              0.5306
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 14.63,
+            "ci95_pp_scenario": [
+              7.19,
+              23.08
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              7.59,
+              21.66
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 22.67,
+            "ci95_pp_scenario": [
+              12.5,
+              32.89
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              14.63,
+              30.95
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        }
+      },
+      "zs": {
+        "target": "prefix_zs_m11",
+        "base": "prefix_zs_m6",
+        "h": "h_flag",
+        "goal_pass": {
+          "field": "goal_pass_rate",
+          "n_pairs": 336,
+          "n_handoff": 164,
+          "n_silenced": 172,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 8.96,
+            "ci95_pp_scenario": [
+              4.95,
+              13.17
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              5.64,
+              12.45
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 7.16,
+            "ci95_pp_scenario": [
+              4.11,
+              10.58
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              4.39,
+              10.13
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 1.8,
+            "ci95_pp_scenario": [
+              -0.32,
+              3.9
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              0.0,
+              3.55
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.7994,
+            "ci95_scenario": [
+              0.6117,
+              1.0523
+            ],
+            "ci95_task": [
+              0.6312,
+              0.9996
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 14.67,
+            "ci95_pp_scenario": [
+              9.09,
+              20.39
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              9.22,
+              20.4
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 3.51,
+            "ci95_pp_scenario": [
+              -0.64,
+              7.59
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              0.01,
+              6.97
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        },
+        "tgc": {
+          "field": "tgc",
+          "n_pairs": 336,
+          "n_handoff": 164,
+          "n_silenced": 172,
+          "n_flag_missing": 0,
+          "n_dropped_missing_field": 0,
+          "status": "ok",
+          "delta_total": {
+            "diff_pp": 12.2,
+            "ci95_pp_scenario": [
+              5.95,
+              18.45
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              7.14,
+              17.56
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_handoff": {
+            "diff_pp": 8.93,
+            "ci95_pp_scenario": [
+              4.76,
+              13.39
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              5.06,
+              12.8
+            ],
+            "n_undefined_task": 0
+          },
+          "contribution_silenced": {
+            "diff_pp": 3.27,
+            "ci95_pp_scenario": [
+              -0.6,
+              7.14
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              0.0,
+              6.25
+            ],
+            "n_undefined_task": 0
+          },
+          "share_of_rise_from_handoff": {
+            "point": 0.7317,
+            "ci95_scenario": [
+              0.5179,
+              1.0833
+            ],
+            "ci95_task": [
+              0.5405,
+              1.0
+            ],
+            "n_resamples_rise_not_positive_scenario": 0,
+            "n_resamples_rise_not_positive_task": 0
+          },
+          "gain_on_handoff_subset": {
+            "diff_pp": 18.29,
+            "ci95_pp_scenario": [
+              10.0,
+              26.71
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              10.56,
+              25.95
+            ],
+            "n_undefined_task": 0
+          },
+          "gain_on_silenced_subset": {
+            "diff_pp": 6.4,
+            "ci95_pp_scenario": [
+              -1.16,
+              14.2
+            ],
+            "n_undefined_scenario": 0,
+            "ci95_pp_task": [
+              0.0,
+              12.5
+            ],
+            "n_undefined_task": 0
+          },
+          "share_interval_note": "Percentile interval over resamples whose total rise is > 0. If the count of resamples with a non-positive rise exceeds 2.5% of B, the rise itself is unresolved and the share interval is not read."
+        }
+      }
+    },
+    "limit_rates": {
+      "prefix_m11": {
+        "n_scored": 336,
+        "n_limit": 46,
+        "limit_rate": 0.136905
+      },
+      "prefix_m6": {
+        "n_scored": 336,
+        "n_limit": 96,
+        "limit_rate": 0.285714
+      },
+      "prefix_zs_m11": {
+        "n_scored": 336,
+        "n_limit": 35,
+        "limit_rate": 0.104167
+      },
+      "prefix_zs_m6": {
+        "n_scored": 336,
+        "n_limit": 69,
+        "limit_rate": 0.205357
+      }
+    },
+    "sign_flip_p": {
+      "D1": 9.99990000099999e-06,
+      "D2": 2.999970000299997e-05,
+      "D3": 4.999950000499995e-05,
+      "D4": 9.99990000099999e-05
+    },
+    "live_asks": {
+      "prefix_m11": {
+        "n_scored": 336,
+        "n_episodes_live_answer": 0,
+        "n_live_answer_calls": 0,
+        "n_ledger_live_planner_calls": 0,
+        "n_episodes_events_and_ledger_disagree": 0,
+        "bound_pp": 0.0,
+        "bound_denominator": 336,
+        "reaches_1pp": false,
+        "episodes": [],
+        "definition": "planner intervention events with usage.provider == 'codex' in the last attempt (ledger PROV-02); bound = episodes with a live answer / registered pairs",
+        "citation": "docs/prereg_j10_amendment_20260924.md Amendment 1 \u00a7I"
+      },
+      "prefix_m6": {
+        "n_scored": 336,
+        "n_episodes_live_answer": 0,
+        "n_live_answer_calls": 0,
+        "n_ledger_live_planner_calls": 0,
+        "n_episodes_events_and_ledger_disagree": 0,
+        "bound_pp": 0.0,
+        "bound_denominator": 336,
+        "reaches_1pp": false,
+        "episodes": [],
+        "definition": "planner intervention events with usage.provider == 'codex' in the last attempt (ledger PROV-02); bound = episodes with a live answer / registered pairs",
+        "citation": "docs/prereg_j10_amendment_20260924.md Amendment 1 \u00a7I"
+      },
+      "prefix_zs_m11": {
+        "n_scored": 336,
+        "n_episodes_live_answer": 0,
+        "n_live_answer_calls": 0,
+        "n_ledger_live_planner_calls": 0,
+        "n_episodes_events_and_ledger_disagree": 0,
+        "bound_pp": 0.0,
+        "bound_denominator": 336,
+        "reaches_1pp": false,
+        "episodes": [],
+        "definition": "planner intervention events with usage.provider == 'codex' in the last attempt (ledger PROV-02); bound = episodes with a live answer / registered pairs",
+        "citation": "docs/prereg_j10_amendment_20260924.md Amendment 1 \u00a7I"
+      },
+      "prefix_zs_m6": {
+        "n_scored": 336,
+        "n_episodes_live_answer": 0,
+        "n_live_answer_calls": 0,
+        "n_ledger_live_planner_calls": 0,
+        "n_episodes_events_and_ledger_disagree": 0,
+        "bound_pp": 0.0,
+        "bound_denominator": 336,
+        "reaches_1pp": false,
+        "episodes": [],
+        "definition": "planner intervention events with usage.provider == 'codex' in the last attempt (ledger PROV-02); bound = episodes with a live answer / registered pairs",
+        "citation": "docs/prereg_j10_amendment_20260924.md Amendment 1 \u00a7I"
+      }
+    }
+  },
+  "crash_convention": "error_type == 'crash' is not an outcome (dropped, counted, arm incomplete); limit / timeout / parse_error / api_error are scored outcomes.",
+  "j12_am2_divergence": {
+    "rule": "docs/prereg_j12_depth_test_20260924.md Amendment 2 (J10 A1 Amendment 5 \u00a7B, unchanged)",
+    "decision_bearing": "completeness only: every statistic, the Holm family and every threshold run as registered",
+    "definition": "a (task_id, seed) of a prefix replay arm whose result.json has error_type == 'crash' and whose events.jsonl, from the last run_start on, holds an 'error' event with payload.reason == 'replay_divergence'; first result.json per key wins",
+    "cap": 16,
+    "replay_arms": [
+      "prefix_m6",
+      "prefix_zs_m6",
+      "prefix_m11",
+      "prefix_zs_m11"
+    ],
+    "per_arm": {
+      "prefix_m6": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      },
+      "prefix_zs_m6": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      },
+      "prefix_m11": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      },
+      "prefix_zs_m11": {
+        "n_divergent": 0,
+        "keys": [],
+        "n_crash_other": 0,
+        "arm_complete": true
+      }
+    },
+    "n_divergent_total": 0,
+    "refill_confirmed_by_operator": null,
+    "resumption_condition": {
+      "rule": "A1 Amendment 5 \u00a7B.1: a divergent key counts only after at least one crash-only resumption run after the crash was first recorded; the result files cannot show it",
+      "required": false,
+      "how_to_confirm": "confirm that each arm with a divergent key had at least one crash-only resumption run after the crash first appeared: resubmit that arm's job line (scripts/pbs/j12_arm.pbs for a J12 arm, scripts/pbs/j10_arm.pbs for J10's prefix_m11 / prefix_zs_m11), which purges the crashed episodes and re-runs only them; a later job's '[j10] resume:' and '[j10] tally cid=... crashed=N' lines must show the same keys still crashed. Then re-run this read with --divergent-refill-confirmed."
+    },
+    "contrasts": {},
+    "companions": {},
+    "non_replay_divergent": {
+      "keys": {},
+      "treated_as": "an ordinary crash"
+    },
+    "notes": [
+      "Paired statistics pair on the (task_id, seed) keys both arms score, and a divergent key is a crash, which a1_arm_episodes already drops from its replay arm; so removing it from the other arm changes no paired statistic, only the counts of unpaired keys (n_left_only / n_right_only) and completeness.",
+      "Amendment 5 \u00a7B.1's 'after at least one crash-only resumption' cannot be read from an arm's files: the refill deletes a crashed episode's directory whole (scripts/setup/campaign_summarize.py purge_crashed) and re-runs it, so a divergent key is read as a crash whose last attempt holds the divergence error; the wrapper's tally lines record the resumption.",
+      "D3 / D4's handoff-only populations, their h_flag sensitivity, the decomposition and the planless-key sensitivity are all read on the pairs left after the removal."
+    ]
+  }
+}
