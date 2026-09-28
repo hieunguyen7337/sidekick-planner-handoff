@@ -1,0 +1,3 @@
+# Planner usage notes (removed)
+
+Removed from the public copy: operational notes on planner quota. The methods-level fact is kept elsewhere: the hosted planner, `gpt-5.6-luna`, ran through the Codex CLI on a ChatGPT plan (see the frozen-planner row in `README.md`). This path is kept because frozen preregistrations (`docs/prereg_bfcl_dev_20260924.md`, `docs/prereg_bfcl_test_20260925.md`) and some configs, scripts and tests cite the original file by section or line number; those sections and lines are not reproduced here. The original file is part of the private original history whose tip is `67ea249072e5ceb7bd427f128e2f0b564857454e`; see `docs/provenance/REWRITE_NOTE.md`.
