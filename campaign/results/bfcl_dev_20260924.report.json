@@ -69,8 +69,8 @@
     "cluster_unit": "entry",
     "ci": "95% percentile entry-cluster bootstrap; every interval is EXPLORATORY",
     "ni_margin_pp": -7.0,
-    "git_sha": "2e2642d07b59bbcce2429a9975d16fadf83624ff",
-    "generated_at": "2026-09-27T18:06:34+00:00",
+    "git_sha": "660a69d8061de620ec7b38805fe86a14fb11fe2e",
+    "generated_at": "2026-09-28T05:17:07+00:00",
     "definitions": {
       "n": "readable result.json files of the arm at the requested seeds (meta.seeds), crashes included",
       "n_expected": "50 dev entries x the requested seeds (150 at seeds 1, 2, 3; dev prereg \u00a74)",
@@ -90,6 +90,7 @@
       "p_two_sided": "j10_report.bootstrap_pvalue(means, 0, 'two-sided')",
       "p_ni": "j10_report.bootstrap_pvalue(means, -0.07, 'greater') = 2 x share of replicates <= -7.00 pp",
       "B1": "\u03a3d\u00b7h/\u03a3h over the pairs of the P3 row, h from the prefix (left) arm; a missing h counts as 0 and is counted; bootstrap resamples entries and recomputes the ratio, replicates with \u03a3h = 0 dropped",
+      "depth_handoff": "depth_*_hstar / depth_*_flag (E-prereg family D: D3, D4 and their flag sensitivity): the B1 estimand \u03a3d\u00b7h/\u03a3h on the pairs of m6 \u2212 m2, h from the LEFT (m6, deeper) arm (h_arm); judged at 0, so no NI fields",
       "did": "the zs contrast minus its qzs repeat, each over its own pairs; each resample draws entries from the union and recomputes both means; replicates where either side has no pair are dropped"
     }
   },
@@ -2143,6 +2144,238 @@
         "lower_above_margin": false,
         "p_ni": 1.0
       },
+      "complete": true,
+      "complete_reason": null
+    },
+    "depth_bplus_hstar": {
+      "left": "prefix_bplus_m6",
+      "right": "prefix_bplus_m2",
+      "kind": "hstar",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 14.24,
+        "ci95_entry": [
+          8.41,
+          20.22
+        ],
+        "sd_pp": 35.45,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 15.62,
+        "ci95_entry": [
+          5.47,
+          25.83
+        ],
+        "sd_pp": 55.327,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0048,
+        "exploratory": true
+      },
+      "h_source": "handoff_control.hstar_flags on the prefix arm's campaign root",
+      "h_arm": "prefix_bplus_m6",
+      "complete": true,
+      "complete_reason": null
+    },
+    "depth_zs_hstar": {
+      "left": "prefix_zs_m6",
+      "right": "prefix_zs_m2",
+      "kind": "hstar",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 4.14,
+        "ci95_entry": [
+          -2.54,
+          10.65
+        ],
+        "sd_pp": 30.923,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.2176,
+        "exploratory": true
+      },
+      "success": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 5.47,
+        "ci95_entry": [
+          -4.17,
+          15.33
+        ],
+        "sd_pp": 49.1,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.312,
+        "exploratory": true
+      },
+      "h_source": "handoff_control.hstar_flags on the prefix arm's campaign root",
+      "h_arm": "prefix_zs_m6",
+      "complete": true,
+      "complete_reason": null
+    },
+    "depth_bplus_flag": {
+      "left": "prefix_bplus_m6",
+      "right": "prefix_bplus_m2",
+      "kind": "flag",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 14.34,
+        "ci95_entry": [
+          8.25,
+          20.59
+        ],
+        "sd_pp": 35.896,
+        "n_handoff": 122,
+        "n_h_missing": 5,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "success": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 16.39,
+        "ci95_entry": [
+          5.69,
+          27.12
+        ],
+        "sd_pp": 56.57,
+        "n_handoff": 122,
+        "n_h_missing": 5,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0048,
+        "exploratory": true
+      },
+      "h_source": "handoff_occurred of the prefix episode's last report event",
+      "h_arm": "prefix_bplus_m6",
+      "complete": true,
+      "complete_reason": null
+    },
+    "depth_zs_flag": {
+      "left": "prefix_zs_m6",
+      "right": "prefix_zs_m2",
+      "kind": "flag",
+      "reason": null,
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 6.72,
+        "ci95_entry": [
+          0.81,
+          13.0
+        ],
+        "sd_pp": 29.015,
+        "n_handoff": 121,
+        "n_h_missing": 7,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0248,
+        "exploratory": true
+      },
+      "success": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 7.44,
+        "ci95_entry": [
+          -3.03,
+          18.18
+        ],
+        "sd_pp": 48.589,
+        "n_handoff": 121,
+        "n_h_missing": 7,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.1856,
+        "exploratory": true
+      },
+      "h_source": "handoff_occurred of the prefix episode's last report event",
+      "h_arm": "prefix_zs_m6",
       "complete": true,
       "complete_reason": null
     },

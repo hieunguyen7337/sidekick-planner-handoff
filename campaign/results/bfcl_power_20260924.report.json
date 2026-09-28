@@ -48,9 +48,23 @@
     "margin_pp": -7.0,
     "dev_n_boot": 10000,
     "dev_seed": 20260925,
-    "git_sha": "2e2642d07b59bbcce2429a9975d16fadf83624ff",
-    "generated_at": "2026-09-27T18:07:50+00:00",
-    "runtime_s": 41.1
+    "separate_pass_families": {
+      "D": {
+        "members": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ],
+        "seed": 20260924,
+        "seed_half": 20260925,
+        "run": true
+      },
+      "note": "each family here is simulated in its own am1_power.simulate pass after the main one, seeded with --seed (--seed + 1 at the half effect), so the main pass's draws and every row before it are unchanged; its reads are independent of the other families'"
+    },
+    "git_sha": "660a69d8061de620ec7b38805fe86a14fb11fe2e",
+    "generated_at": "2026-09-28T05:18:02+00:00",
+    "runtime_s": 56.7
   },
   "contrasts": {
     "P6": {
@@ -126,6 +140,44 @@
       "family": null,
       "power_key": "lower_above",
       "dev_id": "P3_bplus_m6"
+    },
+    "D1": {
+      "left": "prefix_bplus_m6",
+      "right": "prefix_bplus_m2",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "D",
+      "power_key": "holm_supported",
+      "dev_id": "depth_bplus"
+    },
+    "D2": {
+      "left": "prefix_zs_m6",
+      "right": "prefix_zs_m2",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "D",
+      "power_key": "holm_supported",
+      "dev_id": "depth_zs"
+    },
+    "D3": {
+      "left": "prefix_bplus_m6",
+      "right": "prefix_bplus_m2",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "D",
+      "handoff_only": true,
+      "power_key": "holm_supported",
+      "dev_id": "depth_bplus_hstar"
+    },
+    "D4": {
+      "left": "prefix_zs_m6",
+      "right": "prefix_zs_m2",
+      "direction": "greater",
+      "threshold": 0.0,
+      "family": "D",
+      "handoff_only": true,
+      "power_key": "holm_supported",
+      "dev_id": "depth_zs_hstar"
     }
   },
   "dev": {
@@ -358,6 +410,116 @@
         "p_ni": 1.0
       },
       "reason": null
+    },
+    "D1": {
+      "dev_id": "depth_bplus",
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 12.38,
+        "ci95_entry": [
+          7.16,
+          17.73
+        ],
+        "sd_pp": 36.365,
+        "left_mean": 0.684889,
+        "right_mean": 0.561111,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "reason": null
+    },
+    "D2": {
+      "dev_id": "depth_zs",
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 2.53,
+        "ci95_entry": [
+          -3.88,
+          8.48
+        ],
+        "sd_pp": 30.12,
+        "left_mean": 0.716889,
+        "right_mean": 0.691556,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "p_two_sided": 0.4192,
+        "exploratory": true
+      },
+      "reason": null
+    },
+    "D3": {
+      "dev_id": "depth_bplus_hstar",
+      "goal_pass": {
+        "left": "prefix_bplus_m6",
+        "right": "prefix_bplus_m2",
+        "diff_pp": 14.24,
+        "ci95_entry": [
+          8.41,
+          20.22
+        ],
+        "sd_pp": 35.45,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.0,
+        "exploratory": true
+      },
+      "reason": null
+    },
+    "D4": {
+      "dev_id": "depth_zs_hstar",
+      "goal_pass": {
+        "left": "prefix_zs_m6",
+        "right": "prefix_zs_m2",
+        "diff_pp": 4.14,
+        "ci95_entry": [
+          -2.54,
+          10.65
+        ],
+        "sd_pp": 30.923,
+        "n_handoff": 128,
+        "n_h_missing": 0,
+        "n_pairs": 150,
+        "n_clusters": 50,
+        "n_dropped": 0,
+        "dropped": {
+          "left_missing": 0,
+          "right_missing": 0,
+          "crash": 0,
+          "metric_missing": 0
+        },
+        "n_boot_valid": 10000,
+        "p_two_sided": 0.2176,
+        "exploratory": true
+      },
+      "reason": null
     }
   },
   "power": {
@@ -416,6 +578,34 @@
       "key": "lower_above",
       "rule": "lower bound of the 95% entry interval above -7.00 pp (no family)",
       "reason": null
+    },
+    "D1": {
+      "full": 1.0,
+      "half": 0.773,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
+    },
+    "D2": {
+      "full": 0.268,
+      "half": 0.09,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
+    },
+    "D3": {
+      "full": 1.0,
+      "half": 0.817,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
+    },
+    "D4": {
+      "full": 0.391,
+      "half": 0.116,
+      "key": "holm_supported",
+      "rule": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
+      "reason": null
     }
   },
   "families_all_supported": {
@@ -425,6 +615,17 @@
       ],
       "full": 0.731,
       "half": 0.251,
+      "reason": null
+    },
+    "D": {
+      "members": [
+        "D1",
+        "D2",
+        "D3",
+        "D4"
+      ],
+      "full": 0.268,
+      "half": 0.087,
       "reason": null
     },
     "H": {
@@ -453,7 +654,11 @@
     "CF3": 3.372,
     "B1_zs": -0.354,
     "B1_bplus": -2.229,
-    "S3": -1.389
+    "S3": -1.389,
+    "D1": 6.189,
+    "D2": 1.267,
+    "D3": 7.122,
+    "D4": 2.07
   },
   "power_at_dev_effect": {
     "per_contrast": {
@@ -504,12 +709,37 @@
         "lower_above": 0.0,
         "upper_below": 0.349,
         "holm_supported": 0.0
+      },
+      "D1": {
+        "excludes_on_predicted_side": 1.0,
+        "lower_above": 1.0,
+        "upper_below": 0.0,
+        "holm_supported": 1.0
+      },
+      "D2": {
+        "excludes_on_predicted_side": 0.273,
+        "lower_above": 0.273,
+        "upper_below": 0.0,
+        "holm_supported": 0.268
+      },
+      "D3": {
+        "excludes_on_predicted_side": 1.0,
+        "lower_above": 1.0,
+        "upper_below": 0.0,
+        "holm_supported": 1.0
+      },
+      "D4": {
+        "excludes_on_predicted_side": 0.488,
+        "lower_above": 0.488,
+        "upper_below": 0.0,
+        "holm_supported": 0.391
       }
     },
     "families_all_supported": {
       "CF": 0.731,
       "H": 0.064,
-      "P6_alone": 0.995
+      "P6_alone": 0.995,
+      "D": 0.268
     },
     "cf_readings": {
       "CF1 not supported": 0.269,
@@ -566,12 +796,37 @@
         "lower_above": 0.006,
         "upper_below": 0.112,
         "holm_supported": 0.0
+      },
+      "D1": {
+        "excludes_on_predicted_side": 0.889,
+        "lower_above": 0.889,
+        "upper_below": 0.0,
+        "holm_supported": 0.773
+      },
+      "D2": {
+        "excludes_on_predicted_side": 0.107,
+        "lower_above": 0.107,
+        "upper_below": 0.006,
+        "holm_supported": 0.09
+      },
+      "D3": {
+        "excludes_on_predicted_side": 0.93,
+        "lower_above": 0.93,
+        "upper_below": 0.0,
+        "holm_supported": 0.817
+      },
+      "D4": {
+        "excludes_on_predicted_side": 0.16,
+        "lower_above": 0.16,
+        "upper_below": 0.003,
+        "holm_supported": 0.116
       }
     },
     "families_all_supported": {
       "CF": 0.251,
       "H": 0.043,
-      "P6_alone": 0.662
+      "P6_alone": 0.662,
+      "D": 0.087
     },
     "cf_readings": {
       "CF1 not supported": 0.749,
