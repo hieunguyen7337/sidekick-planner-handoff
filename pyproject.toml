@@ -1,22 +1,41 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "sidekick"
 version = "0.1.0"
 description = "Sidekick: planner/executor systems study data spine"
+license = "Apache-2.0"
+authors = [{ name = "Nhu Hieu Nguyen" }]
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2",
     "pyyaml",
+    "numpy",
+    "matplotlib",
+    "httpx",
+    # AppWorld was installed from git at this commit (scripts/setup/build_env.sh:9), not from PyPI.
+    "appworld @ git+https://github.com/StonyBrookNLP/appworld@42b5bcf3cd334fee33f0c37c02070a9f5807add5",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# LoRA training and local serving. Versions the runs used: scripts/train/sft_lora.py:5.
+train = [
+    "torch>=2.13",
+    "transformers>=5.17",
+    "peft>=0.20",
+    "trl>=1.13",
+    "datasets",
+    "vllm>=0.29",
+]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sidekick"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "How Should a Hosted Planner Help a Small Local Agent? Preregistered Held-Out Evidence on Handoff Depth and Help Channels"
+authors:
+  - family-names: "Nguyen"
+    given-names: "Nhu Hieu"
+    affiliation: "Queensland University of Technology"
+license: Apache-2.0
+repository-code: "https://github.com/hieunguyen7337/sidekick-planner-handoff"
+abstract: "Sidekick investigates collaboration between a hosted frontier planner and a smaller local executor agent. We evaluate the impact of handoff depth and communication channels on agent efficiency and frontier compute displacement across interactive coding and tool-use benchmarks."
+keywords:
+  - "agent handoff"
+  - "tool use"
+  - "planner-executor collaboration"
+  - "AppWorld"
+  - "Berkeley Function Calling Leaderboard"
