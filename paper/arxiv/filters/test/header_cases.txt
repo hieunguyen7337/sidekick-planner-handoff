@@ -1,0 +1,4 @@
+## 3.6 Results {#sec:results} ||| {3.6 Results}\label{sec:results}
+## 4.2 Depth (HSTAR-11) ||| {4.2 Depth}\label{depth}
+## 2.3 Channels ||| {2.3 Channels}\label{channels}
+## 2.4 Metrics, and the floor of `goal_pass` ||| {2.4 Metrics, and the floor of goal\_pass}

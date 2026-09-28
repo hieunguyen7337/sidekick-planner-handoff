@@ -1,0 +1,35 @@
+public ||| Concrete code, executed or shown (exploratory; DEC-06, LIM-02). ||| Concrete code, executed or shown (exploratory).
+public ||| Actions beat advice (registered, C1; CHAN-C1-02, DEC-02). ||| Actions beat advice (registered, C1).
+public ||| On TGC the gap does not resolve (METRIC-01). Tests follow. ||| On TGC the gap does not resolve. Tests follow.
+public ||| D0 and C1 survive neither (FDR-02, FDR-03; Appendix C.1). ||| D0 and C1 survive neither (Appendix C.1).
+public ||| It passes (p = 0.0781; ROB-02; SGC: Appendix D.2). ||| It passes (p = 0.0781; SGC: Appendix D.2).
+public ||| Takeover hits it in 2 (LIM-01; Figure 1). ||| Takeover hits it in 2 (Figure 1).
+public ||| It splits into flag-true (n = 71; HO-NI-01) and rescued (n = 17; HSTAR-14) (HSTAR-18); references follow. ||| It splits into flag-true (n = 71) and rescued (n = 17); references follow.
+public ||| Points are not paired contrasts (HSTAR-02..04). ||| Points are not paired contrasts.
+public ||| The flag sensitivity (HO-02..HO-NI-03, HSTAR-16). Before that, nothing. ||| The flag sensitivity. Before that, nothing.
+public ||| Holm over D1–D4 (DEC-01..04, DEC-07, METRIC-01, METRIC-02, LIM-03..05). ||| Holm over D1–D4.
+public ||| Against it the prefix fails (`goal_pass` −1.86 pp, [−8.51, +6.09]; ROB-21, Appendix D.1). ||| Against it the prefix fails (goal_pass −1.86 pp, [−8.51, +6.09]; Appendix D.1).
+public ||| J10 tests P1–P6, CF1 and D1–D4 with LP-2 (Amendment 1 §C, §D). ||| J10 tests P1–P6, CF1 and D1–D4 with LP-2 (Amendment 1 §C, §D).
+public ||| Gate G1 (QUAL-06), chord test C2 (UF-07) and threshold test S3 (F1-RESULT-01) failed. ||| Gate G1, chord test C2 and threshold test S3 failed.
+public ||| D0, C1, CEIL-07 and the m = 11 DiD survive neither. ||| D0, C1, CEIL-07 and the m = 11 DiD survive neither.
+public ||| The census counts rows. Sources: FDR-02, FDR-03, CENSUS-02, CENSUS-01. ||| The census counts rows.
+public ||| It uses 3.24× the tokens ([2.52, 4.11]; ROB-19, ATTRIB-04). ||| It uses 3.24× the tokens ([2.52, 4.11]).
+public ||| Both are exploratory (ROB-19 and ROB-20). ||| Both are exploratory.
+public ||| Rows come from one run (HSTAR-11..13) and one seed (CHAN-PRICE-02, ATTRIB-04). ||| Rows come from one run and one seed.
+public ||| We print ROB-21's key and COST-03's interval. ||| We print ROB-21’s key and COST-03’s interval.
+public ||| The planner is gpt-5.6-luna with Qwen3-8B on 2026-09-24 (A1 §2). ||| The planner is gpt-5.6-luna with Qwen3-8B on 2026-09-24 (A1 §2).
+public ||| Rows are drawn from the same report; HSTAR-11, HSTAR-12. ||| Rows are drawn from the same report.
+public ||| The early estimate (DEC-06; 171 episodes each) holds. ||| The early estimate (171 episodes each) holds.
+public ||| See the planner ceiling (§4.7; CEILHI-01) and the ROB-13 to ROB-21 rows. ||| See the planner ceiling (§4.7) and the ROB-13 to ROB-21 rows.
+public ||| A letter suffix is stripped too (DEC-02a). ||| A letter suffix is stripped too.
+public ||| Companions exist (ROB-22 to ROB-27). ||| Companions exist.
+public ||| Nested brackets stay [−0.49, +8.88] (UF-07; task-clustered). ||| Nested brackets stay [−0.49, +8.88] (task-clustered).
+public ||| Scores rise (Table D2, Appendix D.2; HO-04, POOL-01, HSTAR-05, HSTAR-07). ||| Scores rise (Table D2, Appendix D.2).
+keep ||| Concrete code, executed or shown (exploratory; DEC-06, LIM-02). ||| Concrete code, executed or shown (exploratory; DEC-06, LIM-02).
+keep ||| On TGC the gap does not resolve (METRIC-01). Tests follow. ||| On TGC the gap does not resolve (METRIC-01). Tests follow.
+public ||| Table D7: Cost, n = 114 (COST-01; TGC from the same arms; channel arms charged their plan, ATTRIB-01; plan_only priced on its plan, COSTFIX-01). ||| Table D7: Cost, n = 114 (TGC from the same arms; channel arms charged their plan; plan_only priced on its plan).
+public ||| Means come from the pooled report (HSTAR-02..04; Table 5). ||| Means come from the pooled report (Table 5).
+public ||| The rows predate it. Source: CENSUS-01. The JSONs hold 2,164 contrasts, a lower bound (CENSUS-02). ||| The rows predate it. The JSONs hold 2,164 contrasts, a lower bound.
+public ||| Source: CENSUS-01. The JSONs hold 2,164 contrasts. ||| The JSONs hold 2,164 contrasts.
+public ||| Sources: HSTAR-02..04, ROB-19. Then the text goes on. ||| Then the text goes on.
+public ||| Source: the ledger, CENSUS-01. It stays. ||| Source: the ledger, CENSUS-01. It stays.

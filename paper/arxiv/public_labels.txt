@@ -1,0 +1,9 @@
+# public_labels.txt - short labels the paper DEFINES for its readers.
+#
+# check_tex.sh [6/8] warns (SHORT_LABEL) on every token shaped like J10, D0, P4, LP-2 or
+# W04 in the PDF text, because the same shapes serve as internal test/job handles. List
+# here, separated by spaces or one per line, only the labels the paper introduces and
+# explains to a reader (e.g. hypothesis labels). Everything else should be rephrased in
+# the markdown. Leaving this file empty keeps every such label in the warning list.
+#
+# Override the path with PUBLIC_LABELS=/abs/path/file.txt.

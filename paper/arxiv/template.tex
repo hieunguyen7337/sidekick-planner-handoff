@@ -1,0 +1,180 @@
+\pdfoutput=1
+\documentclass[$if(fontsize)$$fontsize$$else$11pt$endif$,letterpaper]{article}
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{upquote}
+\usepackage{calc}
+\usepackage{etoolbox}
+\usepackage{parskip}
+\usepackage{caption}
+\usepackage{longtable,booktabs,array}
+\usepackage{newunicodechar}
+\usepackage[section]{placeins}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{}
+
+\setcounter{secnumdepth}{-\maxdimen}
+
+\AtBeginEnvironment{longtable}{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}}
+\captionsetup{font=small,labelfont=bf}
+\captionsetup[table]{labelformat=empty}
+\captionsetup[figure]{labelformat=empty}
+\setlength{\emergencystretch}{3em}
+
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\newcommand{\needlines}[1]{\par\begingroup
+  \setlength{\dimen@}{#1\baselineskip}%
+  \vskip\z@\@plus\dimen@
+  \penalty -100\vskip\z@\@plus -\dimen@
+  \vskip\dimen@
+  \penalty 9999%
+  \vskip -\dimen@
+  \vskip\z@skip
+  \endgroup}
+\makeatother
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{%
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi%
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+\def\fps@figure{htbp}
+\makeatother
+
+% every non-ASCII char in the paper must be mapped here; build.sh fails otherwise
+\newunicodechar{§}{\S}
+\newunicodechar{·}{\ensuremath{\cdot}}
+\newunicodechar{×}{\ensuremath{\times}}
+\newunicodechar{Σ}{\ensuremath{\Sigma}}
+\newunicodechar{δ}{\ensuremath{\delta}}
+\newunicodechar{τ}{\ensuremath{\tau}}
+\newunicodechar{–}{\textendash}
+\newunicodechar{—}{\textemdash}
+\newunicodechar{…}{\ldots}
+\newunicodechar{→}{\ensuremath{\rightarrow}}
+\newunicodechar{∈}{\ensuremath{\in}}
+\newunicodechar{−}{\ensuremath{-}}
+\newunicodechar{≥}{\ensuremath{\geq}}
+\newunicodechar{≤}{\ensuremath{\leq}}
+\newunicodechar{≈}{\ensuremath{\approx}}
+\newunicodechar{±}{\ensuremath{\pm}}
+\newunicodechar{≠}{\ensuremath{\neq}}
+\newunicodechar{∼}{\ensuremath{\sim}}
+\newunicodechar{∞}{\ensuremath{\infty}}
+\newunicodechar{⇒}{\ensuremath{\Rightarrow}}
+\newunicodechar{←}{\ensuremath{\leftarrow}}
+\newunicodechar{↔}{\ensuremath{\leftrightarrow}}
+\newunicodechar{α}{\ensuremath{\alpha}}
+\newunicodechar{β}{\ensuremath{\beta}}
+\newunicodechar{γ}{\ensuremath{\gamma}}
+\newunicodechar{ε}{\ensuremath{\varepsilon}}
+\newunicodechar{θ}{\ensuremath{\theta}}
+\newunicodechar{λ}{\ensuremath{\lambda}}
+\newunicodechar{μ}{\ensuremath{\mu}}
+\newunicodechar{π}{\ensuremath{\pi}}
+\newunicodechar{σ}{\ensuremath{\sigma}}
+\newunicodechar{Δ}{\ensuremath{\Delta}}
+\newunicodechar{‘}{\textquoteleft}
+\newunicodechar{’}{\textquoteright}
+\newunicodechar{“}{\textquotedblleft}
+\newunicodechar{”}{\textquotedblright}
+\newunicodechar{•}{\textbullet}
+\newunicodechar{°}{\textdegree}
+\newunicodechar{′}{\ensuremath{'}}
+
+$if(natbiboptions)$
+\usepackage[$natbiboptions$]{natbib}
+$else$
+\usepackage[round,authoryear]{natbib}
+$endif$
+\bibliographystyle{$if(biblio-style)$$biblio-style$$else$plainnat$endif$}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black,
+$if(title-meta)$
+  pdftitle={$title-meta$},
+$endif$
+$if(author-meta)$
+  pdfauthor={$author-meta$},
+$else$
+$if(author)$
+  pdfauthor={$for(author)$$if(author.name)$$author.name$$else$$author$$endif$$sep$, $endfor$},
+$endif$
+$endif$
+  pdfcreator={LaTeX via pandoc}
+}
+\usepackage{bookmark}
+\urlstyle{same}
+
+\makeatletter
+\def\ps@preprintfirst{%
+  \def\@oddhead{}%
+  \def\@evenhead{}%
+  \def\@oddfoot{\normalfont\small\rlap{$if(footer)$$footer$$else$Preprint.$endif$}\hfil\thepage\hfil}%
+  \def\@evenfoot{\@oddfoot}%
+}
+\makeatother
+
+$if(title)$
+\title{$title$}
+$endif$
+% Each author is one column of \maketitle's tabular: every \\ starts a new cell, so the
+% size switches sit bare at the start of a cell (a cell is a group). A brace group
+% around a \\ breaks the tabular ("Missing } inserted").
+\author{$for(author)$$if(author.name)$$author.name$$for(author.affiliation)$ \\ \normalsize $author.affiliation$$endfor$$if(author.email)$ \\ \small\texttt{$author.email$}$endif$$else$$author$$endif$$sep$\and $endfor$}
+\date{$date$}
+
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+\begin{document}
+$if(title)$
+\maketitle
+\thispagestyle{preprintfirst}
+$if(abstract)$
+\begin{abstract}
+$abstract$
+\end{abstract}
+$endif$
+$endif$
+
+$for(include-before)$
+$include-before$
+
+$endfor$
+$body$
+
+$if(refs-placed)$
+$else$
+$if(natbib)$
+$if(bibliography)$
+\bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
+$endif$
+$endif$
+$endif$
+
+$for(include-after)$
+$include-after$
+
+$endfor$
+\end{document}
