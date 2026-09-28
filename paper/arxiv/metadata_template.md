@@ -1,8 +1,8 @@
 # arXiv Submission Metadata Template
 
 This document provides the fill-in template for arXiv submission form fields.
-The project-specific draft values and extended analysis for this paper are located at:
-[`/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/paper/release/metadata.md`](file:///mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/paper/release/metadata.md).
+The project-specific draft values and extended analysis for this paper are in a private
+release note, `paper/release/metadata.md`, which is not published.
 
 Tags: `[OBSERVED <source>]` denotes a fact checked against the source. The arXiv help pages
 were fetched on 2026-09-28 (`help/prep.html`, `help/license/index.html`,
@@ -85,7 +85,7 @@ N pages, M figures
 
 ## 5. Primary Category & Cross-Lists
 
-*Status: TO BE DECIDED (see detailed analysis in [`paper/release/metadata.md`](file:///mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/paper/release/metadata.md)) `[INFERRED]`.*
+*Status: TO BE DECIDED (detailed analysis in `paper/release/metadata.md`, not published) `[INFERRED]`.*
 
 Candidate categories:
 - **`cs.AI` (Artificial Intelligence)**: Covers planning, knowledge representation, heuristics, and reasoning architectures; recommended primary `[INFERRED]`.

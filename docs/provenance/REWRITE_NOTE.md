@@ -112,9 +112,9 @@ No preregistration or freeze citation in the claims ledger cites a pruned commit
 ## References left dangling
 
 Several references to removed or unpublished assets were accepted and left dangling:
-- At the last rewritten commit, 69 tracked files mention `campaign/workers/logs/` (worker briefs, STATUS files, PBS scripts designating log output destinations, `.gitignore`, 4 lines in `docs/claims_ledger.md`, 2 lines in `docs/prereg_j10_amendment_20260924.md`, and 1 line in `docs/prereg_j11_lp2_test_20260924.md`). Worker execution logs are not published.
+- At the last rewritten commit, 69 tracked files mention `campaign/workers/logs/` (worker briefs, STATUS files, PBS scripts designating log output destinations, `.gitignore`, 4 lines in `docs/claims_ledger.md`, 2 lines in `docs/prereg_j10_amendment_20260924.md`, and 1 line in `docs/prereg_j11_lp2_test_20260924.md`). Worker execution logs are not published. The log files cited in those frozen documents (the `.out` and `.aqua.out` PBS logs and the `quarantine_j11_premature_20260925/` directory) were never tracked in git, because `.gitignore` excludes `campaign/workers/logs/`; they are not among the 19 tracked files the rewrite removed.
 - 7 tracked files cite `docs/plan_luna_reset_20260925.md` by section or line number (`docs/prereg_bfcl_dev_20260924.md:127,191` §0 and §5; `docs/prereg_bfcl_test_20260925.md:31` line 104; `configs/dev_advise_structured_fixed_k_1_fullctx.yaml`, `configs/dev_planner_alone_cap81_low.yaml` and `tests/unit/test_dev_arms.py:57` lines 106 and 108; `scripts/pbs/hj12_live.pbs:184,193` by arm name; `scripts/analysis/bfcl_test_report.py:1566` line 180). The file path resolves to the stub, but specific sections and line numbers are not reproduced.
-- `paper/arxiv/metadata_template.md` (lines 5 and 88) links to `paper/release/metadata.md`, which is not published.
+- `paper/arxiv/metadata_template.md` (lines 4-5 and 88) refers to `paper/release/metadata.md`, which is not published; a forward commit replaced the absolute `file:///` links with a plain "not published" note.
 - `paper/release/ai_use.md` cites worker logs (`logs/…`), a local classification file `log_classes.txt`, and local counting scripts, none of which are published.
 - The commit bodies of the 6 pruned commits are not present in the public git history.
 
