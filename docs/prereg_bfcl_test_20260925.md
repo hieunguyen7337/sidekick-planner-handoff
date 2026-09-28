@@ -1,6 +1,6 @@
 # BFCL `multi_turn_base` test (Wave E, E4): preregistration (the E-prereg)
 
-**Status**: DRAFT
+**Status**: **FROZEN** on commit, 2026-09-28, on the user's instruction of 2026-09-28 ("freeze the BFCL prereg"), given in reply to Claude's request to review and freeze 8d5e8e2. Besides this line, the freeze commit resolves §9 item 8's open force-quit question as reporting only (§8 prints each arm's force-quit count beside its `limit` rate; no rule) and adds the end marker; nothing else changes. Checked at freeze: `/scratch/n12194778/sidekick/results` holds no BFCL test campaign (`ls | grep -c '^bfcl_.*_test_'` = 0), and the two dev reports cited are stamped `660a69d`. Amendments are appended below the end marker, never edited in.
 
 Drafted 2026-09-25 by unit S3, before BFCL dev has run, for Claude's review. Filled from the BFCL dev read on
 2026-09-28, with §9's decisions taken before freeze. It registers the one confirmatory BFCL read. Its predictions
@@ -316,7 +316,8 @@ variable (proposed `BFCL_CONFIRM=E_FROZEN`); §2's arms only; `SEEDS=1,2` only; 
 ## 8. Exploratory items and reporting constraints
 
 - **Reported regardless of outcome** (J10 §7):
-  - each arm's means, pair count and `error_type` distribution, with the `limit` rate beside every mean and contrast;
+  - each arm's means, pair count and `error_type` distribution, with the `limit` rate beside every mean and contrast,
+    and each arm's force-quit count beside its `limit` rate (§9, item 8);
   - for P6, CF1 and CF3, the split into pairs with and without a `limit` arm (post-treatment), and the limit-as-0
     sensitivity (J10 Am1 §D);
   - the cost table under both call conventions;
@@ -425,8 +426,9 @@ Taken by Claude after the dev read and before freeze. The Status line stays DRAF
    - Upstream's inference-side force-quit lives in its model handlers, which are not vendored
      (`third_party/bfcl/README.md`). A search of `third_party/bfcl/` for force-quit or force-terminate finds nothing,
      so which `error_type` upstream writes is not established here.
-   - No analysis script reads `force_quit`. Whether §8 prints a force-quit count beside the `limit` rate is open for
-     the freeze review.
+   - No analysis script reads `force_quit` yet. **Resolved at freeze (2026-09-28):** §8 prints each arm's force-quit
+     count (episodes whose evaluate payload has `report.force_quit` true) beside its `limit` rate. It is reported
+     only, with no rule, and it leaves the `limit` rate's definition unchanged.
 9. **Ceilings.** Each hosted test arm's `MAX_PLANNER_CALLS` is a per-episode rate × 300 episodes. The channel and
    plan rates are dev Amendment 1's: **8** calls per episode for the channel arms and **4** for the plan arm
    (`docs/prereg_bfcl_dev_20260924.md:198-230`). Amendment 1 set them to escape the wrapper's smoke refusal, not
@@ -451,3 +453,5 @@ Taken by Claude after the dev read and before freeze. The Status line stays DRAF
    The channel and plan thresholds equal those Amendment 1 gave the same arms over 150 dev episodes. They are
    recorded here for the freeze review. [Inferred: this assumes the test path keeps the dev wrapper's projection,
    with about 300 episodes missing at the smoke.]
+
+*End of the registered text, frozen 2026-09-28. Amendments are appended below this line, never edited in.*
