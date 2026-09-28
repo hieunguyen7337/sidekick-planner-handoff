@@ -6,45 +6,109 @@
 #PBS -j oe
 #PBS -o /scratch/n12194778/sidekick/logs/
 #
-# BFCL multi_turn_base, Wave E dev design (docs/prereg_bfcl_dev_20260924.md): ONE dev-split arm,
-# configs/bfcl_<stem>.yaml. Spike (b) of unit bfcl-env ran bfcl_executor_alone_zs through this
-# wrapper; unit BFCL-E2 extended it to every arm of the dev design. Modelled on
-# scripts/pbs/j10_arm.pbs: a vLLM executor server (none for planner_alone), a crash-only purge,
-# a 2-entry smoke with the campaign gate, the arm, a jq tally. Resubmitting the same arm purges
-# crashed episodes of THIS campaign only and skips episodes that already have a result.json
-# (src/sidekick/runner.py result_path check).
+# BFCL multi_turn_base, Wave E: ONE arm, configs/bfcl_<stem>.yaml, of the dev design
+# (docs/prereg_bfcl_dev_20260924.md) or, behind the gate below, of the frozen test design
+# (docs/prereg_bfcl_test_20260925.md, cited "E:n"). Spike (b) of unit bfcl-env ran
+# bfcl_executor_alone_zs through this wrapper; unit BFCL-E2 extended it to every arm of the dev
+# design; the BFCL test build added SPLIT=test. Modelled on scripts/pbs/j10_arm.pbs: a vLLM
+# executor server (none for planner_alone), a crash-only purge, a 2-entry smoke with the campaign
+# gate, the arm, a jq tally. Resubmitting the same arm purges crashed episodes of THIS campaign
+# only and skips episodes that already have a result.json (src/sidekick/runner.py result_path check).
 #
 #   qsub -v BFCL_REPO=<checkout>,CFG=configs/bfcl_prefix_zs_m4.yaml scripts/pbs/bfcl_arm.pbs
 #   Hosted arms also need EXPECTED_CODEX_VERSION=0.153.4. planner_alone serves no model, so it
 #   may be submitted with a CPU select:
 #   qsub -l select=1:ncpus=12:mem=64gb -v CFG=configs/bfcl_planner_alone_cap81.yaml,EXPECTED_CODEX_VERSION=0.153.4 scripts/pbs/bfcl_arm.pbs
+#   Test split (E:312-314), from a pinned, clean checkout, in the order of E §7:
+#   qsub -v BFCL_REPO=<checkout>,CFG=configs/bfcl_<stem>.yaml,SPLIT=test,BFCL_CONFIRM=E_FROZEN[,EXPECTED_CODEX_VERSION=0.153.4] scripts/pbs/bfcl_arm.pbs
 #
 # Job variables (qsub -v):
 #   BFCL_REPO   the checkout whose code runs (default: the plan worktree)
 #   CFG         default configs/bfcl_executor_alone_zs.yaml (relative to BFCL_REPO or absolute)
 #   SYSTEM      runner --system; default derived from the stem, and it must agree
-#   SPLIT       dev only; anything else is refused (no BFCL test prereg is frozen)
-#   TASKS       0 = the whole dev split (50 entries)
-#   SEEDS       default 1,2; any distinct list works (1,2,3 -> target 150). Target, replay-source
-#               gate, planless cap and MAX_PLANNER_CALLS all scale with the requested seeds.
-#   CID         default: the config's campaign_id
+#   SPLIT       dev (default) or test; test is the gated path below; anything else is refused
+#   BFCL_CONFIRM  E_FROZEN; required on SPLIT=test (E:313-314), ignored on dev
+#   TASKS       0 = the whole split (dev 50 entries, test 150); SPLIT=test accepts 0 only
+#   SEEDS       default 1,2; on dev any distinct list works (1,2,3 -> target 150), and target,
+#               replay-source gate, planless cap and MAX_PLANNER_CALLS all scale with the requested
+#               seeds; SPLIT=test accepts exactly 1,2 (300 (entry, seed) pairs, E:31)
+#   CID         dev default: the config's campaign_id; test: exactly bfcl_<stem>_test_20260925 (E:40)
 #   EXPECTED_CODEX_VERSION  required, and must be 0.153.4, whenever planner.type is codex
-#   MAX_PLANNER_CALLS  live-call ceiling of a hosted arm; default (calls/episode high end) x target
-#   WORKERS (6), RUN_TIMEOUT (12600 s), SMOKE_TASKS (2, capped at the tasks run), SAFETY (1.2)
+#   MAX_PLANNER_CALLS  live-call ceiling of a hosted arm; dev default (calls/episode high end) x
+#               target; on test the registered ceiling (6000 / 2400 / 1200, E:432-442), and a value
+#               passed in must equal it
+#   WORKERS (6), RUN_TIMEOUT (12600 s), SMOKE_TASKS (2, capped at the tasks run), SAFETY (1.2);
+#               SPLIT=test pins SMOKE_TASKS 2 and SAFETY 1.2 (E:446-455)
 # Receivers: zs = zero-shot granite-4.2-8b, bplus = granite + sft_b_plus, qzs = zero-shot
 #   Qwen/Qwen3-8B (served from the home HF cache, as scripts/pbs/hj12_prefix.pbs serves it).
 # Refusals (exit 2), before a model is loaded or anything under results/ changes: SPLIT other
-#   than dev; a config stem not in the dev design; config env not bfcl; a `split:` key; a config
-#   campaign_id other than bfcl_<stem>_dev_20260924; CID without a _dev_ marker; SYSTEM disagreeing
-#   with the stem; SEEDS malformed or repeating a seed; the receiver, planner, fixed_k, takeover,
-#   advice prompt or depth m not the ones the stem registers; planner.type codex without
-#   EXPECTED_CODEX_VERSION=0.153.4 or with another `codex --version`; a replay source other than
-#   bfcl_planner_alone_cap81_dev_20260924, or one missing any (seed, task) the arm will run; more
-#   planless source episodes than the 5 % cap; the sft_b_plus adapter directory missing; Qwen3-8B
-#   weights missing, stubbed or sparse in the home HF cache (a qzs arm); another live job holding
-#   the CID.
-# Exit codes: 0 arm complete (target non-crashed episodes, 0 crashed) | 2 refused | 3 crashes or
-#   missing episodes remain -> resubmit | 1 smoke, gate, MAX_PLANNER_CALLS or infrastructure failure.
+#   than dev or test; a config stem not in the dev design; config env not bfcl; a `split:` key; a
+#   config campaign_id other than bfcl_<stem>_dev_20260924; a dev CID without a _dev_ marker or with
+#   a _test_ one; SYSTEM disagreeing with the stem; SEEDS malformed or repeating a seed; the
+#   receiver, planner, fixed_k, takeover, advice prompt or depth m not the ones the stem registers;
+#   planner.type codex without EXPECTED_CODEX_VERSION=0.153.4 or with another `codex --version`; a
+#   replay source other than the split's planner_alone_cap81 campaign (a dev run naming a _test_
+#   source is refused outright), or one missing any (seed, task) the arm will run; more planless
+#   source episodes than the 5 % cap; the sft_b_plus adapter directory missing; Qwen3-8B weights
+#   missing, stubbed or sparse in the home HF cache (a qzs arm); another live job holding the CID.
+#
+# SPLIT=test (E §7 "Wrapper", E:312-314; seams S1-S7 of the BFCL test build). The gates, in this
+#   order, all refuse with exit 2 before the self-test exit, the lock, a model load, the purge,
+#   the smoke or the run:
+#   (a) BFCL_CONFIRM=E_FROZEN.
+#   (b) docs/prereg_bfcl_test_20260925.md has exactly one **Status** line (an indented, list-item or
+#       quoted one, in any case, counts too), it starts in column 0, its value begins with FROZEN (the
+#       j10_arm.pbs:244 regex), and it does not mention DRAFT.
+#   (c) git, against BFCL_REPO (j11_arm.pbs style): the prereg is committed and unmodified vs HEAD;
+#       src/, scripts/, configs/, data/bfcl_split_20260924.json (the 150 test entries, E:26) and
+#       third_party/bfcl/ (the vendored checker, E:24) are clean; CFG lives in BFCL_REPO/configs.
+#       Then the running wrapper's sha256 is logged beside HEAD:scripts/pbs/bfcl_arm.pbs's (a WARN,
+#       not a refusal, when they differ: how PBS presents the job script is unverified).
+#   (d) the stem is one of E §2's 13 arms; every qzs stem is refused (E:61-62, E:314).
+#   (e) SEEDS=1,2 and TASKS=0: 150 test entries x 2 seeds = 300 (dev keeps 50 per seed).
+#   (f) CID is exactly bfcl_<stem>_test_20260925, and the derived config (below) is written and checked.
+#   (g) a hosted arm: EXPECTED_CODEX_VERSION=0.153.4 (as on dev) and the registered MAX_PLANNER_CALLS.
+#   (h) a replaying arm: its source is the test ceiling bfcl_planner_alone_cap81_test_20260925 (E:44),
+#       complete at all 300 test keys (bfcl_task_ids("test"), the split file's test list) with none
+#       crashed; then at most 15 planless keys of the 300 (E:286), for packet AND prefix arms.
+#   Derived config (S2). configs/ carry dev ids and dev sources and are not edited. The runner gets
+#   ${LOGDIR}/bfcl_test_configs/bfcl_<stem>_test_20260925.yaml: the committed mapping with
+#   campaign_id -> the test id and every value equal to ${OUT}/bfcl_planner_alone_cap81_dev_20260924
+#   -> ${OUT}/bfcl_planner_alone_cap81_test_20260925, under comment lines naming the committed path,
+#   its git blob, HEAD and the UTC time of writing. Fatal: any "_dev_20260924" left in it; any other
+#   key changed; a different file already at that path (identical parsed content is reused, never
+#   rewritten). Derived configs are never deleted; the manifest's config_sha256 is the derived file's.
+#   The file is written at gate (f), so it can outlive a job that (g) or (h) then refuses, and a later
+#   job reuses it: its HEAD and UTC comments are the FIRST writer's. Each job logs its own HEAD beside
+#   the derived sha256, and each episode manifest stamps SIDEKICK_START_COMMIT; read the commit there.
+#   Planless keys (S7). A prefix episode never calls planner.plan(): the loop plans only when it is
+#   given no prefix (src/sidekick/systems/loop.py:715), and prefix_handoff passes one whenever it
+#   runs the episode (prefix_handoff.py:197, prefix_source.py:178; a broken replay is a crash
+#   before any planner call). A planless source key therefore replays a prefix with no plan and no
+#   executed action (effective depth 0) and makes no live plan call, exactly as J10's prefix arms
+#   4-7 did (J10 :224-225; they kept on_missing: fail, and j10_arm.pbs:414-418 skips them). No config
+#   key is needed; the prefix arms keep on_missing: fail and the packet arms call_if_planless.
+#   Refill log (S3). Immediately before the crash-only purge, every crashed episode about to be purged
+#   is appended to ${LOGDIR}/bfcl_refills/<cid>.tsv (header cid seed task_id error_type reason job_id
+#   utc; reason = payload.reason of the LAST error event of the last attempt, empty when that event has
+#   none). Append-only.
+#   Tally (S6, J10 Am5 §B). On a replaying arm, a divergent key is a replay_divergence crash
+#   (scripts/analysis/replay_divergence.py divergent_keys) already in the refill log. Complete (exit 0,
+#   "complete under Am5 §B: N divergent keys") when non-crashed + divergent = 300 and N <= 15; exit 1
+#   ("over cap: N divergent keys > 15") above 15; otherwise as on dev.
+#   Smoke: the first 2 test entries at seed 1, --split test, as <cid>_smoke_<job>; never deleted
+#   and never read. The run-gate flags are the dev ones (--gate; hosted: --expect-planner/-model).
+#   Self-test seams on test only: BFCL_PREREG (another prereg file) and BFCL_GIT_ROOT (the git checks
+#   run against that tree, and are skipped when it is unset); a real submission honours neither.
+#   BFCL_SELFTEST_STAGE=refill writes the refill log without purging.
+#   A self-test on SPLIT=test refuses (exit 2), before anything else, unless BFCL_OUT and BFCL_LOGDIR
+#   are BOTH set and neither is, or lies under, the real results or logs tree: the real defaults would
+#   read held-out results, drop a derived config into the real bfcl_test_configs/, and (stage refill)
+#   log a real campaign's unpurged crashes, which S6 and the read script would then count as divergent.
+#   A real SPLIT=test submission runs only ${SIDEKICK_VENV}/bin/python; a PY passed in is refused.
+# Exit codes: 0 arm complete (target non-crashed episodes, 0 crashed; on test, or Am5 §B-complete)
+#   | 2 refused | 3 crashes or missing episodes remain -> resubmit | 1 smoke, gate,
+#   MAX_PLANNER_CALLS or infrastructure failure, or more than 15 divergent keys on test.
 #
 # Do NOT add reasoning-parser flags to vLLM (G3). The --lora-modules alias MUST equal
 # executor.lora_name or requests silently hit the base model.
@@ -72,14 +136,25 @@ SAFETY="${SAFETY:-1.2}"
 REGISTERED_CODEX_VERSION=0.153.4
 REGISTERED_PLANNER_MODEL=gpt-5.6-luna
 N_DEV=50
-# The one arm that plans; every replay arm replays it (as J10 arms 2 and 4-12 replay arm 3).
+N_TEST=150  # the test list of data/bfcl_split_20260924.json (E:26)
+# The one arm that plans; every replay arm replays it (as J10 arms 2 and 4-12 replay arm 3). On test
+# the only plan and prefix source is the test ceiling (E:44, seam S1).
 PLANNER_ALONE_CID=bfcl_planner_alone_cap81_dev_20260924
-OUT=/scratch/n12194778/sidekick/results
-LOGDIR=/scratch/n12194778/sidekick/logs
+TEST_PLANNER_ALONE_CID=bfcl_planner_alone_cap81_test_20260925
+TEST_DIVERGENCE_CAP=15  # J10 Am5 §B's cap at 5 % of 300 (E:297), not replay_divergence.DIVERGENCE_CAP (16 of 336)
+BFCL_CONFIRM="${BFCL_CONFIRM:-}"
+REAL_OUT=/scratch/n12194778/sidekick/results
+REAL_LOGDIR=/scratch/n12194778/sidekick/logs
+OUT="${REAL_OUT}"
+LOGDIR="${REAL_LOGDIR}"
+PREREG="${REPO}/docs/prereg_bfcl_test_20260925.md"
+GIT_ROOT="${REPO}"
 if [[ "${SELFTEST}" == "1" ]]; then
   # Self-test seams only: never honoured by a real submission.
   OUT="${BFCL_OUT:-${OUT}}"
   LOGDIR="${BFCL_LOGDIR:-${LOGDIR}}"
+  PREREG="${BFCL_PREREG:-${PREREG}}"
+  GIT_ROOT="${BFCL_GIT_ROOT:-}"
 fi
 
 if [[ "${SELFTEST}" != "1" ]]; then
@@ -89,6 +164,27 @@ fi
 
 fatal () { echo "[bfcl] FATAL: $*"; exit 2; }
 echo "[bfcl] start=$(date -Iseconds) job=${JOBTAG} host=$(hostname) repo=${REPO} cfg=${CFG} system=${SYSTEM:-<derive>} split=${SPLIT} tasks=${TASKS} seeds=${SEEDS} selftest=${SELFTEST}"
+
+# A self-test on SPLIT=test never falls back to the real trees. With BFCL_OUT or BFCL_LOGDIR unset it
+# would read held-out results, write bfcl_test_configs/<cid>.yaml into the real logs, and the refill
+# stage would append a real campaign's current crashes, never purged or re-run, to the real
+# bfcl_refills/<cid>.tsv, which S6 (this tally) and the read script count as crash-only resumptions:
+# first-attempt replay_divergence crashes would become divergent keys. Checked before anything else.
+if [[ "${SELFTEST}" == "1" && "${SPLIT}" == "test" ]]; then
+  for seam in BFCL_OUT BFCL_LOGDIR; do
+    [[ -n "${!seam:-}" ]] \
+      || fatal "selftest on SPLIT=test needs ${seam} set to a scratch directory: unset, it defaults to the real ${REAL_OUT} / ${REAL_LOGDIR}"
+    # Absolute only: the wrapper cd's into BFCL_REPO below, which would re-anchor a relative path.
+    [[ "${!seam}" == /* ]] || fatal "selftest on SPLIT=test: ${seam}=${!seam} must be an absolute path"
+    seam_real="$(readlink -m -- "${!seam}")"
+    for real_root in "${REAL_OUT}" "${REAL_LOGDIR}"; do
+      real_root="$(readlink -m -- "${real_root}")"
+      if [[ "${seam_real}" == "${real_root}" || "${seam_real}" == "${real_root}/"* ]]; then
+        fatal "selftest on SPLIT=test: ${seam}=${!seam} is (under) the real ${real_root}; point it at a scratch directory"
+      fi
+    done
+  done
+fi
 
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export HF_HOME=/scratch/n12194778/hf
@@ -111,7 +207,13 @@ if [[ "${SELFTEST}" == "1" && -n "${BFCL_STUB_DIR:-}" ]]; then
   export PATH="${BFCL_STUB_DIR}:${PATH}"  # a stub codex must win over ~/.local/bin/codex (j10_arm.pbs:110-112)
 fi
 export SIDEKICK_START_COMMIT="$(git -C "${REPO}" rev-parse HEAD 2>/dev/null || echo unknown)"
-PY="${PY:-${SIDEKICK_VENV}/bin/python}"
+REGISTERED_PY="${SIDEKICK_VENV}/bin/python"
+PY="${PY:-${REGISTERED_PY}}"
+# Every gate snippet, the runner and the summarizer run under PY. A real test submission runs only the
+# registered interpreter (no commit records another); the PY seam stays for self-tests and dev.
+if [[ "${SPLIT}" == "test" && "${SELFTEST}" != "1" && "${PY}" != "${REGISTERED_PY}" ]]; then
+  fatal "SPLIT=test runs only ${REGISTERED_PY} (got PY=${PY})"
+fi
 SUM="${REPO}/scripts/setup/campaign_summarize.py"
 MODEL_GRANITE=ibm-granite/granite-4.2-8b
 # The qzs receiver is AppWorld's zero-shot Qwen3-8B (configs/hj15_*_zsq.yaml executor.model). Its
@@ -213,7 +315,78 @@ done <<< "${FACTS}"
 echo "[bfcl] config env=${CFG_ENV} campaign_id=${CFG_CAMPAIGN_ID} planner.type=${PLANNER_TYPE} planner.model=${PLANNER_MODEL:-<unset>} packet_source=${PACKET_SOURCE:-<none>} executor=${EXECUTOR_TYPE}:${EXECUTOR_MODEL:-<none>} lora_name=${LORA_NAME:-<none>} handoff.source_campaign=${HANDOFF_SOURCE:-<none>} m=${HANDOFF_M:-<none>} fixed_k=${FIXED_K:-<none>} takeover=${TAKEOVER}"
 
 # ---- refusals -----------------------------------------------------------------------------
-[[ "${SPLIT}" == "dev" ]] || fatal "SPLIT=${SPLIT}: this arm runs on the BFCL dev split only"
+# BFCL has two splits, dev and test (BFCL_SPLITS, bfcl_env.py:62); test_normal / test_challenge are
+# AppWorld's and mean nothing here (E:31-33).
+case "${SPLIT}" in
+  dev)  N_SPLIT="${N_DEV}";  SOURCE_CID="${PLANNER_ALONE_CID}";;
+  test) N_SPLIT="${N_TEST}"; SOURCE_CID="${TEST_PLANNER_ALONE_CID}";;
+  *) fatal "SPLIT=${SPLIT} is not a BFCL split: dev, or test behind BFCL_CONFIRM=E_FROZEN";;
+esac
+
+# ---- SPLIT=test: the E-prereg's gate (E:312-314), gates (a)-(d) -------------------------------------
+# The 13 arms of E §2 (E:42-53). No qzs stem ever runs on test (E:61-62, E:314).
+TEST_STEMS="planner_alone_cap81 takeover_k5 advise_k5_fullctx advise_k5_neutral plan_zs executor_alone_zs executor_alone_bplus prefix_zs_m2 prefix_zs_m4 prefix_zs_m6 prefix_bplus_m2 prefix_bplus_m4 prefix_bplus_m6"
+if [[ "${SPLIT}" == "test" ]]; then
+  # (a) the confirm token.
+  [[ "${BFCL_CONFIRM}" == "E_FROZEN" ]] \
+    || fatal "SPLIT=test needs BFCL_CONFIRM=E_FROZEN (got '${BFCL_CONFIRM:-<unset>}'; E:313-314)"
+  # (b) the prereg is FROZEN: exactly one Status line, whose value begins with FROZEN (j10_arm.pbs:239-249;
+  # "contains FROZEN" alone is not enough, since a DRAFT line can read "becomes FROZEN on commit").
+  [[ -f "${PREREG}" ]] || fatal "SPLIT=test: the E-prereg ${PREREG} does not exist"
+  # Counted wherever it sits (indented, a list item, quoted; any case), so a second, DRAFT status line
+  # cannot hide from the count by not starting in column 0. The one line must then start in column 0.
+  STATUS_RE='^[[:space:]>*+-]*\*\*Status\*\*'
+  N_STATUS="$(grep -ci "${STATUS_RE}" "${PREREG}")"
+  [[ "${N_STATUS}" == "1" ]] || fatal "${PREREG} has ${N_STATUS:-0} **Status** lines; the E-prereg has exactly one"
+  STATUS_LINE="$(grep -m 1 -i "${STATUS_RE}" "${PREREG}")"
+  if ! [[ "${STATUS_LINE}" =~ ^\*\*Status\*\*:[[:space:]]*(\*\*)?[[:space:]]*FROZEN ]]; then
+    fatal "the E-prereg is not FROZEN: its **Status** value must begin with FROZEN (${PREREG})"
+  fi
+  if grep -qi 'DRAFT' <<< "${STATUS_LINE}"; then
+    fatal "the E-prereg's status line still mentions DRAFT (${PREREG})"
+  fi
+  echo "[bfcl] test gate: BFCL_CONFIRM=E_FROZEN; ${PREREG}: ${STATUS_LINE:0:40}"
+  # (c) git, j11_arm.pbs:112-119 / :288-299: every test episode must run code a commit names (the
+  # manifest stamps HEAD). Always against REPO in a real submission; a self-test uses BFCL_GIT_ROOT.
+  if [[ -n "${GIT_ROOT}" ]]; then
+    git -C "${GIT_ROOT}" ls-files --error-unmatch "${PREREG}" >/dev/null 2>&1 \
+      || fatal "${PREREG} is not committed; FROZEN means committed"
+    git -C "${GIT_ROOT}" diff --quiet HEAD -- "${PREREG}" \
+      || fatal "${PREREG} has uncommitted changes; the frozen text is the committed text"
+    # The split file defines the 150 test entries (bfcl_env.py:59 DEFAULT_SPLIT_PATH, E:26) and
+    # third_party/bfcl is the vendored checker (gorilla @ 6ea5797, E:24): both decide what is run and scored.
+    [[ -z "$(git -C "${GIT_ROOT}" status --porcelain -- src scripts configs data/bfcl_split_20260924.json third_party/bfcl 2>/dev/null)" ]] \
+      || fatal "${GIT_ROOT} has uncommitted changes under src/, scripts/, configs/, data/bfcl_split_20260924.json or third_party/bfcl/; the test split runs only committed code and data"
+    [[ "$(dirname "$(readlink -f "${CFG}")")" == "$(readlink -f "${GIT_ROOT}/configs")" ]] \
+      || fatal "CFG must live in ${GIT_ROOT}/configs on SPLIT=test (got ${CFG})"
+    echo "[bfcl] test gate: git checks passed against ${GIT_ROOT} (prereg committed and unmodified; src/ scripts/ configs/ data/bfcl_split_20260924.json third_party/bfcl/ clean)"
+  else
+    echo "[bfcl] selftest: git checks skipped (BFCL_GIT_ROOT unset)"
+  fi
+  # Which wrapper runs: (c) proves REPO's scripts/ clean, not that the job script IS REPO's committed
+  # scripts/pbs/bfcl_arm.pbs (qsub copies whatever file it is given). Recorded, not refused: how PBS
+  # presents the job script here (a spool copy, or stdin) is unverified, and a false refusal would stop
+  # every test arm. Compare the two hashes in the job log before reading an arm.
+  SELF_PATH="${BASH_SOURCE[0]:-}"
+  SELF_SHA=unknown
+  if [[ -n "${SELF_PATH}" && -f "${SELF_PATH}" ]]; then
+    SELF_SHA="$(sha256sum < "${SELF_PATH}" | cut -d' ' -f1)"
+  fi
+  HEAD_WRAPPER_SHA=unknown
+  if git -C "${REPO}" cat-file -e HEAD:scripts/pbs/bfcl_arm.pbs 2>/dev/null; then
+    HEAD_WRAPPER_SHA="$(git -C "${REPO}" show HEAD:scripts/pbs/bfcl_arm.pbs | sha256sum | cut -d' ' -f1)"
+  fi
+  echo "[bfcl] wrapper running sha256=${SELF_SHA} (${SELF_PATH:-<stdin>}); ${REPO} HEAD:scripts/pbs/bfcl_arm.pbs sha256=${HEAD_WRAPPER_SHA}"
+  if [[ "${SELF_SHA}" == "unknown" || "${SELF_SHA}" != "${HEAD_WRAPPER_SHA}" ]]; then
+    echo "[bfcl] WARN: the running wrapper is not (or could not be compared with) the committed scripts/pbs/bfcl_arm.pbs of ${REPO}"
+  fi
+  # (d) E §2's arms only.
+  if [[ "${CFG_STEM}" == *qzs* ]]; then
+    fatal "${CFG_BASE}: no qzs stem runs on the BFCL test split (docs/prereg_bfcl_test_20260925.md §2 registers the zs and bplus arms only)"
+  fi
+  [[ " ${TEST_STEMS} " == *" ${CFG_STEM} "* ]] \
+    || fatal "${CFG_BASE} is not one of the 13 arms of the BFCL test design (docs/prereg_bfcl_test_20260925.md §2)"
+fi
 
 # The dev design (docs/prereg_bfcl_dev_20260924.md): stem -> runner system, receiver, whether the
 # arm spends hosted calls, and the high end of its hosted calls per episode
@@ -256,7 +429,7 @@ fi
 [[ "${HAS_SPLIT_KEY}" == "0" ]] || fatal "${CFG} carries a split: key; the split is a CLI argument"
 [[ "${CFG_CAMPAIGN_ID}" == "bfcl_${CFG_STEM}_dev_20260924" ]] \
   || fatal "config campaign_id ${CFG_CAMPAIGN_ID:-<unset>} is not bfcl_${CFG_STEM}_dev_20260924"
-[[ "${TASKS}" =~ ^[0-9]+$ && "${TASKS}" -le "${N_DEV}" ]] || fatal "TASKS must be 0..${N_DEV} (0 = all), got ${TASKS}"
+[[ "${TASKS}" =~ ^[0-9]+$ && "${TASKS}" -le "${N_SPLIT}" ]] || fatal "TASKS must be 0..${N_SPLIT} (0 = all), got ${TASKS}"
 # No leading zeros: the runner parses 01 as 1, but the source gate, the planless count and the
 # tally compare seeds as text (the result.json seed, the <seed>/ directory), so 01 would never match.
 [[ "${SEEDS}" =~ ^(0|[1-9][0-9]*)(,(0|[1-9][0-9]*))*$ ]] \
@@ -265,14 +438,34 @@ N_SEEDS=$(tr ',' '\n' <<< "${SEEDS}" | wc -l | tr -d ' ')
 # A repeated seed runs once but would count twice in TARGET, so the arm could never complete.
 [[ "$(tr ',' '\n' <<< "${SEEDS}" | sort -u | wc -l | tr -d ' ')" == "${N_SEEDS}" ]] \
   || fatal "SEEDS=${SEEDS} repeats a seed; the target would count episodes that are never run"
-CID="${CID:-${CFG_CAMPAIGN_ID}}"
+if [[ "${SPLIT}" == "test" ]]; then
+  # (e) all 150 test entries at seeds {1, 2}: 300 (entry, seed) pairs (E:26, E:31, E:291, E:314),
+  # and the 2-episode smoke that E:446-455's launch thresholds assume (SAFETY is pinned at gate g).
+  [[ "${SEEDS}" == "1,2" ]] || fatal "SPLIT=test is registered at SEEDS=1,2 only (got ${SEEDS}; E:31, E:314)"
+  [[ "${TASKS}" == "0" ]] || fatal "SPLIT=test runs all ${N_TEST} test entries: TASKS=0 only (got ${TASKS}; E:26)"
+  [[ "${SMOKE_TASKS}" == "2" ]] || fatal "SPLIT=test smokes 2 entries at seed 1 (SMOKE_TASKS=2, got ${SMOKE_TASKS}; E:446-455)"
+fi
+if [[ "${SPLIT}" == "test" ]]; then
+  # (f) the one test campaign id of this stem (E:40, seam S1).
+  TEST_CID="bfcl_${CFG_STEM}_test_20260925"
+  [[ -z "${CID}" || "${CID}" == "${TEST_CID}" ]] \
+    || fatal "CID=${CID}: a BFCL test campaign is exactly ${TEST_CID} (E:40)"
+  CID="${TEST_CID}"
+else
+  CID="${CID:-${CFG_CAMPAIGN_ID}}"
+fi
 [[ -n "${CID}" ]] || fatal "no campaign id"
 [[ "${CID}" =~ ^[A-Za-z0-9_.-]+$ && "${CID}" != "." && "${CID}" != ".." ]] || fatal "unsafe CID ${CID}"
-[[ "${CID}" == *_dev_* ]] || fatal "CID=${CID} does not say _dev_; a dev run must not look like a test campaign"
+if [[ "${SPLIT}" == "dev" ]]; then
+  [[ "${CID}" == *_dev_* ]] || fatal "CID=${CID} does not say _dev_; a dev run must not look like a test campaign"
+  # The j10_arm.pbs:369 analogue: a dev run never writes under a name that reads as a test campaign.
+  [[ "${CID}" != *_test_* ]] || fatal "CID=${CID} says _test_; a dev run must never look like a test campaign"
+fi
 TARGET_TASKS="${TASKS}"
-if [[ "${TASKS}" -eq 0 ]]; then TARGET_TASKS="${N_DEV}"; fi
+if [[ "${TASKS}" -eq 0 ]]; then TARGET_TASKS="${N_SPLIT}"; fi
 TARGET=$(( TARGET_TASKS * N_SEEDS ))
-# The smoke is the first SMOKE_TASKS dev entries at the first requested seed. Capped at the tasks
+# The smoke is the first SMOKE_TASKS entries of the split at the first requested seed (on test: the
+# first 2 test entries at seed 1, E:81; a held-out tree that is kept and never read). Capped at the tasks
 # the arm runs, so its (seed, task) keys are always among the arm's own, which the replay-source
 # gate below checks one by one.
 SMOKE_SEED="${SEEDS%%,*}"
@@ -282,6 +475,169 @@ if (( SMOKE_TASKS > TARGET_TASKS )); then
   SMOKE_TASKS="${TARGET_TASKS}"
 fi
 echo "[bfcl] cid=${CID} system=${SYSTEM} receiver=${RECEIVER} hosted=${HOSTED} target=${TARGET} (${TARGET_TASKS} tasks x ${N_SEEDS} seeds) seeds=${SEEDS} smoke=${SMOKE_TASKS} tasks x seed ${SMOKE_SEED}"
+
+# ---- SPLIT=test, gate (f): the derived config (seam S2) --------------------------------------------
+# configs/bfcl_<stem>.yaml carry the dev campaign id and replay the dev ceiling, and configs/ is frozen
+# (E:413-415), so the runner gets a derived copy: the committed mapping with campaign_id and every value
+# equal to the dev ceiling's path rewritten, nothing else. PyYAML re-emits the mapping, so the
+# committed comments (which cite docs/prereg_bfcl_dev_20260924.md) are replaced by a header recording
+# where the mapping came from. The file is checked before it is written and again after, and an
+# existing file is reused only when its parsed mapping is identical. So its HEAD and UTC comments name
+# the FIRST writer, which gate (g) or (h) may then have refused; the log line below gives this job's HEAD.
+RUN_CFG="${CFG}"
+if [[ "${SPLIT}" == "test" ]]; then
+  DERIVED_DIR="${LOGDIR}/bfcl_test_configs"
+  RUN_CFG="${DERIVED_DIR}/${CID}.yaml"
+  CFG_BLOB="$(git hash-object "${CFG}" 2>/dev/null)" || CFG_BLOB=""
+  DERIVED_HEAD="$(git -C "${GIT_ROOT:-${REPO}}" rev-parse HEAD 2>/dev/null)" || DERIVED_HEAD=""
+  mkdir -p "${DERIVED_DIR}" || fatal "could not create ${DERIVED_DIR}"
+  DERIVE_OUT="$(timeout 60 "${PY}" - "${CFG}" "${RUN_CFG}" "${OUT}/${PLANNER_ALONE_CID}" "${OUT}/${TEST_PLANNER_ALONE_CID}" \
+    "${CID}" "${CFG_BLOB:-unknown}" "${DERIVED_HEAD:-unknown}" 2>&1 <<'PY'
+import datetime
+import os
+import sys
+from pathlib import Path
+
+import yaml
+
+cfg, dst, dev_src, test_src, cid, blob, head = sys.argv[1:8]
+MARK = "_dev_20260924"
+
+
+def fail(msg):
+    print(f"FAIL: {msg}")
+    sys.exit(3)
+
+
+committed = yaml.safe_load(Path(cfg).read_text(encoding="utf-8"))
+if not isinstance(committed, dict):
+    fail(f"{cfg} is not a mapping")
+rewritten = ["campaign_id"]
+
+
+def rewrite(node, path):
+    if isinstance(node, dict):
+        return {k: rewrite(v, f"{path}.{k}" if path else str(k)) for k, v in node.items()}
+    if isinstance(node, list):
+        return [rewrite(v, f"{path}[{i}]") for i, v in enumerate(node)]
+    if isinstance(node, str) and node == dev_src:
+        rewritten.append(path)
+        return test_src
+    return node
+
+
+derived = rewrite(committed, "")
+derived["campaign_id"] = cid
+
+
+def flatten(node, path="", out=None):
+    out = {} if out is None else out
+    if isinstance(node, dict) and node:
+        for k, v in node.items():
+            flatten(v, f"{path}.{k}" if path else str(k), out)
+    elif isinstance(node, list) and node:
+        for i, v in enumerate(node):
+            flatten(v, f"{path}[{i}]", out)
+    else:
+        out[path] = node
+    return out
+
+
+def check(text, where):
+    """The S2 tripwires: no dev id left, and nothing but the rewritten keys differs from the committed config."""
+    if MARK in text:
+        fail(f"{where} contains {MARK}: a dev campaign id or dev source survived the rewrite")
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        fail(f"{where} is not valid YAML: {exc}")
+    flat_c = flatten(committed)
+    flat_d = flatten(data if isinstance(data, dict) else {})
+    if set(flat_c) != set(flat_d):
+        fail(f"{where} does not have the committed config's keys: {sorted(set(flat_c) ^ set(flat_d))}")
+    for key, value in flat_c.items():
+        want = (cid if key == "campaign_id" else test_src) if key in rewritten else value
+        if flat_d[key] != want:
+            fail(f"{where}: {key} is {flat_d[key]!r}, expected {want!r}; only campaign_id and the ceiling path may change")
+    return data
+
+
+utc = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+header = (
+    "# Derived BFCL test config (seam S2), written by scripts/pbs/bfcl_arm.pbs on SPLIT=test; never edited or deleted.\n"
+    f"# committed config: {cfg}\n"
+    f"# committed config git blob (git hash-object): {blob}\n"
+    f"# git rev-parse HEAD: {head}\n"
+    f"# written (UTC): {utc}\n"
+    "# HEAD and time are the first writer's: a later job with the same mapping reuses this file unchanged, and\n"
+    "# that job may have been refused after writing it. Each run's commit is its manifests' SIDEKICK_START_COMMIT.\n"
+)
+text = header + yaml.safe_dump(derived, sort_keys=False, allow_unicode=True, default_flow_style=False, width=4096)
+path = Path(dst)
+
+
+def reuse():
+    old = path.read_text(encoding="utf-8")
+    try:
+        old_data = yaml.safe_load(old)
+    except yaml.YAMLError as exc:
+        fail(f"{path} already exists and is not valid YAML ({exc}); derived configs are never rewritten")
+    if old_data != derived:
+        fail(f"{path} already exists with different content; derived configs are never rewritten")
+    check(old, str(path))
+    return "reused"
+
+
+if path.exists():
+    status = reuse()
+else:
+    check(text, "the derived config")
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    try:
+        os.link(tmp, path)  # atomic, and never over an existing file
+        status = "written"
+    except FileExistsError:
+        status = reuse()
+    except OSError:
+        with open(path, "x", encoding="utf-8") as fh:
+            fh.write(text)
+        status = "written"
+    finally:
+        tmp.unlink()
+    check(path.read_text(encoding="utf-8"), str(path))
+planner = derived.get("planner") if isinstance(derived.get("planner"), dict) else {}
+handoff = derived.get("handoff") if isinstance(derived.get("handoff"), dict) else {}
+print(f"DERIVED_STATUS={status}")
+print(f"DERIVED_CID={derived.get('campaign_id')}")
+print(f"DERIVED_PACKET_SOURCE={str(planner.get('packet_source') or '').strip()}")
+print(f"DERIVED_HANDOFF_SOURCE={str(handoff.get('source_campaign') or '').strip()}")
+print(f"DERIVED_KEYS={','.join(rewritten)}")
+PY
+)"
+  DERIVE_RC=$?
+  if [[ "${DERIVE_RC}" -ne 0 ]]; then
+    DERIVE_MSG="$(grep -m 1 '^FAIL: ' <<< "${DERIVE_OUT}")"
+    [[ -n "${DERIVE_MSG}" ]] || DERIVE_MSG="$(tail -n 1 <<< "${DERIVE_OUT}")"
+    fatal "derived test config ${RUN_CFG}: ${DERIVE_MSG#FAIL: }"
+  fi
+  DERIVED_STATUS=""; DERIVED_CID=""; DERIVED_KEYS=""; DERIVED_PACKET_SOURCE=""; DERIVED_HANDOFF_SOURCE=""
+  while IFS='=' read -r key value; do
+    case "${key}" in
+      DERIVED_STATUS) DERIVED_STATUS="${value}";;
+      DERIVED_CID) DERIVED_CID="${value}";;
+      DERIVED_KEYS) DERIVED_KEYS="${value}";;
+      DERIVED_PACKET_SOURCE) DERIVED_PACKET_SOURCE="${value}";;
+      DERIVED_HANDOFF_SOURCE) DERIVED_HANDOFF_SOURCE="${value}";;
+    esac
+  done <<< "${DERIVE_OUT}"
+  [[ "${DERIVED_CID}" == "${CID}" && -s "${RUN_CFG}" ]] || fatal "derived test config ${RUN_CFG} does not carry campaign_id ${CID}"
+  # Every later check judges what the runner will be given: the derived sources.
+  PACKET_SOURCE="${DERIVED_PACKET_SOURCE}"
+  HANDOFF_SOURCE="${DERIVED_HANDOFF_SOURCE}"
+  echo "[bfcl] derived test config ${RUN_CFG} (${DERIVED_STATUS}) sha256=$(sha256sum "${RUN_CFG}" | cut -d' ' -f1) rewrote ${DERIVED_KEYS}; from ${CFG} blob ${CFG_BLOB:-unknown}; this job's HEAD ${DERIVED_HEAD:-unknown} (the file's HEAD comment is its first writer's)"
+  echo "[bfcl] derived handoff.source_campaign=${HANDOFF_SOURCE:-<none>} planner.packet_source=${PACKET_SOURCE:-<none>}"
+fi
 
 # ---- receiver ---------------------------------------------------------------------------------
 case "${RECEIVER}" in
@@ -399,26 +755,58 @@ fi
 if [[ "${HOSTED}" == "1" && "${SELFTEST}" != "1" && ! -s "${HOME}/.codex/auth.json" ]]; then
   fatal "~/.codex/auth.json missing or empty -- planner cannot authenticate"
 fi
+# ---- SPLIT=test, gate (g): the registered hosted-call ceilings (E:432-444, seam S5) ----------------
+# 20 x 300 for the ceiling, 8 x 300 for each channel arm, 4 x 300 for plan_zs; the other eight arms are
+# HOSTED=0 with no brake. The wrapper sets the ceiling itself; a value passed in must be the registered one.
+if [[ "${SPLIT}" == "test" ]]; then
+  case "${CFG_STEM}" in
+    planner_alone_cap81) TEST_MAX_PLANNER_CALLS=6000;;
+    takeover_k5|advise_k5_fullctx|advise_k5_neutral) TEST_MAX_PLANNER_CALLS=2400;;
+    plan_zs) TEST_MAX_PLANNER_CALLS=1200;;
+    *) TEST_MAX_PLANNER_CALLS="";;
+  esac
+  if [[ "${HOSTED}" == "1" ]]; then
+    [[ -n "${TEST_MAX_PLANNER_CALLS}" ]] || fatal "hosted arm ${CFG_STEM} has no registered test ceiling"
+    [[ -z "${MAX_PLANNER_CALLS}" || "${MAX_PLANNER_CALLS}" == "${TEST_MAX_PLANNER_CALLS}" ]] \
+      || fatal "MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS}: the registered test ceiling of ${CFG_STEM} is ${TEST_MAX_PLANNER_CALLS} (E:432-442)"
+    MAX_PLANNER_CALLS="${TEST_MAX_PLANNER_CALLS}"
+  else
+    [[ -z "${MAX_PLANNER_CALLS}" ]] \
+      || fatal "MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS}: ${CFG_STEM} runs at HOSTED=0 on test, with no MAX_PLANNER_CALLS brake (E:443-444)"
+  fi
+  [[ "${SAFETY}" == "1.2" ]] || fatal "SAFETY=${SAFETY}: the test launch check is registered at SAFETY 1.2 (E:446-455)"
+fi
 
 # ---- replay arms: the planner_alone run they replay must be complete ---------------------------
-# Every replay source is BFCL planner_alone_cap81's dev campaign: the prefix arms re-execute its
+# Every replay source is BFCL planner_alone_cap81's campaign on the SAME split (dev:
+# bfcl_planner_alone_cap81_dev_20260924; test: the test ceiling, E:44): the prefix arms re-execute its
 # first m actions (handoff.source_campaign), plan_zs and the channel arms replay its first plan
 # (planner.packet_source). Against a partial source a replay episode crashes on a missing packet or
 # replays a plan the source never scored, so the source must hold >= TARGET non-crashed result.json
 # for the REQUESTED seeds (150 for 1,2,3), 0 crashed, 0 unreadable. Ported from j10_arm.pbs:373-445.
 # A count alone can pass a source that lacks a whole seed (TASKS=30 SEEDS=1,2,3 needs 90; a 1,2
-# source holds 100), so every (seed, task) key the arm runs -- the first TARGET_TASKS dev entries
-# (bfcl_task_ids, as the runner picks them) x the requested seeds -- must also be present, by its
-# <seed>/<task> directory, which is where CachedPacketPlanner reads the packet (planner.py:883).
-REQUIRED_SOURCE="${OUT}/${PLANNER_ALONE_CID}"
+# source holds 100), so every (seed, task) key the arm runs -- the first TARGET_TASKS entries of the
+# split (bfcl_task_ids(SPLIT), as the runner picks them) x the requested seeds -- must also be present,
+# by its <seed>/<task> directory, which is where CachedPacketPlanner reads the packet (planner.py:883).
+# On test that is all 300 keys (E:285-289), so the planless count below never runs on an incomplete ceiling.
+REQUIRED_SOURCE="${OUT}/${SOURCE_CID}"
+if [[ "${SPLIT}" == "dev" ]]; then
+  # The j10_arm.pbs:369 analogue: a dev run never replays (so never reads) a test campaign.
+  for src in "${HANDOFF_SOURCE}" "${PACKET_SOURCE}"; do
+    [[ -z "${src}" || "$(basename "${src%/}")" != *_test_* ]] \
+      || fatal "replay source ${src} is a test campaign; a dev run must never replay a test source"
+  done
+fi
 for src in "${HANDOFF_SOURCE}" "${PACKET_SOURCE}"; do
   [[ -z "${src}" || "${src%/}" == "${REQUIRED_SOURCE}" ]] \
     || fatal "replay source ${src} is not ${REQUIRED_SOURCE}; every BFCL replay arm replays planner_alone_cap81"
 done
+REPLAYING=0
+[[ -n "${HANDOFF_SOURCE}${PACKET_SOURCE}" ]] && REPLAYING=1
 require_complete_source () {
   local what="$1" src="$2"
   local stats src_ok src_crash src_bad src_exists src_need src_missing src_first
-  stats="$(timeout 300 "${PY}" - "${src}" "${SEEDS}" "${TARGET_TASKS}" <<'PY'
+  stats="$(timeout 300 "${PY}" - "${src}" "${SEEDS}" "${TARGET_TASKS}" "${SPLIT}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -427,7 +815,7 @@ from sidekick.environments.bfcl_env import bfcl_task_ids
 
 root = Path(sys.argv[1])
 seeds = [s for s in sys.argv[2].split(",") if s]
-need = {f"{s}/{t}" for s in seeds for t in bfcl_task_ids("dev", int(sys.argv[3]))}
+need = {f"{s}/{t}" for s in seeds for t in bfcl_task_ids(sys.argv[4], int(sys.argv[3]))}
 ok = crash = bad = 0
 have = set()
 if root.is_dir():
@@ -459,28 +847,45 @@ if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
   require_complete_source "prefix source" "${HANDOFF_SOURCE}"
 fi
 # A prefix arm's packet_source is its handoff source; judging it twice would only repeat the line.
+PLANLESS_SOURCE=""; PLANLESS_SYSTEM="${PACKET_SYSTEM}"
 if [[ -n "${PACKET_SOURCE}" ]] && ! [[ "${SYSTEM}" == "prefix_handoff" && "${PACKET_SOURCE%/}" == "${HANDOFF_SOURCE%/}" ]]; then
   require_complete_source "planner.packet_source" "${PACKET_SOURCE}"
+  PLANLESS_SOURCE="${PACKET_SOURCE}"
+fi
+# On test the planless check also covers the prefix arms: more than 15 planless keys of the 300 and no
+# replaying arm starts, packet or prefix (E:286, seam S7; j12_arm.pbs:185-200 closes the same gap).
+# Dev keeps its prefix arms out of it, as j10_arm.pbs:414-418 does.
+if [[ "${SPLIT}" == "test" && "${SYSTEM}" == "prefix_handoff" && -z "${PLANLESS_SOURCE}" ]]; then
+  PLANLESS_SOURCE="${HANDOFF_SOURCE}"; PLANLESS_SYSTEM=planner_alone
+fi
+if [[ -n "${PLANLESS_SOURCE}" ]]; then
   # Source episodes scored without a crash that wrote no plan: on_missing: call_if_planless plans
   # them live, one call per key per arm (J10 A1 §4.2). More than 5 % of the target points at the
   # harness, not the planner, so the arm is refused (j10_arm.pbs:421-445). Counted over the keys
-  # this arm runs (requested seeds x its tasks), the same set TARGET counts: 5 % of 150 for 1,2,3.
-  PLANLESS="$(timeout 300 "${PY}" - "${PACKET_SOURCE}" "${PACKET_SYSTEM}" "${SEEDS}" "${TARGET_TASKS}" <<'PY'
+  # this arm runs (requested seeds x its tasks), the same set TARGET counts: 5 % of 150 for 1,2,3,
+  # 15 of the 300 test keys. It runs only after require_complete_source has passed the source, so a
+  # count of 0 never comes from an incomplete ceiling.
+  PLANLESS="$(timeout 300 "${PY}" - "${PLANLESS_SOURCE}" "${PLANLESS_SYSTEM}" "${SEEDS}" "${TARGET_TASKS}" "${SPLIT}" <<'PY'
 import sys
 
 from sidekick.agents.planner import planless_source_keys
 from sidekick.environments.bfcl_env import bfcl_task_ids
 
 seeds = [s for s in sys.argv[3].split(",") if s]
-tasks = set(bfcl_task_ids("dev", int(sys.argv[4])))
+tasks = set(bfcl_task_ids(sys.argv[5], int(sys.argv[4])))
 keys = planless_source_keys(sys.argv[1], sys.argv[2], seeds)
 print(" ".join(k for k in keys if k.split("/", 1)[1] in tasks))
 PY
-)" || fatal "could not list the planner_alone episodes without a plan under ${PACKET_SOURCE}"
+)" || fatal "could not list the planner_alone episodes without a plan under ${PLANLESS_SOURCE}"
   N_PLANLESS=$(wc -w <<< "${PLANLESS}")
   PLANLESS_CAP=$(( TARGET * 5 / 100 ))
   echo "[bfcl] planner_alone episodes scored without a plan: ${N_PLANLESS} (cap ${PLANLESS_CAP}, as J10 A1 §4.2)${PLANLESS:+: ${PLANLESS}}"
-  if (( N_PLANLESS > 0 )) && [[ "${ON_MISSING}" != "call_if_planless" ]]; then
+  if [[ "${SYSTEM}" == "prefix_handoff" ]]; then
+    # Seam S7: a prefix episode never calls planner.plan() (loop.py:715 plans only without a prefix),
+    # so a planless key replays at effective depth 0 with no live plan, as J10's arms 4-7 did (J10
+    # :224-225). on_missing: fail is never reached for it, and the derived config needs no key.
+    (( N_PLANLESS == 0 )) || echo "[bfcl] prefix arm: the ${N_PLANLESS} planless key(s) replay at effective depth 0 with no plan call (J10 :224-225; seam S7)"
+  elif (( N_PLANLESS > 0 )) && [[ "${ON_MISSING}" != "call_if_planless" ]]; then
     fatal "planner.on_missing is '${ON_MISSING}', so the ${N_PLANLESS} planless source episode(s) would crash"
   fi
   if (( N_PLANLESS > PLANLESS_CAP )); then
@@ -506,7 +911,11 @@ fi
 if [[ "${HOSTED}" == "1" ]]; then
   MAX_PLANNER_CALLS="${MAX_PLANNER_CALLS:-$(( CPE_HIGH * TARGET ))}"
   [[ "${MAX_PLANNER_CALLS}" =~ ^[0-9]+$ ]] || fatal "MAX_PLANNER_CALLS must be an integer, got ${MAX_PLANNER_CALLS}"
-  echo "[bfcl] MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS} (hosted planner calls of ${CID}; ${CPE_HIGH}/episode high end x ${TARGET}) safety=${SAFETY}"
+  if [[ "${SPLIT}" == "test" ]]; then
+    echo "[bfcl] MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS} (hosted planner calls of ${CID}; the registered test ceiling, E:432-442) safety=${SAFETY}"
+  else
+    echo "[bfcl] MAX_PLANNER_CALLS=${MAX_PLANNER_CALLS} (hosted planner calls of ${CID}; ${CPE_HIGH}/episode high end x ${TARGET}) safety=${SAFETY}"
+  fi
 fi
 # "<hosted calls> <episodes> <ledger calls>" of one campaign: the ledger key from
 # campaign_summarize.summarise (hj12_live.pbs:662-677) minus the n_calls of planner records whose
@@ -567,9 +976,102 @@ bfcl_spend_guard () {
   fi
 }
 
+# ---- SPLIT=test: the refill log (seam S3) and the divergent keys (seam S6) ----------------------
+# J10 Am5 §B (J10 :1104-1126) reads a divergent key as one that is still a replay_divergence crash
+# "after at least one crash-only resumption". The refill log is that record: immediately before the
+# crash-only purge, every crashed episode of this campaign about to be purged gets one line, with the
+# reason its last attempt gave (the payload.reason of its last error event, empty if that event has none;
+# replay_divergence.py's last-attempt rule, from the last run_start on). The reason column is a record
+# only: S6 keys on (seed, task_id). Append-only; the header is written when the file is created.
+# A self-test writes it only under a scratch BFCL_LOGDIR (the guard after the start line).
+REFILL_LOG="${LOGDIR}/bfcl_refills/${CID}.tsv"
+RD_PY="${REPO}/scripts/analysis/replay_divergence.py"
+bfcl_refill_log () {
+  local out
+  out="$(timeout 300 "${PY}" - "${RD_PY}" "${OUT}" "${CID}" "${REFILL_LOG}" "${PBS_JOBID:-none}" 2>&1 <<'PY'
+import datetime
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+rd_path, out_root, cid, log_path, job = sys.argv[1:6]
+spec = importlib.util.spec_from_file_location("replay_divergence", rd_path)
+rd = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(rd)
+HEADER = "cid\tseed\ttask_id\terror_type\treason\tjob_id\tutc"
+
+
+def field(value):
+    return " ".join(str("" if value is None else value).split())
+
+
+root = Path(out_root) / cid
+utc = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+lines = []
+for path in sorted(root.rglob("result.json")) if root.is_dir() else []:
+    try:
+        row = json.loads(path.read_text(encoding="utf-8").strip() or "null")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        continue  # purged as unreadable_result, not a crashed episode
+    if not isinstance(row, dict) or row.get("error_type") != "crash":
+        continue
+    # S3: the last error event of the last attempt decides; a reasonless one there leaves reason empty.
+    reason = ""
+    for ev in rd.events_of_last_attempt(path.parent / "events.jsonl"):
+        if ev.get("event_type") == "error":
+            payload = ev.get("payload")
+            reason = (payload.get("reason") or "") if isinstance(payload, dict) else ""
+    seed = row.get("seed") if row.get("seed") is not None else path.parent.parent.name
+    task = row.get("task_id") if row.get("task_id") is not None else path.parent.name
+    lines.append("\t".join(field(v) for v in (cid, seed, task, row.get("error_type"), reason, job, utc)))
+log = Path(log_path)
+log.parent.mkdir(parents=True, exist_ok=True)
+fresh = not log.exists() or log.stat().st_size == 0
+with open(log, "a", encoding="utf-8") as fh:
+    if fresh:
+        fh.write(HEADER + "\n")
+    for line in lines:
+        fh.write(line + "\n")
+print(f"[bfcl] refill log {log}: {len(lines)} crashed episode(s) of {cid} recorded before the crash-only purge")
+PY
+)"
+  local rc=$?
+  printf '%s\n' "${out}"
+  [[ "${rc}" -eq 0 ]] || { echo "[bfcl] FATAL: could not write the refill log ${REFILL_LOG}"; exit 1; }
+}
+# "<divergent> <divergent-reason crashes not yet in the refill log> <keys|->" of one campaign: seam S6's
+# definition, replay_divergence.divergent_keys (first result.json per key) restricted to the requested
+# seeds, AND a line for that (seed, task_id) in the campaign's refill log.
+bfcl_divergent_keys () {
+  local cid="$1" seeds="$2"
+  timeout 300 "${PY}" - "${RD_PY}" "${OUT}/${cid}" "${LOGDIR}/bfcl_refills/${cid}.tsv" "${cid}" "${seeds}" <<'PY'
+import importlib.util
+import sys
+from pathlib import Path
+
+rd_path, root, log, cid, seeds = sys.argv[1:6]
+spec = importlib.util.spec_from_file_location("replay_divergence", rd_path)
+rd = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(rd)
+wanted = {s for s in seeds.split(",") if s}
+refilled = set()
+log = Path(log)
+if log.is_file():
+    for line in log.read_text(encoding="utf-8").splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 3 and parts[0] == cid:
+            refilled.add((parts[2], parts[1]))
+keys = [k for k in rd.divergent_keys(Path(root)) if str(k[1]) in wanted]
+div = [k for k in keys if (k[0], str(k[1])) in refilled]
+print(len(div), len(keys) - len(div), " ".join(rd.key_label(k) for k in div) or "-")
+PY
+}
+
 # ---- tally: what an operator reads before resubmitting ------------------------------------------
 # The jq tally of the spike wrapper, with j10_arm.pbs:455-529's unreadable / other-seed / orphan
 # counts: an unreadable result.json is counted, not allowed to fail jq -s for the whole campaign.
+# On test, a replaying arm also counts its divergent keys (seam S6, J10 Am5 §B, cap 15).
 tally_campaign () {
   local cid="$1" target="$2" seeds="$3"
   local root="${OUT}/${cid}"
@@ -605,6 +1107,25 @@ tally_campaign () {
     [[ -f "${d}/result.json" ]] || n_orphan=$((n_orphan + 1))
   done < <(find "${root}" -type f \( -name events.jsonl -o -name manifest.json \) -printf '%h\0' 2>/dev/null | sort -zu)
   echo "[bfcl] tally cid=${cid} result_files=${n} non_crashed=${n_ok} crashed=${n_crash} target=${target} unreadable=${n_bad} other_seed=${n_other} attempts_without_result=${n_orphan}"
+  if [[ "${SPLIT}" == "test" && "${REPLAYING}" == "1" ]]; then
+    local div_raw n_div n_div_new div_keys
+    div_raw="$(bfcl_divergent_keys "${cid}" "${seeds}")" || div_raw=""
+    read -r n_div n_div_new div_keys <<< "${div_raw}"
+    if [[ "${n_div:-}" =~ ^[0-9]+$ && "${n_div_new:-}" =~ ^[0-9]+$ ]]; then
+      echo "[bfcl] divergent keys (J10 Am5 §B: a replay_divergence crash already in ${LOGDIR}/bfcl_refills/${cid}.tsv): ${n_div} (cap ${TEST_DIVERGENCE_CAP}); replay_divergence crashes not yet refilled: ${n_div_new}; keys: ${div_keys}"
+      if (( n_div > TEST_DIVERGENCE_CAP )); then
+        echo "[bfcl] over cap: ${n_div} divergent keys > ${TEST_DIVERGENCE_CAP}"
+        return 1
+      fi
+      if (( n_bad == 0 && n_crash == n_div && n_ok + n_div == target )); then
+        (( n_crash == 0 )) && echo "[bfcl] COMPLETE: ${n_ok}/${target} non-crashed, 0 crashed"
+        echo "[bfcl] complete under Am5 §B: ${n_div} divergent keys"
+        return 0
+      fi
+    else
+      echo "[bfcl] WARN: could not count divergent keys of ${cid}; every crash is ordinary"
+    fi
+  fi
   if (( n_crash > 0 || n_bad > 0 || n_ok < target )); then
     echo "[bfcl] INCOMPLETE: ${n_ok}/${target} non-crashed, ${n_crash} crashed, ${n_bad} unreadable -- resubmit this arm"
     return 3
@@ -617,7 +1138,17 @@ if [[ "${SELFTEST}" == "1" ]]; then
   case "${BFCL_SELFTEST_STAGE:-preflight}" in
     tally) tally_campaign "${CID}" "${TARGET}" "${SEEDS}"; exit $?;;
     spend) bfcl_spend_guard "${BFCL_SPEND_RATE_CID:-${CID}}"; echo "[bfcl] selftest spend guard passed"; exit 0;;
-    *) echo "[bfcl] selftest preflight ok system=${SYSTEM} cid=${CID} receiver=${RECEIVER} target=${TARGET} gate=${GATE_ARGS[*]}"; exit 0;;
+    # The refill log alone, as the run path writes it before the purge (nothing is purged here).
+    refill)
+      [[ "${SPLIT}" == "test" ]] || { echo "[bfcl] selftest refill: no refill log on SPLIT=${SPLIT}"; exit 0; }
+      bfcl_refill_log; exit 0;;
+    *)
+      if [[ "${SPLIT}" == "test" ]]; then
+        echo "[bfcl] selftest preflight ok system=${SYSTEM} cid=${CID} receiver=${RECEIVER} target=${TARGET} split=test config=${RUN_CFG} ceiling=${REQUIRED_SOURCE} max_planner_calls=${MAX_PLANNER_CALLS:-none} gate=${GATE_ARGS[*]}"
+      else
+        echo "[bfcl] selftest preflight ok system=${SYSTEM} cid=${CID} receiver=${RECEIVER} target=${TARGET} gate=${GATE_ARGS[*]}"
+      fi
+      exit 0;;
   esac
 fi
 
@@ -787,6 +1318,8 @@ fi
 
 # ---- purge crashed episodes of THIS campaign only (j10_arm.pbs:930-938) ---------------------------
 echo "[bfcl] ---- purge crashed episodes (${CID} only; limit/timeout/parse_error are scored and kept) ----"
+# On test, the refill log first (seam S3): the record of every crash this purge is about to refill.
+[[ "${SPLIT}" == "test" ]] && bfcl_refill_log
 # Captured, not piped to head: a closed pipe would SIGPIPE the summary print and fail the rc.
 PURGE_OUT="$(timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --purge-crashed-only 2>&1)"
 PURGE_RC=$?
@@ -802,11 +1335,11 @@ if [[ "${N_EXISTING}" -eq 0 ]]; then
   timeout 1800 "${PY}" -m sidekick.runner \
     --system "${SYSTEM}" --split "${SPLIT}" --tasks "${SMOKE_TASKS}" --seeds "${SMOKE_SEED}" \
     --env bfcl --workers 2 \
-    --config "${CFG}" --campaign-id "${SCID}" --out "${OUT}"
+    --config "${RUN_CFG}" --campaign-id "${SCID}" --out "${OUT}"
   SMOKE_RC=$?
   [[ "${SMOKE_RC}" -eq 0 ]] || { echo "[bfcl] FATAL: smoke runner exited ${SMOKE_RC}"; exit 1; }
   # The campaign gate on the smoke (j10_arm.pbs:950-953): zero live calls, or luna on every record.
-  timeout 300 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${SCID}" --config "${CFG}" --repo "${REPO}" "${GATE_ARGS[@]}"
+  timeout 300 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${SCID}" --config "${RUN_CFG}" --repo "${REPO}" "${GATE_ARGS[@]}"
   GATE_RC=$?
   [[ "${GATE_RC}" -eq 0 ]] || { echo "[bfcl] FATAL: smoke gate failed (rc=${GATE_RC}); ${SCID} kept for inspection"; exit 1; }
   tally_campaign "${SCID}" "${SMOKE_TASKS}" "${SMOKE_SEED}"
@@ -835,12 +1368,12 @@ echo "[bfcl] ---- runner (${CID}) ----"
 timeout "${RUN_TIMEOUT}" "${PY}" -m sidekick.runner \
   --system "${SYSTEM}" --split "${SPLIT}" --tasks "${TASKS}" --seeds "${SEEDS}" \
   --env bfcl --workers "${WORKERS}" \
-  --config "${CFG}" --out "${OUT}" --campaign-id "${CID}"
+  --config "${RUN_CFG}" --out "${OUT}" --campaign-id "${CID}"
 CAMP_RC=$?
 echo "[bfcl] runner rc=${CAMP_RC}"
 
 echo "[bfcl] ---- summary + manifest + gate (${CID}) ----"
-timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --config "${CFG}" \
+timeout 600 "${PY}" "${SUM}" --out "${OUT}" --campaign-id "${CID}" --config "${RUN_CFG}" \
   --manifest "${OUT}/results/${CID}/manifest.json" --repo "${REPO}" "${GATE_ARGS[@]}"
 SUM_RC=$?
 

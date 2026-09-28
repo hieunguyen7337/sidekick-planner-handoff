@@ -180,8 +180,9 @@ def test_preflight_accepts_the_registered_config(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "env, message",
     [
-        ({"SPLIT": "test"}, "SPLIT=test: this arm runs on the BFCL dev split only"),
-        ({"SPLIT": "test_normal"}, "SPLIT=test_normal: this arm runs on the BFCL dev split only"),
+        # The test split is gated (tests/unit/test_bfcl_arm_pbs_test_path.py); without the token it is refused.
+        ({"SPLIT": "test"}, "SPLIT=test needs BFCL_CONFIRM=E_FROZEN (got '<unset>'"),
+        ({"SPLIT": "test_normal"}, "SPLIT=test_normal is not a BFCL split: dev, or test behind BFCL_CONFIRM=E_FROZEN"),
         ({"CID": "bfcl_executor_alone_zs_test_x"}, "does not say _dev_"),
         ({"CID": "../bfcl_x_dev_y"}, "unsafe CID"),
         ({"SYSTEM": "planner_alone"}, "disagrees with the registered system executor_alone"),
