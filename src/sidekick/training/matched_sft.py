@@ -19,9 +19,6 @@ from sidekick.training import sft_data as _sft
 from sidekick.training.sft_data import (
     ASK_REASON,
     ASK_TEMPLATE,
-    DEFAULT_ADAPTER_MANIFEST,
-    DEFAULT_CORRECTION_CAMPAIGN,
-    DEFAULT_TEACHER_JSONL,
     DROP_ASK_PLANNER_TARGET,
     DROP_INTERVENTION_LEAK,
     DROP_MISSING_EVENTS,
@@ -31,18 +28,21 @@ from sidekick.training.sft_data import (
     DROP_NO_POST_INTERVENTION_ACTION,
     DROP_NOT_IN_SPLIT,
     DROP_UNREPRESENTABLE,
+    default_adapter_manifest,
+    default_correction_campaign,
+    default_teacher_jsonl,
     load_split_ids,
 )
 
 __all__ = [
     "ASK_TEMPLATE",
-    "DEFAULT_ADAPTER_MANIFEST",
-    "DEFAULT_CORRECTION_CAMPAIGN",
-    "DEFAULT_TEACHER_JSONL",
     "build_ask_dataset",
     "build_correction_dataset",
     "build_sft_b_plus",
     "classify_branch_label",
+    "default_adapter_manifest",
+    "default_correction_campaign",
+    "default_teacher_jsonl",
     "load_branch_labels",
 ]
 
@@ -585,10 +585,12 @@ def _combine_teacher_and_correction(
     *,
     quiet: bool,
     extra_summary: dict[str, Any] | None = None,
-    adapter_manifest: Path = DEFAULT_ADAPTER_MANIFEST,
+    adapter_manifest: Path | None = None,
     allow_interventions: bool = False,
     tokenizer_id: str | None = None,
 ) -> dict:
+    if adapter_manifest is None:
+        adapter_manifest = default_adapter_manifest()
     teacher_rows = _load_jsonl_rows(teacher_jsonl)
     records = list(teacher_rows) + list(correction_records)
     allow_ask_targets = extra_summary is not None
@@ -704,15 +706,19 @@ def build_sft_b_plus(
     split_ids,
     out_jsonl,
     *,
-    teacher_jsonl: Path | str = DEFAULT_TEACHER_JSONL,
+    teacher_jsonl: Path | str | None = None,
     correction_system: str = "fixed_k",
     strip_interventions: bool = True,
     quiet: bool = False,
-    adapter_manifest: Path | str = DEFAULT_ADAPTER_MANIFEST,
+    adapter_manifest: Path | str | None = None,
     tokenizer_id: str | None = None,
     **_ignored: Any,
 ) -> dict:
     """Frozen teacher jsonl plus per-episode J4 correction sequences. No ASK targets."""
+    if teacher_jsonl is None:
+        teacher_jsonl = default_teacher_jsonl()
+    if adapter_manifest is None:
+        adapter_manifest = default_adapter_manifest()
     teacher_path = Path(teacher_jsonl)
     if not teacher_path.is_file():
         raise FileNotFoundError(f"teacher jsonl not found: {teacher_path}")
@@ -745,15 +751,19 @@ def build_ask_dataset(
     labels_jsonl,
     out_jsonl,
     *,
-    teacher_jsonl: Path | str = DEFAULT_TEACHER_JSONL,
+    teacher_jsonl: Path | str | None = None,
     correction_system: str = "fixed_k",
     strip_interventions: bool = True,
     quiet: bool = False,
-    adapter_manifest: Path | str = DEFAULT_ADAPTER_MANIFEST,
+    adapter_manifest: Path | str | None = None,
     tokenizer_id: str | None = None,
     **_ignored: Any,
 ) -> dict:
     """sft_c: same episodes as sft_b_plus; ASK only at complete needed points."""
+    if teacher_jsonl is None:
+        teacher_jsonl = default_teacher_jsonl()
+    if adapter_manifest is None:
+        adapter_manifest = default_adapter_manifest()
     teacher_path = Path(teacher_jsonl)
     if not teacher_path.is_file():
         raise FileNotFoundError(f"teacher jsonl not found: {teacher_path}")
@@ -798,9 +808,9 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(description="Build matched sft_b_plus / sft_c JSONL.")
     parser.add_argument("--mode", choices=("sft_b_plus", "sft_c"), default="sft_b_plus")
-    parser.add_argument("--campaign-root", default=str(DEFAULT_CORRECTION_CAMPAIGN))
+    parser.add_argument("--campaign-root", default=None, help="Default: $SIDEKICK_ROOT/results/hj4_correction_train_20260917")
     parser.add_argument("--correction-campaign-root", default=None)
-    parser.add_argument("--teacher-jsonl", default=str(DEFAULT_TEACHER_JSONL))
+    parser.add_argument("--teacher-jsonl", default=None, help="Default: $SIDEKICK_ROOT/artifacts/sft/sft_b_s123_p075.jsonl")
     parser.add_argument("--labels-jsonl", default=None)
     parser.add_argument("--split", required=True)
     parser.add_argument("--out", required=True)
@@ -809,7 +819,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tokenizer-id", default=None)
     args = parser.parse_args(list(argv) if argv is not None else None)
     split_ids = load_split_ids(args.split)
-    corr_root = args.correction_campaign_root or args.campaign_root
+    corr_root = args.correction_campaign_root or args.campaign_root or str(default_correction_campaign())
     strip = not args.no_strip_interventions
     if args.mode == "sft_c":
         if not args.labels_jsonl:

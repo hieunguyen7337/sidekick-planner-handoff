@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import glob
 import json
+import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -44,3 +46,37 @@ def test_manifests_have_no_leakage():
         train_ids = manifest.get("train_task_ids", [])
         heldout_ids = manifest.get("heldout_task_ids", [])
         assert_no_leakage(train_ids, heldout_ids)
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PROTECTED_APPWORLD_PREFIXES = (
+    "data/tasks/",
+    "data/api_docs/",
+    "data/base_dbs/",
+    "data/datasets/",
+)
+
+
+def test_no_protected_appworld_data_is_tracked():
+    """AppWorld's protected data may be redistributed only in encrypted form,
+    so no tracked path may sit under these prefixes."""
+    if not (REPO_ROOT / ".git").exists():
+        pytest.skip("not a git checkout; nothing to check")
+    proc = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        check=True,
+        timeout=120,
+    )
+    tracked = [
+        raw.decode("utf-8", errors="surrogateescape")
+        for raw in proc.stdout.split(b"\0")
+        if raw
+    ]
+    assert tracked, "git ls-files returned nothing; the check would pass vacuously"
+    offending = sorted(p for p in tracked if p.startswith(PROTECTED_APPWORLD_PREFIXES))
+    assert not offending, (
+        f"{len(offending)} tracked path(s) under protected AppWorld data dirs, e.g. {offending[:5]}"
+    )
+

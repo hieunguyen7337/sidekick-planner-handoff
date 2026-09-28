@@ -32,11 +32,16 @@ from sidekick.training.sft_data import (
     _start_commit,
     _try_tokenizer,
     _write_manifest,
+    sidekick_root,
 )
 
-DEFAULT_SOURCE = Path(
-    "/scratch/n12194778/sidekick/results/hj2b_planner_train_20260916"
-)
+SOURCE_REL = "results/hj2b_planner_train_20260916"
+
+
+def default_source() -> Path:
+    return sidekick_root() / SOURCE_REL
+
+
 DEFAULT_SYSTEM = "planner_alone"
 DEFAULT_CUTS: tuple[int, ...] = (6, 9, 11)
 DROP_TOO_SHORT = "too_short"
@@ -350,7 +355,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Build suffix-handoff SFT JSONL from planner trajectories."
     )
-    parser.add_argument("--source", default=str(DEFAULT_SOURCE))
+    parser.add_argument(
+        "--source",
+        default=None,
+        help="Planner campaign dir (default: $SIDEKICK_ROOT/results/hj2b_planner_train_20260916).",
+    )
     parser.add_argument("--system", default=DEFAULT_SYSTEM)
     parser.add_argument("--cuts", default=",".join(str(m) for m in DEFAULT_CUTS))
     parser.add_argument("--out", required=True)
@@ -358,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(list(argv) if argv is not None else None)
     cuts = tuple(int(part.strip()) for part in str(args.cuts).split(",") if part.strip())
     build_handoff_dataset(
-        args.source,
+        args.source if args.source is not None else str(default_source()),
         args.out,
         system=args.system,
         cuts=cuts,

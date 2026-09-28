@@ -69,15 +69,37 @@ INTERVENTION_MARK = "INTERVENTION:"
 ASK_REASON = "Review my progress so far and tell me the next step."
 ASK_TEMPLATE = f"ASK_PLANNER: {ASK_REASON}"
 
-DEFAULT_TEACHER_JSONL = Path(
-    "/scratch/n12194778/sidekick/artifacts/sft/sft_b_s123_p075.jsonl"
-)
-DEFAULT_ADAPTER_MANIFEST = Path(
-    "/scratch/n12194778/sidekick/artifacts/adapters/sft_b_s123_granite8b/manifest.json"
-)
-DEFAULT_CORRECTION_CAMPAIGN = Path(
-    "/scratch/n12194778/sidekick/results/hj4_correction_train_20260917"
-)
+class SidekickRootError(RuntimeError):
+    """A default run-tree path was needed but SIDEKICK_ROOT is not set."""
+
+
+# Relative to SIDEKICK_ROOT. The original runs used SIDEKICK_ROOT=/scratch/<user>/sidekick on QUT Aqua.
+TEACHER_JSONL_REL = "artifacts/sft/sft_b_s123_p075.jsonl"
+ADAPTER_MANIFEST_REL = "artifacts/adapters/sft_b_s123_granite8b/manifest.json"
+CORRECTION_CAMPAIGN_REL = "results/hj4_correction_train_20260917"
+
+
+def sidekick_root() -> Path:
+    """The run tree that holds artifacts/ and results/, read from SIDEKICK_ROOT at call time."""
+    raw = os.environ.get("SIDEKICK_ROOT")
+    if not raw:
+        raise SidekickRootError(
+            "SIDEKICK_ROOT is not set. Export SIDEKICK_ROOT=<dir> pointing at the run tree that "
+            "holds artifacts/ and results/, or pass the path explicitly."
+        )
+    return Path(raw)
+
+
+def default_teacher_jsonl() -> Path:
+    return sidekick_root() / TEACHER_JSONL_REL
+
+
+def default_adapter_manifest() -> Path:
+    return sidekick_root() / ADAPTER_MANIFEST_REL
+
+
+def default_correction_campaign() -> Path:
+    return sidekick_root() / CORRECTION_CAMPAIGN_REL
 
 
 def _heldout_task_ids() -> list[str]:
@@ -1158,7 +1180,7 @@ def build_sft_b_plus(
     split_ids,
     out_jsonl,
     *,
-    teacher_jsonl: Path | str = DEFAULT_TEACHER_JSONL,
+    teacher_jsonl: Path | str | None = None,
     teacher_system: str = "planner_alone",
     correction_system: str = "fixed_k",
     strip_interventions: bool = True,
@@ -1176,6 +1198,7 @@ def build_sft_b_plus(
         split_ids,
         out_jsonl,
         teacher_jsonl=teacher_jsonl,
+        adapter_manifest=kwargs.get("adapter_manifest"),
         correction_system=correction_system,
         strip_interventions=strip_interventions,
         tokenizer_id=tokenizer_id,
@@ -1351,7 +1374,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             corr_root,
             split_ids,
             args.out,
-            teacher_jsonl=getattr(args, "teacher_jsonl", DEFAULT_TEACHER_JSONL),
+            teacher_jsonl=getattr(args, "teacher_jsonl", None),
             correction_system=args.correction_system,
             strip_interventions=strip,
             solved_only=not args.no_solved_only,

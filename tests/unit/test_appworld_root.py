@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 
 from sidekick.environments.appworld_env import (
-    DEFAULT_APPWORLD_ROOT,
     AppWorldEnv,
     AppWorldRootError,
 )
@@ -33,14 +33,23 @@ def test_env_var_wins_over_default(tmp_path, monkeypatch):
     assert env.root == env_root
 
 
-def test_default_used_when_nothing_set(tmp_path, monkeypatch):
+def test_unset_env_raises_clear_error(monkeypatch):
     monkeypatch.delenv("APPWORLD_ROOT", raising=False)
-    fake_default = _make_root(tmp_path)
-    monkeypatch.setattr(
-        "sidekick.environments.appworld_env.DEFAULT_APPWORLD_ROOT", fake_default
-    )
-    env = AppWorldEnv()
-    assert env.root == fake_default
+    with pytest.raises(AppWorldRootError, match="APPWORLD_ROOT is not set"):
+        AppWorldEnv()
+
+
+def test_empty_env_raises_clear_error(monkeypatch):
+    monkeypatch.setenv("APPWORLD_ROOT", "")
+    with pytest.raises(AppWorldRootError, match="APPWORLD_ROOT is not set"):
+        AppWorldEnv()
+
+
+def test_no_hardcoded_default_root():
+    import sidekick.environments.appworld_env as mod
+
+    assert not hasattr(mod, "DEFAULT_APPWORLD_ROOT")
+    assert "n12194778" not in Path(mod.__file__).read_text(encoding="utf-8")
 
 
 def test_missing_tasks_dir_raises(tmp_path, monkeypatch):
@@ -67,7 +76,3 @@ def test_env_var_set_before_reset(tmp_path, monkeypatch):
         "appworld_root": root,
         "experiment_name": "sidekick",
     }
-
-
-def test_default_constant_points_at_installed_data():
-    assert DEFAULT_APPWORLD_ROOT == "/scratch/n12194778/sidekick/appworld"

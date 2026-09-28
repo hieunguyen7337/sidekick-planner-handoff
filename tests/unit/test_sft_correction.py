@@ -451,7 +451,11 @@ def test_sft_b_plus_combines_teacher_and_correction(tmp_path, no_heldout):
     build_sft_dataset(teacher, ["copy_hello"], teacher_jsonl)
     out = tmp_path / "sft_b_plus.jsonl"
     summary = build_sft_b_plus(
-        correction, ["copy_hello"], out, teacher_jsonl=teacher_jsonl
+        correction,
+        ["copy_hello"],
+        out,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     assert summary["n_teacher_sequences"] == 1
     assert summary["n_correction_sequences"] == 1

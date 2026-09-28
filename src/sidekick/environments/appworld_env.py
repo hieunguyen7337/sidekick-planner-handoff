@@ -9,11 +9,9 @@ from typing import Any
 from sidekick.environments.base import BaseEnv
 from sidekick.protocols.schemas import ExecutorAction, Observation
 
-DEFAULT_APPWORLD_ROOT = "/scratch/n12194778/sidekick/appworld"
-
 
 class AppWorldRootError(Exception):
-    """Raised when the resolved AppWorld data root has no data/tasks directory."""
+    """Raised when no AppWorld data root is configured, or it has no data/tasks directory."""
 
 
 class AppWorldEnv(BaseEnv):
@@ -40,14 +38,20 @@ class AppWorldEnv(BaseEnv):
         root: str | None = None,
     ) -> None:
         # Resolve the data root: explicit argument > APPWORLD_ROOT env var >
-        # installed default. Never fall through to os.getcwd() (AppWorld's own
-        # dangerous default in appworld/common/path_store.py).
-        self.root = root or os.environ.get("APPWORLD_ROOT") or DEFAULT_APPWORLD_ROOT
+        # error. Never os.getcwd() (AppWorld's own dangerous default in
+        # appworld/common/path_store.py).
+        self.root = root or os.environ.get("APPWORLD_ROOT")
+        if not self.root:
+            raise AppWorldRootError(
+                "APPWORLD_ROOT is not set. Install the AppWorld data outside this "
+                "repository and export APPWORLD_ROOT=<dir> (the directory that "
+                "contains data/tasks), or pass root=... to AppWorldEnv."
+            )
         self.root = os.path.abspath(self.root)
         if not os.path.isdir(os.path.join(self.root, "data", "tasks")):
             raise AppWorldRootError(
                 f"AppWorld data root {self.root!r} has no data/tasks directory. "
-                f"Pass root=..., set APPWORLD_ROOT, or check {DEFAULT_APPWORLD_ROOT!r}."
+                "Pass root=... or set APPWORLD_ROOT to a directory that contains data/tasks."
             )
         # Set before the lazy AppWorld import in reset(): appworld resolves its
         # root from this variable and would otherwise use os.getcwd().

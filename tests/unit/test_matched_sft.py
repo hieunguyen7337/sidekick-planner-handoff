@@ -239,10 +239,19 @@ def test_needless_pair_sequences_are_byte_identical(tmp_path, no_heldout):
     plus = tmp_path / "sft_b_plus.jsonl"
     ask = tmp_path / "sft_c.jsonl"
     plus_sum = build_sft_b_plus(
-        corr, ["copy_hello"], plus, teacher_jsonl=teacher_jsonl
+        corr,
+        ["copy_hello"],
+        plus,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     ask_sum = build_ask_dataset(
-        corr, ["copy_hello"], labels, ask, teacher_jsonl=teacher_jsonl
+        corr,
+        ["copy_hello"],
+        labels,
+        ask,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     plus_rows = _load_runs(plus)
     ask_rows = _load_runs(ask)
@@ -283,10 +292,19 @@ def test_needed_point_inserts_ask_and_keeps_action_count(tmp_path, no_heldout):
     plus = tmp_path / "sft_b_plus.jsonl"
     ask = tmp_path / "sft_c.jsonl"
     plus_sum = build_sft_b_plus(
-        corr, ["copy_hello"], plus, teacher_jsonl=teacher_jsonl
+        corr,
+        ["copy_hello"],
+        plus,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     ask_sum = build_ask_dataset(
-        corr, ["copy_hello"], labels, ask, teacher_jsonl=teacher_jsonl
+        corr,
+        ["copy_hello"],
+        labels,
+        ask,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     plus_rows = _load_runs(plus)
     ask_rows = _load_runs(ask)
@@ -337,10 +355,19 @@ def test_ambiguous_and_incomplete_match_needless(tmp_path, no_heldout):
     plus = tmp_path / "sft_b_plus.jsonl"
     ask = tmp_path / "sft_c.jsonl"
     plus_sum = build_sft_b_plus(
-        corr, ["copy_hello"], plus, teacher_jsonl=teacher_jsonl
+        corr,
+        ["copy_hello"],
+        plus,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     ask_sum = build_ask_dataset(
-        corr, ["copy_hello"], labels, ask, teacher_jsonl=teacher_jsonl
+        corr,
+        ["copy_hello"],
+        labels,
+        ask,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     plus_corr = next(
         r for r in _load_runs(plus) if r["meta"].get("source") == "correction"
@@ -368,7 +395,11 @@ def test_seeds_are_discovered_not_hardcoded(tmp_path, no_heldout):
     )
     out = tmp_path / "plus.jsonl"
     summary = build_sft_b_plus(
-        corr, ["copy_hello"], out, teacher_jsonl=teacher_jsonl
+        corr,
+        ["copy_hello"],
+        out,
+        teacher_jsonl=teacher_jsonl,
+        adapter_manifest=tmp_path / "no_adapter.json",
     )
     seeds = sorted(
         {
