@@ -650,5 +650,491 @@
       "hstar_handoff_pp": 8.570455
     },
     "skipped_reason": null
+  },
+  {
+    "figure_id": "F12",
+    "file_pdf": "paper/figures/f12_registered_forest.pdf",
+    "file_png": "paper/figures/f12_registered_forest.png",
+    "width_in": 7.0,
+    "column": "two-column",
+    "caption": "Every registered held-out (`test_normal`) `goal_pass` prediction of J12, J10 and J11 (J10's P2, a cost ratio, is not a `goal_pass` contrast and is not drawn), left arm \u2212 right arm as labelled, pp: point and scenario 95 % CI, 336 pairs per row except D3 (n = 182), D4 (n = 182). Marker fill is each row's registered verdict under its own rule, printed at the right; the rules differ in direction (P5 predicts that advice at every step is not shown to beat the one-plan floor, L2 that it falls short of the 11-action prefix). Directionally consistent (P4): the point lies on the predicted side of 0 and the interval includes 0, which the registration reads as unresolved, with no claim. Dotted: 0. Dashed: the \u03b4 = \u22127.00 pp non-inferiority margin, on the two non-inferiority rows only, P3 and L4. L4 is registered as planner alone \u2212 tailored 11-action prefix (upper bound < +7.00 pp) and is drawn flipped, as prefix \u2212 planner alone, so both rows read against \u22127.00 pp; drawn, it is \u22120.86 pp, [\u22127.08, +5.97], its lower bound 0.08 pp below the margin. \u2020 CF2, CF3: pre-specified, not decision-bearing. Ledger rows: D1 J12-02, D2 J12-03, D3 J12-04, D4 J12-05, P1 J10-02, P3 J10-04, P4 J10-05, P5 J10-06, P6 J10-07, CF1 J10-08, CF2 J10-09, CF3 J10-09, L1 J11-03, L2 J11-04, L3 J11-05, L4 J11-06, L5 J11-07.",
+    "series": [
+      {
+        "label": "D1  tailored, all",
+        "row_id": "D1",
+        "study": "J12",
+        "report_path": "campaign/results/j12_depth_test_normal.report.json",
+        "json_keys": [
+          "j12_depth_test_normal.report.json:predictions[D1].contrast.scenario.diff_pp",
+          "j12_depth_test_normal.report.json:predictions[D1].contrast.scenario.ci95_pp",
+          "j12_depth_test_normal.report.json:predictions[D1].contrast.n_pairs",
+          "j12_depth_test_normal.report.json:predictions[D1].verdict",
+          "j12_depth_test_normal.report.json:predictions[D1].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J12-02"
+        ],
+        "value_pp": 13.55,
+        "ci95_pp_scenario": [
+          8.78,
+          18.64
+        ],
+        "n": 336,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "D2  untailored, all",
+        "row_id": "D2",
+        "study": "J12",
+        "report_path": "campaign/results/j12_depth_test_normal.report.json",
+        "json_keys": [
+          "j12_depth_test_normal.report.json:predictions[D2].contrast.scenario.diff_pp",
+          "j12_depth_test_normal.report.json:predictions[D2].contrast.scenario.ci95_pp",
+          "j12_depth_test_normal.report.json:predictions[D2].contrast.n_pairs",
+          "j12_depth_test_normal.report.json:predictions[D2].verdict",
+          "j12_depth_test_normal.report.json:predictions[D2].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J12-03"
+        ],
+        "value_pp": 8.96,
+        "ci95_pp_scenario": [
+          4.95,
+          13.17
+        ],
+        "n": 336,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "D3  tailored, $h^*$ handoff (n = 182)",
+        "row_id": "D3",
+        "study": "J12",
+        "report_path": "campaign/results/j12_depth_test_normal.report.json",
+        "json_keys": [
+          "j12_depth_test_normal.report.json:predictions[D3].contrast.scenario.diff_pp",
+          "j12_depth_test_normal.report.json:predictions[D3].contrast.scenario.ci95_pp",
+          "j12_depth_test_normal.report.json:predictions[D3].contrast.n_handoff",
+          "j12_depth_test_normal.report.json:predictions[D3].verdict",
+          "j12_depth_test_normal.report.json:predictions[D3].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J12-04"
+        ],
+        "value_pp": 14.14,
+        "ci95_pp_scenario": [
+          7.84,
+          21.34
+        ],
+        "n": 182,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "D4  untailored, $h^*$ handoff (n = 182)",
+        "row_id": "D4",
+        "study": "J12",
+        "report_path": "campaign/results/j12_depth_test_normal.report.json",
+        "json_keys": [
+          "j12_depth_test_normal.report.json:predictions[D4].contrast.scenario.diff_pp",
+          "j12_depth_test_normal.report.json:predictions[D4].contrast.scenario.ci95_pp",
+          "j12_depth_test_normal.report.json:predictions[D4].contrast.n_handoff",
+          "j12_depth_test_normal.report.json:predictions[D4].verdict",
+          "j12_depth_test_normal.report.json:predictions[D4].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J12-05"
+        ],
+        "value_pp": 12.85,
+        "ci95_pp_scenario": [
+          6.89,
+          18.72
+        ],
+        "n": 182,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "P1  advice every step \u2212 prefix $m=11$",
+        "row_id": "P1",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:predictions[P1].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:predictions[P1].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:predictions[P1].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:predictions[P1].verdict",
+          "j10_a1_test_normal.report.json:predictions[P1].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-02"
+        ],
+        "value_pp": -11.98,
+        "ci95_pp_scenario": [
+          -17.04,
+          -6.92
+        ],
+        "n": 336,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "P3  prefix $m=11$ \u2212 planner alone",
+        "row_id": "P3",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:predictions[P3].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:predictions[P3].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:predictions[P3].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:predictions[P3].verdict",
+          "j10_a1_test_normal.report.json:predictions[P3].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-04"
+        ],
+        "value_pp": -3.97,
+        "ci95_pp_scenario": [
+          -8.68,
+          0.96
+        ],
+        "n": 336,
+        "verdict": "not_supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": true,
+        "threshold_pp_drawn": -7.0
+      },
+      {
+        "label": "P4  untailored prefix $m=11$ \u2212 $m=9$",
+        "row_id": "P4",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:predictions[P4].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:predictions[P4].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:predictions[P4].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:predictions[P4].verdict",
+          "j10_a1_test_normal.report.json:predictions[P4].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-05"
+        ],
+        "value_pp": 2.07,
+        "ci95_pp_scenario": [
+          -0.23,
+          4.52
+        ],
+        "n": 336,
+        "verdict": "directionally_consistent",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "P5  advice every step \u2212 one-plan floor",
+        "row_id": "P5",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:predictions[P5].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:predictions[P5].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:predictions[P5].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:predictions[P5].verdict",
+          "j10_a1_test_normal.report.json:predictions[P5].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-06"
+        ],
+        "value_pp": 4.47,
+        "ci95_pp_scenario": [
+          -1.19,
+          10.07
+        ],
+        "n": 336,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "P6  takeover \u2212 correction-prompt advice",
+        "row_id": "P6",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:predictions[P6].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:predictions[P6].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:predictions[P6].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:predictions[P6].verdict",
+          "j10_a1_test_normal.report.json:predictions[P6].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-07"
+        ],
+        "value_pp": 5.83,
+        "ci95_pp_scenario": [
+          1.61,
+          10.31
+        ],
+        "n": 336,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "CF1  neutral \u2212 correction-prompt advice",
+        "row_id": "CF1",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:amendment1.cf.predictions[CF1].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:amendment1.cf.predictions[CF1].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:amendment1.cf.predictions[CF1].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:amendment1.cf.predictions[CF1].verdict",
+          "j10_a1_test_normal.report.json:amendment1.cf.predictions[CF1].threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-08"
+        ],
+        "value_pp": 5.4,
+        "ci95_pp_scenario": [
+          1.43,
+          9.37
+        ],
+        "n": 336,
+        "verdict": "supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "CF2  action shown \u2212 correction-prompt advice",
+        "row_id": "CF2",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF2].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF2].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF2].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF2].side"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-09"
+        ],
+        "value_pp": 0.46,
+        "ci95_pp_scenario": [
+          -2.79,
+          3.9
+        ],
+        "n": 336,
+        "verdict": "not_resolved",
+        "decision_bearing": false,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": null
+      },
+      {
+        "label": "CF3  takeover \u2212 neutral advice",
+        "row_id": "CF3",
+        "study": "J10",
+        "report_path": "campaign/results/j10_a1_test_normal.report.json",
+        "json_keys": [
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF3].contrast.scenario.diff_pp",
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF3].contrast.scenario.ci95_pp",
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF3].contrast.n_pairs",
+          "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF3].side"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J10-09"
+        ],
+        "value_pp": 0.44,
+        "ci95_pp_scenario": [
+          -3.03,
+          3.87
+        ],
+        "n": 336,
+        "verdict": "not_resolved",
+        "decision_bearing": false,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": null
+      },
+      {
+        "label": "L1  takeover \u2212 correction-prompt advice",
+        "row_id": "L1",
+        "study": "J11",
+        "report_path": "campaign/results/j11_lp2_test_normal.report.json",
+        "json_keys": [
+          "j11_lp2_test_normal.report.json:contrasts.L1.scenario.diff_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L1.scenario.ci95_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L1.n_pairs",
+          "j11_lp2_test_normal.report.json:contrasts.L1.reading",
+          "j11_lp2_test_normal.report.json:contrasts.L1.threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J11-03"
+        ],
+        "value_pp": 5.08,
+        "ci95_pp_scenario": [
+          1.07,
+          9.05
+        ],
+        "n": 336,
+        "verdict": "on_the_boundary",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "L2  advice every step \u2212 prefix $m=11$",
+        "row_id": "L2",
+        "study": "J11",
+        "report_path": "campaign/results/j11_lp2_test_normal.report.json",
+        "json_keys": [
+          "j11_lp2_test_normal.report.json:contrasts.L2.scenario.diff_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L2.scenario.ci95_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L2.n_pairs",
+          "j11_lp2_test_normal.report.json:contrasts.L2.reading",
+          "j11_lp2_test_normal.report.json:contrasts.L2.threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J11-04"
+        ],
+        "value_pp": 11.84,
+        "ci95_pp_scenario": [
+          7.09,
+          16.6
+        ],
+        "n": 336,
+        "verdict": "not_supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "L3  tailored prefix $m=11$ \u2212 $m=6$",
+        "row_id": "L3",
+        "study": "J11",
+        "report_path": "campaign/results/j11_lp2_test_normal.report.json",
+        "json_keys": [
+          "j11_lp2_test_normal.report.json:contrasts.L3.scenario.diff_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L3.scenario.ci95_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L3.n_pairs",
+          "j11_lp2_test_normal.report.json:contrasts.L3.reading",
+          "j11_lp2_test_normal.report.json:contrasts.L3.threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J11-05"
+        ],
+        "value_pp": 0.01,
+        "ci95_pp_scenario": [
+          -4.25,
+          4.34
+        ],
+        "n": 336,
+        "verdict": "not_supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      },
+      {
+        "label": "L4  prefix $m=11$ \u2212 planner alone (flipped)",
+        "row_id": "L4",
+        "study": "J11",
+        "report_path": "campaign/results/j11_lp2_test_normal.report.json",
+        "json_keys": [
+          "j11_lp2_test_normal.report.json:contrasts.L4.scenario.diff_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L4.scenario.ci95_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L4.n_pairs",
+          "j11_lp2_test_normal.report.json:contrasts.L4.reading",
+          "j11_lp2_test_normal.report.json:contrasts.L4.threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J11-06"
+        ],
+        "value_pp": -0.86,
+        "ci95_pp_scenario": [
+          -7.08,
+          5.97
+        ],
+        "n": 336,
+        "verdict": "not_supported",
+        "decision_bearing": true,
+        "flipped": true,
+        "non_inferiority": true,
+        "threshold_pp_drawn": -7.0
+      },
+      {
+        "label": "L5  untailored prefix $m=11$ \u2212 $m=6$",
+        "row_id": "L5",
+        "study": "J11",
+        "report_path": "campaign/results/j11_lp2_test_normal.report.json",
+        "json_keys": [
+          "j11_lp2_test_normal.report.json:contrasts.L5.scenario.diff_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L5.scenario.ci95_pp",
+          "j11_lp2_test_normal.report.json:contrasts.L5.n_pairs",
+          "j11_lp2_test_normal.report.json:contrasts.L5.reading",
+          "j11_lp2_test_normal.report.json:contrasts.L5.threshold_pp"
+        ],
+        "n_points": 1,
+        "ledger_ids": [
+          "J11-07"
+        ],
+        "value_pp": 3.25,
+        "ci95_pp_scenario": [
+          -0.13,
+          6.66
+        ],
+        "n": 336,
+        "verdict": "not_supported",
+        "decision_bearing": true,
+        "flipped": false,
+        "non_inferiority": false,
+        "threshold_pp_drawn": 0.0
+      }
+    ],
+    "margin_pp": -7.0,
+    "skipped_reason": null
   }
 ]

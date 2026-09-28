@@ -6,6 +6,7 @@ No real campaign data or network connections are accessed in tests.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -27,6 +28,7 @@ from scripts.analysis.figures import (
     generate_f9_channel_limit,
     generate_f10_depth_hstar,
     generate_f11_ni_forest,
+    generate_f12_registered_forest,
     get_nested_key,
     load_report_json,
     run_figures,
@@ -332,6 +334,86 @@ def _populate_v2_fixtures(results_dir: Path) -> None:
         (results_dir / f"{name}.report.json").write_text(json.dumps(payload))
 
 
+# F12 fixtures are SYNTHETIC: every number below is invented for the test (300 pairs, 150 h*),
+# and only the key layout follows the three held-out aggregate reports. The file names are the
+# ones F12 reads, written under tmp_path.
+F12_FIXTURE_NAMES = {
+    "j12": "j12_depth_test_normal",
+    "j10": "j10_a1_test_normal",
+    "j11": "j11_lp2_test_normal",
+}
+
+
+def _f12_prediction(pid: str, left: str, right: str, diff_pp: float, ci: list[float], verdict: str,
+                    threshold_pp: float = 0.0, n_handoff: int | None = None) -> dict:
+    contrast = {"field": "goal_pass_rate", "n_pairs": 300,
+                "scenario": {"clustering": "scenario", "diff_pp": diff_pp, "ci95_pp": ci}}
+    if n_handoff is not None:
+        contrast["n_handoff"] = n_handoff
+    return {"id": pid, "left": left, "right": right, "threshold_pp": threshold_pp, "verdict": verdict,
+            "contrast": contrast}
+
+
+def _f12_secondary(pid: str, left: str, right: str, diff_pp: float, ci: list[float]) -> dict:
+    return {"id": pid, "left": left, "right": right, "side": "not_resolved", "decision_bearing": False,
+            "contrast": {"field": "goal_pass_rate", "n_pairs": 300,
+                         "scenario": {"clustering": "scenario", "diff_pp": diff_pp, "ci95_pp": ci}}}
+
+
+def _f12_j11_contrast(left: str, right: str, diff_pp: float, ci: list[float], reading: str,
+                      threshold_pp: float = 0.0) -> dict:
+    return {"left": left, "right": right, "field": "goal_pass_rate", "n_pairs": 300,
+            "threshold_pp": threshold_pp, "reading": reading,
+            "scenario": {"clustering": "scenario", "diff_pp": diff_pp, "ci95_pp": ci}}
+
+
+def _make_synthetic_j12_report() -> dict:
+    return {"split": "test_normal", "status": "COMPLETE", "predictions": [
+        _f12_prediction("D1", "prefix_m11", "prefix_m6", 10.0, [5.0, 15.0], "supported"),
+        _f12_prediction("D2", "prefix_zs_m11", "prefix_zs_m6", 6.0, [2.0, 10.0], "supported"),
+        _f12_prediction("D3", "prefix_m11", "prefix_m6", 12.0, [4.0, 20.0], "supported", n_handoff=150),
+        _f12_prediction("D4", "prefix_zs_m11", "prefix_zs_m6", -1.0, [-6.0, 4.0], "not_supported", n_handoff=150),
+    ]}
+
+
+def _make_synthetic_j10_report() -> dict:
+    return {"split": "test_normal", "status": "COMPLETE", "predictions": [
+        _f12_prediction("P1", "advise_k1_fullctx", "prefix_m11", -9.0, [-14.0, -4.0], "supported"),
+        {"id": "P2", "kind": "cost_ratio", "verdict": "supported"},
+        _f12_prediction("P3", "prefix_m11", "planner_alone_cap81", -2.0, [-8.0, 4.0], "not_supported",
+                        threshold_pp=-7.0),
+        _f12_prediction("P4", "prefix_zs_m11", "prefix_zs_m9", 1.0, [-1.0, 3.0], "directionally_consistent"),
+        _f12_prediction("P5", "advise_k1_fullctx", "sft_plan", 3.0, [-2.0, 8.0], "supported"),
+        _f12_prediction("P6", "takeover_k10", "advise_k10_fullctx", 4.0, [0.5, 7.5], "supported"),
+    ], "amendment1": {"cf": {
+        "predictions": [
+            _f12_prediction("CF1", "advise_k10_neutral", "advise_k10_fullctx", 3.5, [1.0, 6.0], "supported"),
+        ],
+        "secondary": [
+            _f12_secondary("CF2", "show_k10", "advise_k10_fullctx", 0.5, [-3.0, 4.0]),
+            _f12_secondary("CF3", "takeover_k10", "advise_k10_neutral", -0.5, [-4.0, 3.0]),
+        ],
+    }}}
+
+
+def _make_synthetic_j11_report() -> dict:
+    return {"split": "test_normal", "status": "COMPLETE", "planner": {"code": "PX"}, "contrasts": {
+        "L1": _f12_j11_contrast("T", "A", 4.5, [0.5, 8.5], "on_the_boundary"),
+        "L2": _f12_j11_contrast("A1", "M_bplus_11", 9.0, [5.0, 13.0], "not_supported"),
+        "L3": _f12_j11_contrast("M_bplus_11", "M_bplus_6", 0.2, [-4.0, 4.4], "not_supported"),
+        # Registered as C − M^bplus_11 < +7; F12 draws it flipped: -1.5 [-6.5, +5.0] against -7.
+        "L4": _f12_j11_contrast("C", "M_bplus_11", 1.5, [-5.0, 6.5], "supported", threshold_pp=7.0),
+        "L5": _f12_j11_contrast("M_zs_11", "M_zs_6", 2.0, [-1.0, 5.0], "not_supported"),
+    }}
+
+
+def _populate_f12_fixtures(results_dir: Path) -> None:
+    results_dir.mkdir(parents=True, exist_ok=True)
+    for key, payload in [("j12", _make_synthetic_j12_report()), ("j10", _make_synthetic_j10_report()),
+                         ("j11", _make_synthetic_j11_report())]:
+        (results_dir / f"{F12_FIXTURE_NAMES[key]}.report.json").write_text(json.dumps(payload))
+
+
 def _edit_fixture(results_dir: Path, name: str, edit) -> None:
     path = results_dir / f"{name}.report.json"
     data = json.loads(path.read_text())
@@ -373,6 +455,7 @@ def _populate_all_standard_fixtures(results_dir: Path) -> None:
     with open(results_dir / "hj13_advice_at_price_cost_20260923.report.json", "w") as f:
         json.dump(_make_minimal_advice_at_price_cost_report(), f)
     _populate_v2_fixtures(results_dir)
+    _populate_f12_fixtures(results_dir)
 
 
 def test_missing_report_file_is_fatal(tmp_path: Path) -> None:
@@ -874,9 +957,172 @@ def test_run_figures_subset_keeps_other_manifest_entries(tmp_path: Path) -> None
 
     run_figures(results_dir, out_dir, manifest_path)
     first = json.loads(manifest_path.read_text())
-    assert [e["figure_id"] for e in first] == [f"F{i}" for i in range(1, 12)]
+    assert [e["figure_id"] for e in first] == [f"F{i}" for i in range(1, 13)]
 
     run_figures(results_dir, out_dir, manifest_path, only_fig="F9, f11")
     second = json.loads(manifest_path.read_text())
-    assert [e["figure_id"] for e in second] == [f"F{i}" for i in range(1, 12)]
+    assert [e["figure_id"] for e in second] == [f"F{i}" for i in range(1, 13)]
     assert second[0] == first[0]
+
+
+def test_f12_rows_verdict_fills_margin_and_flip(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+    _populate_f12_fixtures(results_dir)
+
+    errorbar_calls, errorbar_patch = _spy("errorbar")
+    vlines_calls, vlines_patch = _spy("vlines")
+    axvline_calls, axvline_patch = _spy("axvline")
+    text_calls, text_patch = _spy("text")
+    with errorbar_patch, vlines_patch, axvline_patch, text_patch:
+        entry = generate_f12_registered_forest(results_dir, out_dir)
+
+    assert entry["figure_id"] == "F12"
+    assert entry["file_pdf"].endswith("f12_registered_forest.pdf")
+    assert entry["file_png"].endswith("f12_registered_forest.png")
+    assert Path(entry["file_pdf"]).is_file() and Path(entry["file_png"]).is_file()
+    assert "test_normal" not in Path(entry["file_pdf"]).name
+
+    # J12 D1-D4, J10 P1 P3-P6 CF1-CF3, J11 L1-L5, in that order; P2 (a cost ratio) is not a row.
+    # L4's stored +1.5 [-5.0, +6.5] (C - M) is drawn flipped as -1.5 [-6.5, +5.0].
+    ids = [s["row_id"] for s in entry["series"]]
+    assert ids == ["D1", "D2", "D3", "D4", "P1", "P3", "P4", "P5", "P6", "CF1", "CF2", "CF3",
+                   "L1", "L2", "L3", "L4", "L5"]
+    drawn = [args[0][0] for args, _ in errorbar_calls]
+    assert drawn == [10.0, 6.0, 12.0, -1.0, -9.0, -2.0, 1.0, 3.0, 4.0, 3.5, 0.5, -0.5, 4.5, 9.0, 0.2, -1.5, 2.0]
+    l4_index = ids.index("L4")
+    _, l4_kwargs = errorbar_calls[l4_index]
+    assert l4_kwargs["xerr"] == [[5.0], [6.5]]  # -1.5 - (-6.5) below, 5.0 - (-1.5) above
+    l4 = entry["series"][l4_index]
+    assert l4["flipped"] is True and l4["ci95_pp_scenario"] == [-6.5, 5.0] and l4["threshold_pp_drawn"] == -7.0
+    p4 = entry["series"][ids.index("P4")]
+    assert p4["ledger_ids"] == ["J10-05"] and p4["verdict"] == "directionally_consistent"
+    assert p4["flipped"] is False and p4["non_inferiority"] is False and p4["threshold_pp_drawn"] == 0.0
+    l5 = entry["series"][ids.index("L5")]
+    assert l5["ledger_ids"] == ["J11-07"] and l5["ci95_pp_scenario"] == [-1.0, 5.0] and l5["verdict"] == "not_supported"
+
+    # Marker fill by verdict: one style per class, not_supported open, on_the_boundary half-filled.
+    styles = {}
+    for (_, kwargs), series in zip(errorbar_calls, entry["series"]):
+        style = (kwargs["markerfacecolor"], kwargs["fillstyle"])
+        styles.setdefault(series["verdict"], set()).add(style)
+    assert all(len(v) == 1 for v in styles.values())
+    assert styles["not_supported"] == {("white", "full")}
+    assert next(iter(styles["on_the_boundary"]))[1] == "left"
+    # directionally consistent (P4) shares the unresolved class with CF2 and CF3's not_resolved.
+    assert styles["directionally_consistent"] == styles["not_resolved"]
+    assert len({next(iter(v)) for v in styles.values()}) == 4
+
+    # The zero line spans the axes; the margin is a dashed segment on P3 and L4 only.
+    assert [args[0] for args, _ in axvline_calls] == [0.0]
+    assert [args[0] for args, _ in vlines_calls] == [-7.0, -7.0]
+    assert [s["row_id"] for s in entry["series"] if s["non_inferiority"]] == ["P3", "L4"]
+
+    # The verdict string sits at the right of every row, CF2 and CF3 marked not decision-bearing.
+    verdict_texts = [args[2] for args, _ in text_calls]
+    assert verdict_texts == [
+        "supported", "supported", "supported", "not supported",
+        "supported", "not supported", "directionally consistent", "supported", "supported", "supported",
+        "not resolved†", "not resolved†",
+        "on the boundary", "not supported", "not supported", "supported", "not supported",
+    ]
+
+    # Row labels carry n only where it differs from the common 300; the caption names the rest.
+    labels = [s["label"] for s in entry["series"]]
+    assert labels[2].endswith("(n = 150)") and labels[3].endswith("(n = 150)")
+    assert not any("(n = 300)" in label for label in labels)
+    # One arm pair, one name: J11's L1 (T − A) is J10's P6 contrast under the second planner.
+    assert labels[ids.index("L1")] == "L1  takeover − correction-prompt advice"
+    assert labels[ids.index("P6")] == "P6  takeover − correction-prompt advice"
+    caption = entry["caption"]
+    assert "300 pairs per row except D3 (n = 150), D4 (n = 150)" in caption
+    assert "δ = −7.00 pp" in caption and "upper bound < +7.00 pp" in caption and "drawn flipped" in caption
+    assert "† CF2, CF3: pre-specified, not decision-bearing." in caption
+    assert "D1 J12-02" in caption and "CF3 J10-09" in caption and "L4 J11-06" in caption
+    assert "P4 J10-05" in caption and "L5 J11-07" in caption
+    assert caption.startswith("Every registered held-out (`test_normal`) `goal_pass` prediction of J12, J10 and J11")
+    assert "J10's P2, a cost ratio, is not a `goal_pass` contrast and is not drawn" in caption
+    assert "Directionally consistent (P4): the point lies on the predicted side of 0" in caption
+    assert "drawn, it is −1.50 pp, [−6.50, +5.00], its lower bound 0.50 pp above the margin." in caption
+    assert "M^bplus" not in caption
+    keys = [k for s in entry["series"] for k in s["json_keys"]]
+    assert "j12_depth_test_normal.report.json:predictions[D3].contrast.scenario.ci95_pp" in keys
+    assert "j10_a1_test_normal.report.json:amendment1.cf.secondary[CF2].side" in keys
+    assert "j11_lp2_test_normal.report.json:contrasts.L4.scenario.diff_pp" in keys
+    assert "j10_a1_test_normal.report.json:predictions[P4].verdict" in keys
+    assert "j11_lp2_test_normal.report.json:contrasts.L5.reading" in keys
+
+
+def test_f12_refuses_missing_key_wrong_arms_unknown_verdict_and_incomplete_report(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j12"],
+                  lambda d: d["predictions"][2]["contrast"]["scenario"].pop("ci95_pp"))
+    with pytest.raises(SystemExit) as exc_info:
+        generate_f12_registered_forest(results_dir, out_dir)
+    assert "Fatal [F12]" in str(exc_info.value)
+    assert "predictions[D3].contrast.scenario.ci95_pp" in str(exc_info.value)
+
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j11"],
+                  lambda d: d["contrasts"]["L4"].update({"left": "M_bplus_11", "right": "C"}))
+    with pytest.raises(SystemExit, match="L4 in j11_lp2_test_normal.report.json is M_bplus_11 − C"):
+        generate_f12_registered_forest(results_dir, out_dir)
+
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j10"],
+                  lambda d: d["amendment1"]["cf"]["secondary"][0].update({"side": "maybe"}))
+    with pytest.raises(SystemExit, match="unknown verdict 'maybe'"):
+        generate_f12_registered_forest(results_dir, out_dir)
+
+    _populate_f12_fixtures(results_dir)
+    # P3 at -5 against L4's flipped -7.
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j10"], lambda d: d["predictions"][2].update({"threshold_pp": -5.0}))
+    with pytest.raises(SystemExit, match="disagree on one negative margin"):
+        generate_f12_registered_forest(results_dir, out_dir)
+
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j12"], lambda d: d.update({"status": "INCOMPLETE"}))
+    with pytest.raises(SystemExit, match="COMPLETE test_normal read"):
+        generate_f12_registered_forest(results_dir, out_dir)
+    assert not (out_dir / "f12_registered_forest.pdf").exists()
+
+
+def test_f12_refuses_wrong_field_wrong_split_margin_flag_mismatch_and_point_outside_interval(tmp_path: Path) -> None:
+    results_dir = tmp_path / "results"
+    out_dir = tmp_path / "figures"
+
+    # A row whose contrast is on another field than goal_pass_rate.
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j12"],
+                  lambda d: d["predictions"][0]["contrast"].update({"field": "tgc"}))
+    with pytest.raises(SystemExit, match=re.escape("D1 in j12_depth_test_normal.report.json is prefix_m11 − prefix_m6 on tgc")):
+        generate_f12_registered_forest(results_dir, out_dir)
+
+    # A COMPLETE report on another split than test_normal.
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j10"], lambda d: d.update({"split": "dev"}))
+    with pytest.raises(SystemExit, match=re.escape("j10_a1_test_normal.report.json is split 'dev', status 'COMPLETE'")):
+        generate_f12_registered_forest(results_dir, out_dir)
+
+    # A row F12 reads against 0 whose report carries a margin (P5 is predictions[4]) ...
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j10"], lambda d: d["predictions"][4].update({"threshold_pp": -7.0}))
+    with pytest.raises(SystemExit, match=re.escape("P5 threshold_pp is -7.0; F12 draws it as a row read against 0")):
+        generate_f12_registered_forest(results_dir, out_dir)
+
+    # ... and a non-inferiority row whose report carries 0.
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j11"], lambda d: d["contrasts"]["L4"].update({"threshold_pp": 0.0}))
+    with pytest.raises(SystemExit, match=re.escape("L4 threshold_pp is 0.0; F12 draws it as a non-inferiority row")):
+        generate_f12_registered_forest(results_dir, out_dir)
+
+    # A point outside its own interval.
+    _populate_f12_fixtures(results_dir)
+    _edit_fixture(results_dir, F12_FIXTURE_NAMES["j11"],
+                  lambda d: d["contrasts"]["L3"]["scenario"].update({"diff_pp": 9.0}))
+    with pytest.raises(SystemExit, match=re.escape("L3 point 9.0 lies outside [-4.0, 4.4]")):
+        generate_f12_registered_forest(results_dir, out_dir)
+    assert not (out_dir / "f12_registered_forest.pdf").exists()

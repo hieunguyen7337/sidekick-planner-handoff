@@ -17,15 +17,17 @@ Figures:
   F9: The k = 10 channel arms against their step-limit rates, and D0 split by the step limit (v2 §3).
   F10: goal_pass at m = 6, 9, 11 by h* population, both receivers (v2 §4.2).
   F11: Arm minus the planner alone, forest with the 7.00 pp margin and the h* rescue split (v2 §4.6).
+  F12: Registered held-out forest: the J12, J10 and J11 goal_pass predictions on test_normal, by verdict.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 # Ensure thread environment variables are set before any math/numpy operations
 for _thread_env in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -36,6 +38,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.lines import Line2D
+from matplotlib.transforms import blended_transform_factory
 
 MANDATORY_F5_ANNOTATION = (
     "Floor not shown: both Qwen floor arms score identically and complete no tasks, "
@@ -1937,6 +1941,358 @@ def generate_f11_ni_forest(
     }
 
 
+class _F12Row(NamedTuple):
+    """One F12 row: where its prediction sits in its study's report, and what it must say."""
+
+    study: str
+    row_id: str
+    container: str  # dotted key of a list matched on "id", or of a dict keyed by row id
+    contrast: str  # prefix of the contrast block inside the entry ("" when the entry is the contrast)
+    n_key: str  # the pair count shown for the row
+    verdict_key: str
+    label: str
+    left: str  # the report's own `left` and `right`, checked so a label cannot sit on another contrast
+    right: str
+    non_inferiority: bool
+    flip: bool  # draw right − left (value and interval negated)
+    ledger_id: str
+
+
+# Study order, report file and group label (the J11 label names the planner from its report).
+F12_STUDIES = (
+    ("J12", "j12_depth_test_normal.report.json", "J12 · depth, $m=11$ − $m=6$"),
+    ("J10", "j10_a1_test_normal.report.json", "J10 · A1"),
+    ("J11", "j11_lp2_test_normal.report.json", "J11 · LP-2, planner {planner}"),
+)
+
+# Rows top to bottom within each study: every registered test_normal goal_pass prediction of the three
+# reads (J10's P2 is a cost ratio, not a goal_pass contrast, and is not a row). L4 is registered as
+# C − M^bplus_11 with upper bound < +7.00 pp; flipped, it reads as prefix − planner against the same
+# negative margin as P3.
+F12_ROWS = (
+    _F12Row("J12", "D1", "predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "D1  tailored, all", "prefix_m11", "prefix_m6", False, False, "J12-02"),
+    _F12Row("J12", "D2", "predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "D2  untailored, all", "prefix_zs_m11", "prefix_zs_m6", False, False, "J12-03"),
+    _F12Row("J12", "D3", "predictions", "contrast.", "contrast.n_handoff", "verdict",
+            "D3  tailored, $h^*$ handoff", "prefix_m11", "prefix_m6", False, False, "J12-04"),
+    _F12Row("J12", "D4", "predictions", "contrast.", "contrast.n_handoff", "verdict",
+            "D4  untailored, $h^*$ handoff", "prefix_zs_m11", "prefix_zs_m6", False, False, "J12-05"),
+    _F12Row("J10", "P1", "predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "P1  advice every step − prefix $m=11$", "advise_k1_fullctx", "prefix_m11", False, False, "J10-02"),
+    _F12Row("J10", "P3", "predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "P3  prefix $m=11$ − planner alone", "prefix_m11", "planner_alone_cap81", True, False, "J10-04"),
+    _F12Row("J10", "P4", "predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "P4  untailored prefix $m=11$ − $m=9$", "prefix_zs_m11", "prefix_zs_m9", False, False, "J10-05"),
+    _F12Row("J10", "P5", "predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "P5  advice every step − one-plan floor", "advise_k1_fullctx", "sft_plan", False, False, "J10-06"),
+    _F12Row("J10", "P6", "predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "P6  takeover − correction-prompt advice", "takeover_k10", "advise_k10_fullctx", False, False, "J10-07"),
+    _F12Row("J10", "CF1", "amendment1.cf.predictions", "contrast.", "contrast.n_pairs", "verdict",
+            "CF1  neutral − correction-prompt advice", "advise_k10_neutral", "advise_k10_fullctx", False, False, "J10-08"),
+    _F12Row("J10", "CF2", "amendment1.cf.secondary", "contrast.", "contrast.n_pairs", "side",
+            "CF2  action shown − correction-prompt advice", "show_k10", "advise_k10_fullctx", False, False, "J10-09"),
+    _F12Row("J10", "CF3", "amendment1.cf.secondary", "contrast.", "contrast.n_pairs", "side",
+            "CF3  takeover − neutral advice", "takeover_k10", "advise_k10_neutral", False, False, "J10-09"),
+    _F12Row("J11", "L1", "contrasts", "", "n_pairs", "reading",
+            "L1  takeover − correction-prompt advice", "T", "A", False, False, "J11-03"),
+    _F12Row("J11", "L2", "contrasts", "", "n_pairs", "reading",
+            "L2  advice every step − prefix $m=11$", "A1", "M_bplus_11", False, False, "J11-04"),
+    _F12Row("J11", "L3", "contrasts", "", "n_pairs", "reading",
+            "L3  tailored prefix $m=11$ − $m=6$", "M_bplus_11", "M_bplus_6", False, False, "J11-05"),
+    _F12Row("J11", "L4", "contrasts", "", "n_pairs", "reading",
+            "L4  prefix $m=11$ − planner alone (flipped)", "C", "M_bplus_11", True, True, "J11-06"),
+    _F12Row("J11", "L5", "contrasts", "", "n_pairs", "reading",
+            "L5  untailored prefix $m=11$ − $m=6$", "M_zs_11", "M_zs_6", False, False, "J11-07"),
+)
+
+# Verdict strings the reports use, mapped to the four marker classes the legend shows. A string
+# outside this map is fatal, so a new reading cannot be drawn with some other class's fill.
+F12_VERDICT_CLASS = {
+    "supported": "supported",
+    "not_supported": "not_supported",
+    "on_the_boundary": "on_the_boundary",
+    "not_resolved": "unresolved",
+    "directionally_consistent": "unresolved",
+}
+F12_INK = "#222222"
+F12_CLASS_STYLE = {
+    "supported": {"legend": "supported", "markerfacecolor": F12_INK, "fillstyle": "full"},
+    "not_supported": {"legend": "not supported", "markerfacecolor": "white", "fillstyle": "full"},
+    "on_the_boundary": {"legend": "on the boundary", "markerfacecolor": F12_INK, "fillstyle": "left"},
+    "unresolved": {"legend": "not resolved / directionally consistent", "markerfacecolor": "#A6A6A6",
+                   "fillstyle": "full"},
+}
+F12_MARGIN_COLOR = "#B22222"
+
+
+def _f12_walk(entry: Any, sub: str, base: str, report_path: Path, fig_id: str) -> Any:
+    """get_nested_key inside one located entry, naming the full key (base.sub) when it fails."""
+    curr = entry
+    for part in sub.split("."):
+        if not isinstance(curr, dict) or part not in curr:
+            raise SystemExit(
+                f"Fatal [{fig_id}]: key {base + '.' + sub!r} (missing segment {part!r}) absent in report {report_path}"
+            )
+        curr = curr[part]
+    return curr
+
+
+def generate_f12_registered_forest(
+    results_dir: Path,
+    out_dir: Path,
+    dpi: int = 200,
+) -> dict[str, Any]:
+    """F12 · The registered held-out (`test_normal`) `goal_pass` predictions, pp, by study and verdict.
+
+    Rows (F12_ROWS): J12 D1-D4, J10 P1, P3-P6 and CF1-CF3, J11 L1-L5 (every registered goal_pass
+    prediction of the three reads; J10's P2 is a cost ratio), each its point and
+    scenario 95 % interval, read from the three committed aggregate reports. Marker fill is the
+    registered verdict (`verdict`; CF2 and CF3, which carry none, their `side`; J11 its `reading`),
+    printed at the right of the row. A dotted line marks 0, and a dashed segment the
+    non-inferiority margin on the two non-inferiority rows, P3 and L4 (drawn flipped).
+
+    Guards: each report is COMPLETE on test_normal; each row's left and right arms and its field
+    (goal_pass_rate) are the report's own; every verdict string is a known one; the margin rows
+    agree on one negative margin, and every other row's threshold is 0; each point lies in its interval.
+    """
+    fig_id = "F12"
+    apply_style()
+
+    reports: dict[str, tuple[Path, dict[str, Any]]] = {}
+    headers: dict[str, str] = {}
+    for study, file_name, header in F12_STUDIES:
+        path = results_dir / file_name
+        data = load_report_json(path, fig_id)
+        split = get_nested_key(data, "split", path, fig_id)
+        status = get_nested_key(data, "status", path, fig_id)
+        if split != "test_normal" or status != "COMPLETE":
+            raise SystemExit(
+                f"Fatal [{fig_id}]: {path.name} is split {split!r}, status {status!r}; "
+                "F12 plots only a COMPLETE test_normal read"
+            )
+        reports[study] = (path, data)
+        planner = get_nested_key(data, "planner.code", path, fig_id) if "{planner}" in header else ""
+        headers[study] = header.format(planner=planner)
+
+    rows: list[dict[str, Any]] = []
+    for spec in F12_ROWS:
+        path, data = reports[spec.study]
+        container = get_nested_key(data, spec.container, path, fig_id)
+        if isinstance(container, dict):
+            if spec.row_id not in container:
+                raise SystemExit(
+                    f"Fatal [{fig_id}]: key {spec.container + '.' + spec.row_id!r} absent in report {path}"
+                )
+            entry, base = container[spec.row_id], f"{spec.container}.{spec.row_id}"
+        elif isinstance(container, list):
+            matches = [e for e in container if isinstance(e, dict) and e.get("id") == spec.row_id]
+            if len(matches) != 1:
+                raise SystemExit(
+                    f"Fatal [{fig_id}]: expected one {spec.container}[{spec.row_id}] in report {path}, "
+                    f"found {len(matches)}"
+                )
+            entry, base = matches[0], f"{spec.container}[{spec.row_id}]"
+        else:
+            raise SystemExit(f"Fatal [{fig_id}]: {spec.container!r} in report {path} is neither a list nor a dict")
+
+        def walk(sub: str, _entry: Any = entry, _base: str = base, _path: Path = path) -> Any:
+            return _f12_walk(_entry, sub, _base, _path, fig_id)
+
+        left, right = walk("left"), walk("right")
+        field = walk(f"{spec.contrast}field")
+        if (left, right) != (spec.left, spec.right) or field != "goal_pass_rate":
+            raise SystemExit(
+                f"Fatal [{fig_id}]: {spec.row_id} in {path.name} is {left} − {right} on {field}; "
+                f"F12 labels it {spec.left} − {spec.right} on goal_pass_rate"
+            )
+        diff_key, ci_key = f"{spec.contrast}scenario.diff_pp", f"{spec.contrast}scenario.ci95_pp"
+        diff = float(walk(diff_key))
+        ci = walk(ci_key)
+        lower, upper = float(ci[0]), float(ci[1])
+        n = int(walk(spec.n_key))
+        verdict = walk(spec.verdict_key)
+        if verdict not in F12_VERDICT_CLASS:
+            raise SystemExit(
+                f"Fatal [{fig_id}]: unknown verdict {verdict!r} at {base}.{spec.verdict_key} in {path.name}"
+            )
+        json_keys = [f"{path.name}:{base}.{k}" for k in (diff_key, ci_key, spec.n_key, spec.verdict_key)]
+        # CF2 and CF3 are pre-specified and carry no threshold and no verdict of their own.
+        decision_bearing = True
+        threshold = None
+        if spec.verdict_key == "side":
+            decision_bearing = bool(walk("decision_bearing"))
+        else:
+            threshold = float(walk("threshold_pp"))
+            json_keys.append(f"{path.name}:{base}.threshold_pp")
+            if spec.non_inferiority == (threshold == 0.0):
+                raise SystemExit(
+                    f"Fatal [{fig_id}]: {spec.row_id} threshold_pp is {threshold}; F12 draws it as "
+                    f"{'a non-inferiority row' if spec.non_inferiority else 'a row read against 0'}"
+                )
+        if spec.flip:
+            diff, lower, upper = -diff, -upper, -lower
+            threshold = -threshold if threshold is not None else None
+        if not lower <= diff <= upper:
+            raise SystemExit(f"Fatal [{fig_id}]: {spec.row_id} point {diff} lies outside [{lower}, {upper}]")
+        rows.append({
+            "spec": spec, "value": diff, "lower": lower, "upper": upper, "n": n, "verdict": verdict,
+            "verdict_class": F12_VERDICT_CLASS[verdict], "threshold": threshold,
+            "decision_bearing": decision_bearing, "report_path": str(path), "json_keys": json_keys,
+        })
+
+    ni_rows = [row for row in rows if row["spec"].non_inferiority]
+    margins = {row["threshold"] for row in ni_rows}
+    if len(margins) != 1 or next(iter(margins)) >= 0.0:
+        raise SystemExit(f"Fatal [{fig_id}]: the non-inferiority rows disagree on one negative margin: {sorted(margins)}")
+    margin = next(iter(margins))
+
+    # The common pair count is left out of the row labels and stated once in the caption.
+    n_counts = [row["n"] for row in rows]
+    n_common = max(set(n_counts), key=n_counts.count)
+
+    # Slots top to bottom: each study's header, its rows, and a gap before the next study.
+    slots: list[tuple[str, Any]] = []
+    for index, (study, _, _) in enumerate(F12_STUDIES):
+        if index:
+            slots.append(("gap", None))
+        slots.append(("header", headers[study]))
+        slots.extend(("row", row) for row in rows if row["spec"].study == study)
+    y_of = [len(slots) - 1 - index for index in range(len(slots))]
+
+    fig, ax = plt.subplots(figsize=(7.0, 0.22 * len(slots) + 1.4))
+    text_transform = blended_transform_factory(ax.transAxes, ax.transData)
+    tick_positions: list[int] = []
+    tick_labels: list[str] = []
+    tick_bold: list[bool] = []
+    for y_pos, (kind, item) in zip(y_of, slots):
+        if kind == "gap":
+            ax.axhline(y_pos, color="#DDDDDD", linewidth=0.6, zorder=1)
+            continue
+        tick_positions.append(y_pos)
+        if kind == "header":
+            tick_labels.append(item)
+            tick_bold.append(True)
+            continue
+        spec = item["spec"]
+        suffix = f" (n = {item['n']})" if item["n"] != n_common else ""
+        item["label"] = spec.label + suffix
+        tick_labels.append(item["label"])
+        tick_bold.append(False)
+        style = F12_CLASS_STYLE[item["verdict_class"]]
+        ax.errorbar(
+            [item["value"]], [y_pos],
+            xerr=[[item["value"] - item["lower"]], [item["upper"] - item["value"]]],
+            fmt="o", color=F12_INK, ecolor=F12_INK, markeredgecolor=F12_INK,
+            markerfacecolor=style["markerfacecolor"], markerfacecoloralt="white", fillstyle=style["fillstyle"],
+            elinewidth=1.3, capsize=2.5, capthick=1.0, markersize=6, zorder=4,
+        )
+        if spec.non_inferiority:
+            ax.vlines(item["threshold"], y_pos - 0.42, y_pos + 0.42, colors=F12_MARGIN_COLOR,
+                      linestyles="--", linewidth=1.3, zorder=3)
+        verdict_text = item["verdict"].replace("_", " ") + ("" if item["decision_bearing"] else "†")
+        item["verdict_text"] = verdict_text
+        ax.text(1.02, y_pos, verdict_text, transform=text_transform, ha="left", va="center",
+                fontsize=8, color="#333333")
+    ax.axvline(0.0, color="#444444", linestyle=":", linewidth=1.0, zorder=2)
+
+    ax.set_yticks(tick_positions)
+    ax.set_yticklabels(tick_labels, fontsize=8)
+    for tick, bold in zip(ax.get_yticklabels(), tick_bold):
+        if bold:
+            tick.set_fontweight("bold")
+    ax.tick_params(axis="y", length=0)
+    ax.yaxis.grid(False)
+    ax.set_ylim(-0.7, len(slots) - 0.3)
+    low = min([row["lower"] for row in rows] + [margin])
+    high = max(row["upper"] for row in rows)
+    ax.set_xlim(5.0 * math.floor((low - 1.0) / 5.0), 5.0 * math.ceil((high + 1.0) / 5.0))
+    ax.set_xlabel("Left arm $-$ right arm, goal pass (pp), point and scenario 95% CI")
+
+    handles = [
+        Line2D([], [], linestyle="none", marker="o", markersize=6, color=F12_INK, markeredgecolor=F12_INK,
+               markerfacecolor=style["markerfacecolor"], markerfacecoloralt="white", fillstyle=style["fillstyle"],
+               label=style["legend"])
+        for style in F12_CLASS_STYLE.values()
+    ]
+    handles.append(Line2D([], [], color=F12_MARGIN_COLOR, linestyle="--", linewidth=1.3,
+                          label=f"$\\delta = {margin:.2f}$ pp, non-inferiority rows"))
+    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3,
+              frameon=False, fontsize=8, handletextpad=0.4, columnspacing=1.2)
+
+    plt.tight_layout()
+    pdf_path, png_path = save_figure(fig, out_dir, "f12_registered_forest", dpi=dpi)
+
+    def pp(value: float) -> str:
+        return f"{value:+.2f}".replace("-", "−")
+
+    l4 = next(row for row in rows if row["spec"].row_id == "L4")
+    # L4's drawn lower bound can sit within a hair of the margin (0.08 pp on the real read), which the
+    # plot cannot show, so the caption prints it.
+    if l4["lower"] < margin:
+        l4_side = f"{margin - l4['lower']:.2f} pp below the margin"
+    elif l4["lower"] > margin:
+        l4_side = f"{l4['lower'] - margin:.2f} pp above the margin"
+    else:
+        l4_side = "on the margin"
+    directional = [row["spec"].row_id for row in rows if row["verdict"] == "directionally_consistent"]
+    not_common = [row for row in rows if row["n"] != n_common]
+    not_common_text = (
+        " except " + ", ".join(f"{row['spec'].row_id} (n = {row['n']})" for row in not_common)
+        if not_common else ""
+    )
+    secondary = [row["spec"].row_id for row in rows if not row["decision_bearing"]]
+    caption = (
+        "Every registered held-out (`test_normal`) `goal_pass` prediction of J12, J10 and J11 (J10's P2, a cost "
+        "ratio, is not a `goal_pass` contrast and is not drawn), left arm − right arm as labelled, pp: "
+        f"point and scenario 95 % CI, {n_common} pairs per row{not_common_text}. "
+        "Marker fill is each row's registered verdict under its own rule, printed at the right; the rules "
+        "differ in direction (P5 predicts that advice at every step is not shown to beat the one-plan floor, "
+        "L2 that it falls short of the 11-action prefix). "
+        + (f"Directionally consistent ({', '.join(directional)}): the point lies on the predicted side of 0 and "
+           "the interval includes 0, which the registration reads as unresolved, with no claim. "
+           if directional else "")
+        + "Dotted: 0. "
+        f"Dashed: the δ = {pp(margin)} pp non-inferiority margin, on the two non-inferiority rows only, P3 and L4. "
+        f"L4 is registered as planner alone − tailored 11-action prefix (upper bound < {pp(-l4['threshold'])} pp) "
+        f"and is drawn flipped, as prefix − planner alone, so both rows read against {pp(margin)} pp; drawn, it is "
+        f"{pp(l4['value'])} pp, [{pp(l4['lower'])}, {pp(l4['upper'])}], its lower bound {l4_side}. "
+        + (f"† {', '.join(secondary)}: pre-specified, not decision-bearing. " if secondary else "")
+        + "Ledger rows: " + ", ".join(f"{row['spec'].row_id} {row['spec'].ledger_id}" for row in rows) + "."
+    )
+
+    return {
+        "figure_id": fig_id,
+        "file_pdf": str(pdf_path),
+        "file_png": str(png_path),
+        "width_in": 7.0,
+        "column": "two-column",
+        "caption": caption,
+        "series": [
+            {
+                "label": row["label"],
+                "row_id": row["spec"].row_id,
+                "study": row["spec"].study,
+                "report_path": row["report_path"],
+                "json_keys": row["json_keys"],
+                "n_points": 1,
+                "ledger_ids": [row["spec"].ledger_id],
+                "value_pp": row["value"],
+                "ci95_pp_scenario": [row["lower"], row["upper"]],
+                "n": row["n"],
+                "verdict": row["verdict"],
+                "decision_bearing": row["decision_bearing"],
+                "flipped": row["spec"].flip,
+                "non_inferiority": row["spec"].non_inferiority,
+                "threshold_pp_drawn": row["threshold"],
+            }
+            for row in rows
+        ],
+        "margin_pp": margin,
+        "skipped_reason": None,
+    }
+
+
 def run_figures(
     results_dir: Path,
     out_dir: Path,
@@ -1966,6 +2322,7 @@ def run_figures(
         "F9": generate_f9_channel_limit,
         "F10": generate_f10_depth_hstar,
         "F11": generate_f11_ni_forest,
+        "F12": generate_f12_registered_forest,
     }
 
     selected = None
