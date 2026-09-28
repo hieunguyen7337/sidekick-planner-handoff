@@ -20,6 +20,13 @@ lower bound is above -7.00 pp and its adjusted p is <= 0.05. B1 (handoff-only, h
 and S3 hold when the lower bound is above -7.00 pp (no family). CF3 is two-sided (interval excludes 0).
 P6_alone is P6 in a family of its own, so the cost of adding P3 to H is visible (E-prereg §6).
 
+Family D (depth, added 2026-09-28 before the E-prereg froze, its §9.5): D1 = prefix_bplus_m6 − prefix_bplus_m2
+and D2 = prefix_zs_m6 − prefix_zs_m2 on all pairs, D3 / D4 the same contrasts handoff-only (Σd·h*/Σh*, h* of
+the LEFT, m6 arm); each is supported when its interval lies above 0 and its Holm-adjusted p (m = 4, within D)
+is <= 0.05. D is simulated in a pass of its own (am1_power.simulate with the same --seed, and --seed + 1 at
+the half effect), so it consumes none of the random draws of the rows before it, and every earlier value of
+this report is unchanged. D's reads are therefore independent of H's and CF's; no joint rate is reported.
+
 Power is given at the dev effect and at half of it: every per-pair difference is shifted by half the dev
 effect measured from the prediction's threshold (am1_power.py:336-340), i.e. by half the dev mean for the
 rows judged at 0, and half-way to the margin for the non-inferiority rows.
@@ -82,7 +89,19 @@ CONTRASTS: dict[str, dict[str, Any]] = {
                      dev_id="B1_bplus_m6_hstar"),
     "S3": dict(left="prefix_bplus_m6", right="planner_alone_cap81", direction="greater", threshold=MARGIN,
                family=None, power_key="lower_above", dev_id="P3_bplus_m6"),
+    # Family D (E-prereg §4, §9.5): depth m6 − m2, Holm within D (m = 4), simulated in its own pass.
+    "D1": dict(left="prefix_bplus_m6", right="prefix_bplus_m2", direction="greater", threshold=0.0,
+               family="D", power_key="holm_supported", dev_id="depth_bplus"),
+    "D2": dict(left="prefix_zs_m6", right="prefix_zs_m2", direction="greater", threshold=0.0,
+               family="D", power_key="holm_supported", dev_id="depth_zs"),
+    "D3": dict(left="prefix_bplus_m6", right="prefix_bplus_m2", direction="greater", threshold=0.0,
+               family="D", handoff_only=True, power_key="holm_supported", dev_id="depth_bplus_hstar"),
+    "D4": dict(left="prefix_zs_m6", right="prefix_zs_m2", direction="greater", threshold=0.0,
+               family="D", handoff_only=True, power_key="holm_supported", dev_id="depth_zs_hstar"),
 }
+
+# Families simulated in a pass of their own, after the main pass, so they draw nothing from its RNG.
+SEPARATE_PASS_FAMILIES = ("D",)
 
 RULES = {
     "holm_supported": "interval excludes the threshold on the predicted side AND Holm-adjusted p <= 0.05",
@@ -182,17 +201,34 @@ def build(
         rows[name] = paired_rows(arms, hstars, spec) if ok else None
     reasons = availability(arms, rows)
     live = [n for n in CONTRASTS if reasons[n] is None]
-    specs = {n: CONTRASTS[n] for n in live}
     indices = {n: am1.index_by_scenario(rows[n]) for n in live}
     full_shift = {n: 0.0 for n in live}
     half_shift = half_shifts(rows, live)  # type: ignore[arg-type]
+    # The main pass sees only its own rows' indices: simulate draws its entries from the union of the
+    # indices it is given, so a separate-pass row must not enter it.
+    specs = {n: CONTRASTS[n] for n in live if CONTRASTS[n].get("family") not in SEPARATE_PASS_FAMILIES}
     if specs:
-        at_dev = am1.simulate(indices, specs, full_shift, n_sims=n_sims, n_boot=n_boot, seed=seed,
+        main_idx = {n: indices[n] for n in specs}
+        at_dev = am1.simulate(main_idx, specs, full_shift, n_sims=n_sims, n_boot=n_boot, seed=seed,
                               n_scenarios=n_entries)
-        at_half = am1.simulate(indices, specs, half_shift, n_sims=n_sims, n_boot=n_boot, seed=seed + 1,
+        at_half = am1.simulate(main_idx, specs, half_shift, n_sims=n_sims, n_boot=n_boot, seed=seed + 1,
                                n_scenarios=n_entries)
     else:
-        at_dev = at_half = {"per_contrast": {}, "families_all_supported": {}, "cf_readings": {}}
+        at_dev = {"per_contrast": {}, "families_all_supported": {}, "cf_readings": {}}
+        at_half = {"per_contrast": {}, "families_all_supported": {}, "cf_readings": {}}
+    separate: dict[str, Any] = {}
+    for fam in SEPARATE_PASS_FAMILIES:
+        fam_specs = {n: CONTRASTS[n] for n in live if CONTRASTS[n].get("family") == fam}
+        separate[fam] = {"members": [n for n, s in CONTRASTS.items() if s.get("family") == fam],
+                         "seed": seed, "seed_half": seed + 1, "run": bool(fam_specs)}
+        if not fam_specs:
+            continue
+        fam_idx = {n: indices[n] for n in fam_specs}
+        for target, shift, s in ((at_dev, full_shift, seed), (at_half, half_shift, seed + 1)):
+            res = am1.simulate(fam_idx, fam_specs, shift, n_sims=n_sims, n_boot=n_boot, seed=s,
+                               n_scenarios=n_entries)
+            target["per_contrast"].update(res["per_contrast"])
+            target["families_all_supported"].update(res["families_all_supported"])
     power: dict[str, Any] = {}
     for name, spec in CONTRASTS.items():
         key = spec["power_key"]
@@ -231,6 +267,12 @@ def build(
             "margin_pp": round(MARGIN * 100, 2),
             "dev_n_boot": dev_n_boot,
             "dev_seed": dev_seed,
+            "separate_pass_families": {
+                **separate,
+                "note": ("each family here is simulated in its own am1_power.simulate pass after the main one, "
+                         "seeded with --seed (--seed + 1 at the half effect), so the main pass's draws and "
+                         "every row before it are unchanged; its reads are independent of the other families'"),
+            },
             "git_sha": dr.git_sha(),
             "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         },

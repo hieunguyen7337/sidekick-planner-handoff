@@ -20,6 +20,10 @@ never be used on BFCL ids: it strips the trailing "_n", so every multi_turn_base
 (scripts/setup/hj1_gate.py:45-47). Plain contrasts reuse j10_report.cluster_bootstrap_means (:2001) with
 entry labels; the ratio (B1) and difference-in-differences bootstraps copy its draw sequence.
 
+The depth_*_hstar / depth_*_flag rows (added 2026-09-28, before the E-prereg froze, its §9.5) are the dev
+values of that prereg's D3 and D4 (family D): the B1 ratio on m6 − m2, h from the m6 (left) arm. D1 and D2 are
+the depth_bplus and depth_zs rows, unchanged.
+
 Dev only: any path naming test_normal, test_challenge or _test_ is refused, and so is any campaign id
 without _dev_ (j16_robustness.refuse_heldout, :136-140, plus the _test_ marker).
 """
@@ -84,6 +88,10 @@ EXPECTED_ARMS = (
 
 # id -> spec. kind: plain | ni (non-inferiority at NI_MARGIN) | hstar / flag (handoff-only B1,
 # Σd·h/Σh with h from the LEFT (prefix) arm) | depth (plain, with the m4 arm's mean beside it).
+# depth=True on an hstar / flag row: the handoff-only depth contrast m6 − m2 of the E-prereg's family D
+# (D3, D4, and their flag sensitivity). h is still the LEFT (m6, deeper) arm's, the rule is at 0, so the
+# row carries no NI fields and names its h arm. These rows are appended last (docs/prereg_bfcl_test_20260925.md
+# §9.5): every contrast draws from its own random.Random(seed), so the earlier rows are unchanged.
 CONTRASTS: dict[str, dict[str, Any]] = {
     "P6": dict(left="takeover_k5", right="advise_k5_fullctx", kind="plain"),
     "CF1": dict(left="advise_k5_neutral", right="advise_k5_fullctx", kind="plain"),
@@ -104,6 +112,10 @@ CONTRASTS: dict[str, dict[str, Any]] = {
     "CF3_qzs": dict(left="takeover_k5_qzs", right="advise_k5_neutral_qzs", kind="plain"),
     "plan_qzs": dict(left="plan_qzs", right="executor_alone_qzs", kind="plain"),
     "P3_qzs_m6": dict(left="prefix_qzs_m6", right="planner_alone_cap81", kind="ni"),
+    "depth_bplus_hstar": dict(left="prefix_bplus_m6", right="prefix_bplus_m2", kind="hstar", depth=True),
+    "depth_zs_hstar": dict(left="prefix_zs_m6", right="prefix_zs_m2", kind="hstar", depth=True),
+    "depth_bplus_flag": dict(left="prefix_bplus_m6", right="prefix_bplus_m2", kind="flag", depth=True),
+    "depth_zs_flag": dict(left="prefix_zs_m6", right="prefix_zs_m2", kind="flag", depth=True),
 }
 
 # Receiver difference-in-differences: the zs contrast minus its qzs repeat, both recomputed per resample.
@@ -144,6 +156,9 @@ DEFINITIONS = {
     "p_ni": "j10_report.bootstrap_pvalue(means, -0.07, 'greater') = 2 x share of replicates <= -7.00 pp",
     "B1": ("Σd·h/Σh over the pairs of the P3 row, h from the prefix (left) arm; a missing h counts as 0 and "
            "is counted; bootstrap resamples entries and recomputes the ratio, replicates with Σh = 0 dropped"),
+    "depth_handoff": ("depth_*_hstar / depth_*_flag (E-prereg family D: D3, D4 and their flag sensitivity): "
+                      "the B1 estimand Σd·h/Σh on the pairs of m6 − m2, h from the LEFT (m6, deeper) arm (h_arm); "
+                      "judged at 0, so no NI fields"),
     "did": ("the zs contrast minus its qzs repeat, each over its own pairs; each resample draws entries from "
             "the union and recomputes both means; replicates where either side has no pair are dropped"),
 }
@@ -509,8 +524,11 @@ def handoff_metric(
     *,
     n_boot: int,
     seed: int,
+    ni: bool = True,
 ) -> tuple[Optional[dict[str, Any]], Optional[str]]:
-    """B1: Σd·h/Σh over the pairs, h from the prefix arm (missing -> 0, counted), entry bootstrap."""
+    """B1: Σd·h/Σh over the pairs, h from the prefix arm (missing -> 0, counted), entry bootstrap.
+
+    ni=False (the depth rows, judged at 0) leaves out the NI fields; nothing else changes."""
     if not series["diffs"]:
         return None, "no pairs"
     hs: list[float] = []
@@ -552,7 +570,7 @@ def handoff_metric(
         "n_boot_valid": len(means),
         "p_two_sided": round(bootstrap_pvalue(means, 0.0, "two-sided"), 6) if means else None,
         "exploratory": True,
-        **_ni_fields(lo, means),
+        **(_ni_fields(lo, means) if ni else {}),
     }
     return block, None
 
@@ -654,7 +672,7 @@ def contrast_block(
                 h = hstars.get(left, {})
             else:
                 h = {k: r["h_flag"] for k, r in arms[left]["rows"].items()}
-            block, why = handoff_metric(s, h, n_boot=n_boot, seed=seed)
+            block, why = handoff_metric(s, h, n_boot=n_boot, seed=seed, ni=not spec.get("depth"))
             if why:
                 reasons.append(f"{metric}: {why}")
         else:
@@ -665,6 +683,8 @@ def contrast_block(
     if kind in ("hstar", "flag"):
         out["h_source"] = ("handoff_control.hstar_flags on the prefix arm's campaign root" if kind == "hstar"
                            else "handoff_occurred of the prefix episode's last report event")
+        if spec.get("depth"):
+            out["h_arm"] = left  # both arms are prefix arms; h is the LEFT (m6, deeper) arm's
     out["reason"] = "; ".join(reasons) if reasons else None
     return out, series
 

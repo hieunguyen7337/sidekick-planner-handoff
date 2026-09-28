@@ -309,6 +309,85 @@ def test_b1_bootstrap_resamples_entries_and_recomputes_the_ratio():
     assert none is None and "sum of h = 0" in why
 
 
+# ---- depth, handoff-only (E-prereg family D: D3, D4 and their flag sensitivity) --------------------
+def _depth_tree(base: Path) -> tuple[Path, Path]:
+    """prefix_bplus_m6 − prefix_bplus_m2 at seed 1, d = 0.5, -0.2, 1.0, 0.4.
+
+    Left (m6) h* = 1, 1, 0 (terminal), missing (no handoff record); left h_flag = True, False, True, None.
+    The right (m2) arm has h* = 1 on every entry, so a row that took h from the right would count all four.
+    """
+    root, configs = base / "results", write_configs(base / "configs")
+    for entry, m6_gp, m2_gp, pre in (("multi_turn_base_1", 0.9, 0.4, prefix_spec(True, True)),
+                                     ("multi_turn_base_2", 0.3, 0.5, prefix_spec(True, False)),
+                                     ("multi_turn_base_3", 1.0, 0.0, prefix_spec(False, True)),
+                                     ("multi_turn_base_4", 0.6, 0.2, prefix_spec(False, None, record=False))):
+        write_episode(root, "prefix_bplus_m6", entry, 1, m6_gp, system="prefix_handoff", prefix=pre)
+        write_episode(root, "prefix_bplus_m2", entry, 1, m2_gp, system="prefix_handoff",
+                      prefix={"eff": 2, "n_src": 8, "flag": True, "live": True, "record": True})
+    return root, configs
+
+
+def test_depth_hstar_takes_h_from_the_left_m6_arm(tmp_path):
+    rep = dr.build_report(*_depth_tree(tmp_path), n_boot=N_BOOT, seed=dr.SEED)
+    row = rep["contrasts"]["depth_bplus_hstar"]
+    assert (row["left"], row["right"], row["kind"], row["h_arm"]) == (
+        "prefix_bplus_m6", "prefix_bplus_m2", "hstar", "prefix_bplus_m6")
+    gp = row["goal_pass"]
+    # Left h* = 1, 1, 0, missing(->0): (0.5 - 0.2) / 2 = 0.15. The terminal e3 (left h* = 0, right h* = 1)
+    # does not count; with h from the right arm it would be (0.5 - 0.2 + 1.0 + 0.4) / 4 = 0.425.
+    assert gp["diff_pp"] == 15.0
+    assert gp["n_handoff"] == 2 and gp["n_h_missing"] == 1
+    assert gp["n_pairs"] == 4 and gp["n_clusters"] == 4 and gp["n_dropped"] == 0
+    assert gp["sd_pp"] == pytest.approx(49.497, abs=1e-3)  # stdev(0.5, -0.2) = 0.7 / sqrt(2)
+    # Judged at 0: no NI fields (B1 keeps them).
+    assert "margin_pp" not in gp and "p_ni" not in gp and "lower_above_margin" not in gp
+    assert gp["p_two_sided"] is not None
+    flag = rep["contrasts"]["depth_bplus_flag"]
+    assert flag["kind"] == "flag" and flag["h_arm"] == "prefix_bplus_m6"
+    # Left h_flag = True, False, True, None(->0): (0.5 + 1.0) / 2 = 0.75.
+    assert flag["goal_pass"]["diff_pp"] == 75.0
+    assert flag["goal_pass"]["n_handoff"] == 2 and flag["goal_pass"]["n_h_missing"] == 1
+    # D1's dev value is the plain depth row over every pair: (0.5 - 0.2 + 1.0 + 0.4) / 4 = 0.425.
+    assert rep["contrasts"]["depth_bplus"]["goal_pass"]["diff_pp"] == 42.5
+    # The zs pair is absent here: its rows are null with a reason naming the arm.
+    for cid in ("depth_zs_hstar", "depth_zs_flag"):
+        assert rep["contrasts"][cid]["goal_pass"] is None and "prefix_zs_m2" in rep["contrasts"][cid]["reason"]
+
+
+def test_depth_handoff_interval_by_hand():
+    keys = [("multi_turn_base_1", 1), ("multi_turn_base_2", 1), ("multi_turn_base_3", 1)]
+    series = {"keys": keys, "diffs": [0.3, -0.1, 0.9], "n_dropped": 0, "dropped": {}}
+    # The third pair has h = 0, so its entry holds no weight. A replicate without entry 1 is -0.1 and one
+    # without entry 2 is 0.3, each (2/3)^3 - (1/3)^3 = 7/27 of the draws, so the 2.5 % and 97.5 % order
+    # statistics sit on them; drawing entry 3 three times (1/27) gives Σh = 0 and the replicate is dropped.
+    block, why = dr.handoff_metric(series, {keys[0]: True, keys[1]: True, keys[2]: False}, n_boot=4000, seed=1,
+                                   ni=False)
+    assert why is None
+    assert block["diff_pp"] == 10.0  # (0.3 - 0.1) / 2
+    assert block["ci95_entry"] == [-10.0, 30.0]
+    assert block["n_handoff"] == 2 and block["n_pairs"] == 3
+    assert "margin_pp" not in block
+    assert 0 < 4000 - block["n_boot_valid"] < 400  # about 4000 / 27 = 148 dropped
+
+
+def test_depth_rows_are_appended_and_leave_every_earlier_row_unchanged(tmp_path, monkeypatch):
+    new = ["depth_bplus_hstar", "depth_zs_hstar", "depth_bplus_flag", "depth_zs_flag"]
+    assert list(dr.CONTRASTS)[-4:] == new
+    assert dr.CONTRASTS["depth_bplus"] == dict(left="prefix_bplus_m6", right="prefix_bplus_m2", kind="depth",
+                                               m4="prefix_bplus_m4")
+    root, configs = _depth_tree(tmp_path)
+    for i, c_gp in ((1, 0.5), (2, 0.25), (3, 0.75), (4, 0.0)):  # so B1_bplus_* and P3_bplus_m6 are computed
+        write_episode(root, "planner_alone_cap81", f"multi_turn_base_{i}", 1, c_gp, system="planner_alone")
+    with_d = dr.build_report(root, configs, n_boot=300, seed=dr.SEED)
+    assert with_d["contrasts"]["B1_bplus_m6_hstar"]["goal_pass"] is not None
+    monkeypatch.setattr(dr, "CONTRASTS", {k: v for k, v in dr.CONTRASTS.items() if k not in new})
+    without = dr.build_report(root, configs, n_boot=300, seed=dr.SEED)
+    assert set(with_d["contrasts"]) - set(without["contrasts"]) == set(new)
+    for cid, block in without["contrasts"].items():
+        assert with_d["contrasts"][cid] == block, cid
+    assert with_d["arms"] == without["arms"]
+
+
 # ---- non-inferiority fields ------------------------------------------------------------------------
 def _series(diffs: list[float]) -> dict[str, Any]:
     keys = [(f"multi_turn_base_{i}", 1) for i in range(len(diffs))]

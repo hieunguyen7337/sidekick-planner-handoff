@@ -51,13 +51,17 @@ def write_configs(configs: Path) -> Path:
     return configs
 
 
-def make_tree(base: Path, values: dict[str, Callable[[int], float]], n_entries: int) -> tuple[Path, Path]:
-    """values: arm -> f(entry index) = goal_pass_rate, the same at every seed."""
+def make_tree(base: Path, values: dict[str, Callable[[int], float]], n_entries: int,
+              live: Optional[dict[str, Callable[[int], bool]]] = None) -> tuple[Path, Path]:
+    """values: arm -> f(entry index) = goal_pass_rate, the same at every seed. live: arm -> f(entry index) =
+    whether a prefix episode has its live step (h* = 1); a prefix arm not named is live everywhere."""
     root = base / "results"
+    live = live or {}
     for arm, f in values.items():
+        is_live = live.get(arm, lambda i: True)
         for i in range(1, n_entries + 1):
             for s in SEEDS:
-                write_episode(root, arm, f"multi_turn_base_{i}", s, f(i), prefix_live=True)
+                write_episode(root, arm, f"multi_turn_base_{i}", s, f(i), prefix_live=is_live(i))
     return root, write_configs(base / "configs")
 
 
@@ -138,6 +142,123 @@ def test_incomplete_family_is_not_run_at_a_smaller_m(tmp_path):
     rep = bp.build(root, configs, n_sims=10, n_boot=100, seed=1, **SIM)
     assert rep["power"]["P6"]["full"] is None and "family H incomplete" in rep["power"]["P6"]["reason"]
     assert rep["power"]["P6_alone"]["full"] == 1.0
+
+
+# ---- family D (depth m6 − m2, E-prereg §4 and §9.5) --------------------------------------------------
+D_IDS = ["D1", "D2", "D3", "D4"]
+DEPTH = {
+    "prefix_bplus_m6": lambda i: 0.9, "prefix_bplus_m2": lambda i: 0.1,
+    "prefix_zs_m6": lambda i: 0.9, "prefix_zs_m2": lambda i: 0.1,
+}
+
+
+def _force_holm_in_d(monkeypatch, pvalues: list[float]) -> list[int]:
+    """Replace the p-values Holm sees in a family of four (only D has m = 4) and record every family size."""
+    real = am1.holm_adjust
+    sizes: list[int] = []
+
+    def forced(ps):
+        sizes.append(len(ps))
+        return real(list(pvalues)) if len(ps) == 4 else real(ps)
+
+    monkeypatch.setattr(am1, "holm_adjust", forced)
+    return sizes
+
+
+def test_family_d_huge_depth_has_power_one(tmp_path):
+    root, configs = make_tree(tmp_path, {**HUGE, **DEPTH}, n_entries=8)
+    rep = bp.build(root, configs, n_sims=30, n_boot=200, seed=1, **SIM)
+    assert rep["families_all_supported"]["D"]["members"] == D_IDS
+    for name in D_IDS:
+        assert rep["contrasts"][name]["family"] == "D" and rep["power"][name]["key"] == "holm_supported"
+        assert rep["power"][name]["full"] == 1.0 and rep["power"][name]["half"] == 1.0, name
+        assert rep["power_at_dev_effect"]["per_contrast"][name]["holm_supported"] == 1.0, name
+        assert rep["power_at_half_effect"]["per_contrast"][name]["holm_supported"] == 1.0, name
+        # Dev +80 pp on every pair (and every handoff pair); the half effect moves it half-way to 0.
+        assert rep["dev"][name]["goal_pass"]["diff_pp"] == 80.0, name
+        assert rep["half_effect_shift_pp"][name] == pytest.approx(40.0), name
+    assert rep["families_all_supported"]["D"]["full"] == 1.0 and rep["families_all_supported"]["D"]["half"] == 1.0
+    assert rep["power_at_dev_effect"]["families_all_supported"]["D"] == 1.0
+    assert rep["families_all_supported"]["H"]["full"] == 1.0  # D is its own family; H keeps m = 2
+    assert rep["meta"]["separate_pass_families"]["D"] == {"members": D_IDS, "seed": 1, "seed_half": 2, "run": True}
+
+
+def test_family_d_is_holm_over_four(tmp_path, monkeypatch):
+    # Every D interval lies above 0. Forced unadjusted p = 0.01, 0.02, 0.03, 0.04: Holm over m = 4 gives
+    # 4 x 0.01 = 0.04, max(0.04, 3 x 0.02) = 0.06, max(0.06, 2 x 0.03) = 0.06, max(0.06, 0.04) = 0.06,
+    # so only D1 is supported. Unadjusted, all four would be.
+    root, configs = make_tree(tmp_path, DEPTH, n_entries=8)
+    sizes = _force_holm_in_d(monkeypatch, [0.01, 0.02, 0.03, 0.04])
+    rep = bp.build(root, configs, n_sims=20, n_boot=200, seed=5, **SIM)
+    assert sizes == [4] * 40  # the main pass has no live row here; D: 20 reads at the dev and 20 at the half effect
+    assert rep["power"]["D1"]["full"] == 1.0 and rep["power"]["D1"]["half"] == 1.0
+    for name in ("D2", "D3", "D4"):
+        assert rep["power"][name]["full"] == 0.0 and rep["power"][name]["half"] == 0.0, name
+    assert rep["families_all_supported"]["D"]["full"] == 0.0
+    assert rep["power"]["P6"]["full"] is None  # the other families' arms are absent
+
+
+def test_family_d_needs_the_interval_above_zero(tmp_path, monkeypatch):
+    # zs: m6 = m2 = 0.5 on every entry, so D2 and D4 have d = 0 exactly and every interval is [0, 0].
+    # With every adjusted p forced to 0, only the interval rule can fail: D1, D3 always, D2, D4 never.
+    root, configs = make_tree(tmp_path, {**DEPTH, "prefix_zs_m6": lambda i: 0.5, "prefix_zs_m2": lambda i: 0.5},
+                              n_entries=8)
+    _force_holm_in_d(monkeypatch, [0.0, 0.0, 0.0, 0.0])
+    rep = bp.build(root, configs, n_sims=20, n_boot=200, seed=6, **SIM)
+    assert rep["power"]["D1"]["full"] == 1.0 and rep["power"]["D3"]["full"] == 1.0
+    assert rep["power"]["D2"]["full"] == 0.0 and rep["power"]["D4"]["full"] == 0.0
+    assert rep["families_all_supported"]["D"]["full"] == 0.0
+    assert rep["half_effect_shift_pp"]["D2"] == 0.0 and rep["half_effect_shift_pp"]["D4"] == 0.0
+
+
+def test_family_d_handoff_rows_take_h_from_the_left_m6_arm(tmp_path):
+    # bplus m6: 0.9 and live (h* = 1) on odd entries, 0.5 and terminal (h* = 0) on even ones; m2: 0.1, live.
+    # D1 (all pairs): (0.8 + 0.4) / 2 = +60 pp, half shift 30 pp. D3 (h* of m6): odd entries only, +80 pp,
+    # half shift 40 pp; h* of the m2 arm (live everywhere) would have given D1's +60.
+    values = {**DEPTH, "prefix_bplus_m6": lambda i: 0.9 if i % 2 else 0.5}
+    root, configs = make_tree(tmp_path, values, n_entries=8, live={"prefix_bplus_m6": lambda i: bool(i % 2)})
+    rep = bp.build(root, configs, n_sims=10, n_boot=100, seed=3, **SIM)
+    assert rep["dev"]["D1"]["dev_id"] == "depth_bplus" and rep["dev"]["D3"]["dev_id"] == "depth_bplus_hstar"
+    assert rep["dev"]["D1"]["goal_pass"]["diff_pp"] == 60.0
+    d3 = rep["dev"]["D3"]["goal_pass"]
+    assert d3["diff_pp"] == 80.0 and d3["n_handoff"] == 12 and d3["n_pairs"] == 24  # 4 odd entries x 3 seeds
+    assert rep["half_effect_shift_pp"]["D1"] == pytest.approx(30.0)
+    assert rep["half_effect_shift_pp"]["D3"] == pytest.approx(40.0)
+    rows = bp.paired_rows(*bp.load_arms(root, configs), bp.CONTRASTS["D3"])
+    assert sum(r["h"] for r in rows) == 12.0 and am1.handoff_ratio(rows) == pytest.approx(0.8)
+
+
+def test_family_d_leaves_every_earlier_value_unchanged(tmp_path, monkeypatch):
+    # P6 per-entry differences +0.3 / -0.2 (mean +5 pp): a power strictly between 0 and 1, so a single
+    # changed draw in the main pass would show in the rows compared below.
+    mixed = {**NULL_P6, **DEPTH, "takeover_k5": lambda i: 0.7 if i % 2 else 0.4}
+    root, configs = make_tree(tmp_path, mixed, n_entries=6)
+    with_d = bp.build(root, configs, n_sims=25, n_boot=150, seed=11, **SIM)
+    assert any(0.0 < p["full"] < 1.0 for n, p in with_d["power"].items() if n not in D_IDS)
+    monkeypatch.setattr(bp, "CONTRASTS", {n: s for n, s in bp.CONTRASTS.items() if s.get("family") != "D"})
+    without = bp.build(root, configs, n_sims=25, n_boot=150, seed=11, **SIM)
+
+    def drop_d(obj):
+        if isinstance(obj, dict):
+            return {k: drop_d(v) for k, v in obj.items() if k not in D_IDS and k != "D"}
+        return obj
+
+    for key in ("contrasts", "dev", "power", "families_all_supported", "half_effect_shift_pp",
+                "power_at_dev_effect", "power_at_half_effect", "caveats"):
+        assert drop_d(with_d[key]) == without[key], key
+    assert set(with_d["power"]) - set(without["power"]) == set(D_IDS)
+
+
+def test_family_d_with_an_absent_arm_is_dropped_whole(tmp_path):
+    root, configs = make_tree(tmp_path, {**HUGE, "prefix_bplus_m2": lambda i: 0.1}, n_entries=6)
+    rep = bp.build(root, configs, n_sims=5, n_boot=50, seed=1, **SIM)
+    for name in ("D2", "D4"):
+        assert rep["power"][name]["full"] is None and "prefix_zs_m2" in rep["power"][name]["reason"], name
+    for name in ("D1", "D3"):  # their arms are present, but Holm at m = 2 is not the registered rule
+        assert rep["power"][name]["full"] is None and "family D incomplete" in rep["power"][name]["reason"], name
+    assert rep["families_all_supported"]["D"]["full"] is None and rep["families_all_supported"]["D"]["reason"]
+    assert rep["meta"]["separate_pass_families"]["D"]["run"] is False
+    assert rep["power"]["P6"]["full"] == 1.0 and rep["families_all_supported"]["H"]["full"] == 1.0
 
 
 def test_heldout_paths_are_refused(tmp_path):
