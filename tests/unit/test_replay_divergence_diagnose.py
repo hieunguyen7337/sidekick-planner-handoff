@@ -23,14 +23,14 @@ def test_address_only_difference_is_address() -> None:
 
 
 def test_reordered_set_repr_is_reordering() -> None:
-    rec = "Friend emails: {'persona9@example.invalid', 'persona7@example.invalid', 'persona11@example.invalid'}\nTotal: 273"
-    live = "Friend emails: {'persona11@example.invalid', 'persona9@example.invalid', 'persona7@example.invalid'}\nTotal: 273"
+    rec = "Friend emails: {'a@x.com', 'b@x.com', 'c@x.com'}\nTotal: 7"
+    live = "Friend emails: {'c@x.com', 'a@x.com', 'b@x.com'}\nTotal: 7"
     assert ddx.classify_difference(rec, live) == "reordering"
 
 
 def test_genuinely_different_text_is_other() -> None:
-    rec = "Total transactions: 273\nCount to like: 24"
-    live = "Total transactions: 274\nCount to like: 24"
+    rec = "Total transactions: 7\nCount to like: 3"
+    live = "Total transactions: 8\nCount to like: 3"
     assert ddx.classify_difference(rec, live) == "other"
 
 

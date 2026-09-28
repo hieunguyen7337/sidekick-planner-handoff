@@ -302,7 +302,7 @@ arm must be re-run.
 
 ⚠ One known loss the planner arm keeps. Run `383cbac_3` seed 2 scored 0.0 because the model
 closed its code fence with two backticks instead of three, so
-`print(apis.supervisor.complete_task(answer=42, status="success"))` — a correct answer —
+`print(apis.supervisor.complete_task(answer=42, status="success"))` (value replaced; dev ground truth) — a correct answer —
 was discarded as unparseable. The parser learned to salvage that afterwards, verified against
 the recorded bytes, but the fix landed while the arm was running and cannot apply to it. One
 episode in 86, and it biases **against** `planner_alone`, so it makes the ≥20 pp gate harder

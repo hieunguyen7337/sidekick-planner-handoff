@@ -271,8 +271,14 @@
             "region": {
               "first_diff_char": 293,
               "region_start": 143,
-              "recorded": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14804efed640>, use_cache=True, scope=None)) -> list[str]\n",
-              "live": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14ba767ba990>, use_cache=True, scope=None)) -> list[str]\n",
+              "recorded": {
+                "sha256": "71bb8570916836315a9d8790192f1ff7f84b76f9d104f35a92f8e9e8c3c204ed",
+                "len": 205
+              },
+              "live": {
+                "sha256": "8f6dbd017279d292f96eb7c2e1a528ac853dbc5e75a0819afcef5fd6c8d4fae4",
+                "len": 205
+              },
               "recorded_len": 348,
               "live_len": 348
             }
@@ -421,8 +427,14 @@
             "region": {
               "first_diff_char": 293,
               "region_start": 143,
-              "recorded": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14804efed640>, use_cache=True, scope=None)) -> list[str]\n",
-              "live": " = Query(True), user: appworld.apps.file_system.models.User = Depends(dependency=<appworld.apps.lib.apis.authentication.LogInOutManager object at 0x14d2c9396a50>, use_cache=True, scope=None)) -> list[str]\n",
+              "recorded": {
+                "sha256": "71bb8570916836315a9d8790192f1ff7f84b76f9d104f35a92f8e9e8c3c204ed",
+                "len": 205
+              },
+              "live": {
+                "sha256": "af946c268c5b41705b3440b23051af26ed9c50d97a8a01cf997f7629b98cf4e1",
+                "len": 205
+              },
               "recorded_len": 348,
               "live_len": 348
             }
@@ -573,8 +585,14 @@
             "region": {
               "first_diff_char": 96,
               "region_start": 0,
-              "recorded": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona9@example.invalid', 'persona2@example.invalid', 'persona7@example.invalid', 'persona4@example.invalid', 'persona12@example.invalid', 'persona6@example.invalid', 'jasonsi",
-              "live": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona5@example.invalid', 'persona9@example.invalid', 'persona4@example.invalid', 'persona7@example.invalid', 'persona12@example.invalid', 'persona6@example.invalid', 'bradley_ba",
+              "recorded": {
+                "sha256": "f3cdf1a820a0ee98071c93166c455bc59f5bae82be81c589d606c972e19bf2cd",
+                "len": 272
+              },
+              "live": {
+                "sha256": "94aa0d7c8c16b7d33274376c80ef9a06340f8f81d97de6d41026a006a960d6be",
+                "len": 275
+              },
               "recorded_len": 823,
               "live_len": 823
             }
@@ -727,8 +745,14 @@
             "region": {
               "first_diff_char": 96,
               "region_start": 0,
-              "recorded": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona9@example.invalid', 'persona2@example.invalid', 'persona7@example.invalid', 'persona4@example.invalid', 'persona12@example.invalid', 'persona6@example.invalid', 'jasonsi",
-              "live": "Current date/time: {'date': 'Thursday, May 18, 2023', 'time': '12:00 PM'}\nAll friends emails: {'persona12@example.invalid', 'persona4@example.invalid', 'persona7@example.invalid', 'persona9@example.invalid', 'persona2@example.invalid', 'persona5@example.invalid', 'ta.wea",
+              "recorded": {
+                "sha256": "f3cdf1a820a0ee98071c93166c455bc59f5bae82be81c589d606c972e19bf2cd",
+                "len": 272
+              },
+              "live": {
+                "sha256": "6b1413ec20af9db29237d1e666cfd883a5e660a968c18ac875f9c129ab5b6699",
+                "len": 271
+              },
               "recorded_len": 823,
               "live_len": 823
             }

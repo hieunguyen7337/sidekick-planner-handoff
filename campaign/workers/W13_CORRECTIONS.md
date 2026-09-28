@@ -2,6 +2,8 @@
 
 Analysis of the 40 most harmful and 40 most helpful review corrections from `/mnt/hpccs01/home/n12194778/iaes/.claude/worktrees/plan-2026-09-15/campaign/workers/harm_sample_corrections.jsonl` (lines 1–40 harmful, line 41 separator, lines 42–81 helpful). [OBSERVED campaign/workers/harm_sample_corrections.jsonl:1-81]
 
+> **Public copy (2026-09-28).** The correction texts are AppWorld train content, so they are not published. The public `harm_sample_corrections.jsonl` keeps only `delta`, `step`, `replay_k`, `n_later`, `task_id` and `seed` for each record, in the same line layout (line 41 is still the separator), so every line citation below still points at the same record. Verbatim quotes of corrections read `[correction text omitted]`, and the analysis around them is paraphrased. Evidence tags that rest on the correction text (the text-length figures, the grep checks and the per-record readings) refer to the pre-release file and cannot be re-run on the public one.
+
 ## 1. Classification Table
 
 Every record was assigned exactly one primary label according to the brief criteria. [INFERRED]
@@ -44,36 +46,35 @@ The text length distributions between harmful and helpful corrections are virtua
   - `e3d6c94_3`: 2 records (lines 13, 27)
   
   **Identified Re-injection Loops in Harmful Records**:
-  - `7d7fbf6_3` (seed 2): At step 15 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:29], the reviewer instructed the agent that directories under `~/pictures/vacations` must not be processed and to finish `COMPLETE`. At step 20 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:19], the reviewer re-injected the exact same abort instruction ("[correction text omitted]").
-  - `2a163ab_3` (seed 2): At step 10 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:36], the reviewer hallucinated that passwords is a positional list; at step 20 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:17], it re-injected the hardcoded positional index `phone_account = passwords[3]`.
-  - `76f2c72_1` (seeds 2 & 3): In both runs at step 20 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:18,22], the reviewer hallucinated that "[correction text omitted]", ordering an incomplete sum ($368) in seed 2 and an outright task failure report in seed 3.
+  - `7d7fbf6_3` (seed 2): At step 15 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:29], the reviewer told the agent that the sub-directories of one of the user's photo folders must not be processed, and to finish with `COMPLETE`. At step 20 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:19], the reviewer re-injected the same abort instruction almost word for word (text omitted).
+  - `2a163ab_3` (seed 2): At step 10 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:36], the reviewer wrongly treated the password list as positional; at step 20 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:17], it re-injected a hard-coded positional index into that list to pick the phone account.
+  - `76f2c72_1` (seeds 2 & 3): In both runs at step 20 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:18,22], the reviewer asserted a false premise about the task's data (text omitted). Acting on it, it ordered the agent to report an incomplete sum in seed 2 and an outright task failure in seed 3.
 
 - **Helpful Group**: 9 tasks have multiple records (19 of 40 total records), but multi-step records reflect constructive refinement (e.g. correcting a positional index to an exact account name lookup in `6ea6792_1` [OBSERVED campaign/workers/harm_sample_corrections.jsonl:47,58] and refining password extraction in `ccb4494_1` [OBSERVED campaign/workers/harm_sample_corrections.jsonl:55,79]), with 0 abort re-injections. [INFERRED]
 
-## 4. Dominant Harmful Patterns: Three Verbatim Examples
+## 4. Dominant Harmful Patterns: Three Examples
+
+The original analysis quoted each correction verbatim. The public copy gives a paraphrase instead.
 
 ### Example 1: State & Schema Hallucination (`wrong_for_task`)
 - **`task_id`**: `3c13f5a_1` | **`delta`**: `-0.75` | **Line**: 1 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:1]
-- **Quote**:
-> "[correction text omitted]"
-- **Grep Verification**:
-`grep -c "[correction text omitted]" campaign/workers/harm_sample_corrections.jsonl` -> **1** [OBSERVED /tmp/grep_check.out:1]
+- **Quote**: `[correction text omitted]`
+- **Paraphrase**: the reviewer asserted that the supervisor's credential list was redacted, forbade looking accounts up by name, and told the agent to pair accounts and passwords by position.
+- **Grep Verification**: the quoted text matched exactly **1** line of the pre-release file [OBSERVED /tmp/grep_check.out:1].
 - **Why Harmful**: The reviewer hallucinated that the supervisor credential list was redacted and forbade name-based lookup, forcing positional pairing that broke authentication. [INFERRED]
 
 ### Example 2: Premature Task Abort / Fake Completion (`wrong_for_task`)
 - **`task_id`**: `7d7fbf6_3` | **`delta`**: `-0.5` | **Line**: 19 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:19]
-- **Quote**:
-> "[correction text omitted]"
-- **Grep Verification**:
-`grep -c "[correction text omitted]" campaign/workers/harm_sample_corrections.jsonl` -> **1** [OBSERVED /tmp/grep_check.out:1]
+- **Quote**: `[correction text omitted]`
+- **Paraphrase**: the reviewer declared some of the task's source directories to be protected and off limits, and ordered the executor to stop all work at once and return `COMPLETE`.
+- **Grep Verification**: the quoted text matched exactly **1** line of the pre-release file [OBSERVED /tmp/grep_check.out:1].
 - **Why Harmful**: Because the reviewer only sees an 8-line local window, it misidentified legitimate source directories as protected output files and commanded the executor to halt all work immediately and return `COMPLETE` with 0 work done. [INFERRED]
 
 ### Example 3: Environment API Hallucination (`wrong_for_task`)
 - **`task_id`**: `6104387_1` | **`delta`**: `-0.6499999999999999` | **Line**: 4 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:4]
-- **Quote**:
-> "[correction text omitted]"
-- **Grep Verification**:
-`grep -c "[correction text omitted]" campaign/workers/harm_sample_corrections.jsonl` -> **1** [OBSERVED /tmp/grep_check.out:1]
+- **Quote**: `[correction text omitted]`
+- **Paraphrase**: the reviewer ordered the agent to write the output with `csv.writer` and forbade escaping the rows by hand.
+- **Grep Verification**: the quoted text matched exactly **1** line of the pre-release file [OBSERVED /tmp/grep_check.out:1].
 - **Why Harmful**: The reviewer ordered the agent to use `csv.writer` and prohibited manual row escaping, but `csv.writer` is unavailable in AppWorld (as established in record 78 [OBSERVED campaign/workers/harm_sample_corrections.jsonl:78]), trapping the executor in an import/runtime error. [INFERRED]
 
 ## 5. Verdict on the Allocation-vs-Format Question
