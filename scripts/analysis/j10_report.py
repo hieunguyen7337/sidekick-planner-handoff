@@ -5285,7 +5285,7 @@ def build_report_a1(
     report, code = a1_r2_finalize(report, arms, preds=preds, checks=checks, arms_as_read=arms0)
     # Phase B: rows and wording only. The registered read always prints A1 §7 item 2's pairwise contrasts.
     a1_r2_phase_b(report, arms, arm_dirs, tasks, seeds, pairwise=pairwise or registered_read, n_boot=n_boot,
-                  seed=bootstrap_seed)
+                  seed=bootstrap_seed, cost_report=cost_report)
     return report, code
 
 
@@ -5913,6 +5913,7 @@ def a1_r2_phase_b(
     pairwise: bool,
     n_boot: int,
     seed: int,
+    cost_report: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Phase B: rows and wording only; no verdict, family, threshold or exit code moves."""
     a1_r2_hstar_labels(report)  # B3 (before the sentences, which read the registered BY family)
@@ -5932,7 +5933,460 @@ def a1_r2_phase_b(
     report["provenance_statement"] = a1_r2_provenance_statement(arm_dirs)  # B7 (§7 item 8)
     report["tgc_scored_as_recorded"] = {  # B7
         a: arm.get("tgc_scored_as_recorded") for a, arm in arms.items() if arm.get("tgc_scored_as_recorded")}
+    a1_cc_phase_b(report, arms, arm_dirs, cost_report, n_boot=n_boot, seed=seed)  # A1 §7 item 3; §5.2's TGC
     report.setdefault("unit_r2", {})["phase_b"] = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"]
+    return report
+
+
+# ---- Unit COSTCONTRAST: A1 §7 item 3's paired cost differences, and TGC beside goal_pass (2026-09-28) ------------
+# Reporting only: no p-value, no Holm, no verdict, and no key that a decision reads moves. A1:518-519 asks for "the
+# cost table: hosted calls, non-cached tokens and USD per episode per arm, each paired difference with its interval.
+# The prefix arms' attributed source cost is shown explicitly, not as zero"; A1 §5.2 (:275-277) makes TGC the
+# secondary metric and asks for two clusterings for every contrast. The code sits at the end of the file and is called
+# from a1_r2_phase_b's last lines (Phase B: rows and wording only), so no line this file's citations name moves. Each
+# of its three parts records an error in its own block and is never fatal.
+A1_CC = "unit COSTCONTRAST, J10 pre-read (2026-09-28)"
+A1_CC_CITATION = f"{A1_PREREG}:518-519 (§7 item 3)"
+A1_CC_CONVENTIONS = f"{A1_PREREG} Amendment 4 §B (:1006-1016)"
+A1_TGC_CITATION = f"{A1_PREREG}:275-277 (§5.2: primary metric goal_pass; secondary metric TGC)"
+A1_CC_AXES: dict[str, tuple[str, str]] = {  # axis -> (unit, definition); Amendment 4 §B's two conventions per axis
+    "calls_attributed": ("hosted planner calls per episode", A1_AM4_DEFINITIONS["calls_attributed"]),
+    "calls_live": ("hosted planner calls per episode", A1_AM4_DEFINITIONS["calls_live"]),
+    "tokens_as_published": ("non-cached tokens per episode",
+                            "the cost report's per-episode noncached_tokens_per_episode (j12_cost_axes; a replayed "
+                            "plan at 0 tokens)"),
+    "tokens_attributed": ("non-cached tokens per episode",
+                          "tokens_as_published plus each replayed plan's source plan-event tokens "
+                          "(j12_cost_axes.episode_cached_plan_attribution, per episode exactly as a1_am4_arm)"),
+    "usd_as_published": ("USD per episode", "the cost report's per-episode usd_per_episode (a replayed plan at $0)"),
+    "usd_attributed": ("USD per episode",
+                       "usd_as_published plus each replayed plan priced from its source plan event "
+                       "(j12_cost_axes.episode_cached_plan_attribution, per episode exactly as a1_am4_arm)"),
+}
+A1_CC_AM4_MEANS = {axis: f"{axis}_mean" for axis in A1_CC_AXES}  # a1_am4_calls.per_arm's name for each axis' mean
+A1_CC_SOURCE_DEFINITION = {
+    "what": ("a prefix arm's replayed prefix -- arm 3's (planner_alone_cap81) planner events up to effective_m actions "
+             "-- is charged to the prefix arm under both conventions (A1:347-349; Amendment 4 §B), so it is already "
+             "inside that arm's calls_*, tokens_* and usd_* means; source_cost shows it on its own (A1:518-519)"),
+    "calls": ("Σ max(1, usage.n_calls) over the replayed prefix's planner usages, the count "
+              "src/sidekick/systems/loop.py counters_from_events charges for a prefix"),
+    "tokens": ("the episode's handoff payload replayed_planner_tokens: the part of noncached_tokens_per_episode that "
+               "j8_noncached_cost.noncached_episode_cost adds for the prefix"),
+    "usd": ("the replayed prefix's planner usages (j12_cost_axes.extract_prefix_replayed_usages from --arm "
+            "planner_alone_cap81) priced by j12_cost_axes.price_usage_record: the USD j12_cost_axes.py:369-376 adds"),
+    "episodes": "the arm's A1 scored episodes; a prefix exists when the handoff payload's effective_m > 0",
+    "n_prefix_shown_as_zero": "episodes with a replayed prefix whose source calls, tokens or USD come out as 0",
+}
+
+
+def a1_cc_episode_values(
+    label: str,
+    arm: dict[str, Any],
+    root: Optional[Path],
+    cost_arm: Optional[dict[str, Any]],
+    j12: Any,
+    models_prices: dict[str, Any],
+) -> dict[str, Any]:
+    """One arm's per-episode values on the six axes: the values a1_am4_arm (:4115-4180) averages, kept per
+    (task_id, seed), on the same attribution (j12.episode_cached_plan_attribution over the same a1_am4_episode_files
+    index and price card) and the same episodes (calls over A1's scored episodes; tokens and USD over the cost
+    report's rows). Returns {"values": {axis: {key: value}}, "absent": {axis: reason or None},
+    "n_scored_without_calls": n}. An axis a1_am4_arm would print as null is absent here, with the reason."""
+    files = a1_am4_episode_files(Path(root)) if root is not None else {}
+    cache: dict[tuple[str, int], dict[str, Any]] = {}
+
+    def attribution(key: tuple[str, int]) -> Optional[dict[str, Any]]:
+        if key not in cache and key in files:
+            cache[key] = j12.episode_cached_plan_attribution(files[key]["events"], models_prices,
+                                                             task_id=key[0], seed=key[1])
+        return cache.get(key)
+
+    values: dict[str, dict[tuple[str, int], float]] = {axis: {} for axis in A1_CC_AXES}
+    absent: dict[str, Optional[str]] = {axis: None for axis in A1_CC_AXES}
+    n_without_calls = 0
+    for key in sorted(arm["episodes"]):
+        att = attribution(key)
+        calls = files.get(key, {}).get("n_planner_calls")
+        if att is None or calls is None:
+            n_without_calls += 1
+            continue
+        values["calls_attributed"][key] = float(calls)
+        values["calls_live"][key] = float(calls - att["cache_calls"])
+    if not values["calls_attributed"]:
+        absent["calls_attributed"] = absent["calls_live"] = (
+            "no scored episode" if not arm["episodes"] else "no scored episode with n_planner_calls")
+    rows = (cost_arm or {}).get("episodes")
+    why_rows = ("the cost report has no row for this arm" if cost_arm is None
+                else "the cost report has no per-episode rows (arms.<arm>.episodes from j12_cost_axes)"
+                if not isinstance(rows, list) or not rows else None)
+    for name, field, extra_key in (("tokens", "noncached_tokens_per_episode", "noncached_tokens"),
+                                   ("usd", "usd_per_episode", "usd")):
+        published, attributed = values[f"{name}_as_published"], values[f"{name}_attributed"]
+        if why_rows:
+            absent[f"{name}_as_published"] = absent[f"{name}_attributed"] = why_rows
+            continue
+        broken: Optional[str] = None
+        for r in rows:
+            key = _a1_am5_row_key(r) if isinstance(r, dict) and r.get(field) is not None else None
+            if key is None or key in published:
+                continue
+            published[key] = float(r[field])
+            if broken is not None:
+                continue
+            extra = 0.0
+            if not j12._nc.is_sft_plan_row({"system": files.get(key, {}).get("system")}, label):
+                att = attribution(key)
+                if att is None or att["n_source_missing"]:
+                    broken = f"{key[0]}/{key[1]}: replayed plan without a readable source plan event"
+                    continue
+                extra = att[extra_key]
+            attributed[key] = float(r[field]) + extra
+        if broken is not None:
+            attributed.clear()
+            absent[f"{name}_attributed"] = broken
+        if not published:
+            absent[f"{name}_as_published"] = absent[f"{name}_attributed"] = f"no per-episode {field} in the cost report"
+    return {"values": values, "absent": absent, "n_scored_without_calls": n_without_calls}
+
+
+def a1_cc_pair(
+    left: str,
+    right: str,
+    per_arm: dict[str, dict[str, Any]],
+    arms: dict[str, dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> tuple[dict[str, Any], list[tuple[str, int]]]:
+    """left − right on every axis: the mean paired difference per episode over the (task_id, seed) keys both arms
+    hold, less the contrast's Amendment 5 divergent keys on both sides (a1_am5_exclusion, as a1_am5_pair), with the
+    quality contrasts' intervals (a1_contrast: scenario and task clusters, same helper and draw order). Costs are
+    not proportions, so a1_interval's percentage-point fields are dropped; point / lo / hi are in the axis' unit."""
+    excluded, _verdict = a1_am5_exclusion(arms, left, right)
+    gone = set(excluded)
+    axes: dict[str, Any] = {}
+    for axis, (unit, _definition) in A1_CC_AXES.items():
+        why = [f"{a}: {per_arm[a]['absent'][axis]}" for a in (left, right) if per_arm[a]["absent"][axis]]
+        if why:
+            axes[axis] = {"status": "absent", "unit": unit, "reason": "; ".join(why)}
+            continue
+        lv = {k: {axis: v} for k, v in per_arm[left]["values"][axis].items() if k not in gone}
+        rv = {k: {axis: v} for k, v in per_arm[right]["values"][axis].items() if k not in gone}
+        cmp = a1_contrast(lv, rv, axis, n_boot=n_boot, seed=seed)
+        keys = cmp["_series"]["keys"]
+        body = _public_contrast(cmp)
+        for name in ("scenario", "task"):
+            for k in ("diff_pp", "ci95_pp"):
+                body[name].pop(k, None)
+        axes[axis] = {
+            "status": "ok" if keys else "no_pairs",
+            "unit": unit,
+            "point": body["scenario"]["point"],
+            "left_mean": statistics.fmean(lv[k][axis] for k in keys) if keys else None,
+            "right_mean": statistics.fmean(rv[k][axis] for k in keys) if keys else None,
+        } | body
+    return axes, excluded
+
+
+def _a1_cc_arm_table(
+    label: str,
+    ev: dict[str, Any],
+    am4_per_arm: dict[str, Any],
+    p2_divergent: bool,
+) -> dict[str, Any]:
+    """One arm's line of the block's per-arm table: n and mean per axis, and whether each mean equals
+    a1_am4_calls.per_arm's (the check that these per-episode values are the ones Amendment 4's means average).
+    P2's arms under an Amendment 5 exclusion are read there on fewer episodes, so they are not compared."""
+    out: dict[str, Any] = {"n_scored_without_calls": ev["n_scored_without_calls"]}
+    for axis in A1_CC_AXES:
+        vals = ev["values"][axis]
+        out[axis] = ({"status": "absent", "reason": ev["absent"][axis]} if ev["absent"][axis]
+                     else {"n": len(vals), "mean": round(statistics.fmean(vals.values()), 6)})
+    am4 = am4_per_arm.get(label)
+    if not isinstance(am4, dict) or "calls_attributed_mean" not in am4:
+        out["matches_a1_am4_calls"] = None
+    elif p2_divergent and label in A1_AM4_P2:
+        out["matches_a1_am4_calls"] = None
+        out["matches_note"] = "P2's arms are read there without P2's divergent keys (Amendment 5); not compared"
+    else:  # an absent axis has no mean to compare (a1_am4_arm may still print the cost report's published one)
+        mismatched = [axis for axis, name in A1_CC_AM4_MEANS.items()
+                      if "mean" in out[axis] and am4.get(name) != out[axis]["mean"]]
+        out["matches_a1_am4_calls"] = not mismatched
+        if mismatched:
+            out["mismatched_axes"] = mismatched
+    return out
+
+
+def a1_cost_contrasts(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    cost_report: Optional[dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """The top-level a1_cost_contrasts block (A1 §7 item 3): one row per pairwise_contrasts row -- the same pairs,
+    in the same orientation -- with the six axes' paired differences and both clusterings' intervals. A row is
+    'not_run' when its pairwise row is, 'absent' when an axis cannot be read (the reason is printed; the other axes
+    still are), else its pairwise row's status ('ok' / 'incomplete'). Never decision-bearing."""
+    rd = _load_replay_divergence()
+    base: dict[str, Any] = {
+        "what": A1_CC,
+        "citation": A1_CC_CITATION,
+        "conventions": A1_CC_CONVENTIONS,
+        "decision_bearing": False,
+        "reading": "information only: a mean paired difference and its intervals; no p-value, no Holm, no verdict",
+        "estimand": "mean over the (task_id, seed) keys both arms hold of (left − right) per episode",
+        "pairs": "pairwise_contrasts' pair list and orientation (A1 §7 item 2, a1_r2_pairwise); none defined here",
+        "keys": ("Amendment 5 §B: the contrast's divergent keys leave both arms (a1_am5_exclusion), as in the "
+                 "quality contrasts; n_pairs per axis"),
+        "episodes": A1_AM4_DEFINITIONS["episodes"],
+        "axes": {axis: {"unit": unit, "definition": d} for axis, (unit, d) in A1_CC_AXES.items()},
+        "bootstrap": {"n_boot": n_boot, "seed": seed, "interval": "95% percentile",
+                      "clusterings": {"scenario": "primary", "task": "secondary"},
+                      "helper": "a1_contrast -> a1_interval -> cluster_bootstrap_means (the quality contrasts' path)"},
+        "per_arm_cost_table": ("a1_am4_calls.per_arm (Amendment 4 §B); each prefix arm's source_cost there shows its "
+                               "attributed source cost explicitly (A1:518-519)"),
+    }
+    pw = report.get("pairwise_contrasts")
+    pw_rows = pw.get("rows") if isinstance(pw, dict) else None
+    if not isinstance(pw_rows, list):
+        why = (pw or {}).get("reason") or (pw or {}).get("status") if isinstance(pw, dict) else "absent"
+        return base | {"status": "not_computed",
+                       "reason": f"pairwise_contrasts has no rows ({why}): these rows reuse its pair list"}
+    j12 = _load_j12()
+    models = _a1_am4_price_card(j12, cost_report)["models"]
+    cost_arms = _cost_arms(cost_report)
+    not_run = set(A1_PAIR_ARMS) if report.get("arms_11_12_not_run") else set()  # A6: arms 11-12 print no value
+    labels = [a for a in dict.fromkeys(x for r in pw_rows for x in (r.get("left"), r.get("right")))
+              if a in arms and a not in not_run]
+    per_arm = {a: a1_cc_episode_values(a, arms[a], arm_dirs.get(a), cost_arms.get(a), j12, models) for a in labels}
+    rows: list[dict[str, Any]] = []
+    for pwr in pw_rows:
+        left, right = pwr.get("left"), pwr.get("right")
+        row: dict[str, Any] = {"left": left, "right": right, "registered_row": pwr.get("registered_row"),
+                               "label": "paired cost difference (A1 §7 item 3): information only",
+                               "decision_bearing": False, "citation": A1_CC_CITATION,
+                               "pair_status": pwr.get("status")}
+        if pwr.get("status") == "not_run":
+            rows.append(row | {"status": "not_run", "axes": None})
+            continue
+        if left not in per_arm or right not in per_arm:
+            rows.append(row | {"status": "absent", "axes": None, "reason": "arm not read"})
+            continue
+        axes, excluded = a1_cc_pair(left, right, per_arm, arms, n_boot=n_boot, seed=seed)
+        row["n_excluded_divergent"] = len(excluded)
+        if excluded:
+            row["excluded_keys"] = [rd.key_label(k) for k in excluded]
+        absent_axes = [a for a, blk in axes.items() if blk["status"] == "absent"]
+        if absent_axes:
+            row.update(status="absent", absent_axes=absent_axes,
+                       reason="; ".join(dict.fromkeys(axes[a]["reason"] for a in absent_axes)))
+        else:
+            row["status"] = pwr.get("status")
+        if pwr.get("incomplete_arms"):
+            row["incomplete_arms"] = pwr["incomplete_arms"]
+        row["axes"] = axes
+        rows.append(row)
+    am4 = report.get("a1_am4_calls") if isinstance(report.get("a1_am4_calls"), dict) else {}
+    p2_divergent = all(a in arms for a in A1_AM4_P2) and bool(a1_am5_exclusion(arms, *A1_AM4_P2)[0])
+    table = {a: _a1_cc_arm_table(a, ev, am4.get("per_arm") or {}, p2_divergent) for a, ev in per_arm.items()}
+    table |= {a: {"status": "not_run"} for a in A1_PAIR_ARMS if a in not_run and a in arms}
+    return base | {"status": "ok", "per_arm": table, "n_pairs_of_arms": len(rows),
+                   "status_counts": dict(sorted(Counter(str(r["status"]) for r in rows).items())), "rows": rows}
+
+
+def a1_cc_prefix_source(
+    arm: dict[str, Any],
+    root: Path,
+    source_root: Optional[Path],
+    j12: Any,
+    models_prices: dict[str, Any],
+) -> dict[str, Any]:
+    """A prefix arm's attributed source cost per episode, meaned (A1_CC_SOURCE_DEFINITION): the replayed prefix as
+    j12_cost_axes charges it (extract_prefix_replayed_usages from arm 3's campaign, priced by price_usage_record, at
+    the episode's handoff-payload effective_m, read by j8_frontier's own reader)."""
+    files = a1_am4_episode_files(Path(root))
+    diag = {"n_usage_without_cache_split": 0}
+    calls: list[float] = []
+    tokens: list[float] = []
+    usd: list[float] = []
+    n_prefix = n_zero = n_no_events = n_tokens_missing = 0
+    for key in sorted(arm["episodes"]):
+        path = files.get(key, {}).get("events")
+        try:
+            text = path.read_text(encoding="utf-8") if path is not None and path.is_file() else None
+        except (OSError, UnicodeDecodeError):
+            text = None
+        if text is None:
+            n_no_events += 1
+            continue
+        facts = j12.j8._handoff_facts_from_events_text(text)
+        m = facts.get("effective_m")
+        has_prefix = m is not None and int(m) > 0
+        usages = (j12.extract_prefix_replayed_usages(source_root, "planner_alone", key[0], key[1], int(m))
+                  if has_prefix and source_root is not None else [])
+        c = float(sum(max(1, int(u.get("n_calls") or 1)) for u in usages))
+        d = float(sum(j12.price_usage_record(u, models_prices, diag) for u in usages))
+        t = facts.get("replayed_planner_tokens")
+        calls.append(c)
+        usd.append(d)
+        if t is None:
+            n_tokens_missing += 1
+        else:
+            tokens.append(float(t))
+        if has_prefix:
+            n_prefix += 1
+            n_zero += int(c == 0 or d == 0 or not t)
+
+    def mean(xs: list[float]) -> Optional[float]:
+        return round(statistics.fmean(xs), 6) if xs else None
+
+    return {"source_arm": A1_PLAN_SOURCE_ARM, "n_episodes": len(arm["episodes"]),
+            "n_with_replayed_prefix": n_prefix, "n_prefix_shown_as_zero": n_zero,
+            "n_without_events": n_no_events, "n_tokens_missing": n_tokens_missing,
+            "calls_mean": mean(calls), "tokens_mean": mean(tokens), "usd_mean": mean(usd)}
+
+
+def a1_cc_add_source_cost(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    cost_report: Optional[dict[str, Any]],
+) -> None:
+    """A1:518-519's 'attributed source cost is shown explicitly, not as zero': a1_am4_calls.per_arm (the per-arm cost
+    table, Amendment 4 §B) folds each prefix arm's replayed prefix into its calls_*, tokens_* and usd_* means without
+    showing it. Adds per_arm.<prefix arm>.source_cost and the block's source_cost_definition; no other key moves."""
+    am4 = report.get("a1_am4_calls")
+    if not isinstance(am4, dict) or am4.get("status") != "ok" or not isinstance(am4.get("per_arm"), dict):
+        return
+    j12 = _load_j12()
+    models = _a1_am4_price_card(j12, cost_report)["models"]
+    source_root = arm_dirs.get(A1_PLAN_SOURCE_ARM)
+    for label in A1_PREFIX_ARMS:
+        blk = am4["per_arm"].get(label)
+        if not isinstance(blk, dict) or blk.get("status") == "not_run" or label not in arms or label not in arm_dirs:
+            continue
+        src = a1_cc_prefix_source(arms[label], Path(arm_dirs[label]),
+                                  None if source_root is None else Path(source_root), j12, models)
+        for axis, total in (("calls", "calls_attributed_mean"), ("tokens", "tokens_attributed_mean"),
+                            ("usd", "usd_attributed_mean")):
+            num, den = src[f"{axis}_mean"], blk.get(total)
+            src[f"share_of_{total}"] = round(num / den, 6) if num is not None and den else None
+        if source_root is None:
+            src["note"] = f"--arm {A1_PLAN_SOURCE_ARM} not given: the replayed prefix cannot be priced"
+        blk["source_cost"] = src
+    am4["source_cost_definition"] = A1_CC_SOURCE_DEFINITION
+
+
+def _a1_tgc_meta() -> dict[str, Any]:
+    return {"metric": "tgc", "role": "secondary", "decision_bearing": False, "citation": A1_TGC_CITATION}
+
+
+def a1_tgc_supporting(
+    row: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    handoff_flags: dict[str, dict[tuple[str, int], Optional[bool]]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> Optional[dict[str, Any]]:
+    """TGC beside one S or E row's goal_pass: a1_evaluate_supporting's path (:2501-2559) with field 'tgc' -- the
+    contrast path P1-P6's tgc_secondary takes (a1_contrast), a1_did_series for a did row, a1_handoff_depth per
+    receiver for a handoff_depth row -- both clusterings, no p. None where the row prints no goal_pass."""
+    if row.get("status") == "not_run" or row.get("goal_pass") is None:
+        return None
+    field = A1_METRIC_FIELDS["tgc"]
+    kind = row.get("kind", "paired")
+    if kind == "handoff_depth":
+        out: dict[str, Any] = {}
+        for name, (target, base) in (row.get("receivers") or {}).items():
+            if target not in arms or base not in arms:
+                out[name] = {"target": target, "base": base, "status": "arm_absent"}
+                continue
+            blk = {"target": target, "base": base} | a1_handoff_depth(
+                arms[target]["episodes"], arms[base]["episodes"], handoff_flags.get(target, {}), field,
+                n_boot=n_boot, seed=seed)
+            if ((row.get("goal_pass") or {}).get(name) or {}).get("status") == "incomplete":
+                blk["status"] = "incomplete"
+            out[name] = blk
+        return _a1_tgc_meta() | out
+    if kind == "did":
+        series = a1_did_series([arms[a]["episodes"] for a in list(row["left"]) + list(row["right"])], field)
+        return _a1_tgc_meta() | {
+            "field": field, "n_pairs": len(series["diffs"]), "n_shared": series["n_shared"],
+            "n_dropped_missing_field": series["n_dropped_missing_field"],
+            "scenario": _public(a1_interval(series, "scenario", n_boot=n_boot, seed=seed)),
+            "task": _public(a1_interval(series, "task", n_boot=n_boot, seed=seed))}
+    return _a1_tgc_meta() | _public_contrast(
+        a1_contrast(arms[row["left"]]["episodes"], arms[row["right"]]["episodes"], field, n_boot=n_boot, seed=seed))
+
+
+def a1_tgc_add(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    *,
+    n_boot: int,
+    seed: int,
+) -> None:
+    """tgc_secondary beside goal_pass on every S, E and pairwise row (A1 §5.2, :275-277), and the top-level
+    a1_tgc_secondary note. A pairwise row takes its goal_pass path: a1_am5_pair, then a1_contrast on 'tgc'."""
+    targets = {t for rows in (report.get("supporting_contrasts") or [], report.get("exploratory_contrasts") or [])
+               for r in rows if r.get("kind") == "handoff_depth" for t, _b in (r.get("receivers") or {}).values()}
+    flags = {t: a1_handoff_flags(Path(arm_dirs[t])) for t in sorted(targets) if t in arm_dirs}
+    counts = {"supporting": 0, "exploratory": 0, "pairwise": 0}
+    for name in ("supporting", "exploratory"):
+        for row in report.get(f"{name}_contrasts") or []:
+            row["tgc_secondary"] = a1_tgc_supporting(row, arms, flags, n_boot=n_boot, seed=seed)
+            counts[name] += row["tgc_secondary"] is not None
+    pw = report.get("pairwise_contrasts")
+    for row in (pw.get("rows") if isinstance(pw, dict) else None) or []:
+        if row.get("status") == "not_run" or row.get("goal_pass") is None:
+            row["tgc_secondary"] = None
+            continue
+        la, ra = a1_am5_pair(arms, row["left"], row["right"])
+        row["tgc_secondary"] = _a1_tgc_meta() | _public_contrast(
+            a1_contrast(la["episodes"], ra["episodes"], A1_METRIC_FIELDS["tgc"], n_boot=n_boot, seed=seed))
+        counts["pairwise"] += 1
+    report["a1_tgc_secondary"] = {
+        "status": "ok", "what": A1_CC, "metric": "tgc", "citation": A1_TGC_CITATION, "decision_bearing": False,
+        "rule": ("goal_pass remains the only metric in any rule; TGC is printed beside it as tgc_secondary on the S, "
+                 "E and pairwise rows, scenario and task clusterings, with no p-value, no Holm and no verdict"),
+        "n_rows_with_tgc": counts,
+        "handoff_depth": "S6's TGC reads the flag-based handoff-only estimand, as its goal_pass (no h* companion)",
+    }
+
+
+def a1_cc_phase_b(
+    report: dict[str, Any],
+    arms: dict[str, dict[str, Any]],
+    arm_dirs: dict[str, Path],
+    cost_report: Optional[dict[str, Any]],
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """Unit COSTCONTRAST, from a1_r2_phase_b after every decision and sentence is made: TGC beside goal_pass, the
+    prefix arms' source cost in the per-arm cost table, and the paired cost differences. Each part records an
+    error in its own block and is never fatal."""
+    try:
+        a1_tgc_add(report, arms, arm_dirs, n_boot=n_boot, seed=seed)
+    except Exception as exc:  # information only: never fatal
+        report["a1_tgc_secondary"] = {"status": "error", "error": f"{type(exc).__name__}: {exc}",
+                                      "decision_bearing": False}
+    try:
+        a1_cc_add_source_cost(report, arms, arm_dirs, cost_report)
+    except Exception as exc:  # information only: never fatal
+        if isinstance(report.get("a1_am4_calls"), dict):
+            report["a1_am4_calls"]["source_cost_error"] = f"{type(exc).__name__}: {exc}"
+    try:
+        report["a1_cost_contrasts"] = a1_cost_contrasts(report, arms, arm_dirs, cost_report, n_boot=n_boot,
+                                                        seed=seed)
+    except Exception as exc:  # information only: never fatal
+        report["a1_cost_contrasts"] = {"status": "error", "error": f"{type(exc).__name__}: {exc}",
+                                       "citation": A1_CC_CITATION, "decision_bearing": False}
     return report
 
 

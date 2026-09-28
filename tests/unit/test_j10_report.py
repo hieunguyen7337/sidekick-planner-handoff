@@ -1859,10 +1859,16 @@ def test_am4_calls_live_and_attributed_by_hand(tmp_path: Path, monkeypatch):
         "tokens_attributed_mean": 1414457.916667, "tokens_as_published_mean": 1414410.0,
         "usd_attributed_mean": 0.001012, "usd_as_published_mean": 0.001}
     # The prefix arm is charged its replayed prefix under both conventions (A1:347-349).
-    assert am4["per_arm"]["prefix_m11"] == {
+    m11 = dict(am4["per_arm"]["prefix_m11"])
+    src = m11.pop("source_cost")  # unit COSTCONTRAST: the prefix's source cost on its own (A1:518-519)
+    assert m11 == {
         "n_episodes": 24, "calls_attributed_mean": 2.0, "calls_live_mean": 2.0, "n_cached_plan_events": 0,
         "tokens_attributed_mean": 443361.0, "tokens_as_published_mean": 443361.0,
         "usd_attributed_mean": 0.002, "usd_as_published_mean": 0.002}
+    # Only AM4_KEY has an event log (handoff at effective_m 11), and this fixture's arm 3 has none to replay from:
+    # its prefix prices at 0 and is flagged as shown as zero, never silently.
+    assert (src["n_with_replayed_prefix"], src["n_prefix_shown_as_zero"], src["n_without_events"],
+            src["calls_mean"], src["usd_mean"], src["tokens_mean"]) == (1, 1, 23, 0.0, 0.0, None)
     p2 = am4["p2_calls_clause"]
     assert p2["attributed"] == {"advise_k1": 2.041667, "prefix_m11": 2.0, "holds": True}
     assert p2["live"] == {"advise_k1": 2.0, "prefix_m11": 2.0, "holds": False}
@@ -2720,3 +2726,319 @@ def test_r2_every_report_carries_status_split_and_verdicts(tmp_path: Path, capsy
     rc = j10.main(["--split", "dev", "--seeds", "1,x", "--arm", f"prefix_m11={tmp_path}"])
     out = json.loads(capsys.readouterr().out)
     assert (rc, out["status"], out["split"], set(out["verdicts"])) == (2, "REFUSED", "dev", p_ids)
+
+
+# ---- Unit COSTCONTRAST: A1 §7 item 3's paired cost differences; TGC beside goal_pass (2026-09-28) ---------------
+CC_TASKS = ["sc0_1", "sc0_2", "sc1_1", "sc1_2", "sc1_3"]  # 5 keys at seed 1: scenario sc0 holds 2, sc1 holds 3
+CC_SEEDS = [1]
+CC_DIV = ("sc1_3", 1)  # prefix_m11's divergent key (Amendment 5): it leaves both arms of every prefix_m11 contrast
+CC_CACHED = ("sc0_1", 1)  # advise_k1 replays arm 3's plan here: one cached-plan event (cache_calls 1)
+CC_CALLS = {"advise_k1_fullctx": {"sc0_1": 3, "sc0_2": 2, "sc1_1": 2, "sc1_2": 4, "sc1_3": 5},
+            "prefix_m11": dict.fromkeys(CC_TASKS, 11),
+            "executor_alone": dict.fromkeys(CC_TASKS, 0)}
+CC_COST_ROWS = {
+    "advise_k1_fullctx": {"noncached_tokens_per_episode": {"sc0_1": 1000.0, "sc0_2": 2000.0, "sc1_1": 3000.0,
+                                                           "sc1_2": 4000.0, "sc1_3": 5000.0},
+                          "usd_per_episode": {"sc0_1": 0.5, "sc0_2": 0.25, "sc1_1": 0.125, "sc1_2": 0.0625,
+                                              "sc1_3": 1.0}},
+    # prefix_m11 also carries a row for its divergent key (as if j12 had priced it): it must leave both arms.
+    "prefix_m11": {"noncached_tokens_per_episode": dict(dict.fromkeys(CC_TASKS, 500.0), sc1_3=100000.0),
+                   "usd_per_episode": dict(dict.fromkeys(CC_TASKS, 0.25), sc1_3=8.0)},
+}  # executor_alone has no row at all: its tokens and USD are absent.
+CC_P1_ROW = {"left": "advise_k1_fullctx", "right": "prefix_m11", "registered_row": "P1", "status": "ok"}
+
+
+def _cc_cost(rows: dict) -> dict:
+    """A j12_cost_axes-shaped report: per-episode rows and, as j12 publishes them, each arm's means of its rows."""
+    import statistics
+
+    arms = {}
+    for label, fields in rows.items():
+        eps = [{"task_id": t, "seed": s, **{f: v[t] for f, v in fields.items()}} for t in CC_TASKS for s in CC_SEEDS]
+        arms[label] = {"n_episodes": len(eps), "episodes": eps,
+                       **{f: round(statistics.fmean(e[f] for e in eps), 6) for f in fields}}
+    return {"arms": arms}
+
+
+def _cc_fixture(tmp_path: Path, tasks: list | None = None):
+    """Three arm trees (runner layout, system dir 'sys'), advise_k1's cached plan, prefix_m11's divergent crash;
+    returns (arm_dirs, the arms as the core builds them over `tasks`, the cost report)."""
+    tasks = list(tasks or CC_TASKS)
+    dirs = {}
+    for label, calls in CC_CALLS.items():
+        for t in CC_TASKS:
+            dest = tmp_path / label / "sys" / "1" / t
+            dest.mkdir(parents=True, exist_ok=True)
+            (dest / "result.json").write_text(json.dumps(
+                {"run_id": f"cc/{label}/1/{t}", "task_id": t, "system": "sys", "seed": 1, "success": False,
+                 "tgc": 0.0, "goal_pass_rate": 0.5, "steps": 5, "n_planner_calls": calls[t],
+                 "error_type": None}) + "\n", encoding="utf-8")
+        dirs[label] = tmp_path / label
+    source = tmp_path / "arm3" / "planner_alone" / "1" / "sc0_1" / "events.jsonl"
+    source.parent.mkdir(parents=True)
+    source.write_text("".join(json.dumps(e) + "\n" for e in [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "plan", "actor": "planner", "step": 0, "payload": {"packet": {"goal": "g"}},
+         "usage": AM4_PLAN_USAGE}]), encoding="utf-8")
+    cached = {"model": "gpt-5.6-luna", "provider": "cache", "input_tokens": 0, "cached_input_tokens": 0,
+              "output_tokens": 0, "reasoning_output_tokens": 0, "n_calls": 1, "raw": {"cached_from": str(source)}}
+    (dirs["advise_k1_fullctx"] / "sys" / "1" / CC_CACHED[0] / "events.jsonl").write_text("".join(
+        json.dumps(e) + "\n" for e in [
+            {"event_type": "run_start", "actor": "system", "payload": {}},
+            {"event_type": "plan", "actor": "planner", "step": 0, "payload": {"packet": {"goal": "g"}},
+             "usage": cached}]), encoding="utf-8")
+    _am5_crash(dirs["prefix_m11"], [CC_DIV])
+    arms = {a: j10.a1_arm_episodes(a, j10.load_arm_tree(d), tasks, CC_SEEDS) for a, d in dirs.items()}
+    arms = j10.a1_am5_arms(arms, dirs, tasks, CC_SEEDS)
+    return dirs, arms, _cc_cost(CC_COST_ROWS)
+
+
+def _cc_rows(block: dict) -> dict:
+    return {(r["left"], r["right"]): r for r in block["rows"]}
+
+
+def test_cc_paired_cost_differences_by_hand(tmp_path: Path):
+    """A1 §7 item 3 on a hand-computed fixture: every point difference, the pair orientation, n pairs, Amendment 5's
+    divergent-key exclusion, the absent and not_run paths, deterministic intervals from the quality contrasts'
+    helper, and per-episode values whose means are a1_am4_arm's."""
+    dirs, arms, cost = _cc_fixture(tmp_path)
+    assert arms["prefix_m11"]["complete"] is True and arms["prefix_m11"][j10.A1_AM5_PRIVATE] == [CC_DIV]
+    pairs = [CC_P1_ROW,
+             {"left": "prefix_m11", "right": "executor_alone", "registered_row": None, "status": "ok"},
+             {"left": "advise_k1_fullctx", "right": "executor_alone", "registered_row": None,
+              "status": "incomplete", "incomplete_arms": ["executor_alone"]}]
+    report = {"pairwise_contrasts": {"rows": pairs}}
+    blk = j10.a1_cost_contrasts(report, arms, dirs, cost, n_boot=j10.A1_BOOTSTRAP_N, seed=j10.A1_BOOTSTRAP_SEED)
+    assert blk["status"] == "ok" and blk["decision_bearing"] is False and blk["n_pairs_of_arms"] == 3
+    assert blk["citation"] == f"{j10.A1_PREREG}:518-519 (§7 item 3)"
+    assert (blk["bootstrap"]["n_boot"], blk["bootstrap"]["seed"]) == (10_000, 20260924)
+    # The pairs are pairwise_contrasts', in its orientation and order; every row is labelled not decision-bearing.
+    assert [(r["left"], r["right"]) for r in blk["rows"]] == [(p["left"], p["right"]) for p in pairs]
+    assert all(r["decision_bearing"] is False and r["citation"].startswith(f"{j10.A1_PREREG}:518-519")
+               for r in blk["rows"])
+    assert not any(k.startswith("p_value") or k == "holm" or k.startswith("verdict") for r in blk["rows"] for k in r)
+    rows = _cc_rows(blk)
+    # advise_k1 − prefix_m11 (P1's orientation): sc1_3 leaves BOTH arms, so 4 pairs in 2 scenarios.
+    r = rows[("advise_k1_fullctx", "prefix_m11")]
+    assert (r["status"], r["registered_row"], r["n_excluded_divergent"], r["excluded_keys"]) == (
+        "ok", "P1", 1, ["1/sc1_3"])
+    ax = r["axes"]
+    for axis in j10.A1_CC_AXES:
+        assert (ax[axis]["n_pairs"], ax[axis]["n_left_only"], ax[axis]["n_right_only"]) == (4, 0, 0), axis
+        assert (ax[axis]["scenario"]["n_clusters"], ax[axis]["task"]["n_clusters"]) == (2, 4), axis
+        assert "diff_pp" not in ax[axis]["scenario"] and "ci95_pp" not in ax[axis]["task"], axis  # not proportions
+    # Calls: (3, 2, 2, 4) − 11 = −8.25; live drops the replayed plan on sc0_1: (2, 2, 2, 4) − 11 = −8.5.
+    assert (ax["calls_attributed"]["point"], ax["calls_attributed"]["left_mean"],
+            ax["calls_attributed"]["right_mean"]) == (-8.25, 2.75, 11.0)
+    assert ax["calls_live"]["point"] == -8.5
+    # Tokens: (1000, 2000, 3000, 4000) − 500 = 2000; attributed adds the source plan's 1,150 on sc0_1: 2287.5.
+    # The divergent key's rows (5000 and 100000) are gone from both sides.
+    assert (ax["tokens_as_published"]["point"], ax["tokens_attributed"]["point"]) == (2000.0, 2287.5)
+    # USD: (0.5, 0.25, 0.125, 0.0625) − 0.25 = −0.015625; attributed adds the plan's $0.00029 on sc0_1.
+    assert ax["usd_as_published"]["point"] == -0.015625
+    assert ax["usd_attributed"]["point"] == pytest.approx((-0.0625 + 0.00029) / 4, rel=1e-9)
+    assert ax["calls_live"]["point"] != ax["calls_attributed"]["point"]
+    assert ax["tokens_attributed"]["point"] != ax["tokens_as_published"]["point"]
+    # The intervals are the quality contrasts' helper at the registered seed, draw for draw, and deterministic.
+    diffs, clusters = [-9.0, -9.0, -9.0, -7.0], ["sc0", "sc0", "sc1", "sc1"]
+    lo, hi = j10.percentile_ci(j10.cluster_bootstrap_means(diffs, clusters, n_boot=10_000, seed=20260924))
+    assert (ax["calls_live"]["scenario"]["lo"], ax["calls_live"]["scenario"]["hi"]) == (lo, hi)
+    again = j10.a1_cost_contrasts(report, arms, dirs, cost, n_boot=j10.A1_BOOTSTRAP_N, seed=j10.A1_BOOTSTRAP_SEED)
+    assert json.dumps(again, sort_keys=True) == json.dumps(blk, sort_keys=True)
+    # prefix_m11 − executor_alone: 11 − 0 on 4 pairs (executor_alone's sc1_3 leaves too); the cost report has no
+    # executor_alone row, so tokens and USD are absent with the reason -- printed, never dropped.
+    r = rows[("prefix_m11", "executor_alone")]
+    assert (r["status"], r["pair_status"], r["n_excluded_divergent"]) == ("absent", "ok", 1)
+    assert r["absent_axes"] == ["tokens_as_published", "tokens_attributed", "usd_as_published", "usd_attributed"]
+    assert r["reason"] == "executor_alone: the cost report has no row for this arm"
+    assert (r["axes"]["calls_attributed"]["point"], r["axes"]["calls_attributed"]["n_pairs"]) == (11.0, 4)
+    assert r["axes"]["calls_attributed"]["n_right_only"] == 0
+    # advise_k1 − executor_alone: no replay arm, all 5 pairs; the pairwise row's incompleteness is carried.
+    r = rows[("advise_k1_fullctx", "executor_alone")]
+    assert (r["status"], r["pair_status"], r["incomplete_arms"], r["n_excluded_divergent"]) == (
+        "absent", "incomplete", ["executor_alone"], 0)
+    assert (r["axes"]["calls_attributed"]["point"], r["axes"]["calls_live"]["point"]) == (3.2, 3.0)
+    assert r["axes"]["calls_attributed"]["n_pairs"] == 5
+    assert blk["status_counts"] == {"absent": 2, "ok": 1}
+    # The per-arm table: its means are a1_am4_arm's, computed on the same attribution.
+    j12 = j10._load_j12()
+    models = j10._a1_am4_price_card(j12, cost)["models"]
+    for label in ("advise_k1_fullctx", "prefix_m11"):
+        am4, _notes = j10.a1_am4_arm(label, arms[label], dirs[label], cost["arms"][label], j12, models)
+        table = blk["per_arm"][label]
+        assert {a: table[a]["mean"] for a in j10.A1_CC_AXES} == {a: am4[f"{a}_mean"] for a in j10.A1_CC_AXES}
+        assert table["matches_a1_am4_calls"] is None  # P2's arms under an Amendment 5 exclusion: not compared
+    assert blk["per_arm"]["prefix_m11"]["tokens_as_published"]["n"] == 5  # the divergent key's row is read ...
+    assert blk["per_arm"]["advise_k1_fullctx"]["calls_live"]["mean"] == 3.0  # ... and removed per contrast only
+    # A cost report whose arm has no per-episode rows: that arm's tokens and USD are absent, with the reason.
+    bare = json.loads(json.dumps(cost))
+    bare["arms"]["prefix_m11"].pop("episodes")
+    r = _cc_rows(j10.a1_cost_contrasts({"pairwise_contrasts": {"rows": [CC_P1_ROW]}}, arms, dirs, bare,
+                                       n_boot=200, seed=20260924))[("advise_k1_fullctx", "prefix_m11")]
+    assert r["status"] == "absent" and r["axes"]["calls_live"]["point"] == -8.5
+    assert r["reason"] == ("prefix_m11: the cost report has no per-episode rows (arms.<arm>.episodes from "
+                           "j12_cost_axes)")
+    # A pair whose pairwise row is not run prints no value; without pairwise rows nothing is computed.
+    nr = j10.a1_cost_contrasts({"pairwise_contrasts": {"rows": [dict(CC_P1_ROW, status="not_run")]}}, arms, dirs,
+                               cost, n_boot=200, seed=20260924)
+    assert (nr["rows"][0]["status"], nr["rows"][0]["axes"]) == ("not_run", None)
+    off = j10.a1_cost_contrasts({"pairwise_contrasts": {"status": "not_computed", "reason": "pairwise=False"}},
+                                arms, dirs, cost, n_boot=200, seed=20260924)
+    assert off["status"] == "not_computed" and "rows" not in off and "pairwise=False" in off["reason"]
+
+
+def test_cc_intervals_are_degenerate_with_one_scenario_cluster(tmp_path: Path):
+    """On the tasks of one scenario every scenario resample is the whole sample: lo = hi = the point. The task
+    clustering (2 tasks) is not degenerate."""
+    dirs, arms, cost = _cc_fixture(tmp_path, tasks=["sc0_1", "sc0_2"])
+    blk = j10.a1_cost_contrasts({"pairwise_contrasts": {"rows": [CC_P1_ROW]}}, arms, dirs, cost,
+                                n_boot=j10.A1_BOOTSTRAP_N, seed=j10.A1_BOOTSTRAP_SEED)
+    calls = blk["rows"][0]["axes"]["calls_attributed"]  # (3, 2) − 11
+    assert (calls["n_pairs"], calls["point"]) == (2, -8.5)
+    assert (calls["scenario"]["n_clusters"], calls["scenario"]["lo"], calls["scenario"]["hi"]) == (1, -8.5, -8.5)
+    assert (calls["task"]["n_clusters"], calls["task"]["lo"], calls["task"]["hi"]) == (2, -9.0, -8.0)
+
+
+def _cc_matrix(tmp_path: Path) -> dict[str, Path]:
+    """The A1 constructed matrix with TGC set per arm (dyadic), so every TGC contrast can be written down."""
+    tgc = {"advise_k1_fullctx": 0.5, "prefix_m11": 0.25, "takeover_k10": 1.0}
+    return {label: write_a1_arm(tmp_path, label, A1_CONSTANT_GP[label], tgc=tgc.get(label, 0.0))
+            for label in A1_ALL_ARMS}
+
+
+# Every arm with per-episode rows on all three axes; P2's arms at A1_COST_REPORT's values, so P2 reads as before.
+CC_FULL_COST = _am5_rows_cost({
+    label: {"noncached_tokens_per_episode": {"advise_k1_fullctx": 1414410.0, "prefix_m11": 443361.0}.get(label, 1000.0),
+            "hosted_calls_per_episode": {"advise_k1_fullctx": 19.0, "prefix_m11": 11.25}.get(label, 1.0),
+            "usd_per_episode": {"advise_k1_fullctx": 0.5, "prefix_m11": 0.25}.get(label, 0.125)}
+    for label in A1_ALL_ARMS})
+
+
+def _cc_strip(report: dict) -> dict:
+    """The report without unit COSTCONTRAST's keys."""
+    rep = json.loads(json.dumps(report, default=str))
+    for key in ("a1_cost_contrasts", "a1_tgc_secondary"):
+        rep.pop(key, None)
+    for key in ("supporting_contrasts", "exploratory_contrasts"):
+        for row in rep.get(key) or []:
+            row.pop("tgc_secondary", None)
+    for row in (rep.get("pairwise_contrasts") or {}).get("rows") or []:
+        row.pop("tgc_secondary", None)
+    am4 = rep.get("a1_am4_calls") or {}
+    am4.pop("source_cost_definition", None)
+    for blk in (am4.get("per_arm") or {}).values():
+        blk.pop("source_cost", None)
+    return rep
+
+
+def test_cc_tgc_beside_goal_pass_and_no_decision_field_moves(tmp_path: Path, monkeypatch):
+    """TGC sits beside goal_pass on every S, E and pairwise row, both clusterings, secondary, with no p; the paired
+    cost rows follow pairwise_contrasts; and the report is otherwise the one without the unit, verdicts included."""
+    dirs = _cc_matrix(tmp_path)
+    report, rc = a1_report(dirs, cost_report=CC_FULL_COST, pairwise=True, n_boot=2000)
+    assert rc == 0, report["headline"]
+    meta = {"metric": "tgc", "role": "secondary", "decision_bearing": False}
+    s = {r["id"]: r for r in report["supporting_contrasts"] + report["exploratory_contrasts"]}
+    assert set(s) == {"S1", "S2", "S3", "S4", "S5", "S6", "E1", "E2", "E3", "E4", "E5"}
+    for rid, row in s.items():
+        tg = row["tgc_secondary"]
+        assert {k: tg[k] for k in meta} == meta and tg["citation"].startswith(f"{j10.A1_PREREG}:275-277"), rid
+        assert not any(k.startswith("p_value") for k in tg), rid
+        if row["kind"] != "handoff_depth":
+            assert set(tg["scenario"]) >= {"lo", "hi", "diff_pp"} and set(tg["task"]) >= {"lo", "hi"}, rid
+            assert row["goal_pass"]["field"] == "goal_pass_rate" and tg["field"] == "tgc", rid
+    # S1 advise_k1 − prefix_m9: 0.5 − 0; S2 advise_k10 − prefix_m11: 0 − 0.25; S4 (m11 − m9) − (zs_m11 − zs_m9):
+    # 0.25; E2 takeover − show: 1.0 -- while goal_pass beside them is untouched (S1: 0.5 − 0.625).
+    assert [s[i]["tgc_secondary"]["scenario"]["diff_pp"] for i in ("S1", "S2", "S4", "E2")] == [
+        50.0, -25.0, 25.0, 100.0]
+    assert s["S1"]["goal_pass"]["scenario"]["diff_pp"] == -12.5
+    assert set(s["S6"]["tgc_secondary"]) >= {"tailored", "untailored"}
+    assert s["S6"]["tgc_secondary"]["tailored"]["target"] == "prefix_m11"
+    pw = {(r["left"], r["right"]): r for r in report["pairwise_contrasts"]["rows"]}
+    assert len(pw) == 78 and all(r["tgc_secondary"]["metric"] == "tgc" for r in pw.values())
+    p1 = pw[("advise_k1_fullctx", "prefix_m11")]
+    assert (p1["tgc_secondary"]["scenario"]["diff_pp"], p1["tgc_secondary"]["task"]["n_clusters"]) == (25.0, 12)
+    assert "p_value_two_sided_at_0" not in p1["tgc_secondary"] and "p_value_two_sided_at_0" in p1["goal_pass"]
+    assert report["a1_tgc_secondary"]["n_rows_with_tgc"] == {"supporting": 6, "exploratory": 5, "pairwise": 78}
+    # The cost rows: exactly the pairwise pairs, in order and orientation; every arm has rows, so every row is ok.
+    cc = report["a1_cost_contrasts"]
+    assert cc["status"] == "ok" and cc["n_pairs_of_arms"] == 78 and cc["status_counts"] == {"ok": 78}
+    assert [(r["left"], r["right"]) for r in cc["rows"]] == [
+        (r["left"], r["right"]) for r in report["pairwise_contrasts"]["rows"]]
+    c1 = _cc_rows(cc)[("advise_k1_fullctx", "prefix_m11")]["axes"]
+    assert (c1["calls_attributed"]["point"], c1["tokens_as_published"]["point"], c1["usd_as_published"]["point"]) == (
+        8.0, 1414410.0 - 443361.0, 0.25)
+    assert all(t["matches_a1_am4_calls"] in (True, None) for t in cc["per_arm"].values())
+    assert cc["per_arm"]["prefix_m11"]["matches_a1_am4_calls"] is True
+    # No decision field moved: without the unit the report is the same -- verdicts, Holm, headline and exit code.
+    monkeypatch.setattr(j10, "a1_cc_phase_b", lambda rep, *_a, **_k: rep)
+    base, rc0 = a1_report(dirs, cost_report=CC_FULL_COST, pairwise=True, n_boot=2000)
+    assert "a1_cost_contrasts" not in base and rc0 == rc
+    assert (base["verdicts"], base["multiplicity"], base["headline"]) == (
+        report["verdicts"], report["multiplicity"], report["headline"])
+    assert json.dumps(_cc_strip(report), sort_keys=True) == json.dumps(_cc_strip(base), sort_keys=True)
+
+
+def test_cc_prefix_source_cost_is_shown_explicitly_not_as_zero(tmp_path: Path):
+    """A1:518-519: a1_am4_calls.per_arm folded each prefix arm's replayed prefix into its means without showing it.
+    Its source_cost now shows it: arm 3's planner usages up to effective_m, counted and priced as j12 charges them,
+    and the handoff payload's replayed_planner_tokens -- non-zero where a prefix exists."""
+    dirs = write_a1_matrix(tmp_path)
+    key = ("sc0_1", 1)
+    src = dirs["planner_alone_cap81"] / "planner_alone" / "1" / key[0] / "events.jsonl"
+    action = dict(AM4_PLAN_USAGE, input_tokens=2000, cached_input_tokens=0, output_tokens=0, reasoning_output_tokens=0)
+    src.write_text("".join(json.dumps(e) + "\n" for e in [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "plan", "actor": "planner", "step": 0, "payload": {"packet": {"goal": "g"}},
+         "usage": AM4_PLAN_USAGE},
+        {"event_type": "action", "actor": "planner", "step": 1, "payload": {"kind": "CODE"}, "usage": action},
+        # Past effective_m = 1: never charged to the prefix.
+        {"event_type": "action", "actor": "planner", "step": 2, "payload": {"kind": "CODE"},
+         "usage": dict(action, input_tokens=90_000)}]), encoding="utf-8")
+    (dirs["prefix_m11"] / "sys" / "1" / key[0] / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in [
+        {"event_type": "run_start", "actor": "system", "payload": {}},
+        {"event_type": "report", "actor": "system", "step": 1,
+         "payload": {"handoff_occurred": True, "effective_m": 1, "replayed_planner_tokens": 3150}}]),
+        encoding="utf-8")
+    report, rc = a1_report(dirs, cost_report=A1_COST_REPORT)
+    assert rc == 0, report["headline"]
+    am4 = report["a1_am4_calls"]
+    per_arm = am4["per_arm"]
+    assert all("source_cost" in per_arm[a] for a in j10.A1_PREFIX_ARMS)
+    assert not any("source_cost" in per_arm[a] for a in per_arm if a not in j10.A1_PREFIX_ARMS)
+    # One episode replays a prefix: 2 planner calls (plan + first action), $0.00029 + 2,000 x $0.20/M = $0.00069,
+    # 3,150 replayed tokens. The other 23 episodes have no event log: counted, not read as a zero source.
+    assert per_arm["prefix_m11"]["source_cost"] == {
+        "source_arm": "planner_alone_cap81", "n_episodes": 24, "n_with_replayed_prefix": 1,
+        "n_prefix_shown_as_zero": 0, "n_without_events": 23, "n_tokens_missing": 0,
+        "calls_mean": 2.0, "tokens_mean": 3150.0, "usd_mean": 0.00069,
+        "share_of_calls_attributed_mean": round(2.0 / 11.0, 6),
+        "share_of_tokens_attributed_mean": round(3150.0 / 443361.0, 6),
+        "share_of_usd_attributed_mean": None}  # A1_COST_REPORT carries no USD
+    assert "A1:518-519" in am4["source_cost_definition"]["what"]
+    # Without a cost report the field still prints: the prefix is read from the arm trees.
+    assert a1_report(dirs)[0]["a1_am4_calls"]["per_arm"]["prefix_m11"]["source_cost"]["calls_mean"] == 2.0
+
+
+def test_cc_arms_11_12_not_run_print_no_cost_or_tgc_value(tmp_path: Path):
+    """A6: when arms 11-12 are not run as a pair, every cost row and TGC value that uses them is printed without a
+    value, as their goal_pass rows are; the other pairs are read as usual."""
+    dirs = write_a1_matrix(tmp_path, AM1_GP)
+    dirs["advise_k10_neutral"] = write_a1_arm(tmp_path / "x", "advise_k10_neutral", 0.75,
+                                              error_types={("sc1_1", 2): "crash"})
+    report, rc = a1_report(dirs, cost_report=CC_FULL_COST, pairwise=True, n_boot=200)
+    assert rc == 0 and report["arms_11_12_not_run"], report["headline"]
+    pair_arms = set(j10.A1_PAIR_ARMS)
+    cc = report["a1_cost_contrasts"]
+    for row in cc["rows"]:
+        if {row["left"], row["right"]} & pair_arms:
+            assert (row["status"], row["axes"]) == ("not_run", None), row
+        else:
+            assert row["status"] == "ok" and row["axes"]["calls_attributed"]["n_pairs"] == 24, row
+    assert cc["status_counts"] == {"not_run": 23, "ok": 55}  # 11 x 2 + 1 pairs touch arm 11 or 12
+    assert cc["per_arm"]["show_k10"] == cc["per_arm"]["advise_k10_neutral"] == {"status": "not_run"}
+    for row in report["pairwise_contrasts"]["rows"]:
+        assert (row["tgc_secondary"] is None) == bool({row["left"], row["right"]} & pair_arms), row
+    e = {r["id"]: r for r in report["exploratory_contrasts"]}
+    assert all(e[k]["tgc_secondary"] is None for k in ("E2", "E3", "E4", "E5"))
+    assert e["E1"]["tgc_secondary"]["metric"] == "tgc"
